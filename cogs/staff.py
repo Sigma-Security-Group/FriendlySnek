@@ -15,31 +15,25 @@ class Staff(commands.Cog):
         cogsReady["staff"] = True
     
     @commands.command()
-    @commands.has_any_role(UNIT_STAFF, DEBUG_UNIT_STAFF)
+    @commands.has_any_role(UNIT_STAFF)
     async def promote(self, ctx, member: discord.Member):
         """
         Promote a member to the next rank
         """
         
-        activeServer = DEBUG_SERVER if DEBUG else SSG_SERVER
-        activePromotions = DEBUG_PROMOTIONS if DEBUG else PROMOTIONS
-        activeOperator = DEBUG_OPERATOR if DEBUG else OPERATOR
-        activeTechnician = DEBUG_TECHNICIAN if DEBUG else TECHNICIAN
-        activeSMEroles = DEBUG_SME_ROLES if DEBUG else SME_ROLES
-        
-        guild = self.bot.get_guild(activeServer)
+        guild = self.bot.get_guild(SERVER)
         for role in member.roles:
-            if role.id in activePromotions:
-                newRole = guild.get_role(activePromotions[role.id])
+            if role.id in PROMOTIONS:
+                newRole = guild.get_role(PROMOTIONS[role.id])
                 # Turn promotions to operator into promotions to technician if member is SME
-                if newRole.id == activeOperator:
+                if newRole.id == OPERATOR:
                     isSME = False
                     for role_ in member.roles:
-                        if role_.id in activeSMEroles:
+                        if role_.id in SME_ROLES:
                             isSME = True
                             break
                     if isSME:
-                        newRole = guild.get_role(activeTechnician)
+                        newRole = guild.get_role(TECHNICIAN)
                 log.info(f"Promoting {member.display_name} from {role} to {newRole}")
                 await member.remove_roles(role)
                 await member.add_roles(newRole)
@@ -48,19 +42,16 @@ class Staff(commands.Cog):
             log.warning(f"No promotion possible for {member.display_name}")
 
     @commands.command()
-    @commands.has_any_role(UNIT_STAFF, DEBUG_UNIT_STAFF)
+    @commands.has_any_role(UNIT_STAFF)
     async def demote(self, ctx, member: discord.Member):
         """
         Demote a member to the previous rank
         """
         
-        activeServer = DEBUG_SERVER if DEBUG else SSG_SERVER
-        activeDemotions = DEBUG_DEMOTIONS if DEBUG else DEMOTIONS
-        
-        guild = self.bot.get_guild(activeServer)
+        guild = self.bot.get_guild(SERVER)
         for role in member.roles:
-            if role.id in activeDemotions:
-                newRole = guild.get_role(activeDemotions[role.id])
+            if role.id in DEMOTIONS:
+                newRole = guild.get_role(DEMOTIONS[role.id])
                 log.info(f"Demoting {member.display_name} from {role} to {newRole}")
                 await member.remove_roles(role)
                 await member.add_roles(newRole)

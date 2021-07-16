@@ -19,6 +19,8 @@ import discord
 from discord.ext import commands
 
 from constants import *
+if DEBUG:
+    from contants.debug import *
 from messageAnalysis import runMessageAnalysis
 
 COMMAND_PREFIX = "-"
@@ -43,7 +45,7 @@ async def on_message(message):
         return
     
     # Ignore messages that were not sent on the correct server
-    if message.guild is None or message.guild.id != (DEBUG_SERVER if DEBUG else SSG_SERVER):
+    if message.guild is None or message.guild.id != SERVER:
         log.warning("Wrong server")
         return
     
@@ -53,6 +55,20 @@ async def on_message(message):
         await bot.process_commands(message)
     
     await runMessageAnalysis(bot, message)
+
+@bot.event
+async def on_member_join(member):
+    guild = member.guild
+    if guild.id != SERVER:
+        log.debug("Member joined on another server")
+        return
+    log.debug("Member joined")
+    await asyncio.sleep(5 * 60)  # seconds
+    currentMembers = await guild.fetch_members()
+    if member in currentMembers:
+        updatedMember = await guild.fetch_member(member.id)
+        if len(updatedMember.roles) < 2:
+            bot.get_channel(WELCOME)
 
 @bot.event
 async def on_error(event, *args, **kwargs):

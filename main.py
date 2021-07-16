@@ -32,8 +32,8 @@ for cog in COGS:
 
 @bot.event
 async def on_ready():
-    while not all(cogsReady):
-        asyncio.sleep(1)
+    while not all(cogsReady.values()):
+        await asyncio.sleep(1)
     log.info("Bot Ready")
 
 @bot.event

@@ -20,7 +20,7 @@ from discord.ext import commands
 
 from constants import *
 if DEBUG:
-    from contants.debug import *
+    from constants.debug import *
 from messageAnalysis import runMessageAnalysis
 
 COMMAND_PREFIX = "-"
@@ -32,6 +32,8 @@ bot = commands.Bot(COMMAND_PREFIX, intents=intents)
 for cog in COGS:
     bot.load_extension(f"cogs.{cog}")
 
+newcomers = set()
+
 @bot.event
 async def on_ready():
     while not all(cogsReady.values()):
@@ -41,7 +43,7 @@ async def on_ready():
 @bot.event
 async def on_message(message):
     # Ignore messages from itself
-    if message.author.id == FRIENDLY_SNEK:
+    if message.author.id in (FRIENDLY_SNEK, FRIENDLY_SNEK_DEV):
         return
     
     # Ignore messages that were not sent on the correct server
@@ -54,6 +56,13 @@ async def on_message(message):
         log.debug(f"{message.author.display_name}({message.author.name}#{message.author.discriminator}) > {message.content}")
         await bot.process_commands(message)
     
+    # Unmark newcomer pinging unit staff as needing a reminder to ping unit staff
+    if message.author.id in newcomers:
+        unitStaffRole = message.guild.get_role(UNIT_STAFF)
+        if unitStaffRole in message.role_mentions:
+            newcomers.remove(message.author.id)
+    
+    # Run message content analysis
     await runMessageAnalysis(bot, message)
 
 @bot.event
@@ -62,13 +71,31 @@ async def on_member_join(member):
     if guild.id != SERVER:
         log.debug("Member joined on another server")
         return
+    newcomers.add(member.id)
     log.debug("Member joined")
-    await asyncio.sleep(5 * 60)  # seconds
-    currentMembers = await guild.fetch_members()
+    await asyncio.sleep(2 * 60 * 60)  # seconds
+    if member.id not in newcomers:
+        log.debug(f"Newcomer is no longer in the server {updatedMember.display_name}({updatedMember.name}#{updatedMember.discriminator})")
+        return
+    currentMembers = await guild.fetch_members().flatten()
     if member in currentMembers:
         updatedMember = await guild.fetch_member(member.id)
         if len(updatedMember.roles) < 2:
-            bot.get_channel(WELCOME)
+            unitStaffRole = guild.get_role(UNIT_STAFF)
+            log.debug(f"Sending ping reminder to {updatedMember.display_name}({updatedMember.name}#{updatedMember.discriminator})")
+            await bot.get_channel(WELCOME).send(f"{updatedMember.mention} Don't forget to ping {unitStaffRole.name} when you are ready.")
+        else:
+            log.debug(f"Newcomer is no longer in need of an interview {updatedMember.display_name}({updatedMember.name}#{updatedMember.discriminator})")
+    else:
+        log.debug(f"Newcomer is no longer in the server {updatedMember.display_name}({updatedMember.name}#{updatedMember.discriminator})")
+    if member.id in newcomers:
+        newcomers.remove(member.id)
+
+@bot.event
+async def on_member_leave(member):
+    if member.id in newcomers:
+        newcomers.remove(member.id)
+        log.debug(f"Newcomer left {member.display_name}({member.name}#{member.discriminator})")
 
 @bot.event
 async def on_error(event, *args, **kwargs):

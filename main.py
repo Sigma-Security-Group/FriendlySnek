@@ -43,7 +43,9 @@ async def on_ready():
 @bot.event
 async def on_message(message):
     # Ignore messages from itself
-    if message.author.id in (FRIENDLY_SNEK, FRIENDLY_SNEK_DEV):
+    if message.author.id == FRIENDLY_SNEK:
+        return
+    if DEBUG and message.author.id == FRIENDLY_SNEK_DEV:
         return
     
     # Ignore messages that were not sent on the correct server

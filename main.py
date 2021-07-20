@@ -48,7 +48,7 @@ async def on_message(message):
     
     # Ignore messages that were not sent on the correct server
     if message.guild is None or message.guild.id != SERVER:
-        log.warning("Wrong server")
+        # log.warning("Wrong server")
         return
     
     # Execute commands
@@ -69,7 +69,7 @@ async def on_message(message):
 async def on_member_join(member):
     guild = member.guild
     if guild.id != SERVER:
-        log.debug("Member joined on another server")
+        # log.debug("Member joined on another server")
         return
     newcomers.add(member.id)
     log.debug("Member joined")

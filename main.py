@@ -4,7 +4,7 @@ log = Logger()
 import os
 # Define whether to use Sigma server or APS (debug) server
 DEBUG = os.path.exists("DEBUG")
-DEBUG = True  # always use debug server during development
+# DEBUG = True  # always use debug server during development
 
 import asyncio
 

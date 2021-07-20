@@ -105,6 +105,14 @@ async def on_error(event, *args, **kwargs):
 async def on_command_error(ctx, error):
     log.error(error)
 
+@bot.command(hidden=True, help="Reload bot (Dev only)")
+async def reload(ctx):
+    if ctx.author.id != ADRIAN:
+        return
+    for cog in COGS:
+        bot.reload_extension(f"cogs.{cog}")
+    await ctx.send("Reloaded")
+
 if __name__ == "__main__":
     defaultData = {"scheduleEvents": {}}
     if os.path.exists("data.pkl"):

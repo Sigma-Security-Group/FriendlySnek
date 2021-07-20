@@ -16,12 +16,35 @@ class Staff(commands.Cog):
         log.debug("Staff Cog is ready", flush=True)
         cogsReady["staff"] = True
     
-    @commands.command()
+    def getMember(self, searchTerm):
+        member = None
+        for member_ in self.bot.get_guild(SERVER).members:
+            if searchTerm.replace("<", "").replace("@", "").replace("!", "").replace(">", "").isdigit() and int(searchTerm.replace("<", "").replace("@", "").replace("!", "").replace(">", "")) == member_.id:
+                member = member_
+                break
+            if searchTerm == member_.display_name or searchTerm == member_.name or searchTerm == member_.mention or searchTerm == member_.mention.replace("<@", "<@!") or searchTerm == member_.mention.replace("<@!", "<@") or (searchTerm.isdigit() and int(searchTerm) == member_.discriminator):
+                member = member_
+                break
+            if searchTerm.lower() == member_.display_name.lower() or searchTerm.lower() == member_.name.lower() or searchTerm.lower() == member_.mention.lower() or searchTerm.lower() == member_.mention.lower().replace("<@", "<@!") or searchTerm.lower() == member_.mention.lower().replace("<@!", "<@") or (searchTerm.isdigit() and int(searchTerm) == member_.discriminator):
+                member = member_
+                break
+            if searchTerm in member_.display_name or searchTerm in member_.name or searchTerm in member_.mention or searchTerm in member_.mention.replace("<@", "<@!") or searchTerm in member_.mention.replace("<@!", "<@"):
+                member = member_
+            if searchTerm.lower() in member_.display_name.lower() or searchTerm.lower() in member_.name.lower() or searchTerm.lower() in member_.mention.lower() or searchTerm.lower() in member_.mention.lower().replace("<@", "<@!") or searchTerm.lower() in member_.mention.lower().replace("<@!", "<@"):
+                member = member_
+        return member
+    
+    @commands.command(help="Promote a member to the next rank")
     @commands.has_any_role(UNIT_STAFF)
-    async def promote(self, ctx, member: discord.Member):
+    async def promote(self, ctx, *, searchTerm):
         """
         Promote a member to the next rank
         """
+        member = self.getMember(searchTerm)
+        if member is None:
+            log.warning(f"No member found for search term: {searchTerm}")
+            await ctx.send(f"No member found for search term: {searchTerm}")
+            return
         guild = self.bot.get_guild(SERVER)
         for role in member.roles:
             if role.id in PROMOTIONS:
@@ -42,12 +65,17 @@ class Staff(commands.Cog):
         else:
             log.warning(f"No promotion possible for {member.display_name}")
 
-    @commands.command()
+    @commands.command(help="Demote a member to the previous rank")
     @commands.has_any_role(UNIT_STAFF)
-    async def demote(self, ctx, *, member: discord.Member):
+    async def demote(self, ctx, *, searchTerm):
         """
         Demote a member to the previous rank
         """
+        member = self.getMember(searchTerm)
+        if member is None:
+            log.warning(f"No member found for search term: {searchTerm}")
+            await ctx.send(f"No member found for search term: {searchTerm}")
+            return
         guild = self.bot.get_guild(SERVER)
         for role in member.roles:
             if role.id in DEMOTIONS:
@@ -59,30 +87,17 @@ class Staff(commands.Cog):
         else:
             log.warning(f"No demotion possible for {member.display_name}")
     
-    @commands.command()
+    @commands.command(help="Search through the moderation logs")
     @commands.has_any_role(UNIT_STAFF)
     async def searchModLogs(self, ctx, *, searchTerm):
         """
         Demote a member to the previous rank
         """
-        member = None
-        for member_ in self.bot.get_guild(SERVER).members:
-            if searchTerm.replace("<", "").replace("@", "").replace("!", "").replace(">", "").isdigit() and int(searchTerm.replace("<", "").replace("@", "").replace("!", "").replace(">", "")) == member_.id:
-                member = member_
-                break
-            if searchTerm == member_.display_name or searchTerm == member_.name or searchTerm == member_.mention or searchTerm == member_.mention.replace("<@", "<@!") or searchTerm == member_.mention.replace("<@!", "<@") or (searchTerm.isdigit() and int(searchTerm) == member_.discriminator):
-                member = member_
-                break
-            if searchTerm.lower() == member_.display_name.lower() or searchTerm.lower() == member_.name.lower() or searchTerm.lower() == member_.mention.lower() or searchTerm.lower() == member_.mention.lower().replace("<@", "<@!") or searchTerm.lower() == member_.mention.lower().replace("<@!", "<@") or (searchTerm.isdigit() and int(searchTerm) == member_.discriminator):
-                member = member_
-                break
-            if searchTerm in member_.display_name or searchTerm in member_.name or searchTerm in member_.mention or searchTerm in member_.mention.replace("<@", "<@!") or searchTerm in member_.mention.replace("<@!", "<@"):
-                member = member_
-            if searchTerm.lower() in member_.display_name.lower() or searchTerm.lower() in member_.name.lower() or searchTerm.lower() in member_.mention.lower() or searchTerm.lower() in member_.mention.lower().replace("<@", "<@!") or searchTerm.lower() in member_.mention.lower().replace("<@!", "<@"):
-                member = member_
+        member = self.searchMember(searchTerm)
         if member is None:
             log.warning(f"No member found for search term: {searchTerm}")
             log.debug(f"Searching Moderation Logs for search term: {searchTerm}")
+            await self.bot.get_channel(STAFF_CHAT).send(f"Searching Moderation Logs for search term: {searchTerm}")
             messageLinksList = []
             numMessages = 0
             async for message in self.bot.get_channel(MODERATION_LOG).history(limit=None):
@@ -97,6 +112,7 @@ class Staff(commands.Cog):
                 await self.bot.get_channel(STAFF_CHAT).send(f"No Moderation Logs related to search term: {searchTerm}")
         else:
             log.debug(f"Searching Moderation Logs for {member.display_name}({member.name}#{member.discriminator})")
+            await self.bot.get_channel(STAFF_CHAT).send(f"Searching Moderation Logs for {member.display_name}({member.name}#{member.discriminator})")
             messageLinksList = []
             numMessages = 0
             async for message in self.bot.get_channel(MODERATION_LOG).history(limit=None):

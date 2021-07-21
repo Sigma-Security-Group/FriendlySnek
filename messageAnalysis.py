@@ -5,7 +5,8 @@ from __main__ import log, DEBUG
 staffPings = {}
 
 async def runMessageAnalysis(bot, message):
-    await staffPingAnalysis(bot, message)
+    pass
+    # await staffPingAnalysis(bot, message)
 
 async def staffPingAnalysis(bot, message):
     staffRoles = STAFF_ROLES

@@ -93,7 +93,7 @@ class Staff(commands.Cog):
         """
         Demote a member to the previous rank
         """
-        member = self.searchMember(searchTerm)
+        member = self.getMember(searchTerm)
         if member is None:
             log.warning(f"No member found for search term: {searchTerm}")
             log.debug(f"Searching Moderation Logs for search term: {searchTerm}")

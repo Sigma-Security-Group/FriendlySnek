@@ -17,6 +17,7 @@ import pickle
 from glob import glob
 import discord
 from discord.ext import commands
+from discord_slash import SlashCommand
 
 from constants import *
 if DEBUG:
@@ -29,6 +30,7 @@ cogsReady = {cog: False for cog in COGS}
 
 intents = discord.Intents.all()
 bot = commands.Bot(COMMAND_PREFIX, intents=intents)
+slash = SlashCommand(bot, override_type=True, sync_commands=True, sync_on_cog_reload=True)
 for cog in COGS:
     bot.load_extension(f"cogs.{cog}")
 
@@ -54,7 +56,7 @@ async def on_message(message):
         return
     
     # Execute commands
-    if message.content.startswith(COMMAND_PREFIX):
+    if message.content.startswith(COMMAND_PREFIX) or message.content.startswith("/"):
         log.debug(f"{message.author.display_name}({message.author.name}#{message.author.discriminator}) > {message.content}")
         await bot.process_commands(message)
     

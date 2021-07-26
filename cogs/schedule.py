@@ -1,5 +1,6 @@
 import discord
 from discord.ext import commands
+from discord_slash import cog_ext, SlashContext
 
 from constants import *
 
@@ -17,6 +18,10 @@ class Schedule(commands.Cog):
     async def on_ready(self):
         log.debug("Schedule Cog is ready", flush=True)
         cogsReady["schedule"] = True
+    
+    @cog_ext.cog_slash(name="schedule", guild_ids=[SERVER])
+    async def schedule(self, ctx: SlashContext):
+        await ctx.send("Schedule")
 
 def setup(bot):
     bot.add_cog(Schedule(bot))

@@ -89,7 +89,7 @@ async def on_member_join(member):
         else:
             log.debug(f"Newcomer is no longer in need of an interview {updatedMember.display_name}({updatedMember.name}#{updatedMember.discriminator})")
     else:
-        log.debug(f"Newcomer is no longer in the server {updatedMember.display_name}({updatedMember.name}#{updatedMember.discriminator})")
+        log.debug(f"Newcomer is no longer in the server {member.display_name}({member.name}#{member.discriminator})")
     if member.id in newcomers:
         newcomers.remove(member.id)
 

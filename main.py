@@ -75,7 +75,7 @@ async def on_member_join(member):
         return
     newcomers.add(member.id)
     log.debug("Member joined")
-    await asyncio.sleep(2 * 60 * 60)  # seconds
+    await asyncio.sleep(24 * 60 * 60)  # seconds
     if member.id not in newcomers:
         log.debug(f"Newcomer is no longer in the server {updatedMember.display_name}({updatedMember.name}#{updatedMember.discriminator})")
         return

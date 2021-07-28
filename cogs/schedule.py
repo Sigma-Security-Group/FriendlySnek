@@ -21,7 +21,7 @@ class Schedule(commands.Cog):
     
     @cog_ext.cog_slash(name="schedule", guild_ids=[SERVER])
     async def schedule(self, ctx: SlashContext):
-        await ctx.send("Schedule")
+        await ctx.send("Schedule comming soon")
 
 def setup(bot):
     bot.add_cog(Schedule(bot))

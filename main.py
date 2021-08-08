@@ -30,6 +30,7 @@ cogsReady = {cog: False for cog in COGS}
 
 intents = discord.Intents.all()
 bot = commands.Bot(COMMAND_PREFIX, intents=intents)
+bot.ready = False
 slash = SlashCommand(bot, override_type=True, sync_commands=True, sync_on_cog_reload=True)
 for cog in COGS:
     bot.load_extension(f"cogs.{cog}")
@@ -40,6 +41,7 @@ newcomers = set()
 async def on_ready():
     while not all(cogsReady.values()):
         await asyncio.sleep(1)
+    bot.ready = True
     log.info("Bot Ready")
 
 @bot.event

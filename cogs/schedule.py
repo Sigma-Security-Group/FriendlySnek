@@ -81,6 +81,8 @@ class Schedule(commands.Cog):
         await self.updateSchedule()
     
     async def updateSchedule(self):
+        if not DEBUG:
+            return
         channel = self.bot.get_channel(SCHEDULE)
         await channel.purge(limit=None)
         

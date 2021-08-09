@@ -109,7 +109,7 @@ class Schedule(commands.Cog):
         
         embed = Embed(title=event["title"], description=event["description"], color=Colour.green())
 
-        embed.add_field(name="Time", value=f"Start: {event['time']} UTC\n Duration: {event['duration']}", inline=False)
+        embed.add_field(name="Time", value=f"Start: <t:{round(UTC.localize(datetime.strptime(event['time'], EVENT_TIME_FORMAT)).timestamp())}:F>\n Duration: {event['duration']}", inline=False)
         embed.add_field(name="Map", value="None" if event["map"] is None else event["map"], inline=False)
         embed.add_field(name="\u200B", value="\u200B")
         embed.add_field(name="External URL", value=event["externalURL"], inline=False)
@@ -136,7 +136,7 @@ class Schedule(commands.Cog):
         
         author = guild.get_member(event["authorId"])
         embed.set_footer(text=f"Created by {author.display_name}")
-        embed.timestamp = datetime.strptime(event["time"], EVENT_TIME_FORMAT)
+        embed.timestamp = UTC.localize(datetime.strptime(event["time"], EVENT_TIME_FORMAT))
         
         return embed
     
@@ -198,7 +198,7 @@ class Schedule(commands.Cog):
         embed.add_field(name="**3** External URL", value=f"```{event['externalURL']}```", inline=False)
         embed.add_field(name="**4** Map", value=f"```{event['map']}```", inline=False)
         embed.add_field(name="**5** Max Players", value=f"```{event['maxPlayers']}```", inline=False)
-        embed.add_field(name="**6** Time", value=f"```{event['time']} UTC```", inline=False)
+        embed.add_field(name="**6** Time", value=f"```<t:{round(UTC.localize(datetime.strptime(event['time'], EVENT_TIME_FORMAT)).timestamp())}:F>```", inline=False)
         embed.add_field(name="**7** Duration", value=f"```{event['duration']}```", inline=False)
         msg = await author.send(embed=embed)
         dmChannel = msg.channel

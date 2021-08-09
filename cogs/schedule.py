@@ -83,8 +83,11 @@ class Schedule(commands.Cog):
     async def updateSchedule(self):
         if not DEBUG:
             return
+        self.lastUpdate = datetime.utcnow()
         channel = self.bot.get_channel(SCHEDULE)
         await channel.purge(limit=None)
+        
+        await channel.send(f"Welcome to the schedule channel. To schedule an event you can use the **`/schedule`** command and follow the instructions through DMs. If you haven't set a prefered time zone yet you will be promped to do so when you schedule an event. If you want to set, change or delete your time zone preference you can do so with the **`/changetimezone`** command.\n\nIf you have any features suggestions or encounter any bugs, please contact {channel.guild.get_member(ADRIAN).display_name}.")
         
         if os.path.exists(EVENTS_FILE):
             with open(EVENTS_FILE) as f:
@@ -173,7 +176,12 @@ class Schedule(commands.Cog):
                     event["tentative"].append(payload.member.id)
             elif payload.emoji.name == "✏️":
                 if payload.member.id == event["authorId"] or any(role.id == UNIT_STAFF for role in payload.member.roles):
-                    await self.editEvent(payload.member, event)
+                    reorderEvents = await self.editEvent(payload.member, event)
+                    if reorderEvents:
+                        with open(EVENTS_FILE, "w") as f:
+                            json.dump(events, f, indent=4)
+                        self.updateSchedule()
+                        return
             elif payload.emoji.name == "🗑":
                 if payload.member.id == event["authorId"] or any(role.id == UNIT_STAFF for role in payload.member.roles):
                     await self.deleteEvent(payload.member, eventMessage)
@@ -183,15 +191,22 @@ class Schedule(commands.Cog):
             else:
                 scheduleNeedsUpdate = False
             if removeReaction:
-                await eventMessage.remove_reaction(payload.emoji, payload.member)
+                try:
+                    await eventMessage.remove_reaction(payload.emoji, payload.member)
+                except Exception:
+                    pass
             if scheduleNeedsUpdate:
-                embed = self.getEventEmbed(event)
-                await eventMessage.edit(embed=embed)
+                try:
+                    embed = self.getEventEmbed(event)
+                    await eventMessage.edit(embed=embed)
+                except Exception:
+                    pass
         
         with open(EVENTS_FILE, "w") as f:
             json.dump(events, f, indent=4)
     
     async def editEvent(self, author, event):
+        editingTime = datetime.utcnow()
         embed = Embed(title=":pencil2: What would you like to edit?", color=Colour.gold())
         embed.add_field(name="**1** Title", value=f"```{event['title']}```", inline=False)
         embed.add_field(name="**2** Description", value=f"```{event['description']}```", inline=False)
@@ -207,7 +222,7 @@ class Schedule(commands.Cog):
             choice = response.content
         except asyncio.TimeoutError:
             await dmChannel.send(embed=TIMEOUT_EMBED)
-            return
+            return False
         while choice not in ("1", "2", "3", "4", "5", "6", "7"):
             embed = Embed(title="❌ Wrong input", colour=Colour.red(), description="Enter the number of an attribute")
             await dmChannel.send(embed=embed)
@@ -216,7 +231,9 @@ class Schedule(commands.Cog):
                 choice = response.content
             except asyncio.TimeoutError:
                 await dmChannel.send(embed=TIMEOUT_EMBED)
-                return
+                return False
+        
+        reorderEvents = False
 
         if choice == "1":
             embed = Embed(title=":pencil2: What is the title of your event?", color=Colour.gold())
@@ -226,7 +243,7 @@ class Schedule(commands.Cog):
                 title = response.content
             except asyncio.TimeoutError:
                 await dmChannel.send(embed=TIMEOUT_EMBED)
-                return
+                return False
             event["title"] = title
             
         elif choice == "2":
@@ -237,7 +254,7 @@ class Schedule(commands.Cog):
                 description = response.content
             except asyncio.TimeoutError:
                 await dmChannel.send(embed=TIMEOUT_EMBED)
-                return
+                return False
             event["description"] = description
             
         elif choice == "3":
@@ -250,7 +267,7 @@ class Schedule(commands.Cog):
                     externalURL = None
             except asyncio.TimeoutError:
                 await dmChannel.send(embed=TIMEOUT_EMBED)
-                return
+                return False
             event["externalURL"] = externalURL
             
         elif choice == "4":
@@ -266,7 +283,7 @@ class Schedule(commands.Cog):
                     eventMap = None
             except asyncio.TimeoutError:
                 await dmChannel.send(embed=TIMEOUT_EMBED)
-                return
+                return False
             event["map"] = eventMap
             
         elif choice == "5":
@@ -281,7 +298,7 @@ class Schedule(commands.Cog):
                     maxPlayers = None
             except asyncio.TimeoutError:
                 await dmChannel.send(embed=TIMEOUT_EMBED)
-                return
+                return False
             event["maxPlayers"] = maxPlayers
             
         elif choice == "6":
@@ -315,7 +332,7 @@ class Schedule(commands.Cog):
                             json.dump(memberTimeZones, f, indent=4)
                 except asyncio.TimeoutError:
                     await dmChannel.send(embed=TIMEOUT_EMBED)
-                    return
+                    return False
             
             embed = Embed(title="What is the time of the event?", color=Colour.gold(), description=f"Your selected time zone is '{timeZone.zone}'\ne.g. 2021-08-08 9:30 PM")
             await dmChannel.send(embed=embed)
@@ -324,7 +341,7 @@ class Schedule(commands.Cog):
                 eventTime = response.content.strip()
             except asyncio.TimeoutError:
                 await dmChannel.send(embed=TIMEOUT_EMBED)
-                return
+                return False
             try:
                 eventTime = datetimeParse(eventTime)
                 isFormatCorrect = True
@@ -338,7 +355,7 @@ class Schedule(commands.Cog):
                     eventTime = response.content.strip()
                 except asyncio.TimeoutError:
                     await dmChannel.send(embed=TIMEOUT_EMBED)
-                    return
+                    return False
                 try:
                     eventTime = datetimeParse(eventTime)
                     isFormatCorrect = True
@@ -346,6 +363,7 @@ class Schedule(commands.Cog):
                     isFormatCorrect = False
             eventTime = timeZone.localize(eventTime).astimezone(UTC).strftime(EVENT_TIME_FORMAT)
             event["time"] = eventTime
+            reorderEvents = True
             
         elif choice == "7":
             embed = Embed(title="What is the duration of the event?", color=Colour.gold(), description="e.g. 2h\ne.g. 2h 30m\ne.g. 3h 30m")
@@ -355,7 +373,7 @@ class Schedule(commands.Cog):
                 duration = response.content.strip()
             except asyncio.TimeoutError:
                 await dmChannel.send(embed=TIMEOUT_EMBED)
-                return
+                return False
             while not re.match(r"^(([1-9]\d*)?\dh(\s?([1-5])?\dm)?)|(([1-5])?\dm)$", duration):
                 embed = Embed(title="❌ Wrong format", colour=Colour.red(), description="e.g. 2h\ne.g. 2h 30m\ne.g. 4h 30m")
                 await dmChannel.send(embed=embed)
@@ -364,11 +382,17 @@ class Schedule(commands.Cog):
                     duration = response.content.strip()
                 except asyncio.TimeoutError:
                     await dmChannel.send(embed=TIMEOUT_EMBED)
-                    return
+                    return False
             event["duration"] = duration
         
-        embed = Embed(title="✅ Event edited", color=Colour.green())
-        await dmChannel.send(embed=embed)
+        if editingTime > self.lastUpdate:
+            embed = Embed(title="✅ Event edited", color=Colour.green())
+            await dmChannel.send(embed=embed)
+            return reorderEvents
+        else:
+            embed = Embed(title="❌ Schedule was updated while you were editing your event. Try again.", color=Colour.red())
+            await dmChannel.send(embed=embed)
+            return False
     
     async def deleteEvent(self, author, message):
         msg = await author.send("Are you sure you want to delete this event?")

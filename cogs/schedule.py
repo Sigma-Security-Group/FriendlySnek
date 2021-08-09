@@ -455,7 +455,7 @@ class Schedule(commands.Cog):
             except pytz.exceptions.UnknownTimeZoneError:
                 timeZone = UTC
         else:
-            embed = Embed(title=":clock1: It appears that you haven't set your prefered time zone yet. What is your prefered time zone?", color=Colour.gold(), description="Enter `none`, a number from the list or any time zone name from the column 'TZ DATABASE NAME' in the following Wikipedia article (https://en.wikipedia.org/wiki/List_of_tz_database_time_zones) to make your choice. If you enter `none` or something invalid UTC will be assumed and you will be asked again the next time you schedule an event. You can change or delete your prefered time zone at any time with the `/changeTimeZone` command.")
+            embed = Embed(title=":clock1: It appears that you don't have a prefered time zone currently set. What is your prefered time zone?", color=Colour.gold(), description="Enter `none`, a number from the list or any time zone name from the column 'TZ DATABASE NAME' in the following Wikipedia article (https://en.wikipedia.org/wiki/List_of_tz_database_time_zones) to make your choice. If you enter `none` or something invalid UTC will be assumed and you will be asked again the next time you schedule an event. You can change or delete your prefered time zone at any time with the `/changetimezone` command.")
             embed.add_field(name="Time Zone", value="\n".join(f"**{idx}** {tz}" for idx, tz in enumerate(TIME_ZONES, 1)))
             await dmChannel.send(embed=embed)
             try:
@@ -555,14 +555,14 @@ class Schedule(commands.Cog):
         
         await ctx.send("Event scheduled")
     
-    @cog_ext.cog_slash(name="changeTimeZone", guild_ids=[SERVER])
+    @cog_ext.cog_slash(name="changetimezone", guild_ids=[SERVER])
     async def changeTimeZone(self, ctx: SlashContext):
         await ctx.send("Changing Time Zone Preferences")
         
         with open(MEMBER_TIME_ZONES_FILE) as f:
             memberTimeZones = json.load(f)
         
-        embed = Embed(title=":clock1: What is your prefered time zone?", color=Colour.gold(), description="Enter `none`, a number from the list or any time zone name from the column 'TZ DATABASE NAME' in the following Wikipedia article (https://en.wikipedia.org/wiki/List_of_tz_database_time_zones) to make your choice. If you enter `none` or something invalid your current preference will be deleted and you will be asked again the next time you schedule an event. You can change or delete your prefered time zone at any time with the `/changeTimeZone` command.")
+        embed = Embed(title=":clock1: What is your prefered time zone?", color=Colour.gold(), description=(f"Your current time zone preference is '{memberTimeZones[str(ctx.author.id)]}'." if str(ctx.author.id) in memberTimeZones else "You don't have a prefered time zone set.") + " Enter `none`, a number from the list or any time zone name from the column 'TZ DATABASE NAME' in the following Wikipedia article (https://en.wikipedia.org/wiki/List_of_tz_database_time_zones) to make your choice. If you enter `none` or something invalid your current preference will be deleted and you will be asked again the next time you schedule an event. You can change or delete your prefered time zone at any time with the `/changetimezone` command.")
         embed.add_field(name="Time Zone", value="\n".join(f"**{idx}** {tz}" for idx, tz in enumerate(TIME_ZONES, 1)))
         embed.set_footer(text="Enter `cancel` to keep your current preference")
         msg = await ctx.author.send(embed=embed)

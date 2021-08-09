@@ -3,3 +3,5 @@ tokenDev
 __pycache__
 DEBUG
 data.pkl
+data/events.json
+data/memberTimeZones.json

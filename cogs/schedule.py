@@ -126,9 +126,9 @@ class Schedule(commands.Cog):
         declined = [guild.get_member(memberId).display_name for memberId in declinedIds]
         tentative = [guild.get_member(memberId).display_name for memberId in tentativeIds]
         
-        embed.add_field(name=f"Accepted ({len(accepted)}/{event['maxPlayers']}) 🟩" if event["maxPlayers"] is not None else f"Accepted ({len(accepted)}) 🟩", value="\n".join(name for name in accepted) if len(accepted) > 0 else "-")
-        embed.add_field(name=f"Declined ({len(declined)}) 🟥", value="\n".join(name for name in declined) if len(declined) > 0 else "-")
-        embed.add_field(name=f"Tentative ({len(tentative)}) 🟨", value="\n".join(name for name in tentative) if len(tentative) > 0 else "-")
+        embed.add_field(name=f"Accepted ({len(accepted)}/{event['maxPlayers']}) 🟩" if event["maxPlayers"] is not None else f"Accepted ({len(accepted)}) 🟩", value="\n".join(name for name in accepted) if len(accepted) > 0 else "-", inline=False)
+        embed.add_field(name=f"Declined ({len(declined)}) 🟥", value="\n".join(name for name in declined) if len(declined) > 0 else "-", inline=True)
+        embed.add_field(name=f"Tentative ({len(tentative)}) 🟨", value="\n".join(name for name in tentative) if len(tentative) > 0 else "-", inline=True)
         if len(standby) > 0:
             embed.add_field(name=f"Standby ({len(standby)}) :clock:", value="\n".join(name for name in standby), inline=False)
         
@@ -171,7 +171,7 @@ class Schedule(commands.Cog):
                     event["tentative"].append(payload.member.id)
             elif payload.emoji.name == "✏️":
                 if payload.member.id == event["authorId"] or any(role.id == UNIT_STAFF for role in payload.member.roles):
-                    await self.editEvent(event, eventMessage)
+                    await self.editEvent(payload.member, event)
             elif payload.emoji.name == "🗑":
                 if payload.member.id == event["authorId"] or any(role.id == UNIT_STAFF for role in payload.member.roles):
                     await self.deleteEvent(payload.member, eventMessage)
@@ -189,7 +189,7 @@ class Schedule(commands.Cog):
         with open(EVENTS_FILE, "w") as f:
             json.dump(events, f, indent=4)
     
-    async def editEvent(self, event):
+    async def editEvent(self, author, event):
         embed = Embed(title=":pencil2: What would you like to edit?", color=Colour.gold())
         embed.add_field(name="**1** Title", value=f"```{event['title']}```", inline=False)
         embed.add_field(name="**2** Description", value=f"```{event['description']}```", inline=False)
@@ -198,7 +198,7 @@ class Schedule(commands.Cog):
         embed.add_field(name="**5** Max Players", value=f"```{event['maxPlayers']}```", inline=False)
         embed.add_field(name="**6** Time", value=f"```{event['time']} UTC```", inline=False)
         embed.add_field(name="**7** Duration", value=f"```{event['duration']}```", inline=False)
-        msg = await ctx.author.send(embed=embed)
+        msg = await author.send(embed=embed)
         dmChannel = msg.channel
         try:
             response = await self.bot.wait_for("message", timeout=120, check=lambda msg, author=author, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
@@ -220,7 +220,7 @@ class Schedule(commands.Cog):
             embed = Embed(title=":pencil2: What is the title of your event?", color=Colour.gold())
             await dmChannel.send(embed=embed)
             try:
-                response = await self.bot.wait_for("message", timeout=600, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
+                response = await self.bot.wait_for("message", timeout=600, check=lambda msg, author=author, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
                 title = response.content
             except asyncio.TimeoutError:
                 await dmChannel.send(embed=TIMEOUT_EMBED)
@@ -231,7 +231,7 @@ class Schedule(commands.Cog):
             embed = Embed(title=":notepad_spiral: What is the event description?", color=Colour.gold())
             await dmChannel.send(embed=embed)
             try:
-                response = await self.bot.wait_for("message", timeout=1800, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
+                response = await self.bot.wait_for("message", timeout=1800, check=lambda msg, author=author, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
                 description = response.content
             except asyncio.TimeoutError:
                 await dmChannel.send(embed=TIMEOUT_EMBED)
@@ -242,7 +242,7 @@ class Schedule(commands.Cog):
             embed = Embed(title=":notebook_with_decorative_cover: Enter none or a URL \n e.g. Signup sheet / Briefing / OPORD", color=Colour.gold())
             await dmChannel.send(embed=embed)
             try:
-                response = await self.bot.wait_for("message", timeout=600, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
+                response = await self.bot.wait_for("message", timeout=600, check=lambda msg, author=author, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
                 externalURL = response.content
                 if externalURL.strip().lower() == "none":
                     externalURL = None
@@ -256,7 +256,7 @@ class Schedule(commands.Cog):
             embed.add_field(name="Map", value="\n".join(f"**{idx}** {mapName}" for idx, mapName in enumerate(MAPS, 1)))
             await dmChannel.send(embed=embed)
             try:
-                response = await self.bot.wait_for("message", timeout=600, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
+                response = await self.bot.wait_for("message", timeout=600, check=lambda msg, author=author, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
                 eventMap = response.content
                 if eventMap.isdigit() and int(eventMap) <= len(MAPS) and int(eventMap) > 0:
                     eventMap = MAPS[int(eventMap) - 1]
@@ -271,7 +271,7 @@ class Schedule(commands.Cog):
             embed = Embed(title=":family_man_boy_boy: What is the maximum number of attendees?", color=Colour.gold(), description="Enter none or a number above zero and not greater than 100")
             await dmChannel.send(embed=embed)
             try:
-                response = await self.bot.wait_for("message", timeout=600, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
+                response = await self.bot.wait_for("message", timeout=600, check=lambda msg, author=author, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
                 maxPlayers = response.content
                 if maxPlayers.isdigit():
                     maxPlayers = int(maxPlayers)
@@ -286,9 +286,9 @@ class Schedule(commands.Cog):
             with open(MEMBER_TIME_ZONES_FILE) as f:
                 memberTimeZones = json.load(f)
             
-            if str(ctx.author.id) in memberTimeZones:
+            if str(author.id) in memberTimeZones:
                 try:
-                    timeZone = pytz.timezone(memberTimeZones[str(ctx.author.id)])
+                    timeZone = pytz.timezone(memberTimeZones[str(author.id)])
                 except pytz.exceptions.UnknownTimeZoneError:
                     timeZone = UTC
             else:
@@ -296,7 +296,7 @@ class Schedule(commands.Cog):
                 embed.add_field(name="Time Zone", value="\n".join(f"**{idx}** {tz}" for idx, tz in enumerate(TIME_ZONES, 1)))
                 await dmChannel.send(embed=embed)
                 try:
-                    response = await self.bot.wait_for("message", timeout=600, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
+                    response = await self.bot.wait_for("message", timeout=600, check=lambda msg, author=author, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
                     timeZone = response.content
                     saveTimeZonepreference = True
                     if timeZone.isdigit() and int(timeZone) <= len(TIME_ZONES) and int(timeZone) > 0:
@@ -308,7 +308,7 @@ class Schedule(commands.Cog):
                             timeZone = UTC
                             saveTimeZonepreference = False
                     if saveTimeZonepreference:
-                        memberTimeZones[str(ctx.author.id)] = timeZone.zone
+                        memberTimeZones[str(author.id)] = timeZone.zone
                         with open(MEMBER_TIME_ZONES_FILE, "w") as f:
                             json.dump(memberTimeZones, f, indent=4)
                 except asyncio.TimeoutError:
@@ -318,7 +318,7 @@ class Schedule(commands.Cog):
             embed = Embed(title="What is the time of the event?", color=Colour.gold(), description=f"Your selected time zone is '{timeZone.zone}'\ne.g. 2021-08-08 9:30 PM")
             await dmChannel.send(embed=embed)
             try:
-                response = await self.bot.wait_for("message", timeout=600, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
+                response = await self.bot.wait_for("message", timeout=600, check=lambda msg, author=author, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
                 eventTime = response.content.strip()
             except asyncio.TimeoutError:
                 await dmChannel.send(embed=TIMEOUT_EMBED)
@@ -332,7 +332,7 @@ class Schedule(commands.Cog):
                 embed = Embed(title="❌ Wrong format", colour=Colour.red(), description="e.g. 2021-08-08 9:30 PM")
                 await dmChannel.send(embed=embed)
                 try:
-                    response = await self.bot.wait_for("message", timeout=600, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
+                    response = await self.bot.wait_for("message", timeout=600, check=lambda msg, author=author, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
                     eventTime = response.content.strip()
                 except asyncio.TimeoutError:
                     await dmChannel.send(embed=TIMEOUT_EMBED)
@@ -349,7 +349,7 @@ class Schedule(commands.Cog):
             embed = Embed(title="What is the duration of the event?", color=Colour.gold(), description="e.g. 2h\ne.g. 2h 30m\ne.g. 3h 30m")
             await dmChannel.send(embed=embed)
             try:
-                response = await self.bot.wait_for("message", timeout=600, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
+                response = await self.bot.wait_for("message", timeout=600, check=lambda msg, author=author, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
                 duration = response.content.strip()
             except asyncio.TimeoutError:
                 await dmChannel.send(embed=TIMEOUT_EMBED)
@@ -358,7 +358,7 @@ class Schedule(commands.Cog):
                 embed = Embed(title="❌ Wrong format", colour=Colour.red(), description="e.g. 2h\ne.g. 2h 30m\ne.g. 4h 30m")
                 await dmChannel.send(embed=embed)
                 try:
-                    response = await self.bot.wait_for("message", timeout=600, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
+                    response = await self.bot.wait_for("message", timeout=600, check=lambda msg, author=author, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
                     duration = response.content.strip()
                 except asyncio.TimeoutError:
                     await dmChannel.send(embed=TIMEOUT_EMBED)

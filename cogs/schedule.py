@@ -382,9 +382,6 @@ class Schedule(commands.Cog):
     
     @cog_ext.cog_slash(name="schedule", guild_ids=[SERVER])
     async def schedule(self, ctx: SlashContext):
-        if not DEBUG:
-            await ctx.author.send("Schedule comming soon")
-            return
         await ctx.send("Scheduling event")
         
         authorId = ctx.author.id

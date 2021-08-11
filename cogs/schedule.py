@@ -92,10 +92,10 @@ class Schedule(commands.Cog):
         if os.path.exists(EVENTS_FILE):
             with open(EVENTS_FILE) as f:
                 events = json.load(f)
-            for event in sorted(events, key=lambda e: e["time"], reverse=True):
+            for event in sorted(events, key=lambda e: datetime.strptime(e["time"], EVENT_TIME_FORMAT), reverse=True):
                 embed = self.getEventEmbed(event)
                 msg = await channel.send(embed=embed)
-                for emoji in ("🟩", "🟥", "🟨", "✏️", "🗑"):
+                for emoji in (f"<:Green:{GREEN}>", f"<:Red:{RED}>", f"<:Yellow:{YELLOW}>", "✏️", "🗑"):
                     await msg.add_reaction(emoji)
                 event["messageId"] = msg.id
             with open(EVENTS_FILE, "w") as f:
@@ -114,10 +114,10 @@ class Schedule(commands.Cog):
 
         embed.add_field(name="Time", value=f"Start: <t:{round(UTC.localize(datetime.strptime(event['time'], EVENT_TIME_FORMAT)).timestamp())}:F>\n Duration: {event['duration']}", inline=False)
         embed.add_field(name="Map", value="None" if event["map"] is None else event["map"], inline=False)
-        embed.add_field(name="\u200B", value="\u200B")
+        embed.add_field(name="\u200B", value="\u200B", inline=False)
         embed.add_field(name="External URL", value=event["externalURL"], inline=False)
-        embed.add_field(name="\u200B", value="\u200B")
-        embed.add_field(name="\u200B", value="\u200B" )
+        embed.add_field(name="\u200B", value="\u200B", inline=False)
+        embed.add_field(name="\u200B", value="\u200B", inline=False)
         
         acceptedIds = event["accepted"]
         standbyIds = []
@@ -131,9 +131,9 @@ class Schedule(commands.Cog):
         declined = [guild.get_member(memberId).display_name for memberId in declinedIds]
         tentative = [guild.get_member(memberId).display_name for memberId in tentativeIds]
         
-        embed.add_field(name=f"Accepted ({len(accepted)}/{event['maxPlayers']}) 🟩" if event["maxPlayers"] is not None else f"Accepted ({len(accepted)}) 🟩", value="\n".join(name for name in accepted) if len(accepted) > 0 else "-", inline=False)
-        embed.add_field(name=f"Declined ({len(declined)}) 🟥", value="\n".join(name for name in declined) if len(declined) > 0 else "-", inline=True)
-        embed.add_field(name=f"Tentative ({len(tentative)}) 🟨", value="\n".join(name for name in tentative) if len(tentative) > 0 else "-", inline=True)
+        embed.add_field(name=f"Accepted ({len(accepted)}/{event['maxPlayers']}) <:Green:{GREEN}>" if event["maxPlayers"] is not None else f"Accepted ({len(accepted)}) <:Green:{GREEN}>", value="\n".join(name for name in accepted) if len(accepted) > 0 else "-", inline=True)
+        embed.add_field(name=f"Declined ({len(declined)}) <:Red:{RED}>", value="\n".join(name for name in declined) if len(declined) > 0 else "-", inline=True)
+        embed.add_field(name=f"Tentative ({len(tentative)}) <:Yellow:{YELLOW}>", value="\n".join(name for name in tentative) if len(tentative) > 0 else "-", inline=True)
         if len(standby) > 0:
             embed.add_field(name=f"Standby ({len(standby)}) :clock:", value="\n".join(name for name in standby), inline=False)
         
@@ -153,21 +153,21 @@ class Schedule(commands.Cog):
             removeReaction = True
             event = [event for event in events if event["messageId"] == payload.message_id][0]
             eventMessage = await self.bot.get_channel(SCHEDULE).fetch_message(event["messageId"])
-            if payload.emoji.name == "🟩":
+            if payload.emoji.id == GREEN:
                 if payload.member.id in event["declined"]:
                     event["declined"].remove(payload.member.id)
                 if payload.member.id in event["tentative"]:
                     event["tentative"].remove(payload.member.id)
                 if payload.member.id not in event["accepted"]:
                     event["accepted"].append(payload.member.id)
-            elif payload.emoji.name == "🟥":
+            elif payload.emoji.id == RED:
                 if payload.member.id in event["accepted"]:
                     event["accepted"].remove(payload.member.id)
                 if payload.member.id in event["tentative"]:
                     event["tentative"].remove(payload.member.id)
                 if payload.member.id not in event["declined"]:
                     event["declined"].append(payload.member.id)
-            elif payload.emoji.name == "🟨":
+            elif payload.emoji.id == YELLOW:
                 if payload.member.id in event["accepted"]:
                     event["accepted"].remove(payload.member.id)
                 if payload.member.id in event["declined"]:
@@ -180,7 +180,7 @@ class Schedule(commands.Cog):
                     if reorderEvents:
                         with open(EVENTS_FILE, "w") as f:
                             json.dump(events, f, indent=4)
-                        self.updateSchedule()
+                        await self.updateSchedule()
                         return
             elif payload.emoji.name == "🗑":
                 if payload.member.id == event["authorId"] or any(role.id == UNIT_STAFF for role in payload.member.roles):
@@ -213,7 +213,7 @@ class Schedule(commands.Cog):
         embed.add_field(name="**3** External URL", value=f"```{event['externalURL']}```", inline=False)
         embed.add_field(name="**4** Map", value=f"```{event['map']}```", inline=False)
         embed.add_field(name="**5** Max Players", value=f"```{event['maxPlayers']}```", inline=False)
-        embed.add_field(name="**6** Time", value=f"```<t:{round(UTC.localize(datetime.strptime(event['time'], EVENT_TIME_FORMAT)).timestamp())}:F>```", inline=False)
+        embed.add_field(name="**6** Time", value=f"<t:{round(UTC.localize(datetime.strptime(event['time'], EVENT_TIME_FORMAT)).timestamp())}:F>", inline=False)
         embed.add_field(name="**7** Duration", value=f"```{event['duration']}```", inline=False)
         msg = await author.send(embed=embed)
         dmChannel = msg.channel

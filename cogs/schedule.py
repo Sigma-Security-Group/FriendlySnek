@@ -10,7 +10,7 @@ import discord
 from discord import Embed
 from discord import Colour
 from discord.ext import commands
-from discord_slash import cog_ext, SlashContext
+from discord_slash import cog_ext,  
 from discord_slash.utils.manage_components import create_button, create_actionrow
 from discord_slash.model import ButtonStyle
 
@@ -80,12 +80,17 @@ class Schedule(commands.Cog):
         cogsReady["schedule"] = True
         await self.updateSchedule()
     
+    @cog_ext.cog_slash(name="refreshschedule", description="Refresh the schedule. Use this command if an event was accidentally deleted by staff or by another bot without using the reactions.", guild_ids=[SERVER])
+    async def refreshSchedule(self, ctx: SlashContext):
+        await ctx.send("Updating schedule")
+        await self.updateSchedule()
+    
     async def updateSchedule(self):
         if os.path.exists(HOLD_UPDATE_FILE):
             return
         self.lastUpdate = datetime.utcnow()
         channel = self.bot.get_channel(SCHEDULE)
-        await channel.purge(limit=None)
+        await channel.purge(limit=None, check=lambda m: m.author.id in (FRIENDLY_SNEK, FRIENDLY_SNEK_DEV))
         
         await channel.send(f"Welcome to the schedule channel. To schedule an event you can use the **`/schedule`** command and follow the instructions through DMs. If you haven't set a prefered time zone yet you will be promped to do so when you schedule an event. If you want to set, change or delete your time zone preference you can do so with the **`/changetimezone`** command.\n\nIf you have any features suggestions or encounter any bugs, please contact {channel.guild.get_member(ADRIAN).display_name}.")
         
@@ -406,8 +411,8 @@ class Schedule(commands.Cog):
         embed = Embed(title="✅ Event deleted", color=Colour.green())
         await author.send(embed=embed)
     
-    @cog_ext.cog_slash(name="schedule", guild_ids=[SERVER])
-    async def schedule(self, ctx: SlashContext):
+    @cog_ext.cog_slash(name="schedule", description="Create an event to add to the schedule.", guild_ids=[SERVER])
+    async def schedule(self, ctx:  ):
         if os.path.exists(HOLD_UPDATE_FILE):
             await ctx.send("Schedule comming very soon")
             return
@@ -581,8 +586,8 @@ class Schedule(commands.Cog):
         
         await ctx.send("Event scheduled")
     
-    @cog_ext.cog_slash(name="changetimezone", guild_ids=[SERVER])
-    async def changeTimeZone(self, ctx: SlashContext):
+    @cog_ext.cog_slash(name="changetimezone", description="Change your time zone preferences for the next time you schedule an event.", guild_ids=[SERVER])
+    async def changeTimeZone(self, ctx:  ):
         await ctx.send("Changing Time Zone Preferences")
         
         with open(MEMBER_TIME_ZONES_FILE) as f:

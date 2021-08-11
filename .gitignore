@@ -3,5 +3,6 @@ tokenDev
 __pycache__
 DEBUG
 HOLD_UPDATE
+secret.py
 data.pkl
 data/*

@@ -25,6 +25,7 @@ from constants import *
 if DEBUG:
     from constants.debug import *
 from messageAnalysis import runMessageAnalysis
+import secret
 
 COMMAND_PREFIX = "-"
 COGS = [os.path.basename(path)[:-3] for path in glob("cogs/*.py")]
@@ -132,11 +133,9 @@ if __name__ == "__main__":
     else:
         data = defaultData
     
-    with open(("tokenDev" if os.path.exists("tokenDev") else "token") if DEBUG else "token") as f:
-        token = f.read().strip()
     try:
         bot.data = data
-        bot.run(token)
+        bot.run(secret.tokenDev if DEBUG else secret.token)
         log.info("Bot Stopped")
     except Exception:
         log.exception("An error occured")

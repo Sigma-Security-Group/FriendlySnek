@@ -4,7 +4,16 @@ Friendly Snek is a discord bot made for Sigma Security Group that implements cus
 
 # Getting Started
 
-The bot needs a file `token` in the project's root folder which holds the secret token to connect to the bot account. You can also define a file `tokenDev` with the token of the debug bot account if you want to use the debug mode (also useful for dev). All of the constants in `constants/debug.py` are made to work on Adrian's personal BTR (Bot Testing Range). If you want to make the bot work on another test server you will need to replace all the IDs in said file.
+The bot needs a file `secret.py` in the project's root folder which defines a few variables. These are:
+* token (str)
+* tokenDev (str)
+* ftpHost (str)
+* ftpUsername (str)
+* ftpPassword (str)
+
+The way these variables are defined doesn't matter as long as they end up with the appropriate values.
+
+All of the constants in `constants/debug.py` are made to work on Adrian's personal BTR (Bot Testing Range). If you want to make the bot work on another test server you will need to replace all the IDs in said file.
 
 You can easily control whether the bot should use the debug server instead of the Sigma server by creating a file called `DEBUG` in the project's root folder (the file can be empty or contain any gibberish, it doesn't matter).
 

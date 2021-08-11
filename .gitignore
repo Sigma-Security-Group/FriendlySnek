@@ -2,5 +2,6 @@ token
 tokenDev
 __pycache__
 DEBUG
+HOLD_UPDATE
 data.pkl
 data/*

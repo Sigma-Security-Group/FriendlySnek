@@ -6,6 +6,8 @@ import os
 DEBUG = os.path.exists("DEBUG")
 # DEBUG = True  # always use debug server during development
 
+HOLD_UPDATE_FILE = "HOLD_UPDATE"
+
 import asyncio
 
 # Set appropriate event loop policy to avoid runtime errors on windows

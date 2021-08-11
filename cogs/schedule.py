@@ -16,7 +16,7 @@ from discord_slash.model import ButtonStyle
 
 from constants import *
 
-from __main__ import log, cogsReady, DEBUG
+from __main__ import log, cogsReady, DEBUG, HOLD_UPDATE_FILE
 if DEBUG:
     from constants.debug import *
 
@@ -81,7 +81,7 @@ class Schedule(commands.Cog):
         await self.updateSchedule()
     
     async def updateSchedule(self):
-        if not DEBUG:
+        if os.path.exists(HOLD_UPDATE_FILE):
             return
         self.lastUpdate = datetime.utcnow()
         channel = self.bot.get_channel(SCHEDULE)
@@ -408,7 +408,7 @@ class Schedule(commands.Cog):
     
     @cog_ext.cog_slash(name="schedule", guild_ids=[SERVER])
     async def schedule(self, ctx: SlashContext):
-        if not DEBUG:
+        if os.path.exists(HOLD_UPDATE_FILE):
             await ctx.send("Schedule comming very soon")
             return
         await ctx.send("Scheduling event")

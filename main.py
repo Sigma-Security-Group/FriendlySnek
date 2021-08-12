@@ -15,7 +15,6 @@ import platform
 if platform.system() == 'Windows':
 	asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
-import pickle
 from glob import glob
 import discord
 from discord.ext import commands
@@ -123,22 +122,8 @@ async def reload(ctx):
     await ctx.send("Reloaded")
 
 if __name__ == "__main__":
-    defaultData = {"scheduleEvents": {}}
-    if os.path.exists("data.pkl"):
-        try:
-            with open("data.pkl", "rb") as f:
-                data = pickle.load(f)
-        except Exception:
-            data = defaultData
-    else:
-        data = defaultData
-    
     try:
-        bot.data = data
         bot.run(secret.tokenDev if DEBUG else secret.token)
         log.info("Bot Stopped")
     except Exception:
         log.exception("An error occured")
-    finally:
-        with open("data.pkl", "wb") as f:
-            pickle.dump(data, f)

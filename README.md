@@ -8,6 +8,7 @@ The bot needs a file `secret.py` in the project's root folder which defines a fe
 * token (str)
 * tokenDev (str)
 * ftpHost (str)
+* ftpPort (int)
 * ftpUsername (str)
 * ftpPassword (str)
 

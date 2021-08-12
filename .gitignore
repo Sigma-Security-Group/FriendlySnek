@@ -4,4 +4,7 @@ __pycache__
 DEBUG
 HOLD_UPDATE
 secret.py
+tmp
+tmp/*
+data
 data/*

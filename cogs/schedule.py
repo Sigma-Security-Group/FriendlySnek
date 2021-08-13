@@ -80,7 +80,15 @@ class Schedule(commands.Cog):
         cogsReady["schedule"] = True
         await self.updateSchedule()
     
-    @cog_ext.cog_slash(name="refreshschedule", description="Refresh the schedule. Use this command if an event was deleted improperly.", guild_ids=[SERVER])
+    @cog_ext.cog_slash(name="refreshschedule",
+                       description="Refresh the schedule. Use this command if an event was deleted without using the reactions.",
+                       guild_ids=[SERVER],
+                       permissions={
+                           SERVER: [
+                               create_permission(EVERYONE, SlashCommandPermissionType.ROLE, False),
+                               create_permission(UNIT_STAFF, SlashCommandPermissionType.ROLE, True)
+                           ]
+                       })
     async def refreshSchedule(self, ctx: SlashContext):
         await ctx.send("Updating schedule")
         await self.updateSchedule()

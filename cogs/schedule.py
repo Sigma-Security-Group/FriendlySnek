@@ -11,8 +11,9 @@ from discord import Embed
 from discord import Colour
 from discord.ext import commands
 from discord_slash import cog_ext, SlashContext
+from discord_slash.utils.manage_commands import create_permission
 from discord_slash.utils.manage_components import create_button, create_actionrow
-from discord_slash.model import ButtonStyle
+from discord_slash.model import ButtonStyle, SlashCommandPermissionType
 
 from constants import *
 

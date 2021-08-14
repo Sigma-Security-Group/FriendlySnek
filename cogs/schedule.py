@@ -2,7 +2,7 @@ import os
 import re
 import json
 import asyncio
-from datetime import datetime
+from datetime import datetime, timedelta
 from dateutil.parser import parse as datetimeParse
 import pytz
 
@@ -127,7 +127,7 @@ class Schedule(commands.Cog):
         
         embed = Embed(title=event["title"], description=event["description"], color=Colour.green())
 
-        embed.add_field(name="Time", value=f"Start: <t:{round(UTC.localize(datetime.strptime(event['time'], EVENT_TIME_FORMAT)).timestamp())}:F>\n Duration: {event['duration']}", inline=False)
+        embed.add_field(name="Time", value=f"Start: <t:{round(UTC.localize(datetime.strptime(event['time'], EVENT_TIME_FORMAT)).timestamp())}:F>\n Duration: {event['duration']}\nEnd: <t:{round(UTC.localize(datetime.strptime(event['endTime'], EVENT_TIME_FORMAT)).timestamp())}:F>", inline=False)
         embed.add_field(name="Map", value="None" if event["map"] is None else event["map"], inline=False)
         embed.add_field(name="\u200B", value="\u200B", inline=False)
         embed.add_field(name="External URL", value=event["externalURL"], inline=False)
@@ -376,8 +376,15 @@ class Schedule(commands.Cog):
                     isFormatCorrect = True
                 except ValueError:
                     isFormatCorrect = False
-            eventTime = timeZone.localize(eventTime).astimezone(UTC).strftime(EVENT_TIME_FORMAT)
-            event["time"] = eventTime
+            eventTime = timeZone.localize(eventTime).astimezone(UTC)
+            duration = event["duration"]
+            d = timedelta(
+                hours=int(duration.split("h")[0].strip()) if "h" in duration else 0,
+                minutes=int(duration.split("h")[-1].replace("m", "").strip()) if duration.strip()[-1] != "h" else 0
+            )
+            endTime = eventTime + d
+            event["time"] = eventTime.strftime(EVENT_TIME_FORMAT)
+            event["endTime"] = endTime.strftime(EVENT_TIME_FORMAT)
             reorderEvents = True
             
         elif choice == "7":
@@ -389,7 +396,7 @@ class Schedule(commands.Cog):
             except asyncio.TimeoutError:
                 await dmChannel.send(embed=TIMEOUT_EMBED)
                 return False
-            while not re.match(r"^(([1-9]\d*)?\dh(\s?([1-5])?\dm)?)|(([1-5])?\dm)$", duration):
+            while not re.match(r"^((([1-9]\d*)?\dh(\s?([0-5])?\dm?)?)|(([0-5])?\dm))$", duration):
                 embed = Embed(title="❌ Wrong format", colour=Colour.red(), description="e.g. 2h\ne.g. 2h 30m\ne.g. 4h 30m")
                 await dmChannel.send(embed=embed)
                 try:
@@ -398,7 +405,14 @@ class Schedule(commands.Cog):
                 except asyncio.TimeoutError:
                     await dmChannel.send(embed=TIMEOUT_EMBED)
                     return False
+            eventTime = UTC.localize(datetime.strptime(event["time"], EVENT_TIME_FORMAT))
+            d = timedelta(
+                hours=int(duration.split("h")[0].strip()) if "h" in duration else 0,
+                minutes=int(duration.split("h")[-1].replace("m", "").strip()) if duration.strip()[-1] != "h" else 0
+            )
+            endTime = eventTime + d
             event["duration"] = duration
+            event["endTime"] = endTime.strftime(EVENT_TIME_FORMAT)
         
         if editingTime > self.lastUpdate:
             embed = Embed(title="✅ Event edited", color=Colour.green())
@@ -546,7 +560,7 @@ class Schedule(commands.Cog):
                 isFormatCorrect = True
             except ValueError:
                 isFormatCorrect = False
-        eventTime = timeZone.localize(eventTime).astimezone(UTC).strftime(EVENT_TIME_FORMAT)
+        eventTime = timeZone.localize(eventTime).astimezone(UTC)
         
         embed = Embed(title="What is the duration of the event?", color=Colour.gold(), description="e.g. 2h\ne.g. 2h 30m\ne.g. 3h 30m")
         await dmChannel.send(embed=embed)
@@ -556,7 +570,7 @@ class Schedule(commands.Cog):
         except asyncio.TimeoutError:
             await dmChannel.send(embed=TIMEOUT_EMBED)
             return
-        while not re.match(r"^(([1-9]\d*)?\dh(\s?([1-5])?\dm)?)|(([1-5])?\dm)$", duration):
+        while not re.match(r"^((([1-9]\d*)?\dh(\s?([0-5])?\dm?)?)|(([0-5])?\dm))$", duration):
             embed = Embed(title="❌ Wrong format", colour=Colour.red(), description="e.g. 2h\ne.g. 2h 30m\ne.g. 4h 30m")
             await dmChannel.send(embed=embed)
             try:
@@ -565,6 +579,12 @@ class Schedule(commands.Cog):
             except asyncio.TimeoutError:
                 await dmChannel.send(embed=TIMEOUT_EMBED)
                 return
+        
+        d = timedelta(
+            hours=int(duration.split("h")[0].strip()) if "h" in duration else 0,
+            minutes=int(duration.split("h")[-1].replace("m", "").strip()) if duration.strip()[-1] != "h" else 0
+        )
+        endTime = eventTime + d
         
         if os.path.exists(EVENTS_FILE):
             with open(EVENTS_FILE) as f:
@@ -578,7 +598,8 @@ class Schedule(commands.Cog):
             "externalURL": externalURL,
             "maxPlayers": maxPlayers,
             "map": eventMap,
-            "time": eventTime,
+            "time": eventTime.strftime(EVENT_TIME_FORMAT),
+            "endTime": endTime.strftime(EVENT_TIME_FORMAT),
             "duration": duration,
             "messageId": None,
             "accepted": [],

@@ -17,9 +17,10 @@ from discord_slash.model import ButtonStyle, SlashCommandPermissionType
 
 from constants import *
 
-from __main__ import log, cogsReady, DEBUG, HOLD_UPDATE_FILE
+from __main__ import log, cogsReady, DEBUG
 if DEBUG:
     from constants.debug import *
+import anvilController
 
 EVENT_TIME_FORMAT = "%Y-%m-%d %I:%M %p"
 EVENTS_FILE = "data/events.json"
@@ -95,7 +96,7 @@ class Schedule(commands.Cog):
         await self.updateSchedule()
     
     async def updateSchedule(self):
-        if os.path.exists(HOLD_UPDATE_FILE):
+        if not anvilController.isCommingSoonWall1Open():
             return
         self.lastUpdate = datetime.utcnow()
         channel = self.bot.get_channel(SCHEDULE)
@@ -422,7 +423,7 @@ class Schedule(commands.Cog):
     
     @cog_ext.cog_slash(name="schedule", description="Create an event to add to the schedule.", guild_ids=[SERVER])
     async def schedule(self, ctx: SlashContext):
-        if os.path.exists(HOLD_UPDATE_FILE):
+        if not anvilController.isCommingSoonWall1Open():
             await ctx.send("Schedule comming very soon")
             return
         await ctx.send("Scheduling event")

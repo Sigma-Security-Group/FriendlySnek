@@ -18,9 +18,10 @@ from discord_slash.model import ButtonStyle, SlashCommandPermissionType
 
 from constants import *
 
-from __main__ import log, cogsReady, DEBUG, HOLD_UPDATE_FILE
+from __main__ import log, cogsReady, DEBUG
 if DEBUG:
     from constants.debug import *
+import anvilController
 import secret
 
 TIMEOUT_EMBED = Embed(title="Time ran out. Try again. :anguished: ", color=Colour.red())
@@ -75,7 +76,7 @@ class MissionUploader(commands.Cog):
                            ]
                        })
     async def uploadMission(self, ctx: SlashContext):
-        if os.path.exists(HOLD_UPDATE_FILE):
+        if not anvilController.isCommingSoonWall2Open():
             await ctx.send("Mission Upload comming soon")
             return
         await ctx.send("Upload mission file in DMs")

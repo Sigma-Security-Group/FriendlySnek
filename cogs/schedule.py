@@ -435,12 +435,12 @@ class Schedule(commands.Cog):
         embed = Embed(title="✅ Event deleted", color=Colour.green())
         await author.send(embed=embed)
     
-    @cog_ext.cog_slash(name="schedule", description="Create an event to add to the schedule.", guild_ids=[SERVER])
-    async def schedule(self, ctx: SlashContext):
+    @cog_ext.cog_slash(name="operation", description="Create an event to add to the schedule.", guild_ids=[SERVER])
+    async def operation(self, ctx: SlashContext):
         if not anvilController.isCommingSoonWall1Open():
             await ctx.send("Schedule comming very soon")
             return
-        await ctx.send("Scheduling event")
+        await ctx.send("Scheduling... Standby for :b:op")
         
         authorId = ctx.author.id
 

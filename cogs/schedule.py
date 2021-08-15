@@ -224,7 +224,7 @@ class Schedule(commands.Cog):
         editingTime = datetime.utcnow()
         embed = Embed(title=":pencil2: What would you like to edit?", color=Colour.gold())
         embed.add_field(name="**1** Title", value=f"```{event['title']}```", inline=False)
-        embed.add_field(name="**2** Description", value=f"```{event['description']}```", inline=False)
+        embed.add_field(name="**2** Description", value=f"```{event['description'] if len(event['description']) < 1000 else event['description'][:1000] + ' [...]'}```", inline=False)
         embed.add_field(name="**3** External URL", value=f"```{event['externalURL']}```", inline=False)
         embed.add_field(name="**4** Map", value=f"```{event['map']}```", inline=False)
         embed.add_field(name="**5** Max Players", value=f"```{event['maxPlayers']}```", inline=False)
@@ -262,7 +262,7 @@ class Schedule(commands.Cog):
             event["title"] = title
             
         elif choice == "2":
-            embed = Embed(title=":notepad_spiral: What is the event description?", color=Colour.gold())
+            embed = Embed(title=":notepad_spiral: What is the event description?", description=f"Current description:\n\n{event['description']}", color=Colour.gold())
             await dmChannel.send(embed=embed)
             try:
                 response = await self.bot.wait_for("message", timeout=1800, check=lambda msg, author=author, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)

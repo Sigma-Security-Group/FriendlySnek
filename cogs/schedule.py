@@ -127,11 +127,11 @@ class Schedule(commands.Cog):
         
         embed = Embed(title=event["title"], description=event["description"], color=Colour.green())
 
-        embed.add_field(name="Time", value=f"Start: <t:{round(UTC.localize(datetime.strptime(event['time'], EVENT_TIME_FORMAT)).timestamp())}:F>\n Duration: {event['duration']}\nEnd: <t:{round(UTC.localize(datetime.strptime(event['endTime'], EVENT_TIME_FORMAT)).timestamp())}:F>", inline=False)
+        embed.add_field(name="Time", value=f"<t:{round(UTC.localize(datetime.strptime(event['time'], EVENT_TIME_FORMAT)).timestamp())}:F> - <t:{round(UTC.localize(datetime.strptime(event['endTime'], EVENT_TIME_FORMAT)).timestamp())}:t>", inline=False)
+        embed.add_field(name="Duration", value=event['duration'], inline=False)
         embed.add_field(name="Map", value="None" if event["map"] is None else event["map"], inline=False)
         embed.add_field(name="\u200B", value="\u200B", inline=False)
-        embed.add_field(name="External URL", value=event["externalURL"], inline=False)
-        embed.add_field(name="\u200B", value="\u200B", inline=False)
+        embed.add_field(name="External URL", value="None" if event["externalURL"] is None else event["externalURL"], inline=False)
         embed.add_field(name="\u200B", value="\u200B", inline=False)
         
         acceptedIds = event["accepted"]

@@ -102,7 +102,7 @@ class Schedule(commands.Cog):
         channel = self.bot.get_channel(SCHEDULE)
         await channel.purge(limit=None, check=lambda m: m.author.id in (FRIENDLY_SNEK, FRIENDLY_SNEK_DEV))
         
-        await channel.send(f"Welcome to the schedule channel. To schedule an event you can use the **`/schedule`** command and follow the instructions through DMs. If you haven't set a prefered time zone yet you will be promped to do so when you schedule an event. If you want to set, change or delete your time zone preference you can do so with the **`/changetimezone`** command.\n\nIf you have any features suggestions or encounter any bugs, please contact {channel.guild.get_member(ADRIAN).display_name}.")
+        await channel.send(f"Welcome to the schedule channel. To schedule an event you can use the **`/operation`** command and follow the instructions through DMs. If you haven't set a prefered time zone yet you will be promped to do so when you schedule an event. If you want to set, change or delete your time zone preference you can do so with the **`/changetimezone`** command.\n\nIf you have any features suggestions or encounter any bugs, please contact {channel.guild.get_member(ADRIAN).display_name}.")
         
         if os.path.exists(EVENTS_FILE):
             with open(EVENTS_FILE) as f:

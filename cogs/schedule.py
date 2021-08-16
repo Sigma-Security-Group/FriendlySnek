@@ -224,7 +224,7 @@ class Schedule(commands.Cog):
         editingTime = datetime.utcnow()
         embed = Embed(title=":pencil2: What would you like to edit?", color=Colour.gold())
         embed.add_field(name="**1** Title", value=f"```{event['title']}```", inline=False)
-        embed.add_field(name="**2** Description", value=f"```{event['description'] if len(event['description']) < 1000 else event['description'][:1000] + ' [...]'}```", inline=False)
+        embed.add_field(name="**2** Description", value=f"```{event['description'] if len(event['description']) < 500 else event['description'][:500] + ' [...]'}```", inline=False)
         embed.add_field(name="**3** External URL", value=f"```{event['externalURL']}```", inline=False)
         embed.add_field(name="**4** Map", value=f"```{event['map']}```", inline=False)
         embed.add_field(name="**5** Max Players", value=f"```{event['maxPlayers']}```", inline=False)

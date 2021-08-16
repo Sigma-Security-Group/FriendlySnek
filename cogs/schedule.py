@@ -134,17 +134,12 @@ class Schedule(commands.Cog):
         embed.add_field(name="External URL", value="None" if event["externalURL"] is None else event["externalURL"], inline=False)
         embed.add_field(name="\u200B", value="\u200B", inline=False)
         
-        acceptedIds = event["accepted"]
-        standbyIds = []
-        if event["maxPlayers"] is not None and len(acceptedIds) > event["maxPlayers"]:
-            acceptedIds, standbyIds = acceptedIds[:event["maxPlayers"]], acceptedIds[event["maxPlayers"]:]
-        declinedIds = event["declined"]
-        tentativeIds = event["tentative"]
-        
-        accepted = [guild.get_member(memberId).display_name for memberId in acceptedIds]
-        standby = [guild.get_member(memberId).display_name for memberId in standbyIds]
-        declined = [guild.get_member(memberId).display_name for memberId in declinedIds]
-        tentative = [guild.get_member(memberId).display_name for memberId in tentativeIds]
+        accepted = [member.display_name for memberId in event["accepted"] if (member := guild.get_member(memberId)) is not None]
+        standby = []
+        if event["maxPlayers"] is not None and len(accepted) > event["maxPlayers"]:
+            accepted, standBy = accepted[:event["maxPlayers"]], accepted[event["maxPlayers"]:]
+        declined = [member.display_name for memberId in event["declined"] if (member := guild.get_member(memberId)) is not None]
+        tentative = [member.display_name for memberId in event["tentative"] if (member := guild.get_member(memberId)) is not None]
         
         embed.add_field(name=f"Accepted ({len(accepted)}/{event['maxPlayers']}) <:Green:{GREEN}>" if event["maxPlayers"] is not None else f"Accepted ({len(accepted)}) <:Green:{GREEN}>", value="\n".join(name for name in accepted) if len(accepted) > 0 else "-", inline=True)
         embed.add_field(name=f"Declined ({len(declined)}) <:Red:{RED}>", value="\n".join(name for name in declined) if len(declined) > 0 else "-", inline=True)

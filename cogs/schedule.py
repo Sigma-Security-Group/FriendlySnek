@@ -262,7 +262,7 @@ class Schedule(commands.Cog):
             event["title"] = title
             
         elif choice == "2":
-            embed = Embed(title=":notepad_spiral: What is the event description?", description=f"Current description:\n\n```{event['description']}```", color=Colour.gold())
+            embed = Embed(title=":notepad_spiral: What is the event description?", description=f"Current description:\n```{event['description']}```", color=Colour.gold())
             await dmChannel.send(embed=embed)
             try:
                 response = await self.bot.wait_for("message", timeout=1800, check=lambda msg, author=author, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)

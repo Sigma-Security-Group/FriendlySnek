@@ -54,7 +54,13 @@ MAPS = [
     "Colombia",
     "Panthera",
     "Panthera Winter",
-    "Sugar Lake"
+    "Sugar Lake",
+    "Rosche, Germany",
+    "Vinjesvingen",
+    "Al Salman, Iraq",
+    "Gulfcoast Islands",
+    "Lingor/Dingor Island",
+    "GOS Lesokovets",
 ]
 
 UTC = pytz.utc

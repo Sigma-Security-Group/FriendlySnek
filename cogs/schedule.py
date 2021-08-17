@@ -389,7 +389,7 @@ class Schedule(commands.Cog):
             reorderEvents = True
             
         elif choice == "7":
-            embed = Embed(title="What is the duration of the event?", color=Colour.gold(), description="e.g. 2h\ne.g. 2h 30m\ne.g. 3h 30m")
+            embed = Embed(title="What is the duration of the event?", color=Colour.gold(), description="e.g. 30m\ne.g. 2h\ne.g. 4h 30m\ne.g. 2h30")
             await dmChannel.send(embed=embed)
             try:
                 response = await self.bot.wait_for("message", timeout=600, check=lambda msg, author=author, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
@@ -398,7 +398,7 @@ class Schedule(commands.Cog):
                 await dmChannel.send(embed=TIMEOUT_EMBED)
                 return False
             while not re.match(r"^((([1-9]\d*)?\dh(\s?([0-5])?\dm?)?)|(([0-5])?\dm))$", duration):
-                embed = Embed(title="❌ Wrong format", colour=Colour.red(), description="e.g. 2h\ne.g. 2h 30m\ne.g. 4h 30m")
+                embed = Embed(title="❌ Wrong format", colour=Colour.red(), description="e.g. 30m\ne.g. 2h\ne.g. 4h 30m\ne.g. 2h30")
                 await dmChannel.send(embed=embed)
                 try:
                     response = await self.bot.wait_for("message", timeout=600, check=lambda msg, author=author, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
@@ -563,7 +563,7 @@ class Schedule(commands.Cog):
                 isFormatCorrect = False
         eventTime = timeZone.localize(eventTime).astimezone(UTC)
         
-        embed = Embed(title="What is the duration of the event?", color=Colour.gold(), description="e.g. 2h\ne.g. 2h 30m\ne.g. 3h 30m")
+        embed = Embed(title="What is the duration of the event?", color=Colour.gold(), description="e.g. 30m\ne.g. 2h\ne.g. 4h 30m\ne.g. 2h30")
         await dmChannel.send(embed=embed)
         try:
             response = await self.bot.wait_for("message", timeout=600, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
@@ -572,7 +572,7 @@ class Schedule(commands.Cog):
             await dmChannel.send(embed=TIMEOUT_EMBED)
             return
         while not re.match(r"^((([1-9]\d*)?\dh(\s?([0-5])?\dm?)?)|(([0-5])?\dm))$", duration):
-            embed = Embed(title="❌ Wrong format", colour=Colour.red(), description="e.g. 2h\ne.g. 2h 30m\ne.g. 4h 30m")
+            embed = Embed(title="❌ Wrong format", colour=Colour.red(), description="e.g. 30m\ne.g. 2h\ne.g. 4h 30m\ne.g. 2h30")
             await dmChannel.send(embed=embed)
             try:
                 response = await self.bot.wait_for("message", timeout=600, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)

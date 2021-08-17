@@ -293,13 +293,33 @@ class Schedule(commands.Cog):
             try:
                 response = await self.bot.wait_for("message", timeout=600, check=lambda msg, author=author, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
                 eventMap = response.content
+                mapOK = True
                 if eventMap.isdigit() and int(eventMap) <= len(MAPS) and int(eventMap) > 0:
                     eventMap = MAPS[int(eventMap) - 1]
-                else:
+                elif eventMap.strip().lower() == "none":
                     eventMap = None
+                else:
+                    mapOK = False
             except asyncio.TimeoutError:
                 await dmChannel.send(embed=TIMEOUT_EMBED)
                 return False
+            while not mapOK:
+                embed = Embed(title=":globe_with_meridians: Enter Your Map Number", color=Colour.gold(), description="Choose from the list below or enter none for no map")
+                embed.add_field(name="Map", value="\n".join(f"**{idx}** {mapName}" for idx, mapName in enumerate(MAPS, 1)))
+                await dmChannel.send(embed=embed)
+                try:
+                    response = await self.bot.wait_for("message", timeout=600, check=lambda msg, author=author, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
+                    eventMap = response.content
+                    mapOK = True
+                    if eventMap.isdigit() and int(eventMap) <= len(MAPS) and int(eventMap) > 0:
+                        eventMap = MAPS[int(eventMap) - 1]
+                    elif eventMap.strip().lower() == "none":
+                        eventMap = None
+                    else:
+                        mapOK = False
+                except asyncio.TimeoutError:
+                    await dmChannel.send(embed=TIMEOUT_EMBED)
+                    return False
             event["map"] = eventMap
             
         elif choice == "5":
@@ -475,19 +495,39 @@ class Schedule(commands.Cog):
             await dmChannel.send(embed=TIMEOUT_EMBED)
             return
         
-        embed = Embed(title=":globe_with_meridians: Enter Your Map Number", color=Colour.gold(), description="Choose from the list below or enter none for no map")
+        embed = Embed(title=":globe_with_meridians: Enter Your Map Number", color=Colour.gold(), description="Choose a number from the list below or enter `none` for no map")
         embed.add_field(name="Map", value="\n".join(f"**{idx}** {mapName}" for idx, mapName in enumerate(MAPS, 1)))
         await dmChannel.send(embed=embed)
         try:
             response = await self.bot.wait_for("message", timeout=600, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
             eventMap = response.content
+            mapOK = True
             if eventMap.isdigit() and int(eventMap) <= len(MAPS) and int(eventMap) > 0:
                 eventMap = MAPS[int(eventMap) - 1]
-            else:
+            elif eventMap.strip().lower() == "none":
                 eventMap = None
+            else:
+                mapOK = False
         except asyncio.TimeoutError:
             await dmChannel.send(embed=TIMEOUT_EMBED)
             return
+        while not mapOK:
+            embed = Embed(title="❌ Wrong format", color=Colour.red(), description="Choose a number from the list below or enter `none` for no map")
+            embed.add_field(name="Map", value="\n".join(f"**{idx}** {mapName}" for idx, mapName in enumerate(MAPS, 1)))
+            await dmChannel.send(embed=embed)
+            try:
+                response = await self.bot.wait_for("message", timeout=600, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
+                eventMap = response.content
+                mapOK = True
+                if eventMap.isdigit() and int(eventMap) <= len(MAPS) and int(eventMap) > 0:
+                    eventMap = MAPS[int(eventMap) - 1]
+                elif eventMap.strip().lower() == "none":
+                    eventMap = None
+                else:
+                    mapOK = False
+            except asyncio.TimeoutError:
+                await dmChannel.send(embed=TIMEOUT_EMBED)
+                return
         
         embed = Embed(title=":family_man_boy_boy: What is the maximum number of attendees?", color=Colour.gold(), description="Enter none or a number above zero and not greater than 100")
         await dmChannel.send(embed=embed)

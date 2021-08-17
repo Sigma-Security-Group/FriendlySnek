@@ -223,7 +223,7 @@ class Schedule(commands.Cog):
     
     async def editEvent(self, author, event):
         editingTime = datetime.utcnow()
-        log.debug(f"{author.display_name}({author.nale}#{author.discriminator}) is editing an event")
+        log.debug(f"{author.display_name}({author.name}#{author.discriminator}) is editing an event")
         embed = Embed(title=":pencil2: What would you like to edit?", color=Colour.gold())
         embed.add_field(name="**1** Title", value=f"```{event['title']}```", inline=False)
         embed.add_field(name="**2** Description", value=f"```{event['description'] if len(event['description']) < 500 else event['description'][:500] + ' [...]'}```", inline=False)
@@ -439,12 +439,12 @@ class Schedule(commands.Cog):
         if editingTime > self.lastUpdate:
             embed = Embed(title="✅ Event edited", color=Colour.green())
             await dmChannel.send(embed=embed)
-            log.debug(f"{author.display_name}({author.nale}#{author.discriminator}) edited an event")
+            log.debug(f"{author.display_name}({author.name}#{author.discriminator}) edited an event")
             return reorderEvents
         else:
             embed = Embed(title="❌ Schedule was updated while you were editing your event. Try again.", color=Colour.red())
             await dmChannel.send(embed=embed)
-            log.debug(f"{author.display_name}({author.nale}#{author.discriminator}) was editing an event but schedule was updated")
+            log.debug(f"{author.display_name}({author.name}#{author.discriminator}) was editing an event but schedule was updated")
             return False
     
     async def deleteEvent(self, author, message):
@@ -465,7 +465,7 @@ class Schedule(commands.Cog):
             await ctx.send("Schedule comming very soon")
             return
         await ctx.send("Scheduling... Standby for :b:op")
-        log.debug(f"{ctx.author.display_name}({ctx.author.nale}#{ctx.author.discriminator}) is creating an event")
+        log.debug(f"{ctx.author.display_name}({ctx.author.name}#{ctx.author.discriminator}) is creating an event")
         
         authorId = ctx.author.id
 
@@ -657,7 +657,7 @@ class Schedule(commands.Cog):
         
         embed = Embed(title="✅ Event created", color=Colour.green())
         await dmChannel.send(embed=embed)
-        log.debug(f"{ctx.author.display_name}({ctx.author.nale}#{ctx.author.discriminator}) created an event")
+        log.debug(f"{ctx.author.display_name}({ctx.author.name}#{ctx.author.discriminator}) created an event")
         
         await self.updateSchedule()
         

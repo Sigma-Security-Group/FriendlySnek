@@ -417,7 +417,7 @@ class Schedule(commands.Cog):
             except asyncio.TimeoutError:
                 await dmChannel.send(embed=TIMEOUT_EMBED)
                 return False
-            while not re.match(r"^((([1-9]\d*)?\dh(\s?([0-5])?\dm?)?)|(([0-5])?\dm))$", duration):
+            while not re.match(r"^\s*((([1-9]\d*)?\d\s*h(\s*([0-5])?\d\s*m?)?)|(([0-5])?\d\s*m))\s*$", duration):
                 embed = Embed(title="❌ Wrong format", colour=Colour.red(), description="e.g. 30m\ne.g. 2h\ne.g. 4h 30m\ne.g. 2h30")
                 await dmChannel.send(embed=embed)
                 try:
@@ -611,7 +611,7 @@ class Schedule(commands.Cog):
         except asyncio.TimeoutError:
             await dmChannel.send(embed=TIMEOUT_EMBED)
             return
-        while not re.match(r"^((([1-9]\d*)?\dh(\s?([0-5])?\dm?)?)|(([0-5])?\dm))$", duration):
+        while not re.match(r"^\s*((([1-9]\d*)?\d\s*h(\s*([0-5])?\d\s*m?)?)|(([0-5])?\d\s*m))\s*$", duration):
             embed = Embed(title="❌ Wrong format", colour=Colour.red(), description="e.g. 30m\ne.g. 2h\ne.g. 4h 30m\ne.g. 2h30")
             await dmChannel.send(embed=embed)
             try:

@@ -29,6 +29,8 @@ MISSIONS_UPLOADED_FILE = "data/missionsUploaded.log"
 UPLOAD_TIME_FORMAT = "%Y-%m-%d %I:%M %p"
 FTP_MISSIONS_DIR = "/144.48.106.194_2316/mpmissions"
 
+UTC = pytz.utc
+
 class MissionUploader(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
@@ -80,6 +82,7 @@ class MissionUploader(commands.Cog):
             await ctx.send("Mission Upload comming soon")
             return
         await ctx.send("Upload mission file in DMs")
+        log.info(f"{ctx.author.display_name}({ctx.author.nale}#{ctx.author.discriminator}) is uploading a mission file")
         
         embed = Embed(title="Upload the mission file you want to put on the server.", color=Colour.gold())
         msg = await ctx.author.send(embed=embed)
@@ -116,21 +119,22 @@ class MissionUploader(commands.Cog):
                     ftp.storbinary(f"STOR {attachment.filename}", f)
         
         filename = attachment.filename
-        utcTime = datetime.utcnow().strftime(UPLOAD_TIME_FORMAT)
+        utcTime = UTC.localize(datetime.utcnow())
         member = f"{ctx.author.display_name}({ctx.author.name}#{ctx.author.discriminator})"
         memberId = ctx.author.id
         
         with open(MISSIONS_UPLOADED_FILE, "a") as f:
-            f.write(f"\nFilename: {filename}\nUTC Time: {utcTime}\nMember: {member}\nMember ID: {memberId}\n")
+            f.write(f"\nFilename: {filename}\nUTC Time: {utcTime.strftime(UPLOAD_TIME_FORMAT)}\nMember: {member}\nMember ID: {memberId}\n")
         
         botLogChannel = self.bot.get_channel(BOT)
         embed = Embed(title="Mission file uploaded", color=Colour.blue())
         embed.add_field(name="Filename", value=filename)
-        embed.add_field(name="UTC Time", value=utcTime)
+        embed.add_field(name="Time", value=f"<t:{utcTime.timestamp()}:F>")
         embed.add_field(name="Member", value=member)
         embed.add_field(name="Member ID", value=memberId)
         await botLogChannel.send(embed=embed)
         
+        log.info(f"{ctx.author.display_name}({ctx.author.nale}#{ctx.author.discriminator}) uploaded a mission file")
         embed = Embed(title="Mission file uploaded", color=Colour.green())
         await dmChannel.send(embed=embed)
 

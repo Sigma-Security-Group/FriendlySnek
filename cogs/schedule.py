@@ -102,7 +102,7 @@ class Schedule(commands.Cog):
         await self.updateSchedule()
     
     async def updateSchedule(self):
-        if not anvilController.isCommingSoonWall1Open():
+        if not anvilController.isScheduleWallOpen():
             return
         self.lastUpdate = datetime.utcnow()
         channel = self.bot.get_channel(SCHEDULE)
@@ -222,6 +222,9 @@ class Schedule(commands.Cog):
             json.dump(events, f, indent=4)
     
     async def editEvent(self, author, event):
+        if not anvilController.isScheduleWallOpen():
+            await author.send("Schedule is currently disabled for technical reasons. Try again later")
+            return
         editingTime = datetime.utcnow()
         log.debug(f"{author.display_name}({author.name}#{author.discriminator}) is editing an event")
         embed = Embed(title=":pencil2: What would you like to edit?", color=Colour.gold())
@@ -461,8 +464,8 @@ class Schedule(commands.Cog):
     
     @cog_ext.cog_slash(name="operation", description="Create an event to add to the schedule.", guild_ids=[SERVER])
     async def operation(self, ctx: SlashContext):
-        if not anvilController.isCommingSoonWall1Open():
-            await ctx.send("Schedule comming very soon")
+        if not anvilController.isScheduleWallOpen():
+            await ctx.send("Schedule is currently disabled for technical reasons. Try again later")
             return
         await ctx.send("Scheduling... Standby for :b:op")
         log.debug(f"{ctx.author.display_name}({ctx.author.name}#{ctx.author.discriminator}) is creating an event")

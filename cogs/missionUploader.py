@@ -78,8 +78,8 @@ class MissionUploader(commands.Cog):
                            ]
                        })
     async def uploadMission(self, ctx: SlashContext):
-        if not anvilController.isCommingSoonWall2Open():
-            await ctx.send("Mission Upload comming soon")
+        if not anvilController.isMissionUploaderWallOpen():
+            await ctx.send("Mission Upload is currently disabled for technical reasons. Try again later")
             return
         await ctx.send("Upload mission file in DMs")
         log.info(f"{ctx.author.display_name}({ctx.author.name}#{ctx.author.discriminator}) is uploading a mission file")

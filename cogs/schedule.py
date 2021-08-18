@@ -102,9 +102,9 @@ class Schedule(commands.Cog):
         await self.updateSchedule()
     
     async def updateSchedule(self):
+        self.lastUpdate = datetime.utcnow()
         if not anvilController.isScheduleWallOpen():
             return
-        self.lastUpdate = datetime.utcnow()
         channel = self.bot.get_channel(SCHEDULE)
         await channel.purge(limit=None, check=lambda m: m.author.id in (FRIENDLY_SNEK, FRIENDLY_SNEK_DEV))
         

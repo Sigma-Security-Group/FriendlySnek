@@ -129,7 +129,7 @@ class MissionUploader(commands.Cog):
         botLogChannel = self.bot.get_channel(BOT)
         embed = Embed(title="Mission file uploaded", color=Colour.blue())
         embed.add_field(name="Filename", value=filename)
-        embed.add_field(name="Time", value=f"<t:{utcTime.timestamp()}:F>")
+        embed.add_field(name="Time", value=f"<t:{round(utcTime.timestamp())}:F>")
         embed.add_field(name="Member", value=member)
         embed.add_field(name="Member ID", value=memberId)
         await botLogChannel.send(embed=embed)

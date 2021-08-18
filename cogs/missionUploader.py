@@ -82,7 +82,7 @@ class MissionUploader(commands.Cog):
             await ctx.send("Mission Upload comming soon")
             return
         await ctx.send("Upload mission file in DMs")
-        log.info(f"{ctx.author.display_name}({ctx.author.nale}#{ctx.author.discriminator}) is uploading a mission file")
+        log.info(f"{ctx.author.display_name}({ctx.author.name}#{ctx.author.discriminator}) is uploading a mission file")
         
         embed = Embed(title="Upload the mission file you want to put on the server.", color=Colour.gold())
         msg = await ctx.author.send(embed=embed)
@@ -134,7 +134,7 @@ class MissionUploader(commands.Cog):
         embed.add_field(name="Member ID", value=memberId)
         await botLogChannel.send(embed=embed)
         
-        log.info(f"{ctx.author.display_name}({ctx.author.nale}#{ctx.author.discriminator}) uploaded a mission file")
+        log.info(f"{ctx.author.display_name}({ctx.author.name}#{ctx.author.discriminator}) uploaded a mission file")
         embed = Embed(title="Mission file uploaded", color=Colour.green())
         await dmChannel.send(embed=embed)
 

@@ -301,7 +301,7 @@ class Schedule(commands.Cog):
         embed.add_field(name="**1** Title", value=f"```{event['title']}```", inline=False)
         embed.add_field(name="**2** Description", value=f"```{event['description'] if len(event['description']) < 500 else event['description'][:500] + ' [...]'}```", inline=False)
         embed.add_field(name="**3** External URL", value=f"```{event['externalURL']}```", inline=False)
-        embed.add_field(name="**4** Reservable Roles", value="```\n" + "\n".join(event["reservableRoles"]) + "```", inline=False)
+        embed.add_field(name="**4** Reservable Roles", value="```\n" + "\n".join(event["reservableRoles"].keys()) + "```" if event["reservableRoles"] is not None else "None", inline=False)
         embed.add_field(name="**5** Map", value=f"```{event['map']}```", inline=False)
         embed.add_field(name="**6** Max Players", value=f"```{event['maxPlayers']}```", inline=False)
         embed.add_field(name="**7** Time", value=f"<t:{round(UTC.localize(datetime.strptime(event['time'], EVENT_TIME_FORMAT)).timestamp())}:F>", inline=False)
@@ -372,7 +372,7 @@ class Schedule(commands.Cog):
                 return
             if reservableRolesPresent:
                 embed = Embed(title="Type each reservable role in its own line (in a single message)", color=Colour.gold(), description="Press Shift + Enter to insert a newline. Editting the name of a role will make it vacant, but roles which keep their exact names will keep their reservations")
-                embed.add_field(name="Current reservable roles", value=("```\n" + "\n".join(event["reservableRoles"]) + "```") if event["reservableRoles"] is not None else "None")
+                embed.add_field(name="Current reservable roles", value=("```\n" + "\n".join(event["reservableRoles"].keys()) + "```") if event["reservableRoles"] is not None else "None")
                 await dmChannel.send(embed=embed)
                 try:
                     response = await self.bot.wait_for("message", timeout=600, check=lambda msg, author=author, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)

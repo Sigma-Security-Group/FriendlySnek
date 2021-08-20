@@ -376,13 +376,14 @@ class Schedule(commands.Cog):
                 await dmChannel.send(embed=embed)
                 try:
                     response = await self.bot.wait_for("message", timeout=600, check=lambda msg, author=author, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
-                    reservableRoles = {role.strip(): event["reservableRoles"][role.strip()] if role.strip() in event["reservableRoles"] else None for role in response.content.split("\n") if len(role.strip()) > 0}
+                    reservableRoles = {role.strip(): event["reservableRoles"][role.strip()] if event["reservableRoles"] is not None and role.strip() in event["reservableRoles"] else None for role in response.content.split("\n") if len(role.strip()) > 0}
                 except asyncio.TimeoutError:
                     await dmChannel.send(embed=TIMEOUT_EMBED)
                     return False
             else:
                 reservableRoles = None
             event["reservableRoles"] = reservableRoles
+            reorderEvents = True
             
         elif choice == "5":
             embed = Embed(title=":globe_with_meridians: Enter Your Map Number", color=Colour.gold(), description="Choose from the list below or enter none for no map")

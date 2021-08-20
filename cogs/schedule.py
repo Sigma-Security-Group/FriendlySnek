@@ -474,6 +474,9 @@ class Schedule(commands.Cog):
                     return False
             
             embed = Embed(title="What is the time of the event?", color=Colour.gold(), description=f"Your selected time zone is '{timeZone.zone}'\ne.g. 2021-08-08 9:30 PM")
+            utcNow = datetime.utcnow()
+            nextHalfHour = utcNow + (datetime.min - utcNow) % timedelta(minutes=30)
+            embed.add_field(name="Current Time", value=UTC.localize(nextHalfHour).astimezone(timeZone).strftime(EVENT_TIME_FORMAT))
             await dmChannel.send(embed=embed)
             try:
                 response = await self.bot.wait_for("message", timeout=600, check=lambda msg, author=author, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
@@ -701,6 +704,9 @@ class Schedule(commands.Cog):
                 return
         
         embed = Embed(title="What is the time of the event?", color=Colour.gold(), description=f"Your selected time zone is '{timeZone.zone}'\ne.g. 2021-08-08 9:30 PM")
+        utcNow = datetime.utcnow()
+        nextHalfHour = utcNow + (datetime.min - utcNow) % timedelta(minutes=30)
+        embed.add_field(name="Current Time", value=UTC.localize(nextHalfHour).astimezone(timeZone).strftime(EVENT_TIME_FORMAT))
         await dmChannel.send(embed=embed)
         try:
             response = await self.bot.wait_for("message", timeout=600, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)

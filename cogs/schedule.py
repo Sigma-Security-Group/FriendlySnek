@@ -116,7 +116,11 @@ class Schedule(commands.Cog):
             for event in sorted(events, key=lambda e: datetime.strptime(e["time"], EVENT_TIME_FORMAT), reverse=True):
                 embed = self.getEventEmbed(event)
                 msg = await channel.send(embed=embed)
-                for emoji in (f"<:Green:{GREEN}>", f"<:Red:{RED}>", f"<:Yellow:{YELLOW}>", "✏️", "🗑"):
+                if event["reservableRoles"] is not None:
+                    emojis = (f"<:Green:{GREEN}>", f"<:Red:{RED}>", f"<:Yellow:{YELLOW}>", f"<:Blue:{BLUE}>", "✏️", "🗑")
+                else:
+                    emojis = (f"<:Green:{GREEN}>", f"<:Red:{RED}>", f"<:Yellow:{YELLOW}>", "✏️", "🗑")
+                for emoji in emojis:
                     await msg.add_reaction(emoji)
                 event["messageId"] = msg.id
             with open(EVENTS_FILE, "w") as f:
@@ -133,17 +137,22 @@ class Schedule(commands.Cog):
         
         embed = Embed(title=event["title"], description=event["description"], color=Colour.green())
 
+        if event["reservableRoles"] is not None:
+            embed.add_field(name="\u200B", value="\u200B", inline=False)
+            embed.add_field(name=f"Reservable Roles <:Blue:{BLUE}>", value="\n".join(f"{roleName} - {(member.display_name if (member := guild.get_member(memberId)) is not None else 'VACANT') if memberId is not None else 'VACANT'}" for roleName, memberId in event["reservableRoles"].items()), inline=False)
+        embed.add_field(name="\u200B", value="\u200B", inline=False)
         embed.add_field(name="Time", value=f"<t:{round(UTC.localize(datetime.strptime(event['time'], EVENT_TIME_FORMAT)).timestamp())}:F> - <t:{round(UTC.localize(datetime.strptime(event['endTime'], EVENT_TIME_FORMAT)).timestamp())}:t>", inline=False)
         embed.add_field(name="Duration", value=event['duration'], inline=False)
-        embed.add_field(name="Map", value="None" if event["map"] is None else event["map"], inline=False)
-        embed.add_field(name="\u200B", value="\u200B", inline=False)
-        embed.add_field(name="External URL", value="None" if event["externalURL"] is None else event["externalURL"], inline=False)
+        embed.add_field(name="Map", value="Unspecified" if event["map"] is None else event["map"], inline=False)
+        if event["externalURL"] is not None:
+            embed.add_field(name="\u200B", value="\u200B", inline=False)
+            embed.add_field(name="External URL", value=event["externalURL"], inline=False)
         embed.add_field(name="\u200B", value="\u200B", inline=False)
         
         accepted = [member.display_name for memberId in event["accepted"] if (member := guild.get_member(memberId)) is not None]
         standby = []
         if event["maxPlayers"] is not None and len(accepted) > event["maxPlayers"]:
-            accepted, standBy = accepted[:event["maxPlayers"]], accepted[event["maxPlayers"]:]
+            accepted, standby = accepted[:event["maxPlayers"]], accepted[event["maxPlayers"]:]
         declined = [member.display_name for memberId in event["declined"] if (member := guild.get_member(memberId)) is not None]
         tentative = [member.display_name for memberId in event["tentative"] if (member := guild.get_member(memberId)) is not None]
         
@@ -183,6 +192,9 @@ class Schedule(commands.Cog):
                     event["tentative"].remove(payload.member.id)
                 if payload.member.id not in event["declined"]:
                     event["declined"].append(payload.member.id)
+                for roleName in event["reservableRoles"]:
+                    if event["reservableRoles"][roleName] == payload.member.id:
+                        event["reservableRoles"][roleName] = None
             elif payload.emoji.id == YELLOW:
                 if payload.member.id in event["accepted"]:
                     event["accepted"].remove(payload.member.id)
@@ -190,6 +202,11 @@ class Schedule(commands.Cog):
                     event["declined"].remove(payload.member.id)
                 if payload.member.id not in event["tentative"]:
                     event["tentative"].append(payload.member.id)
+                for roleName in event["reservableRoles"]:
+                    if event["reservableRoles"][roleName] == payload.member.id:
+                        event["reservableRoles"][roleName] = None
+            elif payload.emoji.id == BLUE:
+                await self.reserveRole(payload.member, event)
             elif payload.emoji.name == "✏️":
                 if payload.member.id == event["authorId"] or any(role.id == UNIT_STAFF for role in payload.member.roles):
                     reorderEvents = await self.editEvent(payload.member, event)
@@ -221,6 +238,59 @@ class Schedule(commands.Cog):
         with open(EVENTS_FILE, "w") as f:
             json.dump(events, f, indent=4)
     
+    async def reserveRole(self, member, event):
+        reservationTime = datetime.utcnow()
+        guild = self.bot.get_guild(SERVER)
+
+        vacantRoles = [roleName for roleName, memberId in event["reservableRoles"].items() if memberId is None or guild.get_member(memberId) is None]
+        currentRole = [roleName for roleName, memberId in event["reservableRoles"].items() if memberId == member.id][0] if member.id in event["reservableRoles"].values() else None
+        
+        embed = Embed(title="Which role would you like to reserve?", color=Colour.gold(), description="Enter a number from the list, `none` to free up the role you currently have reserved. If you enter anything invalid it will cancel the role reservation")
+        embed.add_field(name="Your current role", value=currentRole if currentRole is not None else "None", inline=False)
+        embed.add_field(name="Vacant roles", value="\n".join(f"**{idx}**   {roleName}" for idx, roleName in enumerate(vacantRoles, 1)) if len(vacantRoles) > 0 else "None", inline=False)
+        
+        msg = await member.send(embed=embed)
+        dmChannel = msg.channel
+        try:
+            response = await self.bot.wait_for("message", timeout=300, check=lambda msg, author=member, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
+            reservedRole = response.content
+            mapOK = True
+            if reservedRole.isdigit() and int(reservedRole) <= len(vacantRoles) and int(reservedRole) > 0:
+                reservedRole = vacantRoles[int(reservedRole) - 1]
+            elif reservedRole.strip().lower() == "none":
+                reservedRole = None
+            else:
+                embed = Embed(title="Role reservation cancelled", color=Colour.red())
+                await dmChannel.send(embed=embed)
+                return
+        except asyncio.TimeoutError:
+            await dmChannel.send(embed=TIMEOUT_EMBED)
+            return
+        if reservedRole is not None:
+            if member.id in event["declined"]:
+                event["declined"].remove(member.id)
+            if member.id in event["tentative"]:
+                event["tentative"].remove(member.id)
+            if member.id not in event["accepted"]:
+                event["accepted"].append(member.id)
+            for roleName in event["reservableRoles"]:
+                if event["reservableRoles"][roleName] == member.id:
+                    event["reservableRoles"][roleName] = None
+            if event["reservableRoles"][reservedRole] is None or guild.get_member(event["reservableRoles"][reservedRole]) is None:
+                event["reservableRoles"][reservedRole] = member.id
+        else:
+            for roleName in event["reservableRoles"]:
+                if event["reservableRoles"][roleName] == member.id:
+                    event["reservableRoles"][roleName] = None
+        
+        if reservationTime > self.lastUpdate:
+            embed = Embed(title="Role reservation completed", color=Colour.green())
+            await dmChannel.send(embed=embed)
+        else:
+            embed = Embed(title="❌ Schedule was updated while you were reserving a role. Try again.", color=Colour.red())
+            await dmChannel.send(embed=embed)
+            log.debug(f"{author.display_name}({author.name}#{author.discriminator}) was reserving a role but schedule was updated")
+    
     async def editEvent(self, author, event):
         if not anvilController.isScheduleWallOpen():
             await author.send("Schedule is currently disabled for technical reasons. Try again later")
@@ -231,24 +301,25 @@ class Schedule(commands.Cog):
         embed.add_field(name="**1** Title", value=f"```{event['title']}```", inline=False)
         embed.add_field(name="**2** Description", value=f"```{event['description'] if len(event['description']) < 500 else event['description'][:500] + ' [...]'}```", inline=False)
         embed.add_field(name="**3** External URL", value=f"```{event['externalURL']}```", inline=False)
-        embed.add_field(name="**4** Map", value=f"```{event['map']}```", inline=False)
-        embed.add_field(name="**5** Max Players", value=f"```{event['maxPlayers']}```", inline=False)
-        embed.add_field(name="**6** Time", value=f"<t:{round(UTC.localize(datetime.strptime(event['time'], EVENT_TIME_FORMAT)).timestamp())}:F>", inline=False)
-        embed.add_field(name="**7** Duration", value=f"```{event['duration']}```", inline=False)
+        embed.add_field(name="**4** Reservable Roles", value="```\n" + "\n".join(event["reservableRoles"]) + "```", inline=False)
+        embed.add_field(name="**5** Map", value=f"```{event['map']}```", inline=False)
+        embed.add_field(name="**6** Max Players", value=f"```{event['maxPlayers']}```", inline=False)
+        embed.add_field(name="**7** Time", value=f"<t:{round(UTC.localize(datetime.strptime(event['time'], EVENT_TIME_FORMAT)).timestamp())}:F>", inline=False)
+        embed.add_field(name="**8** Duration", value=f"```{event['duration']}```", inline=False)
         msg = await author.send(embed=embed)
         dmChannel = msg.channel
         try:
             response = await self.bot.wait_for("message", timeout=120, check=lambda msg, author=author, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
-            choice = response.content
+            choice = response.content.strip()
         except asyncio.TimeoutError:
             await dmChannel.send(embed=TIMEOUT_EMBED)
             return False
-        while choice not in ("1", "2", "3", "4", "5", "6", "7"):
+        while choice not in ("1", "2", "3", "4", "5", "6", "7", "8"):
             embed = Embed(title="❌ Wrong input", colour=Colour.red(), description="Enter the number of an attribute")
             await dmChannel.send(embed=embed)
             try:
                 response = await self.bot.wait_for("message", timeout=120, check=lambda msg, author=author, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
-                choice = response.content
+                choice = response.content.strip()
             except asyncio.TimeoutError:
                 await dmChannel.send(embed=TIMEOUT_EMBED)
                 return False
@@ -256,7 +327,7 @@ class Schedule(commands.Cog):
         reorderEvents = False
 
         if choice == "1":
-            embed = Embed(title=":pencil2: What is the title of your event?", color=Colour.gold())
+            embed = Embed(title=":pencil2: What is the title of your operation?", color=Colour.gold())
             await dmChannel.send(embed=embed)
             try:
                 response = await self.bot.wait_for("message", timeout=600, check=lambda msg, author=author, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
@@ -291,8 +362,31 @@ class Schedule(commands.Cog):
             event["externalURL"] = externalURL
             
         elif choice == "4":
+            embed = Embed(title="Are there any reservable roles?", color=Colour.gold(), description="Type yes or y if there are reservable roles or type anything else if there are not")
+            await dmChannel.send(embed=embed)
+            try:
+                response = await self.bot.wait_for("message", timeout=600, check=lambda msg, author=author, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
+                reservableRolesPresent = response.content.strip().lower() in ("yes", "y")
+            except asyncio.TimeoutError:
+                await dmChannel.send(embed=TIMEOUT_EMBED)
+                return
+            if reservableRolesPresent:
+                embed = Embed(title="Type each reservable role in its own line (in a single message)", color=Colour.gold(), description="Press Shift + Enter to insert a newline. Editting the name of a role will make it vacant, but roles which keep their exact names will keep their reservations")
+                embed.add_field(name="Current reservable roles", value=("```\n" + "\n".join(event["reservableRoles"]) + "```") if event["reservableRoles"] is not None else "None")
+                await dmChannel.send(embed=embed)
+                try:
+                    response = await self.bot.wait_for("message", timeout=600, check=lambda msg, author=author, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
+                    reservableRoles = {role.strip(): event["reservableRoles"][role.strip()] if role.strip() in event["reservableRoles"] else None for role in response.content.split("\n") if len(role.strip()) > 0}
+                except asyncio.TimeoutError:
+                    await dmChannel.send(embed=TIMEOUT_EMBED)
+                    return False
+            else:
+                reservableRoles = None
+            event["reservableRoles"] = reservableRoles
+            
+        elif choice == "5":
             embed = Embed(title=":globe_with_meridians: Enter Your Map Number", color=Colour.gold(), description="Choose from the list below or enter none for no map")
-            embed.add_field(name="Map", value="\n".join(f"**{idx}** {mapName}" for idx, mapName in enumerate(MAPS, 1)))
+            embed.add_field(name="Map", value="\n".join(f"**{idx}**   {mapName}" for idx, mapName in enumerate(MAPS, 1)))
             await dmChannel.send(embed=embed)
             try:
                 response = await self.bot.wait_for("message", timeout=600, check=lambda msg, author=author, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
@@ -309,7 +403,7 @@ class Schedule(commands.Cog):
                 return False
             while not mapOK:
                 embed = Embed(title=":globe_with_meridians: Enter Your Map Number", color=Colour.gold(), description="Choose from the list below or enter none for no map")
-                embed.add_field(name="Map", value="\n".join(f"**{idx}** {mapName}" for idx, mapName in enumerate(MAPS, 1)))
+                embed.add_field(name="Map", value="\n".join(f"**{idx}**   {mapName}" for idx, mapName in enumerate(MAPS, 1)))
                 await dmChannel.send(embed=embed)
                 try:
                     response = await self.bot.wait_for("message", timeout=600, check=lambda msg, author=author, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
@@ -326,7 +420,7 @@ class Schedule(commands.Cog):
                     return False
             event["map"] = eventMap
             
-        elif choice == "5":
+        elif choice == "6":
             embed = Embed(title=":family_man_boy_boy: What is the maximum number of attendees?", color=Colour.gold(), description="Enter none or a number above zero and not greater than 100")
             await dmChannel.send(embed=embed)
             try:
@@ -341,7 +435,7 @@ class Schedule(commands.Cog):
                 return False
             event["maxPlayers"] = maxPlayers
             
-        elif choice == "6":
+        elif choice == "7":
             with open(MEMBER_TIME_ZONES_FILE) as f:
                 memberTimeZones = json.load(f)
             
@@ -352,7 +446,7 @@ class Schedule(commands.Cog):
                     timeZone = UTC
             else:
                 embed = Embed(title=":clock1: It appears that you haven't set your prefered time zone yet. What is your prefered time zone?", color=Colour.gold(), description="Enter `none`, a number from the list or any time zone name from the column 'TZ DATABASE NAME' in the following Wikipedia article (https://en.wikipedia.org/wiki/List_of_tz_database_time_zones) to make your choice. If you enter `none` or something invalid UTC will be assumed and you will be asked again the next time you schedule an event. You can change or delete your prefered time zone at any time with the `/changeTimeZone` command.")
-                embed.add_field(name="Time Zone", value="\n".join(f"**{idx}** {tz}" for idx, tz in enumerate(TIME_ZONES, 1)))
+                embed.add_field(name="Time Zone", value="\n".join(f"**{idx}**   {tz}" for idx, tz in enumerate(TIME_ZONES, 1)))
                 await dmChannel.send(embed=embed)
                 try:
                     response = await self.bot.wait_for("message", timeout=600, check=lambda msg, author=author, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
@@ -412,7 +506,7 @@ class Schedule(commands.Cog):
             event["endTime"] = endTime.strftime(EVENT_TIME_FORMAT)
             reorderEvents = True
             
-        elif choice == "7":
+        elif choice == "8":
             embed = Embed(title="What is the duration of the event?", color=Colour.gold(), description="e.g. 30m\ne.g. 2h\ne.g. 4h 30m\ne.g. 2h30")
             await dmChannel.send(embed=embed)
             try:
@@ -445,7 +539,7 @@ class Schedule(commands.Cog):
             log.debug(f"{author.display_name}({author.name}#{author.discriminator}) edited an event")
             return reorderEvents
         else:
-            embed = Embed(title="❌ Schedule was updated while you were editing your event. Try again.", color=Colour.red())
+            embed = Embed(title="❌ Schedule was updated while you were editing your operation. Try again.", color=Colour.red())
             await dmChannel.send(embed=embed)
             log.debug(f"{author.display_name}({author.name}#{author.discriminator}) was editing an event but schedule was updated")
             return False
@@ -472,7 +566,7 @@ class Schedule(commands.Cog):
         
         authorId = ctx.author.id
 
-        embed = Embed(title=":pencil2: What is the title of your event?", color=Colour.gold())
+        embed = Embed(title=":pencil2: What is the title of your operation?", color=Colour.gold())
         msg = await ctx.author.send(embed=embed)
         dmChannel = msg.channel
         try:
@@ -502,8 +596,28 @@ class Schedule(commands.Cog):
             await dmChannel.send(embed=TIMEOUT_EMBED)
             return
         
+        embed = Embed(title="Are there any reservable roles?", color=Colour.gold(), description="Type yes or y if there are reservable roles or type anything else if there are not")
+        await dmChannel.send(embed=embed)
+        try:
+            response = await self.bot.wait_for("message", timeout=600, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
+            reservableRolesPresent = response.content.strip().lower() in ("yes", "y")
+        except asyncio.TimeoutError:
+            await dmChannel.send(embed=TIMEOUT_EMBED)
+            return
+        if reservableRolesPresent:
+            embed = Embed(title="Type each reservable role in its own line (in a single message)", color=Colour.gold(), description="Press Shift + Enter to insert a newline")
+            await dmChannel.send(embed=embed)
+            try:
+                response = await self.bot.wait_for("message", timeout=600, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
+                reservableRoles = {role.strip(): None for role in response.content.split("\n") if len(role.strip()) > 0}
+            except asyncio.TimeoutError:
+                await dmChannel.send(embed=TIMEOUT_EMBED)
+                return
+        else:
+            reservableRoles = None
+        
         embed = Embed(title=":globe_with_meridians: Enter Your Map Number", color=Colour.gold(), description="Choose a number from the list below or enter `none` for no map")
-        embed.add_field(name="Map", value="\n".join(f"**{idx}** {mapName}" for idx, mapName in enumerate(MAPS, 1)))
+        embed.add_field(name="Map", value="\n".join(f"**{idx}**   {mapName}" for idx, mapName in enumerate(MAPS, 1)))
         await dmChannel.send(embed=embed)
         try:
             response = await self.bot.wait_for("message", timeout=600, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
@@ -520,7 +634,7 @@ class Schedule(commands.Cog):
             return
         while not mapOK:
             embed = Embed(title="❌ Wrong format", color=Colour.red(), description="Choose a number from the list below or enter `none` for no map")
-            embed.add_field(name="Map", value="\n".join(f"**{idx}** {mapName}" for idx, mapName in enumerate(MAPS, 1)))
+            embed.add_field(name="Map", value="\n".join(f"**{idx}**   {mapName}" for idx, mapName in enumerate(MAPS, 1)))
             await dmChannel.send(embed=embed)
             try:
                 response = await self.bot.wait_for("message", timeout=600, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
@@ -559,7 +673,7 @@ class Schedule(commands.Cog):
                 timeZone = UTC
         else:
             embed = Embed(title=":clock1: It appears that you don't have a prefered time zone currently set. What is your prefered time zone?", color=Colour.gold(), description="Enter `none`, a number from the list or any time zone name from the column 'TZ DATABASE NAME' in the following Wikipedia article (https://en.wikipedia.org/wiki/List_of_tz_database_time_zones) to make your choice. If you enter `none` or something invalid UTC will be assumed and you will be asked again the next time you schedule an event. You can change or delete your prefered time zone at any time with the `/changetimezone` command.")
-            embed.add_field(name="Time Zone", value="\n".join(f"**{idx}** {tz}" for idx, tz in enumerate(TIME_ZONES, 1)))
+            embed.add_field(name="Time Zone", value="\n".join(f"**{idx}**   {tz}" for idx, tz in enumerate(TIME_ZONES, 1)))
             await dmChannel.send(embed=embed)
             try:
                 response = await self.bot.wait_for("message", timeout=600, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
@@ -644,6 +758,7 @@ class Schedule(commands.Cog):
             "title": title,
             "description": description,
             "externalURL": externalURL,
+            "reservableRoles": reservableRoles,
             "maxPlayers": maxPlayers,
             "map": eventMap,
             "time": eventTime.strftime(EVENT_TIME_FORMAT),
@@ -664,7 +779,7 @@ class Schedule(commands.Cog):
         
         await self.updateSchedule()
         
-        await ctx.send("Event scheduled")
+        await ctx.send(":b:op on schedule")
     
     @cog_ext.cog_slash(name="changetimezone", description="Change your time zone preferences for the next time you schedule an event.", guild_ids=[SERVER])
     async def changeTimeZone(self, ctx: SlashContext):
@@ -674,7 +789,7 @@ class Schedule(commands.Cog):
             memberTimeZones = json.load(f)
         
         embed = Embed(title=":clock1: What is your prefered time zone?", color=Colour.gold(), description=(f"Your current time zone preference is '{memberTimeZones[str(ctx.author.id)]}'." if str(ctx.author.id) in memberTimeZones else "You don't have a prefered time zone set.") + " Enter `none`, a number from the list or any time zone name from the column 'TZ DATABASE NAME' in the following Wikipedia article (https://en.wikipedia.org/wiki/List_of_tz_database_time_zones) to make your choice. If you enter `none` or something invalid your current preference will be deleted and you will be asked again the next time you schedule an event. You can change or delete your prefered time zone at any time with the `/changetimezone` command.")
-        embed.add_field(name="Time Zone", value="\n".join(f"**{idx}** {tz}" for idx, tz in enumerate(TIME_ZONES, 1)))
+        embed.add_field(name="Time Zone", value="\n".join(f"**{idx}**   {tz}" for idx, tz in enumerate(TIME_ZONES, 1)))
         embed.set_footer(text="Enter `cancel` to keep your current preference")
         msg = await ctx.author.send(embed=embed)
         dmChannel = msg.channel

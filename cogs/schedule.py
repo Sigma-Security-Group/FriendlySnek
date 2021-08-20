@@ -139,7 +139,7 @@ class Schedule(commands.Cog):
 
         if event["reservableRoles"] is not None:
             embed.add_field(name="\u200B", value="\u200B", inline=False)
-            embed.add_field(name=f"Reservable Roles <:Blue:{BLUE}>", value="\n".join(f"{roleName} - {(member.display_name if (member := guild.get_member(memberId)) is not None else 'VACANT') if memberId is not None else 'VACANT'}" for roleName, memberId in event["reservableRoles"].items()), inline=False)
+            embed.add_field(name=f"Reservable Roles <:Blue:{BLUE}>", value="\n".join(f"{roleName} - {(member.display_name if (member := guild.get_member(memberId)) is not None else '**VACANT**') if memberId is not None else '**VACANT**'}" for roleName, memberId in event["reservableRoles"].items()), inline=False)
         embed.add_field(name="\u200B", value="\u200B", inline=False)
         embed.add_field(name="Time", value=f"<t:{round(UTC.localize(datetime.strptime(event['time'], EVENT_TIME_FORMAT)).timestamp())}:F> - <t:{round(UTC.localize(datetime.strptime(event['endTime'], EVENT_TIME_FORMAT)).timestamp())}:t>", inline=False)
         embed.add_field(name="Duration", value=event['duration'], inline=False)

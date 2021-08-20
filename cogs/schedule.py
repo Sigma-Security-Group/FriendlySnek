@@ -192,9 +192,10 @@ class Schedule(commands.Cog):
                     event["tentative"].remove(payload.member.id)
                 if payload.member.id not in event["declined"]:
                     event["declined"].append(payload.member.id)
-                for roleName in event["reservableRoles"]:
-                    if event["reservableRoles"][roleName] == payload.member.id:
-                        event["reservableRoles"][roleName] = None
+                if event["reservableRoles"] is not None:
+                    for roleName in event["reservableRoles"]:
+                        if event["reservableRoles"][roleName] == payload.member.id:
+                            event["reservableRoles"][roleName] = None
             elif payload.emoji.id == YELLOW:
                 if payload.member.id in event["accepted"]:
                     event["accepted"].remove(payload.member.id)
@@ -202,9 +203,10 @@ class Schedule(commands.Cog):
                     event["declined"].remove(payload.member.id)
                 if payload.member.id not in event["tentative"]:
                     event["tentative"].append(payload.member.id)
-                for roleName in event["reservableRoles"]:
-                    if event["reservableRoles"][roleName] == payload.member.id:
-                        event["reservableRoles"][roleName] = None
+                if event["reservableRoles"] is not None:
+                    for roleName in event["reservableRoles"]:
+                        if event["reservableRoles"][roleName] == payload.member.id:
+                            event["reservableRoles"][roleName] = None
             elif payload.emoji.id == BLUE:
                 await self.reserveRole(payload.member, event)
             elif payload.emoji.name == "✏️":
@@ -273,15 +275,17 @@ class Schedule(commands.Cog):
                 event["tentative"].remove(member.id)
             if member.id not in event["accepted"]:
                 event["accepted"].append(member.id)
-            for roleName in event["reservableRoles"]:
-                if event["reservableRoles"][roleName] == member.id:
-                    event["reservableRoles"][roleName] = None
-            if event["reservableRoles"][reservedRole] is None or guild.get_member(event["reservableRoles"][reservedRole]) is None:
-                event["reservableRoles"][reservedRole] = member.id
+            if event["reservableRoles"] is not None:
+                for roleName in event["reservableRoles"]:
+                    if event["reservableRoles"][roleName] == member.id:
+                        event["reservableRoles"][roleName] = None
+                if event["reservableRoles"][reservedRole] is None or guild.get_member(event["reservableRoles"][reservedRole]) is None:
+                    event["reservableRoles"][reservedRole] = member.id
         else:
-            for roleName in event["reservableRoles"]:
-                if event["reservableRoles"][roleName] == member.id:
-                    event["reservableRoles"][roleName] = None
+            if event["reservableRoles"] is not None:
+                for roleName in event["reservableRoles"]:
+                    if event["reservableRoles"][roleName] == member.id:
+                        event["reservableRoles"][roleName] = None
         
         if reservationTime > self.lastUpdate:
             embed = Embed(title="Role reservation completed", color=Colour.green())

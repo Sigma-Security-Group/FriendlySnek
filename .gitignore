@@ -2,4 +2,10 @@ token
 tokenDev
 __pycache__
 DEBUG
-data.pkl
+HOLD_UPDATE
+secret.py
+tmp
+tmp/*
+data
+data/*
+anvilController.json

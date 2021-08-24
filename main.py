@@ -13,7 +13,6 @@ import platform
 if platform.system() == 'Windows':
 	asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
-import pickle
 from glob import glob
 import discord
 from discord.ext import commands
@@ -23,6 +22,7 @@ from constants import *
 if DEBUG:
     from constants.debug import *
 from messageAnalysis import runMessageAnalysis
+import secret
 
 COMMAND_PREFIX = "-"
 COGS = [os.path.basename(path)[:-3] for path in glob("cogs/*.py")]
@@ -30,6 +30,7 @@ cogsReady = {cog: False for cog in COGS}
 
 intents = discord.Intents.all()
 bot = commands.Bot(COMMAND_PREFIX, intents=intents)
+bot.ready = False
 slash = SlashCommand(bot, override_type=True, sync_commands=True, sync_on_cog_reload=True)
 for cog in COGS:
     bot.load_extension(f"cogs.{cog}")
@@ -40,6 +41,7 @@ newcomers = set()
 async def on_ready():
     while not all(cogsReady.values()):
         await asyncio.sleep(1)
+    bot.ready = True
     log.info("Bot Ready")
 
 @bot.event
@@ -79,7 +81,7 @@ async def on_member_join(member):
     log.debug("Member joined")
     await asyncio.sleep(24 * 60 * 60)  # seconds
     if member.id not in newcomers:
-        log.debug(f"Newcomer is no longer in the server {updatedMember.display_name}({updatedMember.name}#{updatedMember.discriminator})")
+        log.debug(f"Newcomer is no longer in the server {member.display_name}({member.name}#{member.discriminator})")
         return
     currentMembers = await guild.fetch_members().flatten()
     if member in currentMembers:
@@ -118,24 +120,8 @@ async def reload(ctx):
     await ctx.send("Reloaded")
 
 if __name__ == "__main__":
-    defaultData = {"scheduleEvents": {}}
-    if os.path.exists("data.pkl"):
-        try:
-            with open("data.pkl", "rb") as f:
-                data = pickle.load(f)
-        except Exception:
-            data = defaultData
-    else:
-        data = defaultData
-    
-    with open(("tokenDev" if os.path.exists("tokenDev") else "token") if DEBUG else "token") as f:
-        token = f.read().strip()
     try:
-        bot.data = data
-        bot.run(token)
+        bot.run(secret.tokenDev if DEBUG else secret.token)
         log.info("Bot Stopped")
     except Exception:
         log.exception("An error occured")
-    finally:
-        with open("data.pkl", "wb") as f:
-            pickle.dump(data, f)

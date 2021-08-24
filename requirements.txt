@@ -1,2 +1,4 @@
 discord.py[voice]
 discord-py-slash-command
+pytz
+anvil-uplink

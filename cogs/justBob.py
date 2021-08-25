@@ -120,7 +120,7 @@ class JustBob(commands.Cog):
             playersProgress = json.load(f)
         lastLevelUnlocked = playersProgress.get(str(player.id), 1)
         gameComplete = lastLevelUnlocked > len(levels)
-        embed = Embed(title="Just Bob", description=f"Congratulations, you completed all the levels, but you can replay them if you want{'. More levels comming soon' * (len(levels) < 10)}" if gameComplete else f"Choose a level\n({(lastLevelUnlocked - 1) / len(levels) * 100:.2f}% complete)", color=Colour.green() if gameComplete else Colour.blue())
+        embed = Embed(title="Just Bob", description=f"Congratulations, you completed all the levels, but you can replay them if you want{'. More levels coming soon' * (len(levels) < 10)}" if gameComplete else f"Choose a level\n({(lastLevelUnlocked - 1) / len(levels) * 100:.2f}% complete)", color=Colour.green() if gameComplete else Colour.blue())
         embed.set_footer(text=f"Player: {player.display_name}")
         msg = await channel.send(embed=embed)
         self.games[player.id] = {"levelNum": None, "level": None, "playerPos": None, "trophyPositions": None, "doorLevers": None, "openDoors": None, "description": None, "playerId": None, "messageId": msg.id}
@@ -130,7 +130,7 @@ class JustBob(commands.Cog):
     
     @commands.Cog.listener()
     async def on_raw_reaction_add(self, payload):
-        if payload.member.id in self.games and self.games[payload.member.id]["messageId"] == payload.message_id and self.bot.ready:
+        if (payload.member.id in self.games and self.games[payload.member.id]["messageId"] == payload.message_id and self.bot.ready) or (any(role.id == UNIT_STAFF for role in payload.member.roles) and payload.emoji.name == STOP):
             channel = self.bot.get_channel(payload.channel_id)
             game = self.games[payload.member.id]
             gameMessage = await channel.fetch_message(game["messageId"])

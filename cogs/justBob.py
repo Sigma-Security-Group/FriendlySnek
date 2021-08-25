@@ -252,12 +252,11 @@ class JustBob(commands.Cog):
                 for doorLever in game["doorLevers"]:
                     if [newLayer, newRow, newCol] == doorLever["l"]:
                         for i, (openDoorPos, _) in enumerate(game["openDoors"]):
-                            if openDoorPos == doorLever["l"]:
+                            if openDoorPos == doorLever["d"]:
                                 game["openDoors"][i][1] = doorLever["m"]
                                 break
                         else:
                             game["openDoors"].append([doorLever["d"], doorLever["m"]])
-                        break
         if game["playerPos"] in game["trophyPositions"]:
             with open(PLAYERS_PROGRESS_FILE) as f:
                 playersProgress = json.load(f)

@@ -331,7 +331,7 @@ class Schedule(commands.Cog):
         reorderEvents = False
 
         if choice == "1":
-            embed = Embed(title=":pencil2: What is the title of your operation?", color=Colour.gold())
+            embed = Embed(title=":pencil2: What is the title of your operation?", description="Remeber, operation names should start with the word 'Operation'\ne.g. Operation Red Tide", color=Colour.gold())
             await dmChannel.send(embed=embed)
             try:
                 response = await self.bot.wait_for("message", timeout=600, check=lambda msg, author=author, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
@@ -473,10 +473,8 @@ class Schedule(commands.Cog):
                     await dmChannel.send(embed=TIMEOUT_EMBED)
                     return False
             
-            embed = Embed(title="What is the time of the event?", color=Colour.gold(), description=f"Your selected time zone is '{timeZone.zone}'\ne.g. 2021-08-08 9:30 PM")
-            utcNow = datetime.utcnow()
-            nextHalfHour = utcNow + (datetime.min - utcNow) % timedelta(minutes=30)
-            embed.add_field(name="Current Time", value=UTC.localize(nextHalfHour).astimezone(timeZone).strftime(EVENT_TIME_FORMAT))
+            embed = Embed(title="What is the time of the event?", color=Colour.gold(), description=f"Your selected time zone is '{timeZone.zone}'")
+            embed.add_field(name="Current Value", value=UTC.localize(datetime.strptime(event["time"], EVENT_TIME_FORMAT)).astimezone(timeZone).strftime(EVENT_TIME_FORMAT))
             await dmChannel.send(embed=embed)
             try:
                 response = await self.bot.wait_for("message", timeout=600, check=lambda msg, author=author, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
@@ -574,7 +572,7 @@ class Schedule(commands.Cog):
         
         authorId = ctx.author.id
 
-        embed = Embed(title=":pencil2: What is the title of your operation?", color=Colour.gold())
+        embed = Embed(title=":pencil2: What is the title of your operation?", description="Remeber, operation names should start with the word 'Operation'\ne.g. Operation Red Tide", color=Colour.gold())
         msg = await ctx.author.send(embed=embed)
         dmChannel = msg.channel
         try:
@@ -703,10 +701,10 @@ class Schedule(commands.Cog):
                 await dmChannel.send(embed=TIMEOUT_EMBED)
                 return
         
-        embed = Embed(title="What is the time of the event?", color=Colour.gold(), description=f"Your selected time zone is '{timeZone.zone}'\ne.g. 2021-08-08 9:30 PM")
+        embed = Embed(title="What is the time of the event?", color=Colour.gold(), description=f"Your selected time zone is '{timeZone.zone}'")
         utcNow = datetime.utcnow()
         nextHalfHour = utcNow + (datetime.min - utcNow) % timedelta(minutes=30)
-        embed.add_field(name="Current Time", value=UTC.localize(nextHalfHour).astimezone(timeZone).strftime(EVENT_TIME_FORMAT))
+        embed.add_field(name="Example", value=UTC.localize(nextHalfHour).astimezone(timeZone).strftime(EVENT_TIME_FORMAT))
         await dmChannel.send(embed=embed)
         try:
             response = await self.bot.wait_for("message", timeout=600, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)

@@ -117,9 +117,9 @@ class Schedule(commands.Cog):
                 embed = self.getEventEmbed(event)
                 msg = await channel.send(embed=embed)
                 if event["reservableRoles"] is not None:
-                    emojis = (f"<:Green:{GREEN}>", f"<:Red:{RED}>", f"<:Yellow:{YELLOW}>", f"<:Blue:{BLUE}>", "✏️", "🗑")
+                    emojis = (f"✅", f"❌", f"❓", f"👤", "✏️", "🗑")
                 else:
-                    emojis = (f"<:Green:{GREEN}>", f"<:Red:{RED}>", f"<:Yellow:{YELLOW}>", "✏️", "🗑")
+                    emojis = (f"✅", f"❌", f"❓", "✏️", "🗑")
                 for emoji in emojis:
                     await msg.add_reaction(emoji)
                 event["messageId"] = msg.id
@@ -139,7 +139,7 @@ class Schedule(commands.Cog):
 
         if event["reservableRoles"] is not None:
             embed.add_field(name="\u200B", value="\u200B", inline=False)
-            embed.add_field(name=f"Reservable Roles <:Blue:{BLUE}>", value="\n".join(f"{roleName} - {('*' + member.display_name + '*' if (member := guild.get_member(memberId)) is not None else '**VACANT**') if memberId is not None else '**VACANT**'}" for roleName, memberId in event["reservableRoles"].items()), inline=False)
+            embed.add_field(name=f"Reservable Roles 👤", value="\n".join(f"{roleName} - {('*' + member.display_name + '*' if (member := guild.get_member(memberId)) is not None else '**VACANT**') if memberId is not None else '**VACANT**'}" for roleName, memberId in event["reservableRoles"].items()), inline=False)
         embed.add_field(name="\u200B", value="\u200B", inline=False)
         embed.add_field(name="Time", value=f"<t:{round(UTC.localize(datetime.strptime(event['time'], EVENT_TIME_FORMAT)).timestamp())}:F> - <t:{round(UTC.localize(datetime.strptime(event['endTime'], EVENT_TIME_FORMAT)).timestamp())}:t>", inline=False)
         embed.add_field(name="Duration", value=event['duration'], inline=False)
@@ -156,9 +156,9 @@ class Schedule(commands.Cog):
         declined = [member.display_name for memberId in event["declined"] if (member := guild.get_member(memberId)) is not None]
         tentative = [member.display_name for memberId in event["tentative"] if (member := guild.get_member(memberId)) is not None]
         
-        embed.add_field(name=f"Accepted ({len(accepted)}/{event['maxPlayers']}) <:Green:{GREEN}>" if event["maxPlayers"] is not None else f"Accepted ({len(accepted)}) <:Green:{GREEN}>", value="\n".join(name for name in accepted) if len(accepted) > 0 else "-", inline=True)
-        embed.add_field(name=f"Declined ({len(declined)}) <:Red:{RED}>", value="\n".join(name for name in declined) if len(declined) > 0 else "-", inline=True)
-        embed.add_field(name=f"Tentative ({len(tentative)}) <:Yellow:{YELLOW}>", value="\n".join(name for name in tentative) if len(tentative) > 0 else "-", inline=True)
+        embed.add_field(name=f"Accepted ({len(accepted)}/{event['maxPlayers']}) ✅" if event["maxPlayers"] is not None else f"Accepted ({len(accepted)}) ✅", value="\n".join(name for name in accepted) if len(accepted) > 0 else "-", inline=True)
+        embed.add_field(name=f"Declined ({len(declined)}) ❌", value="\n".join(name for name in declined) if len(declined) > 0 else "-", inline=True)
+        embed.add_field(name=f"Tentative ({len(tentative)}) ❓", value="\n".join(name for name in tentative) if len(tentative) > 0 else "-", inline=True)
         if len(standby) > 0:
             embed.add_field(name=f"Standby ({len(standby)}) :clock:", value="\n".join(name for name in standby), inline=False)
         
@@ -178,14 +178,14 @@ class Schedule(commands.Cog):
             removeReaction = True
             event = [event for event in events if event["messageId"] == payload.message_id][0]
             eventMessage = await self.bot.get_channel(SCHEDULE).fetch_message(event["messageId"])
-            if payload.emoji.id == GREEN:
+            if payload.emoji.name == "✅":
                 if payload.member.id in event["declined"]:
                     event["declined"].remove(payload.member.id)
                 if payload.member.id in event["tentative"]:
                     event["tentative"].remove(payload.member.id)
                 if payload.member.id not in event["accepted"]:
                     event["accepted"].append(payload.member.id)
-            elif payload.emoji.id == RED:
+            elif payload.emoji.name == "❌":
                 if payload.member.id in event["accepted"]:
                     event["accepted"].remove(payload.member.id)
                 if payload.member.id in event["tentative"]:
@@ -196,7 +196,7 @@ class Schedule(commands.Cog):
                     for roleName in event["reservableRoles"]:
                         if event["reservableRoles"][roleName] == payload.member.id:
                             event["reservableRoles"][roleName] = None
-            elif payload.emoji.id == YELLOW:
+            elif payload.emoji.name == "❓":
                 if payload.member.id in event["accepted"]:
                     event["accepted"].remove(payload.member.id)
                 if payload.member.id in event["declined"]:
@@ -207,7 +207,7 @@ class Schedule(commands.Cog):
                     for roleName in event["reservableRoles"]:
                         if event["reservableRoles"][roleName] == payload.member.id:
                             event["reservableRoles"][roleName] = None
-            elif payload.emoji.id == BLUE:
+            elif payload.emoji.name == "👤":
                 await self.reserveRole(payload.member, event)
             elif payload.emoji.name == "✏️":
                 if payload.member.id == event["authorId"] or any(role.id == UNIT_STAFF for role in payload.member.roles):

@@ -130,7 +130,7 @@ class JustBob(commands.Cog):
     
     @commands.Cog.listener()
     async def on_raw_reaction_add(self, payload):
-        if (payload.member.id in self.games and self.games[payload.member.id]["messageId"] == payload.message_id and self.bot.ready) or (any(role.id == UNIT_STAFF for role in payload.member.roles) and payload.emoji.name == STOP):
+        if self.bot.ready and not payload.message.bot and ((payload.member is not None and payload.member.id in self.games and self.games[payload.member.id]["messageId"] == payload.message_id) or (any(role is not None and role.id == UNIT_STAFF for role in payload.member.roles) and payload.emoji.name == STOP)):
             channel = self.bot.get_channel(payload.channel_id)
             game = self.games[payload.member.id]
             gameMessage = await channel.fetch_message(game["messageId"])

@@ -562,6 +562,10 @@ class Schedule(commands.Cog):
         embed = Embed(title="✅ Event deleted", color=Colour.green())
         await author.send(embed=embed)
     
+    @cog_ext.cog_slash(name="bop", description="Create an event to add to the schedule.", guild_ids=[SERVER])
+    async def bop(self, ctx: SlashContext):
+        await self.operation(ctx)
+    
     @cog_ext.cog_slash(name="operation", description="Create an event to add to the schedule.", guild_ids=[SERVER])
     async def operation(self, ctx: SlashContext):
         if not anvilController.isScheduleWallOpen():

@@ -111,6 +111,9 @@ class JustBob(commands.Cog):
     @commands.command(name="Le75P14yJu5780b", hidden=True)
     async def letsPlayJustBob(self, ctx):
         await ctx.message.delete()
+        if ctx.channel.id != GENERAL:
+            await ctx.send("Sorry, but you can only play Just Bob in #general")
+            return
         await self.levelSelect(ctx.channel, ctx.author)
         
     async def levelSelect(self, channel, player):
@@ -130,7 +133,7 @@ class JustBob(commands.Cog):
     
     @commands.Cog.listener()
     async def on_raw_reaction_add(self, payload):
-        if self.bot.ready and not payload.member.bot and ((payload.member is not None and payload.member.id in self.games and self.games[payload.member.id]["messageId"] == payload.message_id) or (any(role is not None and role.id == UNIT_STAFF for role in payload.member.roles) and payload.emoji.name == STOP)):
+        if self.bot.ready and paylod.member is not None and not payload.member.bot and ((payload.member is not None and payload.member.id in self.games and self.games[payload.member.id]["messageId"] == payload.message_id) or (any(role is not None and role.id == UNIT_STAFF for role in payload.member.roles) and payload.emoji.name == STOP)):
             channel = self.bot.get_channel(payload.channel_id)
             game = self.games[payload.member.id]
             gameMessage = await channel.fetch_message(game["messageId"])

@@ -293,7 +293,7 @@ class Schedule(commands.Cog):
         else:
             embed = Embed(title="❌ Schedule was updated while you were reserving a role. Try again.", color=Colour.red())
             await dmChannel.send(embed=embed)
-            log.debug(f"{author.display_name}({author.name}#{author.discriminator}) was reserving a role but schedule was updated")
+            log.debug(f"{member.display_name}({member.name}#{member.discriminator}) was reserving a role but schedule was updated")
     
     async def editEvent(self, author, event):
         if not anvilController.isScheduleWallOpen():

@@ -150,6 +150,8 @@ class Schedule(commands.Cog):
         embed.add_field(name="\u200B", value="\u200B", inline=False)
         
         accepted = [member.display_name for memberId in event["accepted"] if (member := guild.get_member(memberId)) is not None]
+        membersWithReserved = [] if event["reservableRoles"] is None else [member.display_name for memberId in event["reservableRoles"].values() if memberId is not None and (member := guild.get_member(memberId)) is not None]
+        accepted = sorted(accepted, key=lambda x: accepted.index(x) - 1000 * (x in membersWithReserved))
         standby = []
         if event["maxPlayers"] is not None and len(accepted) > event["maxPlayers"]:
             accepted, standby = accepted[:event["maxPlayers"]], accepted[event["maxPlayers"]:]
@@ -160,7 +162,7 @@ class Schedule(commands.Cog):
         embed.add_field(name=f"Declined ({len(declined)}) ❌", value="\n".join(name for name in declined) if len(declined) > 0 else "-", inline=True)
         embed.add_field(name=f"Tentative ({len(tentative)}) ❓", value="\n".join(name for name in tentative) if len(tentative) > 0 else "-", inline=True)
         if len(standby) > 0:
-            embed.add_field(name=f"Standby ({len(standby)}) :clock:", value="\n".join(name for name in standby), inline=False)
+            embed.add_field(name=f"Standby ({len(standby)}) :clock3:", value="\n".join(name for name in standby), inline=False)
         
         author = guild.get_member(event["authorId"])
         embed.set_footer(text=f"Created by {author.display_name}")

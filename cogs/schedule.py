@@ -566,10 +566,13 @@ class Schedule(commands.Cog):
     
     @cog_ext.cog_slash(name="bop", description="Create an event to add to the schedule.", guild_ids=[SERVER])
     async def bop(self, ctx: SlashContext):
-        await self.operation(ctx)
+        await self.scheduleOperation(ctx)
     
     @cog_ext.cog_slash(name="operation", description="Create an event to add to the schedule.", guild_ids=[SERVER])
     async def operation(self, ctx: SlashContext):
+        await self.scheduleOperation(ctx)
+    
+    async def scheduleOperation(self, ctx):
         if not anvilController.isScheduleWallOpen():
             await ctx.send("Schedule is currently disabled for technical reasons. Try again later")
             return

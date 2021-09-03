@@ -5,6 +5,7 @@ import discord
 from discord import Embed
 from discord import Colour
 from discord.ext import commands
+from discord_slash import cog_ext, SlashContext
 
 from constants import *
 
@@ -103,17 +104,19 @@ class JustBob(commands.Cog):
         log.debug("JustBob Cog is ready", flush=True)
         cogsReady["justBob"] = True
     
-    @commands.command(name="justBob", aliases=["jb"], hidden=True)
-    @commands.check(lambda ctx: ctx.author.id == ADRIAN)
-    async def justBobDevShortcut(self, ctx):
-        await self.letsPlayJustBob(ctx)
+    # @commands.command(name="justBob", aliases=["jb"], hidden=True)
+    # @commands.check(lambda ctx: ctx.author.id == ADRIAN)
+    # async def justBobDevShortcut(self, ctx):
+    #     await self.letsPlayJustBob(ctx)
     
-    @commands.command(name="Le75P14yJu5780b", hidden=True)
-    async def letsPlayJustBob(self, ctx):
-        await ctx.message.delete()
+    # @commands.command(name="Le75P14yJu5780b", hidden=True)
+    @cog_ext.cog_slash(name="justbob", description="Play the minigame Just Bob", guild_ids=[SERVER])
+    async def justBob(self, ctx):
+        # await ctx.message.delete()
         if ctx.channel.id != GENERAL:
             await ctx.send("Sorry, but you can only play Just Bob in #general")
             return
+        await ctx.send("Playing Just Bob")
         await self.levelSelect(ctx.channel, ctx.author)
         
     async def levelSelect(self, channel, player):

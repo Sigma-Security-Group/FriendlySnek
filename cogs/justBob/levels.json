@@ -124,5 +124,46 @@
             {"l": [0, 6, 6], "d": [1, 6, 7], "m": 8}
         ],
         "This level only has 2 layers, but it has doors (:orange_square:). To open a door, you need to move on top of the correct lever (:large_orange_diamond:). When a door is opened, it will close after a certain amount of steps. Each door has its own timer. Doors and levers don't need to be on the same layer"
+    ],
+    [
+        "Level 4",
+        [
+            [
+                "##########  ####",
+                "#      #       #",
+                "#      #       #",
+                "#  P   #       #",
+                "#      #       #",
+                "#      #       #",
+                "#      #       #",
+                "#      #       #",
+                "################",
+                "#      #       #",
+                "#    T #       #",
+                "#      #       #",
+                "#      #       #",
+                "##########  ####"
+            ],
+            [
+                "################",
+                "#      #       #",
+                "#      #       #",
+                "#      #       #",
+                "       #        ",
+                "       #        ",
+                "#      #       #",
+                "#      #       #",
+                "################",
+                "#      #       #",
+                "       #        ",
+                "       #        ",
+                "#      #       #",
+                "################"
+            ]
+        ],
+        [0, 3, 3],
+        [[0, 10, 5]],
+        [],
+        "For this one you will need to think a bit outside the box"
     ]
 ]

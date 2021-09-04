@@ -244,6 +244,18 @@ class Schedule(commands.Cog):
     async def reserveRole(self, member, event):
         reservationTime = datetime.utcnow()
         guild = self.bot.get_guild(SERVER)
+        
+        if member.id in event["declined"]:
+            event["declined"].remove(member.id)
+        if member.id in event["tentative"]:
+            event["tentative"].remove(member.id)
+        if member.id not in event["accepted"]:
+            event["accepted"].append(member.id)
+        
+        if event["maxPlayers"] is not None and len(event["accepted"] >= event["maxPlayers"]) and member.id not in event["accepted"]:
+            embed = Embed(title="❌ Sorry, seems like there's no space left in :b:op")
+            member.send(embed=embed)
+            return
 
         vacantRoles = [roleName for roleName, memberId in event["reservableRoles"].items() if memberId is None or guild.get_member(memberId) is None]
         currentRole = [roleName for roleName, memberId in event["reservableRoles"].items() if memberId == member.id][0] if member.id in event["reservableRoles"].values() else None
@@ -270,10 +282,6 @@ class Schedule(commands.Cog):
             await dmChannel.send(embed=TIMEOUT_EMBED)
             return
         if reservedRole is not None:
-            if member.id in event["declined"]:
-                event["declined"].remove(member.id)
-            if member.id in event["tentative"]:
-                event["tentative"].remove(member.id)
             if event["reservableRoles"] is not None:
                 for roleName in event["reservableRoles"]:
                     if event["reservableRoles"][roleName] == member.id:

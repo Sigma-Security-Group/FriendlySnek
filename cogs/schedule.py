@@ -151,14 +151,15 @@ class Schedule(commands.Cog):
         
         accepted = [member.display_name for memberId in event["accepted"] if (member := guild.get_member(memberId)) is not None]
         membersWithReserved = [] if event["reservableRoles"] is None else [member.display_name for memberId in event["reservableRoles"].values() if memberId is not None and (member := guild.get_member(memberId)) is not None]
-        accepted = sorted(accepted, key=lambda x: accepted.index(x) - 1000 * (x in membersWithReserved))
+        # accepted = sorted(accepted, key=lambda x: accepted.index(x) - 1000 * (x in membersWithReserved))
         standby = []
-        if event["maxPlayers"] is not None and len(accepted) > event["maxPlayers"]:
-            accepted, standby = accepted[:event["maxPlayers"]], accepted[event["maxPlayers"]:]
+        numReservableRoles = 0 if event["reservableRoles"] is None else len(event["reservableRoles"])
+        if event["maxPlayers"] is not None and len(accepted) > event["maxPlayers"] - numReservableRoles - numReservableRoles:
+            accepted, standby = accepted[:event["maxPlayers"] - numReservableRoles], accepted[event["maxPlayers"] - numReservableRoles:]
         declined = [member.display_name for memberId in event["declined"] if (member := guild.get_member(memberId)) is not None]
         tentative = [member.display_name for memberId in event["tentative"] if (member := guild.get_member(memberId)) is not None]
         
-        embed.add_field(name=f"Accepted ({len(accepted)}/{event['maxPlayers']}) ✅" if event["maxPlayers"] is not None else f"Accepted ({len(accepted)}) ✅", value="\n".join(name for name in accepted) if len(accepted) > 0 else "-", inline=True)
+        embed.add_field(name=f"Accepted ({len(accepted)}/{event['maxPlayers'] - numReservableRoles}) ✅" if event["maxPlayers"] is not None else f"Accepted ({len(accepted)}) ✅", value="\n".join(name for name in accepted) if len(accepted) > 0 else "-", inline=True)
         embed.add_field(name=f"Declined ({len(declined)}) ❌", value="\n".join(name for name in declined) if len(declined) > 0 else "-", inline=True)
         embed.add_field(name=f"Tentative ({len(tentative)}) ❓", value="\n".join(name for name in tentative) if len(tentative) > 0 else "-", inline=True)
         if len(standby) > 0:
@@ -187,6 +188,10 @@ class Schedule(commands.Cog):
                     event["tentative"].remove(payload.member.id)
                 if payload.member.id not in event["accepted"]:
                     event["accepted"].append(payload.member.id)
+                if event["reservableRoles"] is not None:
+                    for roleName in event["reservableRoles"]:
+                        if event["reservableRoles"][roleName] == payload.member.id:
+                            event["reservableRoles"][roleName] = None
             elif payload.emoji.name == "❌":
                 if payload.member.id in event["accepted"]:
                     event["accepted"].remove(payload.member.id)
@@ -275,8 +280,8 @@ class Schedule(commands.Cog):
                 event["declined"].remove(member.id)
             if member.id in event["tentative"]:
                 event["tentative"].remove(member.id)
-            if member.id not in event["accepted"]:
-                event["accepted"].append(member.id)
+            if member.id in event["accepted"]:
+                event["accepted"].remove(member.id)
             if event["reservableRoles"] is not None:
                 for roleName in event["reservableRoles"]:
                     if event["reservableRoles"][roleName] == member.id:

@@ -252,7 +252,7 @@ class Schedule(commands.Cog):
         if member.id not in event["accepted"]:
             event["accepted"].append(member.id)
         
-        if event["maxPlayers"] is not None and len(event["accepted"] >= event["maxPlayers"]) and member.id not in event["accepted"]:
+        if event["maxPlayers"] is not None and len(event["accepted"]) >= event["maxPlayers"] and member.id not in event["accepted"]:
             embed = Embed(title="❌ Sorry, seems like there's no space left in :b:op")
             member.send(embed=embed)
             return

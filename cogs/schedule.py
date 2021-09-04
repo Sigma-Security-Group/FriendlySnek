@@ -152,6 +152,7 @@ class Schedule(commands.Cog):
         accepted = [member.display_name for memberId in event["accepted"] if (member := guild.get_member(memberId)) is not None]
         membersWithReserved = [] if event["reservableRoles"] is None else [member.display_name for memberId in event["reservableRoles"].values() if memberId is not None and (member := guild.get_member(memberId)) is not None]
         # accepted = sorted(accepted, key=lambda x: accepted.index(x) - 1000 * (x in membersWithReserved))
+        accepted = [member for member in accepted if member not in membersWithReserved]
         standby = []
         numReservableRoles = 0 if event["reservableRoles"] is None else len(event["reservableRoles"])
         if event["maxPlayers"] is not None and len(accepted) > event["maxPlayers"] - numReservableRoles - numReservableRoles:

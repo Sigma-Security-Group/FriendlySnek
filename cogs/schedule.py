@@ -113,8 +113,12 @@ class Schedule(commands.Cog):
         await channel.send(f"Welcome to the schedule channel. To schedule an event you can use the **`/operation`** command and follow the instructions through DMs. If you haven't set a prefered time zone yet you will be prompted to do so when you schedule an event. If you want to set, change or delete your time zone preference you can do so with the **`/changetimezone`** command.\n\nIf you have any features suggestions or encounter any bugs, please contact {channel.guild.get_member(ADRIAN).display_name}.")
         
         if os.path.exists(EVENTS_FILE):
+            self.eventsFileLock = True
             with open(EVENTS_FILE) as f:
                 events = json.load(f)
+            if len(events) == 0:
+                await channel.send("...\nNo bop?\n...\nWhy?\n...\nSnek is sad")
+                await channel.send(":cry:")
             for event in sorted(events, key=lambda e: datetime.strptime(e["time"], EVENT_TIME_FORMAT), reverse=True):
                 embed = self.getEventEmbed(event)
                 msg = await channel.send(embed=embed)
@@ -127,6 +131,7 @@ class Schedule(commands.Cog):
                 event["messageId"] = msg.id
             with open(EVENTS_FILE, "w") as f:
                 json.dump(events, f, indent=4)
+            self.eventsFileLock = False
         else:
             with open(EVENTS_FILE, "w") as f:
                 json.dump([], f, indent=4)

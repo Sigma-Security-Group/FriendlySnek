@@ -81,6 +81,8 @@ TIME_ZONES = {
 class Schedule(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
+        self.eventsFileLock = False
+        self.memberTimeZonesFileLock = False
     
     @commands.Cog.listener()
     async def on_ready(self):
@@ -171,6 +173,12 @@ class Schedule(commands.Cog):
     
     @commands.Cog.listener()
     async def on_raw_reaction_add(self, payload):
+        # if self.eventsFileLock:
+        #     while self.eventsFileLock:
+        #         while self.eventsFileLock:
+        #             asyncio.sleep(0.5)
+        #         asyncio.sleep(0.5)
+        # self.eventsFileLock = True
         with open(EVENTS_FILE) as f:
             events = json.load(f)
         
@@ -240,6 +248,7 @@ class Schedule(commands.Cog):
         
         with open(EVENTS_FILE, "w") as f:
             json.dump(events, f, indent=4)
+        # self.eventsFileLock = False
     
     async def reserveRole(self, member, event):
         reservationTime = datetime.utcnow()
@@ -771,6 +780,15 @@ class Schedule(commands.Cog):
         )
         endTime = eventTime + d
         
+        if self.eventsFileLock:
+            embed = Embed(title=":clock3: Events file is occupied. This happens rarely, but give it just a few seconds")
+            await dmChannel.send(embed=embed)
+            while self.eventsFileLock:
+                while self.eventsFileLock:
+                    asyncio.sleep(0.5)
+                asyncio.sleep(0.5)
+        self.eventsFileLock = True
+        
         if os.path.exists(EVENTS_FILE):
             with open(EVENTS_FILE) as f:
                 events = json.load(f)
@@ -795,6 +813,7 @@ class Schedule(commands.Cog):
         events.append(newEvent)
         with open(EVENTS_FILE, "w") as f:
             json.dump(events, f, indent=4)
+        self.eventsFileLock = False
         
         embed = Embed(title="✅ Event created", color=Colour.green())
         await dmChannel.send(embed=embed)
@@ -819,6 +838,16 @@ class Schedule(commands.Cog):
         try:
             response = await self.bot.wait_for("message", timeout=600, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
             timeZone = response.content
+            if self.memberTimeZonesFileLock:
+                embed = Embed(title=":clock3: Time zones file is occupied. This happens rarely, but give it just a few seconds")
+                await ctx.author.send(embed=embed)
+                while self.memberTimeZonesFileLock:
+                    while self.memberTimeZonesFileLock:
+                        asyncio.sleep(0.5)
+                    asyncio.sleep(0.5)
+            self.memberTimeZonesFileLock = True
+            with open(MEMBER_TIME_ZONES_FILE) as f:
+                memberTimeZones = json.load(f)
             if timeZone.strip().lower() == "cancel":
                 return
             if timeZone.isdigit() and int(timeZone) <= len(TIME_ZONES) and int(timeZone) > 0:
@@ -838,6 +867,7 @@ class Schedule(commands.Cog):
         except asyncio.TimeoutError:
             await dmChannel.send(embed=TIMEOUT_EMBED)
             return
+        self.memberTimeZonesFileLock = False
         
 
 def setup(bot):

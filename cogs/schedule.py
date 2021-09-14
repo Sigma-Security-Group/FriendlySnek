@@ -119,25 +119,26 @@ class Schedule(commands.Cog):
                 await eventMessage.delete()
                 author = self.bot.get_guild(SERVER).get_member(event["authorId"])
                 await self.bot.get_channel(ARMA_DISCUSSION).send(f"{author.mention} You silly goose, you forgot to delete your operation. I'm not your mother, but this time I will do it for you")
-                eventTime = UTC.localize(datetime.strptime(event["time"], EVENT_TIME_FORMAT))
-                with open(EVENTS_STATS_FILE) as f:
-                    eventsStats = json.load(f)
-                while eventTime.strftime(EVENT_TIME_FORMAT) in eventsStats:
-                    eventTime = eventTime + timedelta(minutes=1)
-                eventsStats[eventTime.strftime(EVENT_TIME_FORMAT)] = {
-                    "accepted": min(event["maxPlayers"], len("accepted")) if event["maxPlayers"] is not None else len(event["accepted"]),
-                    "standby": max(0, len("accepted") - event["maxPlayers"]) if event["maxPlayers"] is not None else 0,
-                    "declined": len(event["declined"]),
-                    "tentative": len(event["tentative"]),
-                    "maxPlayers": event["maxPlayers"],
-                    "reservableRoles": len(event["reservableRoles"]) if event["reservableRoles"] is not None else 0,
-                    "reservedRoles": len([role for role, member in event["reservableRoles"].items() if member is not None]) if event["reservableRoles"] is not None else 0,
-                    "map": event["map"],
-                    "duration": event["duration"],
-                    "autoDeleted": True
-                }
-                with open(EVENTS_STATS_FILE, "w") as f:
-                    json.dump(eventsStats, f, indent=4)
+                if event["maxPlayers"] != 0:
+                    eventTime = UTC.localize(datetime.strptime(event["time"], EVENT_TIME_FORMAT))
+                    with open(EVENTS_STATS_FILE) as f:
+                        eventsStats = json.load(f)
+                    while eventTime.strftime(EVENT_TIME_FORMAT) in eventsStats:
+                        eventTime = eventTime + timedelta(minutes=1)
+                    eventsStats[eventTime.strftime(EVENT_TIME_FORMAT)] = {
+                        "accepted": min(event["maxPlayers"], len("accepted")) if event["maxPlayers"] is not None else len(event["accepted"]),
+                        "standby": max(0, len("accepted") - event["maxPlayers"]) if event["maxPlayers"] is not None else 0,
+                        "declined": len(event["declined"]),
+                        "tentative": len(event["tentative"]),
+                        "maxPlayers": event["maxPlayers"],
+                        "reservableRoles": len(event["reservableRoles"]) if event["reservableRoles"] is not None else 0,
+                        "reservedRoles": len([role for role, member in event["reservableRoles"].items() if member is not None]) if event["reservableRoles"] is not None else 0,
+                        "map": event["map"],
+                        "duration": event["duration"],
+                        "autoDeleted": True
+                    }
+                    with open(EVENTS_STATS_FILE, "w") as f:
+                        json.dump(eventsStats, f, indent=4)
         if len(deletedEvents) == 0:
             log.debug("No events were auto deleted")
         for event in deletedEvents:
@@ -640,27 +641,28 @@ class Schedule(commands.Cog):
         embed = Embed(title="✅ Event deleted", color=Colour.green())
         await author.send(embed=embed)
         
-        utcNow = UTC.localize(datetime.utcnow())
-        eventTime = UTC.localize(datetime.strptime(event["time"], EVENT_TIME_FORMAT))
-        if utcNow > eventTime + timedelta(minutes=30):
-            with open(EVENTS_STATS_FILE) as f:
-                eventsStats = json.load(f)
-            while eventTime.strftime(EVENT_TIME_FORMAT) in eventsStats:
-                eventTime = eventTime + timedelta(minutes=1)
-            eventsStats[eventTime.strftime(EVENT_TIME_FORMAT)] = {
-                "accepted": min(event["maxPlayers"], len("accepted")) if event["maxPlayers"] is not None else len(event["accepted"]),
-                "standby": max(0, len("accepted") - event["maxPlayers"]) if event["maxPlayers"] is not None else 0,
-                "declined": len(event["declined"]),
-                "tentative": len(event["tentative"]),
-                "maxPlayers": event["maxPlayers"],
-                "reservableRoles": len(event["reservableRoles"]) if event["reservableRoles"] is not None else 0,
-                "reservedRoles": len([role for role, member in event["reservableRoles"].items() if member is not None]) if event["reservableRoles"] is not None else 0,
-                "map": event["map"],
-                "duration": event["duration"],
-                "autoDeleted": False
-            }
-            with open(EVENTS_STATS_FILE, "w") as f:
-                json.dump(eventsStats, f, indent=4)
+        if event["maxPlayers"] != 0:
+            utcNow = UTC.localize(datetime.utcnow())
+            eventTime = UTC.localize(datetime.strptime(event["time"], EVENT_TIME_FORMAT))
+            if utcNow > eventTime + timedelta(minutes=30):
+                with open(EVENTS_STATS_FILE) as f:
+                    eventsStats = json.load(f)
+                while eventTime.strftime(EVENT_TIME_FORMAT) in eventsStats:
+                    eventTime = eventTime + timedelta(minutes=1)
+                eventsStats[eventTime.strftime(EVENT_TIME_FORMAT)] = {
+                    "accepted": min(event["maxPlayers"], len("accepted")) if event["maxPlayers"] is not None else len(event["accepted"]),
+                    "standby": max(0, len("accepted") - event["maxPlayers"]) if event["maxPlayers"] is not None else 0,
+                    "declined": len(event["declined"]),
+                    "tentative": len(event["tentative"]),
+                    "maxPlayers": event["maxPlayers"],
+                    "reservableRoles": len(event["reservableRoles"]) if event["reservableRoles"] is not None else 0,
+                    "reservedRoles": len([role for role, member in event["reservableRoles"].items() if member is not None]) if event["reservableRoles"] is not None else 0,
+                    "map": event["map"],
+                    "duration": event["duration"],
+                    "autoDeleted": False
+                }
+                with open(EVENTS_STATS_FILE, "w") as f:
+                    json.dump(eventsStats, f, indent=4)
     
     @cog_ext.cog_slash(name="bop", description="Create an event to add to the schedule.", guild_ids=[SERVER])
     async def bop(self, ctx: SlashContext):

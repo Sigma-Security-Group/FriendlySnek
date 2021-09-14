@@ -130,6 +130,7 @@ class Schedule(commands.Cog):
                     "maxPlayers": event["maxPlayers"],
                     "reservableRoles": len(event["reservableRoles"]) if event["reservableRoles"] is not None else 0,
                     "reservedRoles": len([role for role, member in event["reservableRoles"].items() if member is not None]) if event["reservableRoles"] is not None else 0,
+                    "map": event["map"]
                 }
                 with open(EVENTS_STATS_FILE, "w") as f:
                     json.dump(eventsStats, f, indent=4)
@@ -649,6 +650,7 @@ class Schedule(commands.Cog):
                 "maxPlayers": event["maxPlayers"],
                 "reservableRoles": len(event["reservableRoles"]) if event["reservableRoles"] is not None else 0,
                 "reservedRoles": len([role for role, member in event["reservableRoles"].items() if member is not None]) if event["reservableRoles"] is not None else 0,
+                "map": event["map"]
             }
             with open(EVENTS_STATS_FILE, "w") as f:
                 json.dump(eventsStats, f, indent=4)

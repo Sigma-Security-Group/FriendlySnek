@@ -5,6 +5,7 @@ import asyncio
 from datetime import datetime, timedelta
 from dateutil.parser import parse as datetimeParse
 import pytz
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 import discord
 from discord import Embed
@@ -26,6 +27,7 @@ EVENT_TIME_FORMAT = "%Y-%m-%d %I:%M %p"
 EVENTS_FILE = "data/events.json"
 MEMBER_TIME_ZONES_FILE = "data/memberTimeZones.json"
 TIMEOUT_EMBED = Embed(title="Time ran out. Try again. :anguished: ", color=Colour.red())
+EVENTS_STATS_FILE = "data/eventsStats.json"
 
 MAPS = [
     "Altis",
@@ -88,7 +90,54 @@ class Schedule(commands.Cog):
     async def on_ready(self):
         log.debug("Schedule Cog is ready", flush=True)
         cogsReady["schedule"] = True
+        if not os.path.exists(EVENTS_STATS_FILE):
+            with open(EVENTS_STATS_FILE, "w") as f:
+                json.dump({}, f, indent=4)
         await self.updateSchedule()
+        self.scheduler = AsyncIOScheduler()
+        self.scheduler.add_job(self.autoDeleteEvents, "interval", minutes=10)
+        self.scheduler.start()
+    
+    async def autoDeleteEvents(self):
+        log.debug("Checking to auto deleting events")
+        if self.eventsFileLock:
+            while self.eventsFileLock:
+                while self.eventsFileLock:
+                    asyncio.sleep(0.5)
+                asyncio.sleep(0.5)
+        self.eventsFileLock = True
+        with open(EVENTS_FILE) as f:
+            events = json.load(f)
+        utcNow = UTC.localize(datetime.utcnow())
+        deletedEvents = []
+        for event in events:
+            endTime = UTC.localize(datetime.strptime(event["endTime"], EVENT_TIME_FORMAT))
+            if utcNow > endTime + timedelta(minutes=90):
+                log.debug(f"Auto deleting: {event['title']}")
+                deletedEvents.append(event)
+                eventMessage = await self.bot.get_channel(SCHEDULE).fetch_message(event["messageId"])
+                await eventMessage.delete()
+                eventTime = UTC.localize(datetime.strptime(event["time"], EVENT_TIME_FORMAT))
+                with open(EVENTS_STATS_FILE) as f:
+                    eventsStats = json.load(f)
+                while eventTime.strftime(EVENT_TIME_FORMAT) in eventsStats:
+                    eventTime = eventTime + timedelta(minutes=1)
+                eventsStats[eventTime.strftime(EVENT_TIME_FORMAT)] = {
+                    "accepted": min(event["maxPlayers"], len("accepted")) if event["maxPlayers"] is not None else len(event["accepted"]),
+                    "standby": max(0, len("accepted") - event["maxPlayers"]) if event["maxPlayers"] is not None else 0,
+                    "declined": len(event["declined"]),
+                    "tentative": len(event["tentative"]),
+                    "maxPlayers": event["maxPlayers"],
+                    "reservableRoles": len(event["reservableRoles"]) if event["reservableRoles"] is not None else 0,
+                    "reservedRoles": len([role for role, member in event["reservableRoles"].items() if member is not None]) if event["reservableRoles"] is not None else 0,
+                }
+                with open(EVENTS_STATS_FILE, "w") as f:
+                    json.dump(eventsStats, f, indent=4)
+        for event in deletedEvents:
+            events.remove(event)
+        with open(EVENTS_FILE, "w") as f:
+            json.dump(events, f, indent=4)
+        self.eventsFileLock = False
     
     @cog_ext.cog_slash(name="refreshschedule",
                        description="Refresh the schedule. Use this command if an event was deleted without using the reactions.",
@@ -117,7 +166,7 @@ class Schedule(commands.Cog):
             with open(EVENTS_FILE) as f:
                 events = json.load(f)
             if len(events) == 0:
-                await channel.send("...\nNo bop?\n...\nWhy?\n...\nSnek is sad")
+                await channel.send("...\nNo bop?\n...\nSnek is sad")
                 await channel.send(":cry:")
             for event in sorted(events, key=lambda e: datetime.strptime(e["time"], EVENT_TIME_FORMAT), reverse=True):
                 embed = self.getEventEmbed(event)
@@ -233,7 +282,7 @@ class Schedule(commands.Cog):
                         return
             elif payload.emoji.name == "🗑":
                 if payload.member.id == event["authorId"] or any(role.id == UNIT_STAFF for role in payload.member.roles):
-                    await self.deleteEvent(payload.member, eventMessage)
+                    await self.deleteEvent(payload.member, eventMessage, event)
                     events.remove(event)
                     removeReaction = False
                 scheduleNeedsUpdate = False
@@ -571,7 +620,7 @@ class Schedule(commands.Cog):
             log.debug(f"{author.display_name}({author.name}#{author.discriminator}) was editing an event but schedule was updated")
             return False
     
-    async def deleteEvent(self, author, message):
+    async def deleteEvent(self, author, message, event):
         msg = await author.send("Are you sure you want to delete this event?")
         await msg.add_reaction("🗑")
         try:
@@ -582,6 +631,25 @@ class Schedule(commands.Cog):
         await message.delete()
         embed = Embed(title="✅ Event deleted", color=Colour.green())
         await author.send(embed=embed)
+        
+        utcNow = UTC.localize(datetime.utcnow())
+        eventTime = UTC.localize(datetime.strptime(event["time"], EVENT_TIME_FORMAT))
+        if utcNow > eventTime + timedelta(minutes=30):
+            with open(EVENTS_STATS_FILE) as f:
+                eventsStats = json.load(f)
+            while eventTime.strftime(EVENT_TIME_FORMAT) in eventsStats:
+                eventTime = eventTime + timedelta(minutes=1)
+            eventsStats[eventTime.strftime(EVENT_TIME_FORMAT)] = {
+                "accepted": min(event["maxPlayers"], len("accepted")) if event["maxPlayers"] is not None else len(event["accepted"]),
+                "standby": max(0, len("accepted") - event["maxPlayers"]) if event["maxPlayers"] is not None else 0,
+                "declined": len(event["declined"]),
+                "tentative": len(event["tentative"]),
+                "maxPlayers": event["maxPlayers"],
+                "reservableRoles": len(event["reservableRoles"]) if event["reservableRoles"] is not None else 0,
+                "reservedRoles": len([role for role, member in event["reservableRoles"].items() if member is not None]) if event["reservableRoles"] is not None else 0,
+            }
+            with open(EVENTS_STATS_FILE, "w") as f:
+                json.dump(eventsStats, f, indent=4)
     
     @cog_ext.cog_slash(name="bop", description="Create an event to add to the schedule.", guild_ids=[SERVER])
     async def bop(self, ctx: SlashContext):

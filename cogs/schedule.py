@@ -62,7 +62,7 @@ MAPS = [
     "Al Salman, Iraq",
     "Gulfcoast Islands",
     "Lingor/Dingor Island",
-    "GOS Lesokovets",
+    "GOS Leskovets",
 ]
 
 UTC = pytz.utc

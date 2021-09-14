@@ -99,7 +99,7 @@ class Schedule(commands.Cog):
         self.scheduler.start()
     
     async def autoDeleteEvents(self):
-        log.debug("Checking to auto deleting events")
+        log.debug("Checking to auto delete events")
         if self.eventsFileLock:
             while self.eventsFileLock:
                 while self.eventsFileLock:
@@ -133,6 +133,8 @@ class Schedule(commands.Cog):
                 }
                 with open(EVENTS_STATS_FILE, "w") as f:
                     json.dump(eventsStats, f, indent=4)
+        if len(deletedEvents) == 0:
+            log.debug("No events were auto deleted")
         for event in deletedEvents:
             events.remove(event)
         with open(EVENTS_FILE, "w") as f:

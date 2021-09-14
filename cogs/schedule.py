@@ -179,9 +179,9 @@ class Schedule(commands.Cog):
                 embed = self.getEventEmbed(event)
                 msg = await channel.send(embed=embed)
                 if event["reservableRoles"] is not None:
-                    emojis = (f"✅", f"❌", f"❓", f"👤", "✏️", "🗑")
+                    emojis = ("✅", "❌", "❓", "👤", "✏️", "🗑")
                 else:
-                    emojis = (f"✅", f"❌", f"❓", "✏️", "🗑")
+                    emojis = ("✅", "❌", "❓", "✏️", "🗑")
                 for emoji in emojis:
                     await msg.add_reaction(emoji)
                 event["messageId"] = msg.id
@@ -220,11 +220,12 @@ class Schedule(commands.Cog):
         declined = [member.display_name for memberId in event["declined"] if (member := guild.get_member(memberId)) is not None]
         tentative = [member.display_name for memberId in event["tentative"] if (member := guild.get_member(memberId)) is not None]
         
-        embed.add_field(name=f"Accepted ({len(accepted)}/{event['maxPlayers']}) ✅" if event["maxPlayers"] is not None else f"Accepted ({len(accepted)}) ✅", value="\n".join(name for name in accepted) if len(accepted) > 0 else "-", inline=True)
-        embed.add_field(name=f"Declined ({len(declined)}) ❌", value="\n".join(name for name in declined) if len(declined) > 0 else "-", inline=True)
-        embed.add_field(name=f"Tentative ({len(tentative)}) ❓", value="\n".join(name for name in tentative) if len(tentative) > 0 else "-", inline=True)
-        if len(standby) > 0:
-            embed.add_field(name=f"Standby ({len(standby)}) :clock3:", value="\n".join(name for name in standby), inline=False)
+        if event["maxPlayers"] != 0:
+            embed.add_field(name=f"Accepted ({len(accepted)}/{event['maxPlayers']}) ✅" if event["maxPlayers"] is not None else f"Accepted ({len(accepted)}) ✅", value="\n".join(name for name in accepted) if len(accepted) > 0 else "-", inline=True)
+            embed.add_field(name=f"Declined ({len(declined)}) ❌", value="\n".join(name for name in declined) if len(declined) > 0 else "-", inline=True)
+            embed.add_field(name=f"Tentative ({len(tentative)}) ❓", value="\n".join(name for name in tentative) if len(tentative) > 0 else "-", inline=True)
+            if len(standby) > 0:
+                embed.add_field(name=f"Standby ({len(standby)}) :clock3:", value="\n".join(name for name in standby), inline=False)
         
         author = guild.get_member(event["authorId"])
         embed.set_footer(text=f"Created by {author.display_name}")

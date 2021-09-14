@@ -117,6 +117,8 @@ class Schedule(commands.Cog):
                 deletedEvents.append(event)
                 eventMessage = await self.bot.get_channel(SCHEDULE).fetch_message(event["messageId"])
                 await eventMessage.delete()
+                author = self.bot.get_quild(SERVER).get_member(event["authorId"])
+                await self.bot.get_channel(ARMA_DISCUSSION).send(f"{member.mention} You silly goose, you forgot to delete your operation. I'm not your mother, but this time I will do it for you")
                 eventTime = UTC.localize(datetime.strptime(event["time"], EVENT_TIME_FORMAT))
                 with open(EVENTS_STATS_FILE) as f:
                     eventsStats = json.load(f)
@@ -131,6 +133,7 @@ class Schedule(commands.Cog):
                     "reservableRoles": len(event["reservableRoles"]) if event["reservableRoles"] is not None else 0,
                     "reservedRoles": len([role for role, member in event["reservableRoles"].items() if member is not None]) if event["reservableRoles"] is not None else 0,
                     "map": event["map"],
+                    "duration": event["duration"],
                     "autoDeleted": True
                 }
                 with open(EVENTS_STATS_FILE, "w") as f:
@@ -652,6 +655,7 @@ class Schedule(commands.Cog):
                 "reservableRoles": len(event["reservableRoles"]) if event["reservableRoles"] is not None else 0,
                 "reservedRoles": len([role for role, member in event["reservableRoles"].items() if member is not None]) if event["reservableRoles"] is not None else 0,
                 "map": event["map"],
+                "duration": event["duration"],
                 "autoDeleted": False
             }
             with open(EVENTS_STATS_FILE, "w") as f:

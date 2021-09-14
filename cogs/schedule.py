@@ -103,8 +103,8 @@ class Schedule(commands.Cog):
         if self.eventsFileLock:
             while self.eventsFileLock:
                 while self.eventsFileLock:
-                    asyncio.sleep(0.5)
-                asyncio.sleep(0.5)
+                    await asyncio.sleep(0.5)
+                await asyncio.sleep(0.5)
         self.eventsFileLock = True
         with open(EVENTS_FILE) as f:
             events = json.load(f)
@@ -117,7 +117,7 @@ class Schedule(commands.Cog):
                 deletedEvents.append(event)
                 eventMessage = await self.bot.get_channel(SCHEDULE).fetch_message(event["messageId"])
                 await eventMessage.delete()
-                author = self.bot.get_quild(SERVER).get_member(event["authorId"])
+                author = self.bot.get_guild(SERVER).get_member(event["authorId"])
                 await self.bot.get_channel(ARMA_DISCUSSION).send(f"{member.mention} You silly goose, you forgot to delete your operation. I'm not your mother, but this time I will do it for you")
                 eventTime = UTC.localize(datetime.strptime(event["time"], EVENT_TIME_FORMAT))
                 with open(EVENTS_STATS_FILE) as f:
@@ -237,8 +237,8 @@ class Schedule(commands.Cog):
         # if self.eventsFileLock:
         #     while self.eventsFileLock:
         #         while self.eventsFileLock:
-        #             asyncio.sleep(0.5)
-        #         asyncio.sleep(0.5)
+        #             await asyncio.sleep(0.5)
+        #         await asyncio.sleep(0.5)
         # self.eventsFileLock = True
         with open(EVENTS_FILE) as f:
             events = json.load(f)
@@ -868,8 +868,8 @@ class Schedule(commands.Cog):
             await dmChannel.send(embed=embed)
             while self.eventsFileLock:
                 while self.eventsFileLock:
-                    asyncio.sleep(0.5)
-                asyncio.sleep(0.5)
+                    await asyncio.sleep(0.5)
+                await asyncio.sleep(0.5)
         self.eventsFileLock = True
         
         if os.path.exists(EVENTS_FILE):
@@ -926,8 +926,8 @@ class Schedule(commands.Cog):
                 await ctx.author.send(embed=embed)
                 while self.memberTimeZonesFileLock:
                     while self.memberTimeZonesFileLock:
-                        asyncio.sleep(0.5)
-                    asyncio.sleep(0.5)
+                        await asyncio.sleep(0.5)
+                    await asyncio.sleep(0.5)
             self.memberTimeZonesFileLock = True
             with open(MEMBER_TIME_ZONES_FILE) as f:
                 memberTimeZones = json.load(f)

@@ -118,7 +118,7 @@ class Schedule(commands.Cog):
                 eventMessage = await self.bot.get_channel(SCHEDULE).fetch_message(event["messageId"])
                 await eventMessage.delete()
                 author = self.bot.get_guild(SERVER).get_member(event["authorId"])
-                await self.bot.get_channel(ARMA_DISCUSSION).send(f"{member.mention} You silly goose, you forgot to delete your operation. I'm not your mother, but this time I will do it for you")
+                await self.bot.get_channel(ARMA_DISCUSSION).send(f"{author.mention} You silly goose, you forgot to delete your operation. I'm not your mother, but this time I will do it for you")
                 eventTime = UTC.localize(datetime.strptime(event["time"], EVENT_TIME_FORMAT))
                 with open(EVENTS_STATS_FILE) as f:
                     eventsStats = json.load(f)

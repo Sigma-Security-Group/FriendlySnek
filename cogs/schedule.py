@@ -2,6 +2,7 @@ import os
 import re
 import json
 import asyncio
+from copy import deepcopy
 from datetime import datetime, timedelta
 from dateutil.parser import parse as datetimeParse
 import pytz
@@ -103,6 +104,7 @@ class Schedule(commands.Cog):
         self.scheduler.start()
     
     async def autoDeleteEvents(self):
+        guild = self.bot.get_guild(SERVER)
         log.debug("Checking to auto delete events")
         if self.eventsFileLock:
             while self.eventsFileLock:
@@ -146,7 +148,12 @@ class Schedule(commands.Cog):
                     
                     with open(EVENTS_HISTORY_FILE) as f:
                         eventsHistory = json.load(f)
-                    eventsHistory.append(event)
+                    eventCopy = deepcopy(event)
+                    eventCopy["authorName"] = member.display_name if (member := guild.get_member(eventCopy["authorId"])) is not None else "UNKNOWN"
+                    eventCopy["acceptedNames"] = [member.display_name if (member := guild.get_member(memberId)) is not None else "UNKNOWN" for memberId in eventCopy["accepted"]]
+                    eventCopy["declinedNames"] = [member.display_name if (member := guild.get_member(memberId)) is not None else "UNKNOWN" for memberId in eventCopy["declined"]]
+                    eventCopy["tentativeNames"] = [member.display_name if (member := guild.get_member(memberId)) is not None else "UNKNOWN" for memberId in eventCopy["tentative"]]
+                    eventsHistory.append(eventCopy)
                     with open(EVENTS_HISTORY_FILE, "w") as f:
                         json.dump(eventsHistory, f, indent=4)
         if len(deletedEvents) == 0:

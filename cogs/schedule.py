@@ -28,6 +28,7 @@ EVENTS_FILE = "data/events.json"
 MEMBER_TIME_ZONES_FILE = "data/memberTimeZones.json"
 TIMEOUT_EMBED = Embed(title="Time ran out. Try again. :anguished: ", color=Colour.red())
 EVENTS_STATS_FILE = "data/eventsStats.json"
+EVENTS_HISTORY_FILE = "data/eventsHistory.json"
 
 MAPS = [
     "Altis",
@@ -93,6 +94,9 @@ class Schedule(commands.Cog):
         if not os.path.exists(EVENTS_STATS_FILE):
             with open(EVENTS_STATS_FILE, "w") as f:
                 json.dump({}, f, indent=4)
+        if not os.path.exists(EVENTS_HISTORY_FILE):
+            with open(EVENTS_HISTORY_FILE, "w") as f:
+                json.dump({}, f, indent=4)
         await self.updateSchedule()
         self.scheduler = AsyncIOScheduler()
         self.scheduler.add_job(self.autoDeleteEvents, "interval", minutes=10)
@@ -139,6 +143,12 @@ class Schedule(commands.Cog):
                     }
                     with open(EVENTS_STATS_FILE, "w") as f:
                         json.dump(eventsStats, f, indent=4)
+                    
+                    with open(EVENTS_HISTORY_FILE) as f:
+                        eventsHistory = json.load(f)
+                    eventsHistory[eventTime.strftime(EVENT_TIME_FORMAT)] = event
+                    with open(EVENTS_HISTORY_FILE, "w") as f:
+                        json.dump(eventsHistory, f, indent=4)
         if len(deletedEvents) == 0:
             log.debug("No events were auto deleted")
         for event in deletedEvents:
@@ -663,6 +673,12 @@ class Schedule(commands.Cog):
                 }
                 with open(EVENTS_STATS_FILE, "w") as f:
                     json.dump(eventsStats, f, indent=4)
+                    
+                with open(EVENTS_HISTORY_FILE) as f:
+                    eventsHistory = json.load(f)
+                eventsHistory[eventTime.strftime(EVENT_TIME_FORMAT)] = event
+                with open(EVENTS_HISTORY_FILE, "w") as f:
+                    json.dump(eventsHistory, f, indent=4)
     
     @cog_ext.cog_slash(name="bop", description="Create an event to add to the schedule.", guild_ids=[SERVER])
     async def bop(self, ctx: SlashContext):

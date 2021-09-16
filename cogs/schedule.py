@@ -96,7 +96,7 @@ class Schedule(commands.Cog):
                 json.dump({}, f, indent=4)
         if not os.path.exists(EVENTS_HISTORY_FILE):
             with open(EVENTS_HISTORY_FILE, "w") as f:
-                json.dump({}, f, indent=4)
+                json.dump([], f, indent=4)
         await self.updateSchedule()
         self.scheduler = AsyncIOScheduler()
         self.scheduler.add_job(self.autoDeleteEvents, "interval", minutes=10)
@@ -146,7 +146,7 @@ class Schedule(commands.Cog):
                     
                     with open(EVENTS_HISTORY_FILE) as f:
                         eventsHistory = json.load(f)
-                    eventsHistory[eventTime.strftime(EVENT_TIME_FORMAT)] = event
+                    eventsHistory.append(event)
                     with open(EVENTS_HISTORY_FILE, "w") as f:
                         json.dump(eventsHistory, f, indent=4)
         if len(deletedEvents) == 0:
@@ -676,7 +676,7 @@ class Schedule(commands.Cog):
                     
                 with open(EVENTS_HISTORY_FILE) as f:
                     eventsHistory = json.load(f)
-                eventsHistory[eventTime.strftime(EVENT_TIME_FORMAT)] = event
+                eventsHistory.append(event)
                 with open(EVENTS_HISTORY_FILE, "w") as f:
                     json.dump(eventsHistory, f, indent=4)
     

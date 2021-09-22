@@ -980,29 +980,17 @@ class Schedule(commands.Cog):
         
         await ctx.send(":b:op on schedule")
     
-    @cog_ext.cog_slash(name="ws", description="Create a workshop to add to the schedule.", guild_ids=[SERVER],
-                       permissions={
-                           SERVER: [
-                               create_permission(EVERYONE, SlashCommandPermissionType.ROLE, False),
-                               create_permission(UNIT_STAFF, SlashCommandPermissionType.ROLE, True),
-                               create_permission(TECHNICIAN, SlashCommandPermissionType.ROLE, True),
-                               create_permission(ADVISOR, SlashCommandPermissionType.ROLE, True)
-                           ]
-                       })
+    @cog_ext.cog_slash(name="ws", description="Create a workshop to add to the schedule.", guild_ids=[SERVER])
     async def ws(self, ctx: SlashContext):
         await self.scheduleOperation(ctx)
     
-    @cog_ext.cog_slash(name="workshop", description="Create a workshop to add to the schedule.", guild_ids=[SERVER],
-                       permissions={
-                           SERVER: [
-                               create_permission(EVERYONE, SlashCommandPermissionType.ROLE, False),
-                               create_permission(UNIT_STAFF, SlashCommandPermissionType.ROLE, True),
-                               create_permission(TECHNICIAN, SlashCommandPermissionType.ROLE, True),
-                               create_permission(ADVISOR, SlashCommandPermissionType.ROLE, True)
-                           ]
-                       })
+    ws.add_check(lambda ctx: any(role.id == UNIT_STAFF or role in SME_ROLES for role in ctx.author.roles))
+    
+    @cog_ext.cog_slash(name="workshop", description="Create a workshop to add to the schedule.", guild_ids=[SERVER])
     async def workshop(self, ctx: SlashContext):
         await self.scheduleOperation(ctx)
+    
+    workshop.add_check(lambda ctx: any(role.id == UNIT_STAFF or role in SME_ROLES for role in ctx.author.roles))
     
     async def scheduleWorkshop(self, ctx):
         if not anvilController.isScheduleWallOpen():

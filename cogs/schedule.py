@@ -13,7 +13,7 @@ from discord import Embed
 from discord import Colour
 from discord.ext import commands
 from discord_slash import cog_ext, SlashContext
-from discord_slash.utils.manage_commands import create_permission
+from discord_slash.utils.manage_commands import create_permission, create_multi_ids_permission
 from discord_slash.utils.manage_components import create_button, create_actionrow
 from discord_slash.model import ButtonStyle, SlashCommandPermissionType
 
@@ -985,7 +985,7 @@ class Schedule(commands.Cog):
                            SERVER: [
                                create_permission(EVERYONE, SlashCommandPermissionType.ROLE, False),
                                create_permission(UNIT_STAFF, SlashCommandPermissionType.ROLE, True)
-                           ] + [create_permission(smeRole, SlashCommandPermissionType.ROLE, True) for smeRole in SME_ROLES]
+                           ] + create_multi_ids_permission(SME_ROLES, SlashCommandPermissionType.ROLE, True)
                        })
     async def ws(self, ctx: SlashContext):
         await self.scheduleOperation(ctx)
@@ -995,7 +995,7 @@ class Schedule(commands.Cog):
                            SERVER: [
                                create_permission(EVERYONE, SlashCommandPermissionType.ROLE, False),
                                create_permission(UNIT_STAFF, SlashCommandPermissionType.ROLE, True)
-                           ] + [create_permission(smeRole, SlashCommandPermissionType.ROLE, True) for smeRole in SME_ROLES]
+                           ] + create_multi_ids_permission(SME_ROLES, SlashCommandPermissionType.ROLE, True)
                        })
     async def workshop(self, ctx: SlashContext):
         await self.scheduleOperation(ctx)

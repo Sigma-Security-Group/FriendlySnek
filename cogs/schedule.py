@@ -980,11 +980,23 @@ class Schedule(commands.Cog):
         
         await ctx.send(":b:op on schedule")
     
-    @cog_ext.cog_slash(name="ws", description="Create a workshop to add to the schedule.", guild_ids=[SERVER])
+    @cog_ext.cog_slash(name="ws", description="Create a workshop to add to the schedule.", guild_ids=[SERVER],
+                       permissions={
+                           SERVER: [
+                               create_permission(EVERYONE, SlashCommandPermissionType.ROLE, False),
+                               create_permission(UNIT_STAFF, SlashCommandPermissionType.ROLE, True)
+                           ] + [create_permission(smeRole, SlashCommandPermissionType.ROLE, True) for smeRole in SME_ROLES]
+                       })
     async def ws(self, ctx: SlashContext):
         await self.scheduleOperation(ctx)
     
-    @cog_ext.cog_slash(name="workshop", description="Create a workshop to add to the schedule.", guild_ids=[SERVER])
+    @cog_ext.cog_slash(name="workshop", description="Create a workshop to add to the schedule.", guild_ids=[SERVER],
+                       permissions={
+                           SERVER: [
+                               create_permission(EVERYONE, SlashCommandPermissionType.ROLE, False),
+                               create_permission(UNIT_STAFF, SlashCommandPermissionType.ROLE, True)
+                           ] + [create_permission(smeRole, SlashCommandPermissionType.ROLE, True) for smeRole in SME_ROLES]
+                       })
     async def workshop(self, ctx: SlashContext):
         await self.scheduleOperation(ctx)
     

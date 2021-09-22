@@ -984,8 +984,10 @@ class Schedule(commands.Cog):
                        permissions={
                            SERVER: [
                                create_permission(EVERYONE, SlashCommandPermissionType.ROLE, False),
-                               create_permission(UNIT_STAFF, SlashCommandPermissionType.ROLE, True)
-                           ] + create_multi_ids_permission(SME_ROLES, SlashCommandPermissionType.ROLE, True)
+                               create_permission(UNIT_STAFF, SlashCommandPermissionType.ROLE, True),
+                               create_permission(TECHNICIAN, SlashCommandPermissionType.ROLE, True),
+                               create_permission(ADVISOR, SlashCommandPermissionType.ROLE, True)
+                           ]
                        })
     async def ws(self, ctx: SlashContext):
         await self.scheduleOperation(ctx)
@@ -994,8 +996,10 @@ class Schedule(commands.Cog):
                        permissions={
                            SERVER: [
                                create_permission(EVERYONE, SlashCommandPermissionType.ROLE, False),
-                               create_permission(UNIT_STAFF, SlashCommandPermissionType.ROLE, True)
-                           ] + create_multi_ids_permission(SME_ROLES, SlashCommandPermissionType.ROLE, True)
+                               create_permission(UNIT_STAFF, SlashCommandPermissionType.ROLE, True),
+                               create_permission(TECHNICIAN, SlashCommandPermissionType.ROLE, True),
+                               create_permission(ADVISOR, SlashCommandPermissionType.ROLE, True)
+                           ]
                        })
     async def workshop(self, ctx: SlashContext):
         await self.scheduleOperation(ctx)

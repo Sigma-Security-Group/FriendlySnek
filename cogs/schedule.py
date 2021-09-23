@@ -1030,15 +1030,16 @@ class Schedule(commands.Cog):
         with open(WORKSHOP_TEMPLATES) as f:
             workshopTemplates = json.load(f)
 
-        embed = Embed(title=":clipboard: Select a template.", description="Enter a template number or `none` to make a workshop from scratch", color=Colour.gold())
-        msg = await ctx.author.send(embed=embed)
-        dmChannel = msg.channel
-        try:
-            response = await self.bot.wait_for("message", timeout=600, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
-            templateNum = response.content
-        except asyncio.TimeoutError:
-            await dmChannel.send(embed=TIMEOUT_EMBED)
-            return
+        if False:
+            embed = Embed(title=":clipboard: Select a template.", description="Enter a template number or `none` to make a workshop from scratch", color=Colour.gold())
+            msg = await ctx.author.send(embed=embed)
+            dmChannel = msg.channel
+            try:
+                response = await self.bot.wait_for("message", timeout=600, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
+                templateNum = response.content
+            except asyncio.TimeoutError:
+                await dmChannel.send(embed=TIMEOUT_EMBED)
+                return
 
         embed = Embed(title=":pencil2: What is the title of your workshop?", color=Colour.gold())
         await dmChannel.send(embed=embed)

@@ -126,6 +126,7 @@ class Schedule(commands.Cog):
             with open(EVENTS_STATS_FILE, "w") as f:
                 json.dump(eventsStats, f, indent=4)
         
+        guild = self.bot.get_guild(SERVER)
         with open(EVENTS_HISTORY_FILE) as f:
             eventsHistory = json.load(f)
         eventCopy = deepcopy(event)

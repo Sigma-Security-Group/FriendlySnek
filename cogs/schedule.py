@@ -143,66 +143,70 @@ class Schedule(commands.Cog):
     async def autoDeleteEvents(self):
         guild = self.bot.get_guild(SERVER)
         log.debug("Checking to auto delete events")
-        # if self.eventsFileLock:
-        #     while self.eventsFileLock:
-        #         while self.eventsFileLock:
-        #             await asyncio.sleep(0.5)
-        #         await asyncio.sleep(0.5)
-        # self.eventsFileLock = True
-        with open(EVENTS_FILE) as f:
-            events = json.load(f)
-        utcNow = UTC.localize(datetime.utcnow())
-        deletedEvents = []
-        for event in events:
-            endTime = UTC.localize(datetime.strptime(event["endTime"], EVENT_TIME_FORMAT))
-            if utcNow > endTime + timedelta(minutes=90):
-                log.debug(f"Auto deleting: {event['title']}")
-                deletedEvents.append(event)
-                eventMessage = await self.bot.get_channel(SCHEDULE).fetch_message(event["messageId"])
-                await eventMessage.delete()
-                # author = self.bot.get_guild(SERVER).get_member(event["authorId"])
-                # await self.bot.get_channel(ARMA_DISCUSSION).send(f"{author.mention} You silly goose, you forgot to delete your operation. I'm not your mother, but this time I will do it for you")
-                if event["maxPlayers"] != 0:
-                    self.saveEventToHistory(event, autoDeleted=True)
-                    # eventTime = UTC.localize(datetime.strptime(event["time"], EVENT_TIME_FORMAT))
-                    # with open(EVENTS_STATS_FILE) as f:
-                    #     eventsStats = json.load(f)
-                    # while eventTime.strftime(EVENT_TIME_FORMAT) in eventsStats:
-                    #     eventTime = eventTime + timedelta(minutes=1)
-                    # eventsStats[eventTime.strftime(EVENT_TIME_FORMAT)] = {
-                    #     "accepted": min(event["maxPlayers"], len("accepted")) if event["maxPlayers"] is not None else len(event["accepted"]),
-                    #     "standby": max(0, len("accepted") - event["maxPlayers"]) if event["maxPlayers"] is not None else 0,
-                    #     "declined": len(event["declined"]),
-                    #     "tentative": len(event["tentative"]),
-                    #     "maxPlayers": event["maxPlayers"],
-                    #     "reservableRoles": len(event["reservableRoles"]) if event["reservableRoles"] is not None else 0,
-                    #     "reservedRoles": len([role for role, member in event["reservableRoles"].items() if member is not None]) if event["reservableRoles"] is not None else 0,
-                    #     "map": event["map"],
-                    #     "duration": event["duration"],
-                    #     "autoDeleted": True
-                    # }
-                    # with open(EVENTS_STATS_FILE, "w") as f:
-                    #     json.dump(eventsStats, f, indent=4)
-                    
-                    # with open(EVENTS_HISTORY_FILE) as f:
-                    #     eventsHistory = json.load(f)
-                    # eventCopy = deepcopy(event)
-                    # eventCopy["autoDeleted"] = True
-                    # eventCopy["authorName"] = member.display_name if (member := guild.get_member(eventCopy["authorId"])) is not None else "UNKNOWN"
-                    # eventCopy["acceptedNames"] = [member.display_name if (member := guild.get_member(memberId)) is not None else "UNKNOWN" for memberId in eventCopy["accepted"]]
-                    # eventCopy["declinedNames"] = [member.display_name if (member := guild.get_member(memberId)) is not None else "UNKNOWN" for memberId in eventCopy["declined"]]
-                    # eventCopy["tentativeNames"] = [member.display_name if (member := guild.get_member(memberId)) is not None else "UNKNOWN" for memberId in eventCopy["tentative"]]
-                    # eventCopy["reservableRolesNames"] = {role: ((member.display_name if (member := guild.get_member(memberId)) is not None else "UNKNOWN") if memberId is not None else "VACANT") for role, memberId in eventCopy["reservableRoles"].items()} if eventCopy["reservableRoles"] is not None else {}
-                    # eventsHistory.append(eventCopy)
-                    # with open(EVENTS_HISTORY_FILE, "w") as f:
-                    #     json.dump(eventsHistory, f, indent=4)
-        if len(deletedEvents) == 0:
-            log.debug("No events were auto deleted")
-        for event in deletedEvents:
-            events.remove(event)
-        with open(EVENTS_FILE, "w") as f:
-            json.dump(events, f, indent=4)
-        # self.eventsFileLock = False
+        if self.eventsFileLock:
+            while self.eventsFileLock:
+                while self.eventsFileLock:
+                    await asyncio.sleep(0.5)
+                await asyncio.sleep(0.5)
+        self.eventsFileLock = True
+        try:
+            with open(EVENTS_FILE) as f:
+                events = json.load(f)
+            utcNow = UTC.localize(datetime.utcnow())
+            deletedEvents = []
+            for event in events:
+                endTime = UTC.localize(datetime.strptime(event["endTime"], EVENT_TIME_FORMAT))
+                if utcNow > endTime + timedelta(minutes=90):
+                    log.debug(f"Auto deleting: {event['title']}")
+                    deletedEvents.append(event)
+                    eventMessage = await self.bot.get_channel(SCHEDULE).fetch_message(event["messageId"])
+                    await eventMessage.delete()
+                    # author = self.bot.get_guild(SERVER).get_member(event["authorId"])
+                    # await self.bot.get_channel(ARMA_DISCUSSION).send(f"{author.mention} You silly goose, you forgot to delete your operation. I'm not your mother, but this time I will do it for you")
+                    if event["maxPlayers"] != 0:
+                        self.saveEventToHistory(event, autoDeleted=True)
+                        # eventTime = UTC.localize(datetime.strptime(event["time"], EVENT_TIME_FORMAT))
+                        # with open(EVENTS_STATS_FILE) as f:
+                        #     eventsStats = json.load(f)
+                        # while eventTime.strftime(EVENT_TIME_FORMAT) in eventsStats:
+                        #     eventTime = eventTime + timedelta(minutes=1)
+                        # eventsStats[eventTime.strftime(EVENT_TIME_FORMAT)] = {
+                        #     "accepted": min(event["maxPlayers"], len("accepted")) if event["maxPlayers"] is not None else len(event["accepted"]),
+                        #     "standby": max(0, len("accepted") - event["maxPlayers"]) if event["maxPlayers"] is not None else 0,
+                        #     "declined": len(event["declined"]),
+                        #     "tentative": len(event["tentative"]),
+                        #     "maxPlayers": event["maxPlayers"],
+                        #     "reservableRoles": len(event["reservableRoles"]) if event["reservableRoles"] is not None else 0,
+                        #     "reservedRoles": len([role for role, member in event["reservableRoles"].items() if member is not None]) if event["reservableRoles"] is not None else 0,
+                        #     "map": event["map"],
+                        #     "duration": event["duration"],
+                        #     "autoDeleted": True
+                        # }
+                        # with open(EVENTS_STATS_FILE, "w") as f:
+                        #     json.dump(eventsStats, f, indent=4)
+                        
+                        # with open(EVENTS_HISTORY_FILE) as f:
+                        #     eventsHistory = json.load(f)
+                        # eventCopy = deepcopy(event)
+                        # eventCopy["autoDeleted"] = True
+                        # eventCopy["authorName"] = member.display_name if (member := guild.get_member(eventCopy["authorId"])) is not None else "UNKNOWN"
+                        # eventCopy["acceptedNames"] = [member.display_name if (member := guild.get_member(memberId)) is not None else "UNKNOWN" for memberId in eventCopy["accepted"]]
+                        # eventCopy["declinedNames"] = [member.display_name if (member := guild.get_member(memberId)) is not None else "UNKNOWN" for memberId in eventCopy["declined"]]
+                        # eventCopy["tentativeNames"] = [member.display_name if (member := guild.get_member(memberId)) is not None else "UNKNOWN" for memberId in eventCopy["tentative"]]
+                        # eventCopy["reservableRolesNames"] = {role: ((member.display_name if (member := guild.get_member(memberId)) is not None else "UNKNOWN") if memberId is not None else "VACANT") for role, memberId in eventCopy["reservableRoles"].items()} if eventCopy["reservableRoles"] is not None else {}
+                        # eventsHistory.append(eventCopy)
+                        # with open(EVENTS_HISTORY_FILE, "w") as f:
+                        #     json.dump(eventsHistory, f, indent=4)
+            if len(deletedEvents) == 0:
+                log.debug("No events were auto deleted")
+            for event in deletedEvents:
+                events.remove(event)
+            with open(EVENTS_FILE, "w") as f:
+                json.dump(events, f, indent=4)
+        except Exception as e:
+            print(e)
+        finally:
+            self.eventsFileLock = False
     
     @cog_ext.cog_slash(name="refreshschedule",
                        description="Refresh the schedule. Use this command if an event was deleted without using the reactions.",
@@ -227,25 +231,29 @@ class Schedule(commands.Cog):
         await channel.send(f"Welcome to the schedule channel. To schedule an event you can use the **`/operation`** command and follow the instructions through DMs. If you haven't set a prefered time zone yet you will be prompted to do so when you schedule an event. If you want to set, change or delete your time zone preference you can do so with the **`/changetimezone`** command.\n\nIf you have any features suggestions or encounter any bugs, please contact {channel.guild.get_member(ADRIAN).display_name}.")
         
         if os.path.exists(EVENTS_FILE):
-            # self.eventsFileLock = True
-            with open(EVENTS_FILE) as f:
-                events = json.load(f)
-            if len(events) == 0:
-                await channel.send("...\nNo bop?\n...\nSnek is sad")
-                await channel.send(":cry:")
-            for event in sorted(events, key=lambda e: datetime.strptime(e["time"], EVENT_TIME_FORMAT), reverse=True):
-                embed = self.getEventEmbed(event)
-                msg = await channel.send(embed=embed)
-                if event["reservableRoles"] is not None:
-                    emojis = ("✅", "❌", "❓", "👤", "✏️", "🗑")
-                else:
-                    emojis = ("✅", "❌", "❓", "✏️", "🗑")
-                for emoji in emojis:
-                    await msg.add_reaction(emoji)
-                event["messageId"] = msg.id
-            with open(EVENTS_FILE, "w") as f:
-                json.dump(events, f, indent=4)
-            # self.eventsFileLock = False
+            try:
+                self.eventsFileLock = True
+                with open(EVENTS_FILE) as f:
+                    events = json.load(f)
+                if len(events) == 0:
+                    await channel.send("...\nNo bop?\n...\nSnek is sad")
+                    await channel.send(":cry:")
+                for event in sorted(events, key=lambda e: datetime.strptime(e["time"], EVENT_TIME_FORMAT), reverse=True):
+                    embed = self.getEventEmbed(event)
+                    msg = await channel.send(embed=embed)
+                    if event["reservableRoles"] is not None:
+                        emojis = ("✅", "❌", "❓", "👤", "✏️", "🗑")
+                    else:
+                        emojis = ("✅", "❌", "❓", "✏️", "🗑")
+                    for emoji in emojis:
+                        await msg.add_reaction(emoji)
+                    event["messageId"] = msg.id
+                with open(EVENTS_FILE, "w") as f:
+                    json.dump(events, f, indent=4)
+            except Exception as e:
+                print(e)
+            finally:
+                self.eventsFileLock = False
         else:
             with open(EVENTS_FILE, "w") as f:
                 json.dump([], f, indent=4)
@@ -293,82 +301,86 @@ class Schedule(commands.Cog):
     
     @commands.Cog.listener()
     async def on_raw_reaction_add(self, payload):
-        # if self.eventsFileLock:
-        #     while self.eventsFileLock:
-        #         while self.eventsFileLock:
-        #             await asyncio.sleep(0.5)
-        #         await asyncio.sleep(0.5)
-        # self.eventsFileLock = True
-        with open(EVENTS_FILE) as f:
-            events = json.load(f)
-        
-        if any(event["messageId"] == payload.message_id for event in events) and self.bot.ready and not payload.member.bot:
-            scheduleNeedsUpdate = True
-            removeReaction = True
-            event = [event for event in events if event["messageId"] == payload.message_id][0]
-            eventMessage = await self.bot.get_channel(SCHEDULE).fetch_message(event["messageId"])
-            if payload.emoji.name == "✅":
-                if payload.member.id in event["declined"]:
-                    event["declined"].remove(payload.member.id)
-                if payload.member.id in event["tentative"]:
-                    event["tentative"].remove(payload.member.id)
-                if payload.member.id not in event["accepted"]:
-                    event["accepted"].append(payload.member.id)
-            elif payload.emoji.name == "❌":
-                if payload.member.id in event["accepted"]:
-                    event["accepted"].remove(payload.member.id)
-                if payload.member.id in event["tentative"]:
-                    event["tentative"].remove(payload.member.id)
-                if payload.member.id not in event["declined"]:
-                    event["declined"].append(payload.member.id)
-                if event["reservableRoles"] is not None:
-                    for roleName in event["reservableRoles"]:
-                        if event["reservableRoles"][roleName] == payload.member.id:
-                            event["reservableRoles"][roleName] = None
-            elif payload.emoji.name == "❓":
-                if payload.member.id in event["accepted"]:
-                    event["accepted"].remove(payload.member.id)
-                if payload.member.id in event["declined"]:
-                    event["declined"].remove(payload.member.id)
-                if payload.member.id not in event["tentative"]:
-                    event["tentative"].append(payload.member.id)
-                if event["reservableRoles"] is not None:
-                    for roleName in event["reservableRoles"]:
-                        if event["reservableRoles"][roleName] == payload.member.id:
-                            event["reservableRoles"][roleName] = None
-            elif payload.emoji.name == "👤":
-                await self.reserveRole(payload.member, event)
-            elif payload.emoji.name == "✏️":
-                if payload.member.id == event["authorId"] or any(role.id == UNIT_STAFF for role in payload.member.roles):
-                    reorderEvents = await self.editOperation(payload.member, event)
-                    if reorderEvents:
-                        with open(EVENTS_FILE, "w") as f:
-                            json.dump(events, f, indent=4)
-                        await self.updateSchedule()
-                        return
-            elif payload.emoji.name == "🗑":
-                if payload.member.id == event["authorId"] or any(role.id == UNIT_STAFF for role in payload.member.roles):
-                    await self.deleteEvent(payload.member, eventMessage, event)
-                    events.remove(event)
-                    removeReaction = False
-                scheduleNeedsUpdate = False
-            else:
-                scheduleNeedsUpdate = False
-            if removeReaction:
-                try:
-                    await eventMessage.remove_reaction(payload.emoji, payload.member)
-                except Exception:
-                    pass
-            if scheduleNeedsUpdate:
-                try:
-                    embed = self.getEventEmbed(event)
-                    await eventMessage.edit(embed=embed)
-                except Exception:
-                    pass
-        
-        with open(EVENTS_FILE, "w") as f:
-            json.dump(events, f, indent=4)
-        # self.eventsFileLock = False
+        if self.eventsFileLock:
+            while self.eventsFileLock:
+                while self.eventsFileLock:
+                    await asyncio.sleep(0.5)
+                await asyncio.sleep(0.5)
+        self.eventsFileLock = True
+        try:
+            with open(EVENTS_FILE) as f:
+                events = json.load(f)
+            
+            if any(event["messageId"] == payload.message_id for event in events) and self.bot.ready and not payload.member.bot:
+                scheduleNeedsUpdate = True
+                removeReaction = True
+                event = [event for event in events if event["messageId"] == payload.message_id][0]
+                eventMessage = await self.bot.get_channel(SCHEDULE).fetch_message(event["messageId"])
+                if payload.emoji.name == "✅":
+                    if payload.member.id in event["declined"]:
+                        event["declined"].remove(payload.member.id)
+                    if payload.member.id in event["tentative"]:
+                        event["tentative"].remove(payload.member.id)
+                    if payload.member.id not in event["accepted"]:
+                        event["accepted"].append(payload.member.id)
+                elif payload.emoji.name == "❌":
+                    if payload.member.id in event["accepted"]:
+                        event["accepted"].remove(payload.member.id)
+                    if payload.member.id in event["tentative"]:
+                        event["tentative"].remove(payload.member.id)
+                    if payload.member.id not in event["declined"]:
+                        event["declined"].append(payload.member.id)
+                    if event["reservableRoles"] is not None:
+                        for roleName in event["reservableRoles"]:
+                            if event["reservableRoles"][roleName] == payload.member.id:
+                                event["reservableRoles"][roleName] = None
+                elif payload.emoji.name == "❓":
+                    if payload.member.id in event["accepted"]:
+                        event["accepted"].remove(payload.member.id)
+                    if payload.member.id in event["declined"]:
+                        event["declined"].remove(payload.member.id)
+                    if payload.member.id not in event["tentative"]:
+                        event["tentative"].append(payload.member.id)
+                    if event["reservableRoles"] is not None:
+                        for roleName in event["reservableRoles"]:
+                            if event["reservableRoles"][roleName] == payload.member.id:
+                                event["reservableRoles"][roleName] = None
+                elif payload.emoji.name == "👤":
+                    await self.reserveRole(payload.member, event)
+                elif payload.emoji.name == "✏️":
+                    if payload.member.id == event["authorId"] or any(role.id == UNIT_STAFF for role in payload.member.roles):
+                        reorderEvents = await self.editOperation(payload.member, event)
+                        if reorderEvents:
+                            with open(EVENTS_FILE, "w") as f:
+                                json.dump(events, f, indent=4)
+                            await self.updateSchedule()
+                            return
+                elif payload.emoji.name == "🗑":
+                    if payload.member.id == event["authorId"] or any(role.id == UNIT_STAFF for role in payload.member.roles):
+                        await self.deleteEvent(payload.member, eventMessage, event)
+                        events.remove(event)
+                        removeReaction = False
+                    scheduleNeedsUpdate = False
+                else:
+                    scheduleNeedsUpdate = False
+                if removeReaction:
+                    try:
+                        await eventMessage.remove_reaction(payload.emoji, payload.member)
+                    except Exception:
+                        pass
+                if scheduleNeedsUpdate:
+                    try:
+                        embed = self.getEventEmbed(event)
+                        await eventMessage.edit(embed=embed)
+                    except Exception:
+                        pass
+            
+            with open(EVENTS_FILE, "w") as f:
+                json.dump(events, f, indent=4)
+        except Exception as e:
+            print(e)
+        finally:
+            self.eventsFileLock = False
     
     async def reserveRole(self, member, event):
         reservationTime = datetime.utcnow()
@@ -938,41 +950,44 @@ class Schedule(commands.Cog):
         )
         endTime = eventTime + d
         
-        # if self.eventsFileLock:
-        #     embed = Embed(title=":clock3: Events file is occupied. This happens rarely, but give it just a few seconds")
-        #     await dmChannel.send(embed=embed)
-        #     while self.eventsFileLock:
-        #         while self.eventsFileLock:
-        #             await asyncio.sleep(0.5)
-        #         await asyncio.sleep(0.5)
-        # self.eventsFileLock = True
-        
-        if os.path.exists(EVENTS_FILE):
-            with open(EVENTS_FILE) as f:
-                events = json.load(f)
-        else:
-            events = []
-        newEvent = {
-            "authorId": authorId,
-            "title": title,
-            "description": description,
-            "externalURL": externalURL,
-            "reservableRoles": reservableRoles,
-            "maxPlayers": maxPlayers,
-            "map": eventMap,
-            "time": eventTime.strftime(EVENT_TIME_FORMAT),
-            "endTime": endTime.strftime(EVENT_TIME_FORMAT),
-            "duration": duration,
-            "messageId": None,
-            "accepted": [],
-            "declined": [],
-            "tentative": [],
-            "type": "Operation"  # Operation, Workshop, Other
-        }
-        events.append(newEvent)
-        with open(EVENTS_FILE, "w") as f:
-            json.dump(events, f, indent=4)
-        # self.eventsFileLock = False
+        if self.eventsFileLock:
+            embed = Embed(title=":clock3: Someone else is creating or editing an event at the same time. This happens rarely, but give it just a few seconds")
+            await dmChannel.send(embed=embed)
+            while self.eventsFileLock:
+                while self.eventsFileLock:
+                    await asyncio.sleep(0.5)
+                await asyncio.sleep(0.5)
+        self.eventsFileLock = True
+        try:
+            if os.path.exists(EVENTS_FILE):
+                with open(EVENTS_FILE) as f:
+                    events = json.load(f)
+            else:
+                events = []
+            newEvent = {
+                "authorId": authorId,
+                "title": title,
+                "description": description,
+                "externalURL": externalURL,
+                "reservableRoles": reservableRoles,
+                "maxPlayers": maxPlayers,
+                "map": eventMap,
+                "time": eventTime.strftime(EVENT_TIME_FORMAT),
+                "endTime": endTime.strftime(EVENT_TIME_FORMAT),
+                "duration": duration,
+                "messageId": None,
+                "accepted": [],
+                "declined": [],
+                "tentative": [],
+                "type": "Operation"  # Operation, Workshop, Other
+            }
+            events.append(newEvent)
+            with open(EVENTS_FILE, "w") as f:
+                json.dump(events, f, indent=4)
+        except Exception as e:
+            print(e)
+        finally:
+            self.eventsFileLock = False
         
         embed = Embed(title="✅ Operation created", color=Colour.green())
         await dmChannel.send(embed=embed)
@@ -1188,41 +1203,44 @@ class Schedule(commands.Cog):
         )
         endTime = eventTime + d
         
-        # if self.eventsFileLock:
-        #     embed = Embed(title=":clock3: Events file is occupied. This happens rarely, but give it just a few seconds")
-        #     await dmChannel.send(embed=embed)
-        #     while self.eventsFileLock:
-        #         while self.eventsFileLock:
-        #             await asyncio.sleep(0.5)
-        #         await asyncio.sleep(0.5)
-        # self.eventsFileLock = True
-        
-        if os.path.exists(EVENTS_FILE):
-            with open(EVENTS_FILE) as f:
-                events = json.load(f)
-        else:
-            events = []
-        newEvent = {
-            "authorId": authorId,
-            "title": title,
-            "description": description,
-            "externalURL": externalURL,
-            "reservableRoles": reservableRoles,
-            "maxPlayers": maxPlayers,
-            "map": eventMap,
-            "time": eventTime.strftime(EVENT_TIME_FORMAT),
-            "endTime": endTime.strftime(EVENT_TIME_FORMAT),
-            "duration": duration,
-            "messageId": None,
-            "accepted": [],
-            "declined": [],
-            "tentative": [],
-            "type": "Workshop"  # Operation, Workshop, Other
-        }
-        events.append(newEvent)
-        with open(EVENTS_FILE, "w") as f:
-            json.dump(events, f, indent=4)
-        # self.eventsFileLock = False
+        if self.eventsFileLock:
+            embed = Embed(title=":clock3: Someone else is creating or editing an event at the same time. This happens rarely, but give it just a few seconds")
+            await dmChannel.send(embed=embed)
+            while self.eventsFileLock:
+                while self.eventsFileLock:
+                    await asyncio.sleep(0.5)
+                await asyncio.sleep(0.5)
+        self.eventsFileLock = True
+        try:
+            if os.path.exists(EVENTS_FILE):
+                with open(EVENTS_FILE) as f:
+                    events = json.load(f)
+            else:
+                events = []
+            newEvent = {
+                "authorId": authorId,
+                "title": title,
+                "description": description,
+                "externalURL": externalURL,
+                "reservableRoles": reservableRoles,
+                "maxPlayers": maxPlayers,
+                "map": eventMap,
+                "time": eventTime.strftime(EVENT_TIME_FORMAT),
+                "endTime": endTime.strftime(EVENT_TIME_FORMAT),
+                "duration": duration,
+                "messageId": None,
+                "accepted": [],
+                "declined": [],
+                "tentative": [],
+                "type": "Workshop"  # Operation, Workshop, Other
+            }
+            events.append(newEvent)
+            with open(EVENTS_FILE, "w") as f:
+                json.dump(events, f, indent=4)
+        except Exception as e:
+            print(e)
+        finally:
+            self.eventsFileLock = False
         
         embed = Embed(title="✅ Workshop created", color=Colour.green())
         await dmChannel.send(embed=embed)

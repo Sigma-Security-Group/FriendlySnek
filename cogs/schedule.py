@@ -87,6 +87,8 @@ class Schedule(commands.Cog):
         self.bot = bot
         self.eventsFileLock = False
         self.memberTimeZonesFileLock = False
+        self.scheduler = AsyncIOScheduler()
+        self.scheduler.add_job(self.autoDeleteEvents, "interval", minutes=10)
     
     @commands.Cog.listener()
     async def on_ready(self):
@@ -99,9 +101,8 @@ class Schedule(commands.Cog):
             with open(EVENTS_HISTORY_FILE, "w") as f:
                 json.dump([], f, indent=4)
         await self.updateSchedule()
-        self.scheduler = AsyncIOScheduler()
-        self.scheduler.add_job(self.autoDeleteEvents, "interval", minutes=10)
-        self.scheduler.start()
+        if not self.scheduler.running:
+            self.scheduler.start()
     
     def saveEventToHistory(self, event, autoDeleted=False):
         if event.get("type", "Operation") == "Opration":
@@ -141,12 +142,12 @@ class Schedule(commands.Cog):
     async def autoDeleteEvents(self):
         guild = self.bot.get_guild(SERVER)
         log.debug("Checking to auto delete events")
-        if self.eventsFileLock:
-            while self.eventsFileLock:
-                while self.eventsFileLock:
-                    await asyncio.sleep(0.5)
-                await asyncio.sleep(0.5)
-        self.eventsFileLock = True
+        # if self.eventsFileLock:
+        #     while self.eventsFileLock:
+        #         while self.eventsFileLock:
+        #             await asyncio.sleep(0.5)
+        #         await asyncio.sleep(0.5)
+        # self.eventsFileLock = True
         with open(EVENTS_FILE) as f:
             events = json.load(f)
         utcNow = UTC.localize(datetime.utcnow())
@@ -200,7 +201,7 @@ class Schedule(commands.Cog):
             events.remove(event)
         with open(EVENTS_FILE, "w") as f:
             json.dump(events, f, indent=4)
-        self.eventsFileLock = False
+        # self.eventsFileLock = False
     
     @cog_ext.cog_slash(name="refreshschedule",
                        description="Refresh the schedule. Use this command if an event was deleted without using the reactions.",
@@ -225,7 +226,7 @@ class Schedule(commands.Cog):
         await channel.send(f"Welcome to the schedule channel. To schedule an event you can use the **`/operation`** command and follow the instructions through DMs. If you haven't set a prefered time zone yet you will be prompted to do so when you schedule an event. If you want to set, change or delete your time zone preference you can do so with the **`/changetimezone`** command.\n\nIf you have any features suggestions or encounter any bugs, please contact {channel.guild.get_member(ADRIAN).display_name}.")
         
         if os.path.exists(EVENTS_FILE):
-            self.eventsFileLock = True
+            # self.eventsFileLock = True
             with open(EVENTS_FILE) as f:
                 events = json.load(f)
             if len(events) == 0:
@@ -243,7 +244,7 @@ class Schedule(commands.Cog):
                 event["messageId"] = msg.id
             with open(EVENTS_FILE, "w") as f:
                 json.dump(events, f, indent=4)
-            self.eventsFileLock = False
+            # self.eventsFileLock = False
         else:
             with open(EVENTS_FILE, "w") as f:
                 json.dump([], f, indent=4)
@@ -936,14 +937,14 @@ class Schedule(commands.Cog):
         )
         endTime = eventTime + d
         
-        if self.eventsFileLock:
-            embed = Embed(title=":clock3: Events file is occupied. This happens rarely, but give it just a few seconds")
-            await dmChannel.send(embed=embed)
-            while self.eventsFileLock:
-                while self.eventsFileLock:
-                    await asyncio.sleep(0.5)
-                await asyncio.sleep(0.5)
-        self.eventsFileLock = True
+        # if self.eventsFileLock:
+        #     embed = Embed(title=":clock3: Events file is occupied. This happens rarely, but give it just a few seconds")
+        #     await dmChannel.send(embed=embed)
+        #     while self.eventsFileLock:
+        #         while self.eventsFileLock:
+        #             await asyncio.sleep(0.5)
+        #         await asyncio.sleep(0.5)
+        # self.eventsFileLock = True
         
         if os.path.exists(EVENTS_FILE):
             with open(EVENTS_FILE) as f:
@@ -970,7 +971,7 @@ class Schedule(commands.Cog):
         events.append(newEvent)
         with open(EVENTS_FILE, "w") as f:
             json.dump(events, f, indent=4)
-        self.eventsFileLock = False
+        # self.eventsFileLock = False
         
         embed = Embed(title="✅ Operation created", color=Colour.green())
         await dmChannel.send(embed=embed)
@@ -1186,14 +1187,14 @@ class Schedule(commands.Cog):
         )
         endTime = eventTime + d
         
-        if self.eventsFileLock:
-            embed = Embed(title=":clock3: Events file is occupied. This happens rarely, but give it just a few seconds")
-            await dmChannel.send(embed=embed)
-            while self.eventsFileLock:
-                while self.eventsFileLock:
-                    await asyncio.sleep(0.5)
-                await asyncio.sleep(0.5)
-        self.eventsFileLock = True
+        # if self.eventsFileLock:
+        #     embed = Embed(title=":clock3: Events file is occupied. This happens rarely, but give it just a few seconds")
+        #     await dmChannel.send(embed=embed)
+        #     while self.eventsFileLock:
+        #         while self.eventsFileLock:
+        #             await asyncio.sleep(0.5)
+        #         await asyncio.sleep(0.5)
+        # self.eventsFileLock = True
         
         if os.path.exists(EVENTS_FILE):
             with open(EVENTS_FILE) as f:
@@ -1220,7 +1221,7 @@ class Schedule(commands.Cog):
         events.append(newEvent)
         with open(EVENTS_FILE, "w") as f:
             json.dump(events, f, indent=4)
-        self.eventsFileLock = False
+        # self.eventsFileLock = False
         
         embed = Embed(title="✅ Workshop created", color=Colour.green())
         await dmChannel.send(embed=embed)

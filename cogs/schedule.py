@@ -30,6 +30,7 @@ MEMBER_TIME_ZONES_FILE = "data/memberTimeZones.json"
 TIMEOUT_EMBED = Embed(title="Time ran out. Try again. :anguished: ", color=Colour.red())
 EVENTS_STATS_FILE = "data/eventsStats.json"
 EVENTS_HISTORY_FILE = "data/eventsHistory.json"
+WORKSHOP_TEMPLATES = "data/workshopTemplates.json"
 
 MAPS = [
     "Altis",
@@ -100,6 +101,9 @@ class Schedule(commands.Cog):
         if not os.path.exists(EVENTS_HISTORY_FILE):
             with open(EVENTS_HISTORY_FILE, "w") as f:
                 json.dump([], f, indent=4)
+        if not os.path.exists(WORKSHOP_TEMPLATES):
+            with open(WORKSHOP_TEMPLATES, "w") as f:
+                json.dump([], f, indent=4)
         await self.updateSchedule()
         if not self.scheduler.running:
             self.scheduler.start()
@@ -143,12 +147,12 @@ class Schedule(commands.Cog):
     async def autoDeleteEvents(self):
         guild = self.bot.get_guild(SERVER)
         log.debug("Checking to auto delete events")
-        if self.eventsFileLock:
+        if False and self.eventsFileLock:
             while self.eventsFileLock:
                 while self.eventsFileLock:
                     await asyncio.sleep(0.5)
                 await asyncio.sleep(0.5)
-        self.eventsFileLock = True
+        self.eventsFileLock = False
         try:
             with open(EVENTS_FILE) as f:
                 events = json.load(f)
@@ -232,7 +236,7 @@ class Schedule(commands.Cog):
         
         if os.path.exists(EVENTS_FILE):
             try:
-                self.eventsFileLock = True
+                self.eventsFileLock = False
                 with open(EVENTS_FILE) as f:
                     events = json.load(f)
                 if len(events) == 0:
@@ -264,7 +268,12 @@ class Schedule(commands.Cog):
     def getEventEmbed(self, event):
         guild = self.bot.get_guild(SERVER)
         
-        embed = Embed(title=event["title"], description=event["description"], color=Colour.green())
+        colors = {
+            "Operation": Colour.green(),
+            "Workshop": Colour.blue(),
+            "Event": Colour.gold()
+        }
+        embed = Embed(title=event["title"], description=event["description"], color=colors[event.get("type", "Operation")])
 
         if event["reservableRoles"] is not None:
             embed.add_field(name="\u200B", value="\u200B", inline=False)
@@ -301,12 +310,12 @@ class Schedule(commands.Cog):
     
     @commands.Cog.listener()
     async def on_raw_reaction_add(self, payload):
-        if self.eventsFileLock:
+        if False and self.eventsFileLock:
             while self.eventsFileLock:
                 while self.eventsFileLock:
                     await asyncio.sleep(0.5)
                 await asyncio.sleep(0.5)
-        self.eventsFileLock = True
+        self.eventsFileLock = False
         try:
             with open(EVENTS_FILE) as f:
                 events = json.load(f)
@@ -950,14 +959,14 @@ class Schedule(commands.Cog):
         )
         endTime = eventTime + d
         
-        if self.eventsFileLock:
+        if False and self.eventsFileLock:
             embed = Embed(title=":clock3: Someone else is creating or editing an event at the same time. This happens rarely, but give it just a few seconds")
             await dmChannel.send(embed=embed)
             while self.eventsFileLock:
                 while self.eventsFileLock:
                     await asyncio.sleep(0.5)
                 await asyncio.sleep(0.5)
-        self.eventsFileLock = True
+        self.eventsFileLock = False
         try:
             if os.path.exists(EVENTS_FILE):
                 with open(EVENTS_FILE) as f:
@@ -1017,10 +1026,22 @@ class Schedule(commands.Cog):
         log.debug(f"{ctx.author.display_name}({ctx.author.name}#{ctx.author.discriminator}) is creating a workshop")
         
         authorId = ctx.author.id
+        
+        with open(WORKSHOP_TEMPLATES) as f:
+            workshopTemplates = json.load(f)
 
-        embed = Embed(title=":pencil2: What is the title of your workshop?", color=Colour.gold())
+        embed = Embed(title=":clipboard: Select a template.", description="Enter a template number or `none` to make a workshop from scratch", color=Colour.gold())
         msg = await ctx.author.send(embed=embed)
         dmChannel = msg.channel
+        try:
+            response = await self.bot.wait_for("message", timeout=600, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
+            templateNum = response.content
+        except asyncio.TimeoutError:
+            await dmChannel.send(embed=TIMEOUT_EMBED)
+            return
+
+        embed = Embed(title=":pencil2: What is the title of your workshop?", color=Colour.gold())
+        await dmChannel.send(embed=embed)
         try:
             response = await self.bot.wait_for("message", timeout=600, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
             title = response.content
@@ -1203,14 +1224,14 @@ class Schedule(commands.Cog):
         )
         endTime = eventTime + d
         
-        if self.eventsFileLock:
+        if False and self.eventsFileLock:
             embed = Embed(title=":clock3: Someone else is creating or editing an event at the same time. This happens rarely, but give it just a few seconds")
             await dmChannel.send(embed=embed)
             while self.eventsFileLock:
                 while self.eventsFileLock:
                     await asyncio.sleep(0.5)
                 await asyncio.sleep(0.5)
-        self.eventsFileLock = True
+        self.eventsFileLock = False
         try:
             if os.path.exists(EVENTS_FILE):
                 with open(EVENTS_FILE) as f:

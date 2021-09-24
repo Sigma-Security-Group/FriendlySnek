@@ -28,9 +28,9 @@ EVENT_TIME_FORMAT = "%Y-%m-%d %I:%M %p"
 EVENTS_FILE = "data/events.json"
 MEMBER_TIME_ZONES_FILE = "data/memberTimeZones.json"
 TIMEOUT_EMBED = Embed(title="Time ran out. Try again. :anguished: ", color=Colour.red())
-EVENTS_STATS_FILE = "data/eventsStats.json"
+# EVENTS_STATS_FILE = "data/eventsStats.json"
 EVENTS_HISTORY_FILE = "data/eventsHistory.json"
-WORKSHOP_TEMPLATES = "data/workshopTemplates.json"
+WORKSHOP_TEMPLATES_FILE = "data/workshopTemplates.json"
 
 MAPS = [
     "Altis",
@@ -95,40 +95,40 @@ class Schedule(commands.Cog):
     async def on_ready(self):
         log.debug("Schedule Cog is ready", flush=True)
         cogsReady["schedule"] = True
-        if not os.path.exists(EVENTS_STATS_FILE):
-            with open(EVENTS_STATS_FILE, "w") as f:
-                json.dump({}, f, indent=4)
+        # if not os.path.exists(EVENTS_STATS_FILE):
+        #     with open(EVENTS_STATS_FILE, "w") as f:
+        #         json.dump({}, f, indent=4)
         if not os.path.exists(EVENTS_HISTORY_FILE):
             with open(EVENTS_HISTORY_FILE, "w") as f:
                 json.dump([], f, indent=4)
-        if not os.path.exists(WORKSHOP_TEMPLATES):
-            with open(WORKSHOP_TEMPLATES, "w") as f:
+        if not os.path.exists(WORKSHOP_TEMPLATES_FILE):
+            with open(WORKSHOP_TEMPLATES_FILE, "w") as f:
                 json.dump([], f, indent=4)
         await self.updateSchedule()
         if not self.scheduler.running:
             self.scheduler.start()
     
     def saveEventToHistory(self, event, autoDeleted=False):
-        if event.get("type", "Operation") == "Operation":
-            eventTime = UTC.localize(datetime.strptime(event["time"], EVENT_TIME_FORMAT))
-            with open(EVENTS_STATS_FILE) as f:
-                eventsStats = json.load(f)
-            while eventTime.strftime(EVENT_TIME_FORMAT) in eventsStats:
-                eventTime = eventTime + timedelta(minutes=1)
-            eventsStats[eventTime.strftime(EVENT_TIME_FORMAT)] = {
-                "accepted": min(event["maxPlayers"], len("accepted")) if event["maxPlayers"] is not None else len(event["accepted"]),
-                "standby": max(0, len("accepted") - event["maxPlayers"]) if event["maxPlayers"] is not None else 0,
-                "declined": len(event["declined"]),
-                "tentative": len(event["tentative"]),
-                "maxPlayers": event["maxPlayers"],
-                "reservableRoles": len(event["reservableRoles"]) if event["reservableRoles"] is not None else 0,
-                "reservedRoles": len([role for role, member in event["reservableRoles"].items() if member is not None]) if event["reservableRoles"] is not None else 0,
-                "map": event["map"],
-                "duration": event["duration"],
-                "autoDeleted": True
-            }
-            with open(EVENTS_STATS_FILE, "w") as f:
-                json.dump(eventsStats, f, indent=4)
+        # if event.get("type", "Operation") == "Operation":
+        #     eventTime = UTC.localize(datetime.strptime(event["time"], EVENT_TIME_FORMAT))
+        #     with open(EVENTS_STATS_FILE) as f:
+        #         eventsStats = json.load(f)
+        #     while eventTime.strftime(EVENT_TIME_FORMAT) in eventsStats:
+        #         eventTime = eventTime + timedelta(minutes=1)
+        #     eventsStats[eventTime.strftime(EVENT_TIME_FORMAT)] = {
+        #         "accepted": min(event["maxPlayers"], len("accepted")) if event["maxPlayers"] is not None else len(event["accepted"]),
+        #         "standby": max(0, len("accepted") - event["maxPlayers"]) if event["maxPlayers"] is not None else 0,
+        #         "declined": len(event["declined"]),
+        #         "tentative": len(event["tentative"]),
+        #         "maxPlayers": event["maxPlayers"],
+        #         "reservableRoles": len(event["reservableRoles"]) if event["reservableRoles"] is not None else 0,
+        #         "reservedRoles": len([role for role, member in event["reservableRoles"].items() if member is not None]) if event["reservableRoles"] is not None else 0,
+        #         "map": event["map"],
+        #         "duration": event["duration"],
+        #         "autoDeleted": True
+        #     }
+        #     with open(EVENTS_STATS_FILE, "w") as f:
+        #         json.dump(eventsStats, f, indent=4)
         
         guild = self.bot.get_guild(SERVER)
         with open(EVENTS_HISTORY_FILE) as f:
@@ -418,7 +418,7 @@ class Schedule(commands.Cog):
         dmChannel = msg.channel
         try:
             response = await self.bot.wait_for("message", timeout=300, check=lambda msg, author=member, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
-            reservedRole = response.content
+            reservedRole = response.content.strip()
             mapOK = True
             if reservedRole.isdigit() and int(reservedRole) <= len(vacantRoles) and int(reservedRole) > 0:
                 reservedRole = vacantRoles[int(reservedRole) - 1]
@@ -492,7 +492,7 @@ class Schedule(commands.Cog):
             await dmChannel.send(embed=embed)
             try:
                 response = await self.bot.wait_for("message", timeout=600, check=lambda msg, author=author, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
-                title = response.content
+                title = response.content.strip()
             except asyncio.TimeoutError:
                 await dmChannel.send(embed=TIMEOUT_EMBED)
                 return False
@@ -503,7 +503,7 @@ class Schedule(commands.Cog):
             await dmChannel.send(embed=embed)
             try:
                 response = await self.bot.wait_for("message", timeout=1800, check=lambda msg, author=author, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
-                description = response.content
+                description = response.content.strip()
             except asyncio.TimeoutError:
                 await dmChannel.send(embed=TIMEOUT_EMBED)
                 return False
@@ -514,7 +514,7 @@ class Schedule(commands.Cog):
             await dmChannel.send(embed=embed)
             try:
                 response = await self.bot.wait_for("message", timeout=600, check=lambda msg, author=author, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
-                externalURL = response.content
+                externalURL = response.content.strip()
                 if externalURL.strip().lower() == "none":
                     externalURL = None
             except asyncio.TimeoutError:
@@ -552,7 +552,7 @@ class Schedule(commands.Cog):
             await dmChannel.send(embed=embed)
             try:
                 response = await self.bot.wait_for("message", timeout=600, check=lambda msg, author=author, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
-                eventMap = response.content
+                eventMap = response.content.strip()
                 mapOK = True
                 if eventMap.isdigit() and int(eventMap) <= len(MAPS) and int(eventMap) > 0:
                     eventMap = MAPS[int(eventMap) - 1]
@@ -569,7 +569,7 @@ class Schedule(commands.Cog):
                 await dmChannel.send(embed=embed)
                 try:
                     response = await self.bot.wait_for("message", timeout=600, check=lambda msg, author=author, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
-                    eventMap = response.content
+                    eventMap = response.content.strip()
                     mapOK = True
                     if eventMap.isdigit() and int(eventMap) <= len(MAPS) and int(eventMap) > 0:
                         eventMap = MAPS[int(eventMap) - 1]
@@ -587,7 +587,7 @@ class Schedule(commands.Cog):
             await dmChannel.send(embed=embed)
             try:
                 response = await self.bot.wait_for("message", timeout=600, check=lambda msg, author=author, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
-                maxPlayers = response.content
+                maxPlayers = response.content.strip()
                 if maxPlayers.isdigit():
                     maxPlayers = int(maxPlayers)
                 else:
@@ -612,7 +612,7 @@ class Schedule(commands.Cog):
                 await dmChannel.send(embed=embed)
                 try:
                     response = await self.bot.wait_for("message", timeout=600, check=lambda msg, author=author, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
-                    timeZone = response.content
+                    timeZone = response.content.strip()
                     saveTimeZonepreference = True
                     if timeZone.isdigit() and int(timeZone) <= len(TIME_ZONES) and int(timeZone) > 0:
                         timeZone = pytz.timezone(list(TIME_ZONES.values())[int(timeZone) - 1])
@@ -779,7 +779,7 @@ class Schedule(commands.Cog):
         dmChannel = msg.channel
         try:
             response = await self.bot.wait_for("message", timeout=600, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
-            title = response.content
+            title = response.content.strip()
         except asyncio.TimeoutError:
             await dmChannel.send(embed=TIMEOUT_EMBED)
             return
@@ -788,7 +788,7 @@ class Schedule(commands.Cog):
         await dmChannel.send(embed=embed)
         try:
             response = await self.bot.wait_for("message", timeout=1800, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
-            description = response.content
+            description = response.content.strip()
         except asyncio.TimeoutError:
             await dmChannel.send(embed=TIMEOUT_EMBED)
             return
@@ -797,7 +797,7 @@ class Schedule(commands.Cog):
         await dmChannel.send(embed=embed)
         try:
             response = await self.bot.wait_for("message", timeout=600, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
-            externalURL = response.content
+            externalURL = response.content.strip()
             if externalURL.strip().lower() == "none":
                 externalURL = None
         except asyncio.TimeoutError:
@@ -829,7 +829,7 @@ class Schedule(commands.Cog):
         await dmChannel.send(embed=embed)
         try:
             response = await self.bot.wait_for("message", timeout=600, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
-            eventMap = response.content
+            eventMap = response.content.strip()
             mapOK = True
             if eventMap.isdigit() and int(eventMap) <= len(MAPS) and int(eventMap) > 0:
                 eventMap = MAPS[int(eventMap) - 1]
@@ -846,7 +846,7 @@ class Schedule(commands.Cog):
             await dmChannel.send(embed=embed)
             try:
                 response = await self.bot.wait_for("message", timeout=600, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
-                eventMap = response.content
+                eventMap = response.content.strip()
                 mapOK = True
                 if eventMap.isdigit() and int(eventMap) <= len(MAPS) and int(eventMap) > 0:
                     eventMap = MAPS[int(eventMap) - 1]
@@ -862,7 +862,7 @@ class Schedule(commands.Cog):
         await dmChannel.send(embed=embed)
         try:
             response = await self.bot.wait_for("message", timeout=600, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
-            maxPlayers = response.content
+            maxPlayers = response.content.strip()
             if maxPlayers.isdigit():
                 maxPlayers = int(maxPlayers)
             else:
@@ -885,7 +885,7 @@ class Schedule(commands.Cog):
             await dmChannel.send(embed=embed)
             try:
                 response = await self.bot.wait_for("message", timeout=600, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
-                timeZone = response.content
+                timeZone = response.content.strip()
                 saveTimeZonepreference = True
                 if timeZone.isdigit() and int(timeZone) <= len(TIME_ZONES) and int(timeZone) > 0:
                     timeZone = pytz.timezone(list(TIME_ZONES.values())[int(timeZone) - 1])
@@ -1027,92 +1027,112 @@ class Schedule(commands.Cog):
         
         authorId = ctx.author.id
         
-        with open(WORKSHOP_TEMPLATES) as f:
+        with open(WORKSHOP_TEMPLATES_FILE) as f:
             workshopTemplates = json.load(f)
-
-        if False:
-            embed = Embed(title=":clipboard: Select a template.", description="Enter a template number or `none` to make a workshop from scratch", color=Colour.gold())
-            msg = await ctx.author.send(embed=embed)
-            dmChannel = msg.channel
-            try:
-                response = await self.bot.wait_for("message", timeout=600, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
-                templateNum = response.content
-            except asyncio.TimeoutError:
-                await dmChannel.send(embed=TIMEOUT_EMBED)
-                return
-
-        embed = Embed(title=":pencil2: What is the title of your workshop?", color=Colour.gold())
-        await dmChannel.send(embed=embed)
+        
+        embed = Embed(title=":clipboard: Select a template.", description="Enter a template number or `none` to make a workshop from scratch", color=Colour.gold())
+        embed.add_field(name="Template", value="\n".join(f"**{idx}**   {template['name']}" for idx, template in enumerate(workshopTemplates, 1)))
+        msg = await ctx.author.send(embed=embed)
+        dmChannel = msg.channel
         try:
             response = await self.bot.wait_for("message", timeout=600, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
-            title = response.content
+            templateNum = response.content.strip()
+            templateOk = True
+            if templateNum.isdigit() and int(templateNum) <= len(workshopTemplates) and int(templateNum) > 0:
+                template = workshopTemplates[int(templateNum) - 1]
+            elif templateNum.strip().lower() == "none":
+                templateNum = None
+            else:
+                templateOk = False
         except asyncio.TimeoutError:
             await dmChannel.send(embed=TIMEOUT_EMBED)
             return
-        
-        embed = Embed(title=":notepad_spiral: What is the description?", color=Colour.gold())
-        await dmChannel.send(embed=embed)
-        try:
-            response = await self.bot.wait_for("message", timeout=1800, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
-            description = response.content
-        except asyncio.TimeoutError:
-            await dmChannel.send(embed=TIMEOUT_EMBED)
-            return
-        
-        embed = Embed(title=":notebook_with_decorative_cover: Enter none or a URL", color=Colour.gold())
-        await dmChannel.send(embed=embed)
-        try:
-            response = await self.bot.wait_for("message", timeout=600, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
-            externalURL = response.content
-            if externalURL.strip().lower() == "none":
-                externalURL = None
-        except asyncio.TimeoutError:
-            await dmChannel.send(embed=TIMEOUT_EMBED)
-            return
-        
-        embed = Embed(title="Are there any reservable roles?", color=Colour.gold(), description="Type yes or y if there are reservable roles or type anything else if there are not")
-        await dmChannel.send(embed=embed)
-        try:
-            response = await self.bot.wait_for("message", timeout=600, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
-            reservableRolesPresent = response.content.strip().lower() in ("yes", "y")
-        except asyncio.TimeoutError:
-            await dmChannel.send(embed=TIMEOUT_EMBED)
-            return
-        if reservableRolesPresent:
-            embed = Embed(title="Type each reservable role in its own line (in a single message)", color=Colour.gold(), description="Press Shift + Enter to insert a newline")
+        while not templateOk:
+            embed = Embed(title="❌ Wrong format", color=Colour.red(), description="Choose a number from the list below or enter `none` to make a workshop from scratch")
+            embed.add_field(name="Template", value="\n".join(f"**{idx}**   {template['name']}" for idx, template in enumerate(workshopTemplates, 1)))
             await dmChannel.send(embed=embed)
             try:
                 response = await self.bot.wait_for("message", timeout=600, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
-                reservableRoles = {role.strip(): None for role in response.content.split("\n") if len(role.strip()) > 0}
+                templateNum = response.content.strip()
+                templateOk = True
+                if templateNum.isdigit() and int(templateNum) <= len(workshopTemplates) and int(templateNum) > 0:
+                    template = workshopTemplates[int(templateNum) - 1]
+                elif templateNum.strip().lower() == "none":
+                    templateNum = None
+                else:
+                    templateOk = False
+            except asyncio.TimeoutError:
+                await dmChannel.send(embed=TIMEOUT_EMBED)
+                return
+        
+        if template is None:
+            embed = Embed(title=":pencil2: What is the title of your workshop?", color=Colour.gold())
+            await dmChannel.send(embed=embed)
+            try:
+                response = await self.bot.wait_for("message", timeout=600, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
+                title = response.content.strip()
             except asyncio.TimeoutError:
                 await dmChannel.send(embed=TIMEOUT_EMBED)
                 return
         else:
-            reservableRoles = None
+            title = template["title"]
         
-        embed = Embed(title=":globe_with_meridians: Enter Your Map Number", color=Colour.gold(), description="Choose a number from the list below or enter `none` for no map")
-        embed.add_field(name="Map", value="\n".join(f"**{idx}**   {mapName}" for idx, mapName in enumerate(MAPS, 1)))
-        await dmChannel.send(embed=embed)
-        try:
-            response = await self.bot.wait_for("message", timeout=600, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
-            eventMap = response.content
-            mapOK = True
-            if eventMap.isdigit() and int(eventMap) <= len(MAPS) and int(eventMap) > 0:
-                eventMap = MAPS[int(eventMap) - 1]
-            elif eventMap.strip().lower() == "none":
-                eventMap = None
+        if template is None:
+            embed = Embed(title=":notepad_spiral: What is the description?", color=Colour.gold())
+            await dmChannel.send(embed=embed)
+            try:
+                response = await self.bot.wait_for("message", timeout=1800, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
+                description = response.content.strip()
+            except asyncio.TimeoutError:
+                await dmChannel.send(embed=TIMEOUT_EMBED)
+                return
+        else:
+            description = template["description"]
+        
+        if template is None:
+            embed = Embed(title=":notebook_with_decorative_cover: Enter none or a URL", color=Colour.gold())
+            await dmChannel.send(embed=embed)
+            try:
+                response = await self.bot.wait_for("message", timeout=600, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
+                externalURL = response.content.strip()
+                if externalURL.strip().lower() == "none":
+                    externalURL = None
+            except asyncio.TimeoutError:
+                await dmChannel.send(embed=TIMEOUT_EMBED)
+                return
+        else:
+            externalURL = template["externalURL"]
+        
+        if template is None:
+            embed = Embed(title="Are there any reservable roles?", color=Colour.gold(), description="Type yes or y if there are reservable roles or type anything else if there are not")
+            await dmChannel.send(embed=embed)
+            try:
+                response = await self.bot.wait_for("message", timeout=600, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
+                reservableRolesPresent = response.content.strip().lower() in ("yes", "y")
+            except asyncio.TimeoutError:
+                await dmChannel.send(embed=TIMEOUT_EMBED)
+                return
+            if reservableRolesPresent:
+                embed = Embed(title="Type each reservable role in its own line (in a single message)", color=Colour.gold(), description="Press Shift + Enter to insert a newline")
+                await dmChannel.send(embed=embed)
+                try:
+                    response = await self.bot.wait_for("message", timeout=600, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
+                    reservableRoles = {role.strip(): None for role in response.content.strip().split("\n") if len(role.strip()) > 0}
+                except asyncio.TimeoutError:
+                    await dmChannel.send(embed=TIMEOUT_EMBED)
+                    return
             else:
-                mapOK = False
-        except asyncio.TimeoutError:
-            await dmChannel.send(embed=TIMEOUT_EMBED)
-            return
-        while not mapOK:
-            embed = Embed(title="❌ Wrong format", color=Colour.red(), description="Choose a number from the list below or enter `none` for no map")
+                reservableRoles = None
+        else:
+            reservableRoles = template["reservableRoles"]
+        
+        if template is None:
+            embed = Embed(title=":globe_with_meridians: Enter Your Map Number", color=Colour.gold(), description="Choose a number from the list below or enter `none` for no map")
             embed.add_field(name="Map", value="\n".join(f"**{idx}**   {mapName}" for idx, mapName in enumerate(MAPS, 1)))
             await dmChannel.send(embed=embed)
             try:
                 response = await self.bot.wait_for("message", timeout=600, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
-                eventMap = response.content
+                eventMap = response.content.strip()
                 mapOK = True
                 if eventMap.isdigit() and int(eventMap) <= len(MAPS) and int(eventMap) > 0:
                     eventMap = MAPS[int(eventMap) - 1]
@@ -1123,20 +1143,42 @@ class Schedule(commands.Cog):
             except asyncio.TimeoutError:
                 await dmChannel.send(embed=TIMEOUT_EMBED)
                 return
+            while not mapOK:
+                embed = Embed(title="❌ Wrong format", color=Colour.red(), description="Choose a number from the list below or enter `none` for no map")
+                embed.add_field(name="Map", value="\n".join(f"**{idx}**   {mapName}" for idx, mapName in enumerate(MAPS, 1)))
+                await dmChannel.send(embed=embed)
+                try:
+                    response = await self.bot.wait_for("message", timeout=600, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
+                    eventMap = response.content.strip()
+                    mapOK = True
+                    if eventMap.isdigit() and int(eventMap) <= len(MAPS) and int(eventMap) > 0:
+                        eventMap = MAPS[int(eventMap) - 1]
+                    elif eventMap.strip().lower() == "none":
+                        eventMap = None
+                    else:
+                        mapOK = False
+                except asyncio.TimeoutError:
+                    await dmChannel.send(embed=TIMEOUT_EMBED)
+                    return
+        else:
+            eventMap = template["map"]
         
-        embed = Embed(title=":family_man_boy_boy: What is the maximum number of attendees?", color=Colour.gold(), description="Enter none or a number above zero and not greater than 100")
-        await dmChannel.send(embed=embed)
-        try:
-            response = await self.bot.wait_for("message", timeout=600, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
-            maxPlayers = response.content
-            if maxPlayers.isdigit():
-                maxPlayers = int(maxPlayers)
-            else:
-                maxPlayers = None
-        except asyncio.TimeoutError:
-            await dmChannel.send(embed=TIMEOUT_EMBED)
-            return
-        
+        if template is None:
+            embed = Embed(title=":family_man_boy_boy: What is the maximum number of attendees?", color=Colour.gold(), description="Enter none or a number above zero and not greater than 100")
+            await dmChannel.send(embed=embed)
+            try:
+                response = await self.bot.wait_for("message", timeout=600, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
+                maxPlayers = response.content.strip()
+                if maxPlayers.isdigit():
+                    maxPlayers = int(maxPlayers)
+                else:
+                    maxPlayers = None
+            except asyncio.TimeoutError:
+                await dmChannel.send(embed=TIMEOUT_EMBED)
+                return
+        else:
+            maxPlayers = template["maxPlayers"]
+            
         with open(MEMBER_TIME_ZONES_FILE) as f:
             memberTimeZones = json.load(f)
         
@@ -1151,7 +1193,7 @@ class Schedule(commands.Cog):
             await dmChannel.send(embed=embed)
             try:
                 response = await self.bot.wait_for("message", timeout=600, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
-                timeZone = response.content
+                timeZone = response.content.strip()
                 saveTimeZonepreference = True
                 if timeZone.isdigit() and int(timeZone) <= len(TIME_ZONES) and int(timeZone) > 0:
                     timeZone = pytz.timezone(list(TIME_ZONES.values())[int(timeZone) - 1])
@@ -1201,16 +1243,8 @@ class Schedule(commands.Cog):
                 isFormatCorrect = False
         eventTime = timeZone.localize(eventTime).astimezone(UTC)
         
-        embed = Embed(title="What is the duration of the workshop?", color=Colour.gold(), description="e.g. 30m\ne.g. 2h\ne.g. 4h 30m\ne.g. 2h30")
-        await dmChannel.send(embed=embed)
-        try:
-            response = await self.bot.wait_for("message", timeout=600, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
-            duration = response.content.strip()
-        except asyncio.TimeoutError:
-            await dmChannel.send(embed=TIMEOUT_EMBED)
-            return
-        while not re.match(r"^\s*((([1-9]\d*)?\d\s*h(\s*([0-5])?\d\s*m?)?)|(([0-5])?\d\s*m))\s*$", duration):
-            embed = Embed(title="❌ Wrong format", colour=Colour.red(), description="e.g. 30m\ne.g. 2h\ne.g. 4h 30m\ne.g. 2h30")
+        if template is None:
+            embed = Embed(title="What is the duration of the workshop?", color=Colour.gold(), description="e.g. 30m\ne.g. 2h\ne.g. 4h 30m\ne.g. 2h30")
             await dmChannel.send(embed=embed)
             try:
                 response = await self.bot.wait_for("message", timeout=600, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
@@ -1218,12 +1252,61 @@ class Schedule(commands.Cog):
             except asyncio.TimeoutError:
                 await dmChannel.send(embed=TIMEOUT_EMBED)
                 return
+            while not re.match(r"^\s*((([1-9]\d*)?\d\s*h(\s*([0-5])?\d\s*m?)?)|(([0-5])?\d\s*m))\s*$", duration):
+                embed = Embed(title="❌ Wrong format", colour=Colour.red(), description="e.g. 30m\ne.g. 2h\ne.g. 4h 30m\ne.g. 2h30")
+                await dmChannel.send(embed=embed)
+                try:
+                    response = await self.bot.wait_for("message", timeout=600, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
+                    duration = response.content.strip()
+                except asyncio.TimeoutError:
+                    await dmChannel.send(embed=TIMEOUT_EMBED)
+                    return
+        else:
+            duration = template["duration"]
         
         d = timedelta(
             hours=int(duration.split("h")[0].strip()) if "h" in duration else 0,
             minutes=int(duration.split("h")[-1].replace("m", "").strip()) if duration.strip()[-1] != "h" else 0
         )
         endTime = eventTime + d
+        
+        if template is None:
+            embed = Embed(title="Do you want to save this workshop as a template?", color=Colour.gold(), description="Type yes or y if you want to save it or type anything else otherwise")
+            await dmChannel.send(embed=embed)
+            try:
+                response = await self.bot.wait_for("message", timeout=600, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
+                saveTemplate = response.content.strip().lower() in ("yes", "y")
+            except asyncio.TimeoutError:
+                await dmChannel.send(embed=TIMEOUT_EMBED)
+                return
+            if saveTemplate:
+                embed = Embed(title="Which name would you like to save the template as?", color=Colour.gold(), description="Enter `none` to make it the same as the title")
+                await dmChannel.send(embed=embed)
+                try:
+                    response = await self.bot.wait_for("message", timeout=600, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
+                    templateName = response.content.strip()
+                    if templateName.lower() == "none":
+                        templateName = title
+                except asyncio.TimeoutError:
+                    await dmChannel.send(embed=TIMEOUT_EMBED)
+                    return
+                newTemplate = {
+                    "name": templateName,
+                    "title": title,
+                    "description": description,
+                    "externalURL": externalURL,
+                    "reservableRoles": reservableRoles,
+                    "maxPlayers": maxPlayers,
+                    "map": eventMap,
+                    "duration": duration
+                }
+                with open(WORKSHOP_TEMPLATES_FILE) as f:
+                    workshopTemplates = json.load(f)
+                workshopTemplates.append(newTemplate)
+                with open(WORKSHOP_TEMPLATES_FILE, "w") as f:
+                    json.dump(workshopTemplates, f, indent=4)
+                embed = Embed(title="✅ Template saved", color=Colour.green())
+                await dmChannel.send(embed=embed)
         
         if False and self.eventsFileLock:
             embed = Embed(title=":clock3: Someone else is creating or editing an event at the same time. This happens rarely, but give it just a few seconds")
@@ -1286,7 +1369,7 @@ class Schedule(commands.Cog):
         dmChannel = msg.channel
         try:
             response = await self.bot.wait_for("message", timeout=600, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
-            timeZone = response.content
+            timeZone = response.content.strip()
             if self.memberTimeZonesFileLock:
                 embed = Embed(title=":clock3: Time zones file is occupied. This happens rarely, but give it just a few seconds")
                 await ctx.author.send(embed=embed)

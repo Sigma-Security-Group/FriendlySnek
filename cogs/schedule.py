@@ -109,7 +109,7 @@ class Schedule(commands.Cog):
             self.scheduler.start()
     
     def saveEventToHistory(self, event, autoDeleted=False):
-        if event.get("type", "Operation") == "Opration":
+        if event.get("type", "Operation") == "Operation":
             eventTime = UTC.localize(datetime.strptime(event["time"], EVENT_TIME_FORMAT))
             with open(EVENTS_STATS_FILE) as f:
                 eventsStats = json.load(f)

@@ -1307,6 +1307,9 @@ class Schedule(commands.Cog):
                     json.dump(workshopTemplates, f, indent=4)
                 embed = Embed(title="✅ Template saved", color=Colour.green())
                 await dmChannel.send(embed=embed)
+            else:
+                embed = Embed(title="Template not saved", color=Colour.gold())
+                await dmChannel.send(embed=embed)
         
         if False and self.eventsFileLock:
             embed = Embed(title=":clock3: Someone else is creating or editing an event at the same time. This happens rarely, but give it just a few seconds")

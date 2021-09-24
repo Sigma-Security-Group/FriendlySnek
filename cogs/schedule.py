@@ -988,7 +988,7 @@ class Schedule(commands.Cog):
                 "accepted": [],
                 "declined": [],
                 "tentative": [],
-                "type": "Operation"  # Operation, Workshop, Other
+                "type": "Operation"  # Operation, Workshop, Event
             }
             events.append(newEvent)
             with open(EVENTS_FILE, "w") as f:
@@ -1337,7 +1337,7 @@ class Schedule(commands.Cog):
                 "accepted": [],
                 "declined": [],
                 "tentative": [],
-                "type": "Workshop"  # Operation, Workshop, Other
+                "type": "Workshop"  # Operation, Workshop, Event
             }
             events.append(newEvent)
             with open(EVENTS_FILE, "w") as f:

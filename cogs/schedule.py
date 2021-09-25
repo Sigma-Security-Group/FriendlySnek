@@ -110,12 +110,12 @@ class Schedule(commands.Cog):
     
     def saveEventToHistory(self, event, autoDeleted=False):
         # if event.get("type", "Operation") == "Operation":
-        #     eventTime = UTC.localize(datetime.strptime(event["time"], EVENT_TIME_FORMAT))
+        #     startTime = UTC.localize(datetime.strptime(event["time"], EVENT_TIME_FORMAT))
         #     with open(EVENTS_STATS_FILE) as f:
         #         eventsStats = json.load(f)
-        #     while eventTime.strftime(EVENT_TIME_FORMAT) in eventsStats:
-        #         eventTime = eventTime + timedelta(minutes=1)
-        #     eventsStats[eventTime.strftime(EVENT_TIME_FORMAT)] = {
+        #     while startTime.strftime(EVENT_TIME_FORMAT) in eventsStats:
+        #         startTime = startTime + timedelta(minutes=1)
+        #     eventsStats[startTime.strftime(EVENT_TIME_FORMAT)] = {
         #         "accepted": min(event["maxPlayers"], len("accepted")) if event["maxPlayers"] is not None else len(event["accepted"]),
         #         "standby": max(0, len("accepted") - event["maxPlayers"]) if event["maxPlayers"] is not None else 0,
         #         "declined": len(event["declined"]),
@@ -169,12 +169,12 @@ class Schedule(commands.Cog):
                     # await self.bot.get_channel(ARMA_DISCUSSION).send(f"{author.mention} You silly goose, you forgot to delete your operation. I'm not your mother, but this time I will do it for you")
                     if event["maxPlayers"] != 0:
                         self.saveEventToHistory(event, autoDeleted=True)
-                        # eventTime = UTC.localize(datetime.strptime(event["time"], EVENT_TIME_FORMAT))
+                        # startTime = UTC.localize(datetime.strptime(event["time"], EVENT_TIME_FORMAT))
                         # with open(EVENTS_STATS_FILE) as f:
                         #     eventsStats = json.load(f)
-                        # while eventTime.strftime(EVENT_TIME_FORMAT) in eventsStats:
-                        #     eventTime = eventTime + timedelta(minutes=1)
-                        # eventsStats[eventTime.strftime(EVENT_TIME_FORMAT)] = {
+                        # while startTime.strftime(EVENT_TIME_FORMAT) in eventsStats:
+                        #     startTime = startTime + timedelta(minutes=1)
+                        # eventsStats[startTime.strftime(EVENT_TIME_FORMAT)] = {
                         #     "accepted": min(event["maxPlayers"], len("accepted")) if event["maxPlayers"] is not None else len(event["accepted"]),
                         #     "standby": max(0, len("accepted") - event["maxPlayers"]) if event["maxPlayers"] is not None else 0,
                         #     "declined": len(event["declined"]),
@@ -635,12 +635,12 @@ class Schedule(commands.Cog):
             await dmChannel.send(embed=embed)
             try:
                 response = await self.bot.wait_for("message", timeout=600, check=lambda msg, author=author, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
-                eventTime = response.content.strip()
+                startTime = response.content.strip()
             except asyncio.TimeoutError:
                 await dmChannel.send(embed=TIMEOUT_EMBED)
                 return False
             try:
-                eventTime = datetimeParse(eventTime)
+                startTime = datetimeParse(startTime)
                 isFormatCorrect = True
             except ValueError:
                 isFormatCorrect = False
@@ -649,23 +649,23 @@ class Schedule(commands.Cog):
                 await dmChannel.send(embed=embed)
                 try:
                     response = await self.bot.wait_for("message", timeout=600, check=lambda msg, author=author, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
-                    eventTime = response.content.strip()
+                    startTime = response.content.strip()
                 except asyncio.TimeoutError:
                     await dmChannel.send(embed=TIMEOUT_EMBED)
                     return False
                 try:
-                    eventTime = datetimeParse(eventTime)
+                    startTime = datetimeParse(startTime)
                     isFormatCorrect = True
                 except ValueError:
                     isFormatCorrect = False
-            eventTime = timeZone.localize(eventTime).astimezone(UTC)
+            startTime = timeZone.localize(startTime).astimezone(UTC)
             duration = event["duration"]
             d = timedelta(
                 hours=int(duration.split("h")[0].strip()) if "h" in duration else 0,
                 minutes=int(duration.split("h")[-1].replace("m", "").strip()) if duration.strip()[-1] != "h" else 0
             )
-            endTime = eventTime + d
-            event["time"] = eventTime.strftime(EVENT_TIME_FORMAT)
+            endTime = startTime + d
+            event["time"] = startTime.strftime(EVENT_TIME_FORMAT)
             event["endTime"] = endTime.strftime(EVENT_TIME_FORMAT)
             reorderEvents = True
             
@@ -687,12 +687,12 @@ class Schedule(commands.Cog):
                 except asyncio.TimeoutError:
                     await dmChannel.send(embed=TIMEOUT_EMBED)
                     return False
-            eventTime = UTC.localize(datetime.strptime(event["time"], EVENT_TIME_FORMAT))
+            startTime = UTC.localize(datetime.strptime(event["time"], EVENT_TIME_FORMAT))
             d = timedelta(
                 hours=int(duration.split("h")[0].strip()) if "h" in duration else 0,
                 minutes=int(duration.split("h")[-1].replace("m", "").strip()) if duration.strip()[-1] != "h" else 0
             )
-            endTime = eventTime + d
+            endTime = startTime + d
             event["duration"] = duration
             event["endTime"] = endTime.strftime(EVENT_TIME_FORMAT)
         
@@ -721,14 +721,14 @@ class Schedule(commands.Cog):
         
         if event["maxPlayers"] != 0:
             utcNow = UTC.localize(datetime.utcnow())
-            eventTime = UTC.localize(datetime.strptime(event["time"], EVENT_TIME_FORMAT))
-            if utcNow > eventTime + timedelta(minutes=30):
+            startTime = UTC.localize(datetime.strptime(event["time"], EVENT_TIME_FORMAT))
+            if utcNow > startTime + timedelta(minutes=30):
                 self.saveEventToHistory(event)
                 # with open(EVENTS_STATS_FILE) as f:
                 #     eventsStats = json.load(f)
-                # while eventTime.strftime(EVENT_TIME_FORMAT) in eventsStats:
-                #     eventTime = eventTime + timedelta(minutes=1)
-                # eventsStats[eventTime.strftime(EVENT_TIME_FORMAT)] = {
+                # while startTime.strftime(EVENT_TIME_FORMAT) in eventsStats:
+                #     startTime = startTime + timedelta(minutes=1)
+                # eventsStats[startTime.strftime(EVENT_TIME_FORMAT)] = {
                 #     "accepted": min(event["maxPlayers"], len("accepted")) if event["maxPlayers"] is not None else len(event["accepted"]),
                 #     "standby": max(0, len("accepted") - event["maxPlayers"]) if event["maxPlayers"] is not None else 0,
                 #     "declined": len(event["declined"]),
@@ -871,6 +871,29 @@ class Schedule(commands.Cog):
             await dmChannel.send(embed=TIMEOUT_EMBED)
             return
         
+        embed = Embed(title="What is the duration of the operation?", color=Colour.gold(), description="e.g. 30m\ne.g. 2h\ne.g. 4h 30m\ne.g. 2h30")
+        await dmChannel.send(embed=embed)
+        try:
+            response = await self.bot.wait_for("message", timeout=600, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
+            duration = response.content.strip()
+        except asyncio.TimeoutError:
+            await dmChannel.send(embed=TIMEOUT_EMBED)
+            return
+        while not re.match(r"^\s*((([1-9]\d*)?\d\s*h(\s*([0-5])?\d\s*m?)?)|(([0-5])?\d\s*m))\s*$", duration):
+            embed = Embed(title="❌ Wrong format", colour=Colour.red(), description="e.g. 30m\ne.g. 2h\ne.g. 4h 30m\ne.g. 2h30")
+            await dmChannel.send(embed=embed)
+            try:
+                response = await self.bot.wait_for("message", timeout=600, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
+                duration = response.content.strip()
+            except asyncio.TimeoutError:
+                await dmChannel.send(embed=TIMEOUT_EMBED)
+                return
+        
+        d = timedelta(
+            hours=int(duration.split("h")[0].strip()) if "h" in duration else 0,
+            minutes=int(duration.split("h")[-1].replace("m", "").strip()) if duration.strip()[-1] != "h" else 0
+        )
+        
         with open(MEMBER_TIME_ZONES_FILE) as f:
             memberTimeZones = json.load(f)
         
@@ -903,61 +926,67 @@ class Schedule(commands.Cog):
                 await dmChannel.send(embed=TIMEOUT_EMBED)
                 return
         
-        embed = Embed(title="What is the time of the operation?", color=Colour.gold(), description=f"Your selected time zone is '{timeZone.zone}'")
-        utcNow = datetime.utcnow()
-        nextHalfHour = utcNow + (datetime.min - utcNow) % timedelta(minutes=30)
-        embed.add_field(name="Example", value=UTC.localize(nextHalfHour).astimezone(timeZone).strftime(EVENT_TIME_FORMAT))
-        await dmChannel.send(embed=embed)
-        try:
-            response = await self.bot.wait_for("message", timeout=600, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
-            eventTime = response.content.strip()
-        except asyncio.TimeoutError:
-            await dmChannel.send(embed=TIMEOUT_EMBED)
-            return
-        try:
-            eventTime = datetimeParse(eventTime)
-            isFormatCorrect = True
-        except ValueError:
-            isFormatCorrect = False
-        while not isFormatCorrect:
-            embed = Embed(title="❌ Wrong format", colour=Colour.red(), description="e.g. 2021-08-08 9:30 PM")
+        eventCollision = True
+
+        while eventCollision:
+            eventCollision = False
+        
+            embed = Embed(title="What is the time of the operation?", color=Colour.gold(), description=f"Your selected time zone is '{timeZone.zone}'")
+            utcNow = datetime.utcnow()
+            nextHalfHour = utcNow + (datetime.min - utcNow) % timedelta(minutes=30)
+            embed.add_field(name="Example", value=UTC.localize(nextHalfHour).astimezone(timeZone).strftime(EVENT_TIME_FORMAT))
             await dmChannel.send(embed=embed)
             try:
                 response = await self.bot.wait_for("message", timeout=600, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
-                eventTime = response.content.strip()
+                startTime = response.content.strip()
             except asyncio.TimeoutError:
                 await dmChannel.send(embed=TIMEOUT_EMBED)
                 return
             try:
-                eventTime = datetimeParse(eventTime)
+                startTime = datetimeParse(startTime)
                 isFormatCorrect = True
             except ValueError:
                 isFormatCorrect = False
-        eventTime = timeZone.localize(eventTime).astimezone(UTC)
-        
-        embed = Embed(title="What is the duration of the operation?", color=Colour.gold(), description="e.g. 30m\ne.g. 2h\ne.g. 4h 30m\ne.g. 2h30")
-        await dmChannel.send(embed=embed)
-        try:
-            response = await self.bot.wait_for("message", timeout=600, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
-            duration = response.content.strip()
-        except asyncio.TimeoutError:
-            await dmChannel.send(embed=TIMEOUT_EMBED)
-            return
-        while not re.match(r"^\s*((([1-9]\d*)?\d\s*h(\s*([0-5])?\d\s*m?)?)|(([0-5])?\d\s*m))\s*$", duration):
-            embed = Embed(title="❌ Wrong format", colour=Colour.red(), description="e.g. 30m\ne.g. 2h\ne.g. 4h 30m\ne.g. 2h30")
-            await dmChannel.send(embed=embed)
-            try:
-                response = await self.bot.wait_for("message", timeout=600, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
-                duration = response.content.strip()
-            except asyncio.TimeoutError:
-                await dmChannel.send(embed=TIMEOUT_EMBED)
-                return
-        
-        d = timedelta(
-            hours=int(duration.split("h")[0].strip()) if "h" in duration else 0,
-            minutes=int(duration.split("h")[-1].replace("m", "").strip()) if duration.strip()[-1] != "h" else 0
-        )
-        endTime = eventTime + d
+            while not isFormatCorrect:
+                embed = Embed(title="❌ Wrong format", colour=Colour.red(), description="e.g. 2021-08-08 9:30 PM")
+                await dmChannel.send(embed=embed)
+                try:
+                    response = await self.bot.wait_for("message", timeout=600, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
+                    startTime = response.content.strip()
+                except asyncio.TimeoutError:
+                    await dmChannel.send(embed=TIMEOUT_EMBED)
+                    return
+                try:
+                    startTime = datetimeParse(startTime)
+                    isFormatCorrect = True
+                except ValueError:
+                    isFormatCorrect = False
+            startTime = timeZone.localize(startTime).astimezone(UTC)
+            endTime = startTime + d
+            
+            with open(EVENTS_FILE) as f:
+                events = json.load(f)
+            
+            for event in events:
+                if event.get("type", "Operation") == "Event":
+                    continue
+                eventStartTime = UTC.localize(datetime.strptime(event["time"], EVENT_TIME_FORMAT))
+                eventEndTime = UTC.localize(datetime.strptime(event["endTime"], EVENT_TIME_FORMAT))
+                if (eventStartTime <= startTime < eventEndTime) or (eventStartTime <= endTime < eventEndTime) or (startTime <= eventStartTime < endTime):
+                    eventCollision = True
+                    embed = Embed(title=":clock3:❌ There is a collision with another event", colour=Colour.red(), description="Check the schedule and try inputing a another time")
+                    await dmChannel.send(embed=embed)
+                    break
+                elif endTime + timedelta(hours=1) > eventStartTime:
+                    eventCollision = True
+                    embed = Embed(title=":clock3:❌ There is another event starting less than an hour after this one ends", colour=Colour.red(), description="Check the schedule and try inputing a another time")
+                    await dmChannel.send(embed=embed)
+                    break
+                elif eventEndTime + timedelta(hours=1) > startTime:
+                    eventCollision = True
+                    embed = Embed(title=":clock3:❌ Your operation would start less than an hour after the previous event ends", colour=Colour.red(), description="Check the schedule and try inputing a another time")
+                    await dmChannel.send(embed=embed)
+                    break
         
         if False and self.eventsFileLock:
             embed = Embed(title=":clock3: Someone else is creating or editing an event at the same time. This happens rarely, but give it just a few seconds")
@@ -981,7 +1010,7 @@ class Schedule(commands.Cog):
                 "reservableRoles": reservableRoles,
                 "maxPlayers": maxPlayers,
                 "map": eventMap,
-                "time": eventTime.strftime(EVENT_TIME_FORMAT),
+                "time": startTime.strftime(EVENT_TIME_FORMAT),
                 "endTime": endTime.strftime(EVENT_TIME_FORMAT),
                 "duration": duration,
                 "messageId": None,
@@ -1178,6 +1207,32 @@ class Schedule(commands.Cog):
                 return
         else:
             maxPlayers = template["maxPlayers"]
+        
+        if template is None:
+            embed = Embed(title="What is the duration of the workshop?", color=Colour.gold(), description="e.g. 30m\ne.g. 2h\ne.g. 4h 30m\ne.g. 2h30")
+            await dmChannel.send(embed=embed)
+            try:
+                response = await self.bot.wait_for("message", timeout=600, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
+                duration = response.content.strip()
+            except asyncio.TimeoutError:
+                await dmChannel.send(embed=TIMEOUT_EMBED)
+                return
+            while not re.match(r"^\s*((([1-9]\d*)?\d\s*h(\s*([0-5])?\d\s*m?)?)|(([0-5])?\d\s*m))\s*$", duration):
+                embed = Embed(title="❌ Wrong format", colour=Colour.red(), description="e.g. 30m\ne.g. 2h\ne.g. 4h 30m\ne.g. 2h30")
+                await dmChannel.send(embed=embed)
+                try:
+                    response = await self.bot.wait_for("message", timeout=600, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
+                    duration = response.content.strip()
+                except asyncio.TimeoutError:
+                    await dmChannel.send(embed=TIMEOUT_EMBED)
+                    return
+        else:
+            duration = template["duration"]
+        
+        d = timedelta(
+            hours=int(duration.split("h")[0].strip()) if "h" in duration else 0,
+            minutes=int(duration.split("h")[-1].replace("m", "").strip()) if duration.strip()[-1] != "h" else 0
+        )
             
         with open(MEMBER_TIME_ZONES_FILE) as f:
             memberTimeZones = json.load(f)
@@ -1211,64 +1266,66 @@ class Schedule(commands.Cog):
                 await dmChannel.send(embed=TIMEOUT_EMBED)
                 return
         
-        embed = Embed(title="What is the time of the workshop?", color=Colour.gold(), description=f"Your selected time zone is '{timeZone.zone}'")
-        utcNow = datetime.utcnow()
-        nextHalfHour = utcNow + (datetime.min - utcNow) % timedelta(minutes=30)
-        embed.add_field(name="Example", value=UTC.localize(nextHalfHour).astimezone(timeZone).strftime(EVENT_TIME_FORMAT))
-        await dmChannel.send(embed=embed)
-        try:
-            response = await self.bot.wait_for("message", timeout=600, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
-            eventTime = response.content.strip()
-        except asyncio.TimeoutError:
-            await dmChannel.send(embed=TIMEOUT_EMBED)
-            return
-        try:
-            eventTime = datetimeParse(eventTime)
-            isFormatCorrect = True
-        except ValueError:
-            isFormatCorrect = False
-        while not isFormatCorrect:
-            embed = Embed(title="❌ Wrong format", colour=Colour.red(), description="e.g. 2021-08-08 9:30 PM")
+        eventCollision = True
+        while eventCollision:
+            eventCollision = False
+        
+            embed = Embed(title="What is the time of the workshop?", color=Colour.gold(), description=f"Your selected time zone is '{timeZone.zone}'")
+            utcNow = datetime.utcnow()
+            nextHalfHour = utcNow + (datetime.min - utcNow) % timedelta(minutes=30)
+            embed.add_field(name="Example", value=UTC.localize(nextHalfHour).astimezone(timeZone).strftime(EVENT_TIME_FORMAT))
             await dmChannel.send(embed=embed)
             try:
                 response = await self.bot.wait_for("message", timeout=600, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
-                eventTime = response.content.strip()
+                startTime = response.content.strip()
             except asyncio.TimeoutError:
                 await dmChannel.send(embed=TIMEOUT_EMBED)
                 return
             try:
-                eventTime = datetimeParse(eventTime)
+                startTime = datetimeParse(startTime)
                 isFormatCorrect = True
             except ValueError:
                 isFormatCorrect = False
-        eventTime = timeZone.localize(eventTime).astimezone(UTC)
-        
-        if template is None:
-            embed = Embed(title="What is the duration of the workshop?", color=Colour.gold(), description="e.g. 30m\ne.g. 2h\ne.g. 4h 30m\ne.g. 2h30")
-            await dmChannel.send(embed=embed)
-            try:
-                response = await self.bot.wait_for("message", timeout=600, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
-                duration = response.content.strip()
-            except asyncio.TimeoutError:
-                await dmChannel.send(embed=TIMEOUT_EMBED)
-                return
-            while not re.match(r"^\s*((([1-9]\d*)?\d\s*h(\s*([0-5])?\d\s*m?)?)|(([0-5])?\d\s*m))\s*$", duration):
-                embed = Embed(title="❌ Wrong format", colour=Colour.red(), description="e.g. 30m\ne.g. 2h\ne.g. 4h 30m\ne.g. 2h30")
+            while not isFormatCorrect:
+                embed = Embed(title="❌ Wrong format", colour=Colour.red(), description="e.g. 2021-08-08 9:30 PM")
                 await dmChannel.send(embed=embed)
                 try:
                     response = await self.bot.wait_for("message", timeout=600, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
-                    duration = response.content.strip()
+                    startTime = response.content.strip()
                 except asyncio.TimeoutError:
                     await dmChannel.send(embed=TIMEOUT_EMBED)
                     return
-        else:
-            duration = template["duration"]
-        
-        d = timedelta(
-            hours=int(duration.split("h")[0].strip()) if "h" in duration else 0,
-            minutes=int(duration.split("h")[-1].replace("m", "").strip()) if duration.strip()[-1] != "h" else 0
-        )
-        endTime = eventTime + d
+                try:
+                    startTime = datetimeParse(startTime)
+                    isFormatCorrect = True
+                except ValueError:
+                    isFormatCorrect = False
+            startTime = timeZone.localize(startTime).astimezone(UTC)
+            endTime = startTime + d
+            
+            with open(EVENTS_FILE) as f:
+                events = json.load(f)
+            
+            for event in events:
+                if event.get("type", "Operation") != "Operation":
+                    continue
+                eventStartTime = UTC.localize(datetime.strptime(event["time"], EVENT_TIME_FORMAT))
+                eventEndTime = UTC.localize(datetime.strptime(event["endTime"], EVENT_TIME_FORMAT))
+                if (eventStartTime <= startTime < eventEndTime) or (eventStartTime <= endTime < eventEndTime) or (startTime <= eventStartTime < endTime):
+                    eventCollision = True
+                    embed = Embed(title=":clock3:❌ There is a collision with another event", colour=Colour.red(), description="Check the schedule and try inputing a another time")
+                    await dmChannel.send(embed=embed)
+                    break
+                elif endTime + timedelta(hours=1) > eventStartTime:
+                    eventCollision = True
+                    embed = Embed(title=":clock3:❌ There is another event starting less than an hour after this one ends", colour=Colour.red(), description="Check the schedule and try inputing a another time")
+                    await dmChannel.send(embed=embed)
+                    break
+                elif eventEndTime + timedelta(hours=1) > startTime:
+                    eventCollision = True
+                    embed = Embed(title=":clock3:❌ Your workshop would start less than an hour after the previous event ends", colour=Colour.red(), description="Check the schedule and try inputing a another time")
+                    await dmChannel.send(embed=embed)
+                    break
         
         if template is None:
             embed = Embed(title="Do you want to save this workshop as a template?", color=Colour.gold(), description="Type yes or y if you want to save it or type anything else otherwise")
@@ -1333,7 +1390,7 @@ class Schedule(commands.Cog):
                 "reservableRoles": reservableRoles,
                 "maxPlayers": maxPlayers,
                 "map": eventMap,
-                "time": eventTime.strftime(EVENT_TIME_FORMAT),
+                "time": startTime.strftime(EVENT_TIME_FORMAT),
                 "endTime": endTime.strftime(EVENT_TIME_FORMAT),
                 "duration": duration,
                 "messageId": None,

@@ -1313,17 +1313,17 @@ class Schedule(commands.Cog):
                 eventEndTime = UTC.localize(datetime.strptime(event["endTime"], EVENT_TIME_FORMAT))
                 if (eventStartTime <= startTime < eventEndTime) or (eventStartTime <= endTime < eventEndTime) or (startTime <= eventStartTime < endTime):
                     eventCollision = True
-                    embed = Embed(title=":clock3:❌ There is a collision with another event", colour=Colour.red(), description="Check the schedule and try inputing a another time")
+                    embed = Embed(title=":clock3:❌ There is a collision with an operation", colour=Colour.red(), description="Check the schedule and try inputing a another time")
                     await dmChannel.send(embed=embed)
                     break
                 elif endTime + timedelta(hours=1) > eventStartTime:
                     eventCollision = True
-                    embed = Embed(title=":clock3:❌ There is another event starting less than an hour after this one ends", colour=Colour.red(), description="Check the schedule and try inputing a another time")
+                    embed = Embed(title=":clock3:❌ There is an operation starting less than an hour after this one ends", colour=Colour.red(), description="Check the schedule and try inputing a another time")
                     await dmChannel.send(embed=embed)
                     break
                 elif eventEndTime + timedelta(hours=1) > startTime:
                     eventCollision = True
-                    embed = Embed(title=":clock3:❌ Your workshop would start less than an hour after the previous event ends", colour=Colour.red(), description="Check the schedule and try inputing a another time")
+                    embed = Embed(title=":clock3:❌ Your workshop would start less than an hour after the previous operation ends", colour=Colour.red(), description="Check the schedule and try inputing a another time")
                     await dmChannel.send(embed=embed)
                     break
         

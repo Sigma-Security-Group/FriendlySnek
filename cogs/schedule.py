@@ -668,6 +668,12 @@ class Schedule(commands.Cog):
             event["time"] = startTime.strftime(EVENT_TIME_FORMAT)
             event["endTime"] = endTime.strftime(EVENT_TIME_FORMAT)
             reorderEvents = True
+            guild = self.bot.get_guild(SERVER)
+            for memberId in event["accepted"] + event["declined"] + event["tentative"]:
+                member = guild.get_member(memberId)
+                if member is not None:
+                    embed = Embed(title=f":clock3: The starting time has changed for: {event['title']}")
+                    await member.send(embed=embed)
             
         elif choice == "8":
             embed = Embed(title="What is the duration of the event?", color=Colour.gold(), description="e.g. 30m\ne.g. 2h\ne.g. 4h 30m\ne.g. 2h30")

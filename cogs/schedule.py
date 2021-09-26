@@ -1043,13 +1043,13 @@ class Schedule(commands.Cog):
     
     @cog_ext.cog_slash(name="ws", description="Create a workshop to add to the schedule.", guild_ids=[SERVER])
     async def ws(self, ctx: SlashContext):
-        await self.scheduleOperation(ctx)
+        await self.scheduleWorkshop(ctx)
     
     ws.add_check(lambda ctx: any(role.id == UNIT_STAFF or role in SME_ROLES for role in ctx.author.roles))
     
     @cog_ext.cog_slash(name="workshop", description="Create a workshop to add to the schedule.", guild_ids=[SERVER])
     async def workshop(self, ctx: SlashContext):
-        await self.scheduleOperation(ctx)
+        await self.scheduleWorkshop(ctx)
     
     workshop.add_check(lambda ctx: any(role.id == UNIT_STAFF or role in SME_ROLES for role in ctx.author.roles))
     

@@ -1045,13 +1045,13 @@ class Schedule(commands.Cog):
     async def ws(self, ctx: SlashContext):
         await self.scheduleWorkshop(ctx)
     
-    ws.add_check(lambda ctx: any(role.id == UNIT_STAFF or role in SME_ROLES for role in ctx.author.roles))
+    # ws.add_check(lambda ctx: any(role.id == UNIT_STAFF or role in SME_ROLES for role in ctx.author.roles))
     
     @cog_ext.cog_slash(name="workshop", description="Create a workshop to add to the schedule.", guild_ids=[SERVER])
     async def workshop(self, ctx: SlashContext):
         await self.scheduleWorkshop(ctx)
     
-    workshop.add_check(lambda ctx: any(role.id == UNIT_STAFF or role in SME_ROLES for role in ctx.author.roles))
+    # workshop.add_check(lambda ctx: any(role.id == UNIT_STAFF or role in SME_ROLES for role in ctx.author.roles))
     
     async def scheduleWorkshop(self, ctx):
         if not anvilController.isScheduleWallOpen():

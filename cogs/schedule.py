@@ -1076,7 +1076,7 @@ class Schedule(commands.Cog):
             if templateNum.isdigit() and int(templateNum) <= len(workshopTemplates) and int(templateNum) > 0:
                 template = workshopTemplates[int(templateNum) - 1]
             elif templateNum.strip().lower() == "none":
-                templateNum = None
+                template = None
             else:
                 templateOk = False
         except asyncio.TimeoutError:

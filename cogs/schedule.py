@@ -509,7 +509,6 @@ class Schedule(commands.Cog):
                     await dmChannel.send(embed=TIMEOUT_EMBED)
                     return False
             event["type"] = {"1": "Operation", "2": "Workshop", "3": "Event"}.get(eventTypeNum, "Operation")
-            reorderEvents = True
         
         elif choice == "1":
             embed = Embed(title=":pencil2: What is the title of your operation?", description="Remeber, operation names should start with the word 'Operation'\ne.g. Operation Red Tide", color=Colour.gold())

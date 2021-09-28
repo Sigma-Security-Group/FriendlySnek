@@ -358,7 +358,7 @@ class Schedule(commands.Cog):
                     await self.reserveRole(payload.member, event)
                 elif payload.emoji.name == "✏️":
                     if payload.member.id == event["authorId"] or any(role.id == UNIT_STAFF for role in payload.member.roles):
-                        reorderEvents = await self.editOperation(payload.member, event)
+                        reorderEvents = await self.editEvent(payload.member, event)
                         if reorderEvents:
                             with open(EVENTS_FILE, "w") as f:
                                 json.dump(events, f, indent=4)
@@ -452,13 +452,14 @@ class Schedule(commands.Cog):
             await dmChannel.send(embed=embed)
             log.debug(f"{member.display_name}({member.name}#{member.discriminator}) was reserving a role but schedule was updated")
     
-    async def editOperation(self, author, event):
+    async def editEvent(self, author, event):
         if not anvilController.isScheduleWallOpen():
             await author.send("Schedule is currently disabled for technical reasons. Try again later")
             return
         editingTime = datetime.utcnow()
         log.debug(f"{author.display_name}({author.name}#{author.discriminator}) is editing an event")
         embed = Embed(title=":pencil2: What would you like to edit?", color=Colour.gold())
+        embed.add_field(name="**0** Type", value=f"```{event['type']}```", inline=False)
         embed.add_field(name="**1** Title", value=f"```{event['title']}```", inline=False)
         embed.add_field(name="**2** Description", value=f"```{event['description'] if len(event['description']) < 500 else event['description'][:500] + ' [...]'}```", inline=False)
         embed.add_field(name="**3** External URL", value=f"```{event['externalURL']}```", inline=False)
@@ -475,7 +476,7 @@ class Schedule(commands.Cog):
         except asyncio.TimeoutError:
             await dmChannel.send(embed=TIMEOUT_EMBED)
             return False
-        while choice not in ("1", "2", "3", "4", "5", "6", "7", "8"):
+        while choice not in ("0", "1", "2", "3", "4", "5", "6", "7", "8"):
             embed = Embed(title="❌ Wrong input", colour=Colour.red(), description="Enter the number of an attribute")
             await dmChannel.send(embed=embed)
             try:
@@ -487,7 +488,30 @@ class Schedule(commands.Cog):
         
         reorderEvents = False
 
-        if choice == "1":
+        if choice == "0":
+            embed = Embed(title=":pencil2: What is the type of your event?", description="Please choose a number from the list below", color=Colour.gold())
+            embed.add_field(name="Type", value="**1** 🟩 Operation\n**2** 🟦 Workshop\n**3** 🟨 Event")
+            await dmChannel.send(embed=embed)
+            try:
+                response = await self.bot.wait_for("message", timeout=60, check=lambda msg, author=author, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
+                eventTypeNum = response.content.strip()
+            except asyncio.TimeoutError:
+                await dmChannel.send(embed=TIMEOUT_EMBED)
+                return False
+            while eventTypeNum not in ("1", "2", "3"):
+                embed = Embed(title=":pencil2: What is the type of your event?", description="Please choose a number from the list below", color=Colour.gold())
+                embed.add_field(name="Type", value="**1** 🟩 Operation\n**2** 🟦 Workshop\n**3** 🟨 Event")
+                await dmChannel.send(embed=embed)
+                try:
+                    response = await self.bot.wait_for("message", timeout=60, check=lambda msg, author=author, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
+                    eventTypeNum = response.content.strip()
+                except asyncio.TimeoutError:
+                    await dmChannel.send(embed=TIMEOUT_EMBED)
+                    return False
+            event["type"] = {"1": "Operation", "2": "Workshop", "3": "Event"}.get(eventTypeNum, "Operation")
+            reorderEvents = True
+        
+        elif choice == "1":
             embed = Embed(title=":pencil2: What is the title of your operation?", description="Remeber, operation names should start with the word 'Operation'\ne.g. Operation Red Tide", color=Colour.gold())
             await dmChannel.send(embed=embed)
             try:
@@ -673,7 +697,7 @@ class Schedule(commands.Cog):
             for memberId in event["accepted"] + event["declined"] + event["tentative"]:
                 member = guild.get_member(memberId)
                 if member is not None:
-                    embed = Embed(title=f":clock3: The starting time has changed for: {event['title']}", description=f"From: <t:{round(UTC.localize(datetime.strptime(oldStartTime, EVENT_TIME_FORMAT)).timestamp())}:F>\n\u200b\u200bTo: <t:{round(UTC.localize(datetime.strptime(event['time'], EVENT_TIME_FORMAT)).timestamp())}:F>")
+                    embed = Embed(title=f":clock3: The starting time has changed for: {event['title']}", description=f"From: <t:{round(UTC.localize(datetime.strptime(oldStartTime, EVENT_TIME_FORMAT)).timestamp())}:F>\n\u2000\u2000To: <t:{round(UTC.localize(datetime.strptime(event['time'], EVENT_TIME_FORMAT)).timestamp())}:F>")
                     await member.send(embed=embed)
             
         elif choice == "8":
@@ -767,7 +791,7 @@ class Schedule(commands.Cog):
             for memberId in event["accepted"] + event["declined"] + event["tentative"]:
                 member = guild.get_member(memberId)
                 if member is not None:
-                    embed = Embed(title=f"🗑 {event.get('type', 'Operation')} deleted: {event['title']}", description=f"Was supposed to be hosted on:\n<t:{round(UTC.localize(datetime.strptime(event['time'], EVENT_TIME_FORMAT)).timestamp())}:F>")
+                    embed = Embed(title=f"🗑 {event.get('type', 'Operation')} deleted: {event['title']}", description=f"Was scheduled for:\n<t:{round(UTC.localize(datetime.strptime(event['time'], EVENT_TIME_FORMAT)).timestamp())}:F>")
                     await member.send(embed=embed)
     
     @cog_ext.cog_slash(name="bop", description="Create an operation to add to the schedule.", guild_ids=[SERVER])

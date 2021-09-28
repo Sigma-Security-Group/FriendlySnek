@@ -1129,7 +1129,7 @@ class Schedule(commands.Cog):
             workshopTemplates = json.load(f)
         
         embed = Embed(title=":clipboard: Select a template.", description="Enter a template number or `none` to make a workshop from scratch", color=Colour.gold())
-        embed.add_field(name="Template", value="\n".join(f"**{idx}**   {template['name']}" for idx, template in enumerate(workshopTemplates, 1)))
+        embed.add_field(name="Template", value="\n".join(f"**{idx}**   {template['name']}" for idx, template in enumerate(workshopTemplates, 1)) if len(workshopTemplates) > 0 else "-")
         msg = await ctx.author.send(embed=embed)
         dmChannel = msg.channel
         try:

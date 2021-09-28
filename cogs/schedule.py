@@ -91,7 +91,7 @@ class Schedule(commands.Cog):
         self.autoDeleteScheduler = AsyncIOScheduler()
         self.autoDeleteScheduler.add_job(self.autoDeleteEvents, "interval", minutes=10)
         self.acceptedReminderScheduler = AsyncIOScheduler()
-        self.acceptedReminderScheduler.add_job(self.checkAcceptedReminder, "interval", minutes=10)
+        self.acceptedReminderScheduler.add_job(self.checkAcceptedReminder, "interval", minutes=1)
     
     @commands.Cog.listener()
     async def on_ready(self):
@@ -226,7 +226,7 @@ class Schedule(commands.Cog):
             channel = self.bot.get_channel(ARMA_DISCUSSION)
             for event in events:
                 startTime = UTC.localize(datetime.strptime(event["time"], EVENT_TIME_FORMAT))
-                if utcNow > endTime + timedelta(minutes=30):
+                if utcNow > startTime + timedelta(minutes=30):
                     acceptedMembers = [guild.get_member(memberId) for memberId in event["accepted"]]
                     onlineMembers = self.bot.get_channel(COMMAND).members + self.bot.get_channel(DEPLOYED).members
                     acceptedMembersNotOnline = []
@@ -238,8 +238,10 @@ class Schedule(commands.Cog):
                         if member.id != event["authorId"] and member not in acceptedMembers and member not in onlineMembersNotAccepted:
                             onlineMembersNotAccepted.append(member)
                     if len(acceptedMembersNotOnline) > 0:
+                        log.debug(f"Pinging members in accepted not in VC: {[member.display_name for member in acceptedMembersNotOnline]}")
                         await channel.send(" ".join(member.mention for member in acceptedMembersNotOnline) + f" If you are in-game, please get in Command or Deployed. If you are not making it to this {event['type'].lower()}, please hit decline on the schedule.")
                     if len(onlineMembersNotAccepted) > 0:
+                        log.debug(f"Pinging members in VC not in accepted: {[member.display_name for member in onlineMembersNotAccepted]}")
                         await channel.send(" ".join(member.mention for member in onlineMembersNotAccepted) + f" If you are in-game, please please hit accept on the schedule.")
         except Exception as e:
             print(e)

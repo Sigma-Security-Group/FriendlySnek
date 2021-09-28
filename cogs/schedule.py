@@ -673,7 +673,7 @@ class Schedule(commands.Cog):
             for memberId in event["accepted"] + event["declined"] + event["tentative"]:
                 member = guild.get_member(memberId)
                 if member is not None:
-                    embed = Embed(title=f":clock3: The starting time has changed for: {event['title']}", description=f"From <t:{round(UTC.localize(datetime.strptime(oldStartTime, EVENT_TIME_FORMAT)).timestamp())}:F> to <t:{round(UTC.localize(datetime.strptime(event['time'], EVENT_TIME_FORMAT)).timestamp())}:F>")
+                    embed = Embed(title=f":clock3: The starting time has changed for: {event['title']}", description=f"From: <t:{round(UTC.localize(datetime.strptime(oldStartTime, EVENT_TIME_FORMAT)).timestamp())}:F>\n\tTo: <t:{round(UTC.localize(datetime.strptime(event['time'], EVENT_TIME_FORMAT)).timestamp())}:F>")
                     await member.send(embed=embed)
             
         elif choice == "8":

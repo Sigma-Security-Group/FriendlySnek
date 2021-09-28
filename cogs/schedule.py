@@ -91,7 +91,7 @@ class Schedule(commands.Cog):
         self.autoDeleteScheduler = AsyncIOScheduler()
         self.autoDeleteScheduler.add_job(self.autoDeleteEvents, "interval", minutes=10)
         self.acceptedReminderScheduler = AsyncIOScheduler()
-        self.acceptedReminderScheduler.add_job(self.checkAcceptedReminder, "interval", minutes=1)
+        self.acceptedReminderScheduler.add_job(self.checkAcceptedReminder, "interval", minutes=10)
     
     @commands.Cog.listener()
     async def on_ready(self):

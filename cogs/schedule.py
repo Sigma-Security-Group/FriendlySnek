@@ -88,8 +88,10 @@ class Schedule(commands.Cog):
         self.bot = bot
         self.eventsFileLock = False
         self.memberTimeZonesFileLock = False
-        self.scheduler = AsyncIOScheduler()
-        self.scheduler.add_job(self.autoDeleteEvents, "interval", minutes=10)
+        self.autoDeleteScheduler = AsyncIOScheduler()
+        self.autoDeleteScheduler.add_job(self.autoDeleteEvents, "interval", minutes=10)
+        self.acceptedReminderScheduler = AsyncIOScheduler()
+        self.acceptedReminderScheduler.add_job(self.checkAcceptedReminder, "interval", minutes=10)
     
     @commands.Cog.listener()
     async def on_ready(self):
@@ -105,8 +107,10 @@ class Schedule(commands.Cog):
             with open(WORKSHOP_TEMPLATES_FILE, "w") as f:
                 json.dump([], f, indent=4)
         await self.updateSchedule()
-        if not self.scheduler.running:
-            self.scheduler.start()
+        if not self.autoDeleteScheduler.running:
+            self.autoDeleteScheduler.start()
+        if not self.acceptedReminderScheduler.running:
+            self.acceptedReminderScheduler.start()
     
     def saveEventToHistory(self, event, autoDeleted=False):
         # if event.get("type", "Operation") == "Operation":
@@ -211,6 +215,35 @@ class Schedule(commands.Cog):
             print(e)
         finally:
             self.eventsFileLock = False
+    
+    async def checkAcceptedReminder(self):
+        guild = self.bot.get_guild(SERVER)
+        log.debug("Checking for accepted reminders")
+        try:
+            with open(EVENTS_FILE) as f:
+                events = json.load(f)
+            utcNow = UTC.localize(datetime.utcnow())
+            channel = self.bot.get_channel(ARMA_DISCUSSION)
+            for event in events:
+                startTime = UTC.localize(datetime.strptime(event["time"], EVENT_TIME_FORMAT))
+                if utcNow > endTime + timedelta(minutes=30):
+                    acceptedMembers = [guild.get_member(memberId) for memberId in event["accepted"]]
+                    onlineMembers = self.bot.get_channel(COMMAND).members + self.bot.get_channel(DEPLOYED).members
+                    acceptedMembersNotOnline = []
+                    onlineMembersNotAccepted = []
+                    for member in acceptedMembers:
+                        if member not in onlineMembers and member not in acceptedMembersNotOnline:
+                            acceptedMembersNotOnline.append(member)
+                    for member in onlineMembers:
+                        if member.id != event["authorId"] and member not in acceptedMembers and member not in onlineMembersNotAccepted:
+                            onlineMembersNotAccepted.append(member)
+                    if len(acceptedMembersNotOnline) > 0:
+                        await channel.send(" ".join(member.mention for member in acceptedMembersNotOnline) + f" If you are in-game, please get in Command or Deployed. If you are not making it to this {event['type'].lower()}, please hit decline on the schedule.")
+                    if len(onlineMembersNotAccepted) > 0:
+                        await channel.send(" ".join(member.mention for member in onlineMembersNotAccepted) + f" If you are in-game, please please hit accept on the schedule.")
+        except Exception as e:
+            print(e)
+        
     
     @cog_ext.cog_slash(name="refreshschedule",
                        description="Refresh the schedule. Use this command if an event was deleted without using the reactions.",

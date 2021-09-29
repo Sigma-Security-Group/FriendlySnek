@@ -30,7 +30,4 @@ def getDiscordActivity():
     return activity
 
 if __name__ == '__main__':
-    if not os.path.exists(EVENTS_STATS_FILE):
-        with open(EVENTS_STATS_FILE, "w") as f:
-            json.dump({}, f, indent=4)
     anvil.server.wait_forever()

@@ -98,7 +98,7 @@ async def on_message(message):
         with open(MESSAGES_FILE) as f:
             messages = json.load(f)
         messages.append({"authorId": message.author.id, "authorName": message.author.display_name, "channelId": message.channel.id, "channelName": message.channel.name})
-        with oprn(MESSAGES_FILE, "w") as f:
+        with open(MESSAGES_FILE, "w") as f:
             json.dump(messages, f, indent=4)
     
     # Execute commands

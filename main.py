@@ -57,7 +57,7 @@ async def logActivity():
     with open(ACTIVITY_FILE) as f:
         activity = json.load(f)
     guild = bot.get_guild(SERVER)
-    online = [(member.id, member.display_name) for member in guild.members if member.status != discord.Status.offline]
+    online = [(member.id, member.display_name, any(role.id == UNIT_STAFF for role in member.roles)) for member in guild.members if member.status != discord.Status.offline]
     inVoiceChannel = [{"channelId": channel.id, "channelName": channel.name, "members": [(member.id, member.display_name) for member in channel.members]} for channel in guild.voice_channels]
     activity[now] = {"messages": messages, "online": online, "inVoiceChannel": inVoiceChannel}
     with open(ACTIVITY_FILE, "w") as f:

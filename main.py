@@ -13,7 +13,12 @@ import platform
 if platform.system() == 'Windows':
 	asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
+import json
+import pytz
 from glob import glob
+from datetime import datetime
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+
 import discord
 from discord.ext import commands
 from discord_slash import SlashCommand
@@ -35,7 +40,15 @@ slash = SlashCommand(bot, override_type=True, sync_commands=True, sync_on_cog_re
 for cog in COGS:
     bot.load_extension(f"cogs.{cog}")
 
+MESSAGES_FILE = "data/messagesLog.json"
+ACTIVITY_FILE = "data/activityLog.json"
+
+UTC = pytz.utc
+
 newcomers = set()
+
+activityMonitorScheduler = AsyncIOScheduler()
+activityMonitorScheduler.add_job(logActivity, "interval", minutes=10)
 
 @bot.event
 async def on_ready():
@@ -43,6 +56,14 @@ async def on_ready():
         await asyncio.sleep(1)
     bot.ready = True
     log.info("Bot Ready")
+    if not os.path.exists(MESSAGES_FILE):
+        with open(MESSAGES_FILE, "w") as f:
+            json.dump([], f, indent=4)
+    if not os.path.exists(ACTIVITY_FILE):
+        with open(ACTIVITY_FILE, "w") as f:
+            json.dump({}, f, indent=4)
+    if not activityMonitorScheduler.running:
+        activityMonitorScheduler.start()
 
 @bot.event
 async def on_message(message):
@@ -57,6 +78,13 @@ async def on_message(message):
         # log.warning("Wrong server")
         return
     
+    if not message.author.bot:
+        with open(MESSAGES_FILE) as f:
+            messages = json.load(f)
+        messages.append({"authorId": message.author.id, "authorName": message.author.display_name, "channelId": message.channel.id, "channelName": message.channel.name})
+        with oprn(MESSAGES_FILE, "w") as f:
+            json.dump(messages, f, indent=4)
+    
     # Execute commands
     if message.content.startswith(COMMAND_PREFIX) or message.content.startswith("/"):
         log.debug(f"{message.author.display_name}({message.author.name}#{message.author.discriminator}) > {message.content}")
@@ -70,6 +98,22 @@ async def on_message(message):
     
     # Run message content analysis
     await runMessageAnalysis(bot, message)
+
+async def logActivity():
+    log.debug("Logging discord activity")
+    now = UTC.localize(datetime.utcnow()).strftime("%Y-%m-%d %I:%M %p")
+    with open(MESSAGES_FILE) as f:
+        messages = json.load(f)
+    with open(MESSAGES_FILE, "w") as f:
+        json.dump([], f, indent=4)
+    with open(ACTIVITY_FILE) as f:
+        activity = json.load(f)
+    guild = bot.get_guild(SERVER)
+    online = [(member.id, member.display_name) for member in guild.members if member.status != discord.Status.offline]
+    inVoiceChannel = {"channelId": channel.id, "channelName": channel.name, "members": [(member.id, member.display_name) for member in channel.members] for channel in guild.voice_channels}
+    activity[now] = {"messages": messages, "online": online, "inVoiceChannel": inVoiceChannel}
+    with open(ACTIVITY_FILE, "w") as f:
+        json.dump(activity, f, indent=4)
 
 @bot.event
 async def on_member_join(member):

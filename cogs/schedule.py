@@ -225,6 +225,8 @@ class Schedule(commands.Cog):
             utcNow = UTC.localize(datetime.utcnow())
             channel = self.bot.get_channel(ARMA_DISCUSSION)
             for event in events:
+                if event.get("checkedAcceptedReminders", False):
+                    continue
                 startTime = UTC.localize(datetime.strptime(event["time"], EVENT_TIME_FORMAT))
                 if utcNow > startTime + timedelta(minutes=30):
                     acceptedMembers = [guild.get_member(memberId) for memberId in event["accepted"]]
@@ -237,6 +239,10 @@ class Schedule(commands.Cog):
                     for member in onlineMembers:
                         if member.id != event["authorId"] and member not in acceptedMembers and member not in onlineMembersNotAccepted:
                             onlineMembersNotAccepted.append(member)
+                    
+                    event["checkedAcceptedReminders"] = True
+                    with open(EVENTS_FILE, "w") as f:
+                        json.dump(events, f, indent=4)
                     if len(acceptedMembersNotOnline) > 0:
                         log.debug(f"Pinging members in accepted not in VC: {[member.display_name for member in acceptedMembersNotOnline]}")
                         await channel.send(" ".join(member.mention for member in acceptedMembersNotOnline) + f" If you are in-game, please get in Command or Deployed. If you are not making it to this {event['type'].lower()}, please hit decline on the schedule.")

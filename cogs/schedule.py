@@ -142,6 +142,7 @@ class Schedule(commands.Cog):
         eventCopy["authorName"] = member.display_name if (member := guild.get_member(eventCopy["authorId"])) is not None else "UNKNOWN"
         eventCopy["acceptedNames"] = [member.display_name if (member := guild.get_member(memberId)) is not None else "UNKNOWN" for memberId in eventCopy["accepted"]]
         eventCopy["declinedNames"] = [member.display_name if (member := guild.get_member(memberId)) is not None else "UNKNOWN" for memberId in eventCopy["declined"]]
+        eventCopy["declinedForTimingNames"] = [member.display_name if (member := guild.get_member(memberId)) is not None else "UNKNOWN" for memberId in eventCopy.get("declinedForTiming", [])]
         eventCopy["tentativeNames"] = [member.display_name if (member := guild.get_member(memberId)) is not None else "UNKNOWN" for memberId in eventCopy["tentative"]]
         eventCopy["reservableRolesNames"] = {role: ((member.display_name if (member := guild.get_member(memberId)) is not None else "UNKNOWN") if memberId is not None else "VACANT") for role, memberId in eventCopy["reservableRoles"].items()} if eventCopy["reservableRoles"] is not None else {}
         eventsHistory.append(eventCopy)
@@ -287,9 +288,9 @@ class Schedule(commands.Cog):
                     embed = self.getEventEmbed(event)
                     msg = await channel.send(embed=embed)
                     if event["reservableRoles"] is not None:
-                        emojis = ("✅", "❌", "❓", "👤", "✏️", "🗑")
+                        emojis = ("✅", "❌", "⏱", "❓", "👤", "✏️", "🗑")
                     else:
-                        emojis = ("✅", "❌", "❓", "✏️", "🗑")
+                        emojis = ("✅", "❌", "⏱", "❓", "✏️", "🗑")
                     for emoji in emojis:
                         await msg.add_reaction(emoji)
                     event["messageId"] = msg.id
@@ -334,11 +335,13 @@ class Schedule(commands.Cog):
         if event["maxPlayers"] is not None and len(accepted) > event["maxPlayers"]:
             accepted, standby = accepted[:event["maxPlayers"]], accepted[event["maxPlayers"]:]
         declined = [member.display_name for memberId in event["declined"] if (member := guild.get_member(memberId)) is not None]
+        declinedForTiming = [member.display_name for memberId in event.get("declinedForTiming", []) if (member := guild.get_member(memberId)) is not None]
         tentative = [member.display_name for memberId in event["tentative"] if (member := guild.get_member(memberId)) is not None]
         
         if event["maxPlayers"] != 0:
             embed.add_field(name=f"Accepted ({len(accepted)}/{event['maxPlayers']}) ✅" if event["maxPlayers"] is not None else f"Accepted ({len(accepted)}) ✅", value="\n".join(name for name in accepted) if len(accepted) > 0 else "-", inline=True)
             embed.add_field(name=f"Declined ({len(declined)}) ❌", value="\n".join(name for name in declined) if len(declined) > 0 else "-", inline=True)
+            embed.add_field(name=f"Declined (timing) ({len(declinedForTiming)}) ⏱", value="\n".join(name for name in declinedForTiming) if len(declinedForTiming) > 0 else "-", inline=True)
             embed.add_field(name=f"Tentative ({len(tentative)}) ❓", value="\n".join(name for name in tentative) if len(tentative) > 0 else "-", inline=True)
             if len(standby) > 0:
                 embed.add_field(name=f"Standby ({len(standby)}) :clock3:", value="\n".join(name for name in standby), inline=False)
@@ -365,10 +368,14 @@ class Schedule(commands.Cog):
                 scheduleNeedsUpdate = True
                 removeReaction = True
                 event = [event for event in events if event["messageId"] == payload.message_id][0]
+                if "declinedForTiming" not in event:
+                    event["declinedForTiming"] = []
                 eventMessage = await self.bot.get_channel(SCHEDULE).fetch_message(event["messageId"])
                 if payload.emoji.name == "✅":
                     if payload.member.id in event["declined"]:
                         event["declined"].remove(payload.member.id)
+                    if payload.member.id in event["declinedForTiming"]:
+                        event["declinedForTiming"].remove(payload.member.id)
                     if payload.member.id in event["tentative"]:
                         event["tentative"].remove(payload.member.id)
                     if payload.member.id not in event["accepted"]:
@@ -376,10 +383,25 @@ class Schedule(commands.Cog):
                 elif payload.emoji.name == "❌":
                     if payload.member.id in event["accepted"]:
                         event["accepted"].remove(payload.member.id)
+                    if payload.member.id in event["declinedForTiming"]:
+                        event["declinedForTiming"].remove(payload.member.id)
                     if payload.member.id in event["tentative"]:
                         event["tentative"].remove(payload.member.id)
                     if payload.member.id not in event["declined"]:
                         event["declined"].append(payload.member.id)
+                    if event["reservableRoles"] is not None:
+                        for roleName in event["reservableRoles"]:
+                            if event["reservableRoles"][roleName] == payload.member.id:
+                                event["reservableRoles"][roleName] = None
+                elif payload.emoji.name == "⏱":
+                    if payload.member.id in event["accepted"]:
+                        event["accepted"].remove(payload.member.id)
+                    if payload.member.id in event["tentative"]:
+                        event["tentative"].remove(payload.member.id)
+                    if payload.member.id in event["declined"]:
+                        event["declined"].remove(payload.member.id)
+                    if payload.member.id not in event["declinedForTiming"]:
+                        event["declinedForTiming"].append(payload.member.id)
                     if event["reservableRoles"] is not None:
                         for roleName in event["reservableRoles"]:
                             if event["reservableRoles"][roleName] == payload.member.id:
@@ -389,6 +411,8 @@ class Schedule(commands.Cog):
                         event["accepted"].remove(payload.member.id)
                     if payload.member.id in event["declined"]:
                         event["declined"].remove(payload.member.id)
+                    if payload.member.id in event["declinedForTiming"]:
+                        event["declinedForTiming"].remove(payload.member.id)
                     if payload.member.id not in event["tentative"]:
                         event["tentative"].append(payload.member.id)
                     if event["reservableRoles"] is not None:
@@ -438,6 +462,8 @@ class Schedule(commands.Cog):
         
         if member.id in event["declined"]:
             event["declined"].remove(member.id)
+        if member.id in event["declinedForTiming"]:
+            event["declinedForTiming"].remove(member.id)
         if member.id in event["tentative"]:
             event["tentative"].remove(member.id)
         if member.id not in event["accepted"]:
@@ -734,7 +760,7 @@ class Schedule(commands.Cog):
             event["endTime"] = endTime.strftime(EVENT_TIME_FORMAT)
             reorderEvents = True
             guild = self.bot.get_guild(SERVER)
-            for memberId in event["accepted"] + event["declined"] + event["tentative"]:
+            for memberId in event["accepted"] + event.get("declinedForTiming", []) + event["tentative"]:
                 member = guild.get_member(memberId)
                 if member is not None:
                     embed = Embed(title=f":clock3: The starting time has changed for: {event['title']}", description=f"From: <t:{round(UTC.localize(datetime.strptime(oldStartTime, EVENT_TIME_FORMAT)).timestamp())}:F>\n\u2000\u2000To: <t:{round(UTC.localize(datetime.strptime(event['time'], EVENT_TIME_FORMAT)).timestamp())}:F>")
@@ -828,7 +854,7 @@ class Schedule(commands.Cog):
             #     json.dump(eventsHistory, f, indent=4)
         else:
             guild = self.bot.get_guild(SERVER)
-            for memberId in event["accepted"] + event["declined"] + event["tentative"]:
+            for memberId in event["accepted"] + event.get("declinedForTiming", []) + event["tentative"]:
                 member = guild.get_member(memberId)
                 if member is not None:
                     embed = Embed(title=f"🗑 {event.get('type', 'Operation')} deleted: {event['title']}", description=f"Was scheduled for:\n<t:{round(UTC.localize(datetime.strptime(event['time'], EVENT_TIME_FORMAT)).timestamp())}:F>")

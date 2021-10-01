@@ -340,7 +340,7 @@ class Schedule(commands.Cog):
         
         if event["maxPlayers"] != 0:
             embed.add_field(name=f"Accepted ({len(accepted)}/{event['maxPlayers']}) ✅" if event["maxPlayers"] is not None else f"Accepted ({len(accepted)}) ✅", value="\n".join(name for name in accepted) if len(accepted) > 0 else "-", inline=True)
-            embed.add_field(name=f"Declined ({len(declined)}) ❌/⏱", value=("\n".join("⏱ " + name for name in declinedForTiming) + "\n".join(name for name in declined)) if len(declined) + len(declinedForTiming) > 0 else "-", inline=True)
+            embed.add_field(name=f"Declined ({len(declined)}) ❌/⏱", value=("\n".join("⏱ " + name for name in declinedForTiming) + "\n" * (len(declinedForTiming) > 0 and len(declined) > 0) + "\n".join(name for name in declined)) if len(declined) + len(declinedForTiming) > 0 else "-", inline=True)
             # embed.add_field(name=f"Declined (timing) ({len(declinedForTiming)}) ⏱", value="\n".join(name for name in declinedForTiming) if len(declinedForTiming) > 0 else "-", inline=True)
             embed.add_field(name=f"Tentative ({len(tentative)}) ❓", value="\n".join(name for name in tentative) if len(tentative) > 0 else "-", inline=True)
             if len(standby) > 0:

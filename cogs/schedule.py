@@ -288,9 +288,9 @@ class Schedule(commands.Cog):
                     embed = self.getEventEmbed(event)
                     msg = await channel.send(embed=embed)
                     if event["reservableRoles"] is not None:
-                        emojis = ("✅", "❌", "⏱", "❓", "👤", "✏️", "🗑")
+                        emojis = ("✅", "⏱", "❌", "❓", "👤", "✏️", "🗑")
                     else:
-                        emojis = ("✅", "❌", "⏱", "❓", "✏️", "🗑")
+                        emojis = ("✅", "⏱", "❌", "❓", "✏️", "🗑")
                     for emoji in emojis:
                         await msg.add_reaction(emoji)
                     event["messageId"] = msg.id

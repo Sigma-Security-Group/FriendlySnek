@@ -115,7 +115,7 @@ async def on_ready():
             with open(FULL_ACTIVITY_FILE) as fp:
                 fullActivity = json.load(fp)
             activity = {}
-            for t, act in fullActivity:
+            for t, act in fullActivity.items():
                 online = [str(member[0]) for member in act["online"]]
                 staffOnline = [str(member[0]) for member in act["online"] if member[2]]
                 messagesPerChannel = {}

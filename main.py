@@ -75,18 +75,18 @@ async def logActivity():
     
     with open(ACTIVITY_FILE) as f:
         activity = json.load(f)
-    online = [str(member.id) for member in guild.members if member.status != discord.Status.offline]
-    staffOnline = [str(member.id) for member in online if any(role.id == UNIT_STAFF)]
+    online = len([member for member in guild.members if member.status != discord.Status.offline])
+    staffOnline = len([member for member in online if any(role.id == UNIT_STAFF)])
     messagesPerChannel = {}
     for message in messages:
         if message["channelName"] not in messagesPerChannel:
             messagesPerChannel[message["channelName"]] = 0
         messagesPerChannel[message["channelName"]] += 1
     voiceChannels = {
-        "Bar and Mess Hall": [str(member.id) for channel in guild.voice_channels for member in channel.members if channel.id in (THE_BAR, MESS_HALL)],
-        "Game Rooms": [str(member.id) for channel in guild.voice_channels for member in channel.members if channel.id in (GAME_ROOM_ONE, GAME_ROOM_TWO, GAME_ROOM_THREE)],
-        "Command": [str(member.id) for channel in guild.voice_channels for member in channel.members if channel.id == COMMAND],
-        "Deployed": [str(member.id) for channel in guild.voice_channels for member in channel.members if channel.id == DEPLOYED]
+        "Bar and Mess Hall": len([member for channel in guild.voice_channels for member in channel.members if channel.id in (THE_BAR, MESS_HALL)]),
+        "Game Rooms": len([member for channel in guild.voice_channels for member in channel.members if channel.id in (GAME_ROOM_ONE, GAME_ROOM_TWO, GAME_ROOM_THREE)]),
+        "Command": len([member for channel in guild.voice_channels for member in channel.members if channel.id == COMMAND]),
+        "Deployed": len([member for channel in guild.voice_channels for member in channel.members if channel.id == DEPLOYED])
     }
     activity[now] = {"online": online, "staffOnline": staffOnline, "messages": messagesPerChannel, "voiceChannels": voiceChannels}
     with open(ACTIVITY_FILE, "w") as f:
@@ -115,18 +115,18 @@ async def on_ready():
             fullActivity = json.load(f)
         activity = {}
         for t, act in fullActivity.items():
-            online = [str(member[0]) for member in act["online"]]
-            staffOnline = [str(member[0]) for member in act["online"] if member[2]]
+            online = len([member for member in act["online"]])
+            staffOnline = len([member for member in act["online"] if member[2]])
             messagesPerChannel = {}
             for message in act["messages"]:
                 if message["channelName"] not in messagesPerChannel:
                     messagesPerChannel[message["channelName"]] = 0
                 messagesPerChannel[message["channelName"]] += 1
             voiceChannels = {
-                "Bar and Mess Hall": [str(member[0]) for channel in act["inVoiceChannel"] for member in channel["members"] if channel["channelId"] in (THE_BAR, MESS_HALL)],
-                "Game Rooms": [str(member[0]) for channel in act["inVoiceChannel"] for member in channel["members"] if channel["channelId"] in (GAME_ROOM_ONE, GAME_ROOM_TWO, GAME_ROOM_THREE)],
-                "Command": [str(member[0]) for channel in act["inVoiceChannel"] for member in channel["members"] if channel["channelId"] == COMMAND],
-                "Deployed": [str(member[0]) for channel in act["inVoiceChannel"] for member in channel["members"] if channel["channelId"] == DEPLOYED]
+                "Bar and Mess Hall": len([member for channel in act["inVoiceChannel"] for member in channel["members"] if channel["channelId"] in (THE_BAR, MESS_HALL)]),
+                "Game Rooms": len([member for channel in act["inVoiceChannel"] for member in channel["members"] if channel["channelId"] in (GAME_ROOM_ONE, GAME_ROOM_TWO, GAME_ROOM_THREE)]),
+                "Command": len([member for channel in act["inVoiceChannel"] for member in channel["members"] if channel["channelId"] == COMMAND]),
+                "Deployed": len([member for channel in act["inVoiceChannel"] for member in channel["members"] if channel["channelId"] == DEPLOYED])
             }
             activity[t] = {"online": online, "staffOnline": staffOnline, "messages": messagesPerChannel, "voiceChannels": voiceChannels}
         with open(ACTIVITY_FILE, "w") as f:

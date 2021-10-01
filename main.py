@@ -76,7 +76,7 @@ async def logActivity():
     with open(ACTIVITY_FILE) as f:
         activity = json.load(f)
     online = len([member for member in guild.members if member.status != discord.Status.offline])
-    staffOnline = len([member for member in online if any(role.id == UNIT_STAFF)])
+    staffOnline = len([member for member in guild.members if member.status != discord.Status.offline and any(role.id == UNIT_STAFF for role in member.roles)])
     messagesPerChannel = {}
     for message in messages:
         if message["channelName"] not in messagesPerChannel:

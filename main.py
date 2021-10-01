@@ -107,7 +107,7 @@ async def on_ready():
     if not os.path.exists(FULL_ACTIVITY_FILE):
         with open(FULL_ACTIVITY_FILE, "w") as f:
             json.dump({}, f, indent=4)
-    if nor os.path.exists(MEMBERS_FILE):
+    if not os.path.exists(MEMBERS_FILE):
         with open(MEMBERS_FILE, "w") as f:
             json.dump({}, f, indent=4)
     if not os.path.exists(ACTIVITY_FILE):

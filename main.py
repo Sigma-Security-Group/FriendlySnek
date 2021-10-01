@@ -111,25 +111,25 @@ async def on_ready():
         with open(MEMBERS_FILE, "w") as f:
             json.dump({}, f, indent=4)
     if not os.path.exists(ACTIVITY_FILE):
+        with open(FULL_ACTIVITY_FILE) as f:
+            fullActivity = json.load(f)
+        activity = {}
+        for t, act in fullActivity.items():
+            online = [str(member[0]) for member in act["online"]]
+            staffOnline = [str(member[0]) for member in act["online"] if member[2]]
+            messagesPerChannel = {}
+            for message in act["messages"]:
+                if message["channelName"] not in messagesPerChannel:
+                    messagesPerChannel[message["channelName"]] = 0
+                messagesPerChannel[message["channelName"]] += 1
+            voiceChannels = {
+                "Bar and Mess Hall": [str(member[0]) for channel in act["inVoiceChannel"] for member in channel["members"] if channel["channelId"] in (THE_BAR, MESS_HALL)],
+                "Game Rooms": [str(member[0]) for channel in act["inVoiceChannel"] for member in channel["members"] if channel["channelId"] in (GAME_ROOM_ONE, GAME_ROOM_TWO, GAME_ROOM_THREE)],
+                "Command": [str(member[0]) for channel in act["inVoiceChannel"] for member in channel["members"] if channel["channelId"] == COMMAND],
+                "Deployed": [str(member[0]) for channel in act["inVoiceChannel"] for member in channel["members"] if channel["channelId"] == DEPLOYED]
+            }
+            activity[t] = {"online": online, "staffOnline": staffOnline, "messages": messagesPerChannel, "voiceChannels": voiceChannels}
         with open(ACTIVITY_FILE, "w") as f:
-            with open(FULL_ACTIVITY_FILE) as fp:
-                fullActivity = json.load(fp)
-            activity = {}
-            for t, act in fullActivity.items():
-                online = [str(member[0]) for member in act["online"]]
-                staffOnline = [str(member[0]) for member in act["online"] if member[2]]
-                messagesPerChannel = {}
-                for message in act["messages"]:
-                    if message["channelName"] not in messagesPerChannel:
-                        messagesPerChannel[message["channelName"]] = 0
-                    messagesPerChannel[message["channelName"]] += 1
-                voiceChannels = {
-                    "Bar and Mess Hall": [str(member[0]) for channel in act["inVoiceChannel"] for member in channel if channel["channelId"] in (THE_BAR, MESS_HALL)],
-                    "Game Rooms": [str(member[0]) for channel in act["inVoiceChannel"] for member in channel if channel["channelId"] in (GAME_ROOM_ONE, GAME_ROOM_TWO, GAME_ROOM_THREE)],
-                    "Command": [str(member[0]) for channel in act["inVoiceChannel"] for member in channel if channel["channelId"] == COMMAND],
-                    "Deployed": [str(member[0]) for channel in act["inVoiceChannel"] for member in channel if channel["channelId"] == DEPLOYED]
-                }
-                activity[t] = {"online": online, "staffOnline": staffOnline, "messages": messagesPerChannel, "voiceChannels": voiceChannels}
             json.dump(activity, f, indent=4)
     if not activityMonitorScheduler.running:
         activityMonitorScheduler.start()

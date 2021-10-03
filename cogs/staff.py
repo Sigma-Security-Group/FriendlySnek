@@ -35,6 +35,7 @@ class Staff(commands.Cog):
             if lastMessage is not None:
                 membersLastMessage[member.display_name] = {"time": str(lastMessage.created_at), "messageId": lastMessage.id, "messageURL": lastMessage.jump_url}
             else:
+                print(member.display_name)
                 membersLastMessage[member.display_name] = {"time": "NOT FOUNT", "messageId": "NOT FOUNT", "messageURL": "NOT FOUNT"}
         with open("data/membersLastMessage.json", "w") as f:
             json.dump(membersLastMessage, f, indent=4)

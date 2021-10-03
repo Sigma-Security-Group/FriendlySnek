@@ -1,5 +1,6 @@
 import re
 import json
+from pprint import pprint
 import discord
 from discord.ext import commands
 
@@ -32,6 +33,7 @@ class Staff(commands.Cog):
                 if lastMessage is None or fetchedMessage.created_at > lastMessage.created_at:
                     lastMessage = fetchedMessage
             membersLastMessage[member.display_name] = {"time": str(lastMessage.created_at), "messageId": lastMessage.id, "messageURL": lastMessage.jump_url}
+        pprint(membersLastMessage)
         with open("data/membersLastMessage.json", "w") as f:
             json.dump(membersLastMessage, f, indent=4)
     

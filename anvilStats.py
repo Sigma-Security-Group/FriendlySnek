@@ -4,7 +4,6 @@ import anvil.server
 
 import secret
 
-# EVENTS_STATS_FILE = "data/eventsStats.json"
 EVENTS_HISTORY_FILE = "data/eventsHistory.json"
 FULL_ACTIVITY_FILE = "data/fullActivityLog.json"
 ACTIVITY_FILE = "data/activityLog.json"
@@ -13,11 +12,28 @@ MEMBERS_FILE = "data/members.json"
 if __name__ == '__main__':
     anvil.server.connect(secret.anvilStatsUplinkKey)
 
-# @anvil.server.callable
-# def getStats():
-#     with open(EVENTS_STATS_FILE) as f:
-#         eventsStats = json.load(f)
-#     return eventsStats
+@anvil.server.callable
+def getStats():
+    with open(EVENTS_HISTORY_FILE) as f:
+        eventsHistory = json.load(f)
+    stats = {}
+    for event in eventsHistory:
+      if event.get("type", "Operation") not in stats:
+        stats[event.get("type", "Operation")] = []
+      stats[event.get("type", "Operation")].append({
+        "accepted": min(event["maxPlayers"], len("accepted")) if event["maxPlayers"] is not None else len(event["accepted"]),
+        "standby": max(0, len("accepted") - event["maxPlayers"]) if event["maxPlayers"] is not None else 0,
+        "declined": len(event["declined"]),
+        "tentative": len(event["tentative"]),
+        "maxPlayers": event["maxPlayers"],
+        "reservableRoles": len(event["reservableRoles"]) if event["reservableRoles"] is not None else 0,
+        "reservedRoles": len([role for role, member in event["reservableRoles"].items() if member is not None]) if event["reservableRoles"] is not None else 0,
+        "map": event["map"],
+        "time": event["time"],
+        "duration": event["duration"],
+        "autoDeleted": event["autoDeleted"]
+      })
+    return stats
 
 @anvil.server.callable
 def getEventsHistory():

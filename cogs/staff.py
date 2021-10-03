@@ -36,7 +36,6 @@ class Staff(commands.Cog):
                 membersLastMessage[member.display_name] = {"time": str(lastMessage.created_at), "messageId": lastMessage.id, "messageURL": lastMessage.jump_url}
             else:
                 membersLastMessage[member.display_name] = {"time": "NOT FOUNT", "messageId": "NOT FOUNT", "messageURL": "NOT FOUNT"}
-            except Exception
         with open("data/membersLastMessage.json", "w") as f:
             json.dump(membersLastMessage, f, indent=4)
     

@@ -23,7 +23,7 @@ class Staff(commands.Cog):
         for member in guild.members:
             lastMessage = None
             for channel in guild.channels:
-                fetchMessage = await channel.history().find(lambda m: m.author.id == users_id)
+                fetchMessage = await channel.history().find(lambda m: m.author.id == member.id)
                 if fetchMessage is None:
                     continue
                 if lastMessage is None or fetchedMessage.created_at > lastMessage.created_at:

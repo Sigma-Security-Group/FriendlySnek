@@ -24,13 +24,13 @@ class Staff(commands.Cog):
             lastMessage = None
             for channel in guild.channels:
                 try:
-                    fetchMessage = await channel.history().find(lambda m: m.author.id == member.id)
+                    fetchedMessage = await channel.history().find(lambda m: m.author.id == member.id)
                 except AttributeError:
                     continue
-                if fetchMessage is None:
+                if fetchedMessage is None:
                     continue
                 if lastMessage is None or fetchedMessage.created_at > lastMessage.created_at:
-                    lastMessage = fetchMessage
+                    lastMessage = fetchedMessage
             membersLastMessage[member.display_name] = {"time": str(lastMessage.created_at), "messageId": lastMessage.id, "messageURL": lastMessage.jump_url}
         with open("data/membersLastMessage.json", "w") as f:
             json.dump(membersLastMessage, f, indent=4)

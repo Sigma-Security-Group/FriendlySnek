@@ -44,7 +44,12 @@ class WorkshopInterest(commands.Cog):
         await self.updateChannel()
     
     def getWorkshopEmbed(self, workshop, interest):
-        embed = Embed(title=workshop, description=str(interest))
+        guild = self.bot.get_guild(SERVER)
+        embed = Embed(title=workshop)
+        interestedList = "\n".join(member.display_name for memberId in interested["members"] if (member := guild.get_member(memberId)) is not None)
+        if interestedList == "":
+            interestedList = "-"
+        embed.add_field(name="Interested People", value=interestedList)
         return embed
     
     async def updateChannel(self):

@@ -1,4 +1,5 @@
 import re
+import json
 import discord
 from discord.ext import commands
 
@@ -16,6 +17,20 @@ class Staff(commands.Cog):
     async def on_ready(self):
         log.debug("Staff Cog is ready", flush=True)
         cogsReady["staff"] = True
+        
+        membersLastMessage = {}
+        guild = self.bot.get_guild(SERVER)
+        for member in guild.members:
+            lastMessage = None
+            for channel in guild.channels:
+                fetchMessage = await channel.history().find(lambda m: m.author.id == users_id)
+                if fetchMessage is None:
+                    continue
+                if lastMessage is None or fetchedMessage.created_at > lastMessage.created_at:
+                    lastMessage = fetchMessage
+            membersLastMessage[member.display_name] = {"time": str(lastMessage.created_at), "messageId": lastMessage.id, "messageURL": lastMessage.jump_url}
+        with open("data/membersLastMessage.json", "w") as f:
+            json.dump(membersLastMessage, f, indent=4)
     
     def getMember(self, searchTerm):
         member = None

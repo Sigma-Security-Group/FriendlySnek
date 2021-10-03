@@ -1,5 +1,6 @@
 import re
 import json
+from tqdm import tqdm
 from pprint import pprint
 import discord
 from discord.ext import commands
@@ -21,9 +22,10 @@ class Staff(commands.Cog):
         
         membersLastMessage = {}
         guild = self.bot.get_guild(SERVER)
-        for member in guild.members:
+        for member in tqdm(guild.members):
             lastMessage = None
-            for channel in guild.channels:
+            for channel in tqdm(guild.channels):
+                
                 try:
                     fetchedMessage = await channel.history().find(lambda m: m.author.id == member.id)
                 except AttributeError:

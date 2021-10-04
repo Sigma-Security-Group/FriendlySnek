@@ -68,15 +68,15 @@ def getSsgRep():
     user = anvil.users.get_user()
     if user is None or not user["Is_Staff"]:
         return None
-    files = []
+    reports = []
     with FTP() as ftp:
         ftp.connect(host=secret.ftpHost, port=secret.ftpPort)
         ftp.login(user=secret.ftpUsername, passwd=secret.ftpPassword)
         ftp.cwd(FTP_A3DS_FOLDER)
-        for filename in ftp.nlst():
+        for filename in sorted(ftp.nlst()):
             if filename.endswith(".rpt"):
-                files.append(filename)
-    return files
+                ftp.retrlines(f"RETR {filename}", lambda l, r=reports: (r.append(l) if "SSG REP" in l else None))
+    return reports
 
 if __name__ == '__main__':
     anvil.server.wait_forever()

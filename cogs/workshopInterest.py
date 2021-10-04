@@ -39,14 +39,17 @@ class WorkshopInterest(commands.Cog):
             return
         
         if not os.path.exists(WORKSHOP_INTEREST_FILE):
+            workshopInterest = {}
+            for name, title in (("Newcomer", "Newcomer"), ("Rotary Wing", "Rotary Wing 🚁"), ("Fixed Wing", "Fixed Wing ✈️"), ("JTAC", "JTAC 📡"), ("Medic", "Medic 💉"), ("Heavy Weapons", "Heavy Weapons 💣"), ("Marksman", "Marksman 🎯"), ("Breacher", "Breacher 🚪"), ("Mechanised", "Mechanised 🛡️​"), ("RPV-SO", "RPV-SO 🛩️​")):
+                workshopInterest[name] = {"title": title, "members": [], "messageId": None}
             with open(WORKSHOP_INTEREST_FILE, "w") as f:
-                json.dump({}, f, indent=4)
+                json.dump(workshopInterest, f, indent=4)
         await self.updateChannel()
     
-    def getWorkshopEmbed(self, workshop, interest):
+    def getWorkshopEmbed(self, workshop):
         guild = self.bot.get_guild(SERVER)
-        embed = Embed(title=workshop)
-        interestedList = "\n".join(member.display_name for memberId in interested["members"] if (member := guild.get_member(memberId)) is not None)
+        embed = Embed(title=workshop["title"])
+        interestedList = "\n".join(member.display_name for memberId in workshop["members"] if (member := guild.get_member(memberId)) is not None)
         if interestedList == "":
             interestedList = "-"
         embed.add_field(name="Interested People", value=interestedList)
@@ -60,12 +63,50 @@ class WorkshopInterest(commands.Cog):
         
         with open(WORKSHOP_INTEREST_FILE) as f:
             workshopInterest = json.load(f)
-        for workshop, interest in workshopInterest.items():
-            embed = self.getWorkshopEmbed(workshop, interest)
+        for workshop in workshopInterest.values():
+            embed = self.getWorkshopEmbed(workshop)
             msg = await channel.send(embed=embed)
-            interest["messageId"] = msg.id
+            workshop["messageId"] = msg.id
+            for emoji in ("✅", "❌"):
+                await msg.add_reaction(emoji)
         with open(WORKSHOP_INTEREST_FILE, "w") as f:
             json.dump(workshopInterest, f, indent=4)
+    
+    @commands.Cog.listener()
+    async def on_raw_reaction_add(self, payload):
+        try:
+            with open(WORKSHOP_INTEREST_FILE) as f:
+                workshopInterest = json.load(f)
+            
+            if any(workshop["messageId"] == payload.message_id for workshop in workshopInterest.values()) and self.bot.ready and not payload.member.bot:
+                channelNeedsUpdate = True
+                workshop = [workshop for workshop in workshopInterest.values() if workshop["messageId"] == payload.message_id][0]
+                workshopMessage = await self.bot.get_channel(WORKSHOP_INTEREST).fetch_message(workshop["messageId"])
+                if payload.emoji.name == "✅":
+                    if payload.member.id not in workshop["members"]:
+                        workshop["members"].append(payload.member.id)
+                elif payload.emoji.name == "❌":
+                    if payload.member.id in workshop["members"]:
+                        workshop["members"].remove(payload.member.id)
+                else:
+                    channelNeedsUpdate = False
+                
+                try:
+                    await workshopMessage.remove_reaction(payload.emoji, payload.member)
+                except Exception:
+                    pass
+                
+                if channelNeedsUpdate:
+                    try:
+                        embed = self.getWorkshopEmbed(workshop)
+                        await workshopMessage.edit(embed=embed)
+                    except Exception:
+                        pass
+            
+            with open(WORKSHOP_INTEREST_FILE, "w") as f:
+                json.dump(workshopInterest, f, indent=4)
+        except Exception as e:
+            print(e)
 
 def setup(bot):
     bot.add_cog(WorkshopInterest(bot))

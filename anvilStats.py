@@ -64,10 +64,11 @@ def getFullDiscordActivity():
     return fullActivity
 
 @anvil.server.callable
-def getSsgRep():
+def getSsgRep(numLogs=2):
     user = anvil.users.get_user()
     if user is None or not user["Is_Staff"]:
         return None
+    files = []
     reports = []
     with FTP() as ftp:
         ftp.connect(host=secret.ftpHost, port=secret.ftpPort)
@@ -75,7 +76,9 @@ def getSsgRep():
         ftp.cwd(FTP_A3DS_FOLDER)
         for filename in sorted(ftp.nlst()):
             if filename.endswith(".rpt"):
-                ftp.retrlines(f"RETR {filename}", lambda l, r=reports: (r.append(l) if "SSG REP" in l else None))
+                files.append(filename)
+        for filename in sorted(files, reverse=True)[:numLogs]:
+            ftp.retrlines(f"RETR {filename}", lambda l, r=reports: (r.append(l) if "SSG REP" in l else None))
     return sorted(reports, reverse=True)
 
 if __name__ == '__main__':

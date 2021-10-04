@@ -78,7 +78,7 @@ def getSsgRep(numLogs=2):
             if filename.endswith(".rpt"):
                 files.append(filename)
         for filename in sorted(files, reverse=True)[:numLogs]:
-            ftp.retrlines(f"RETR {filename}", lambda l, r=reports: (r.append(l) if "SSG REP" in l else None))
+            ftp.retrlines(f"RETR {filename}", lambda l, r=reports: (r.append(l) if "SSG REP" in l and "SSG REP JIP Exec added" not in l and "SSG REP Added " not in l else None))
     return sorted(reports, reverse=True)
 
 if __name__ == '__main__':

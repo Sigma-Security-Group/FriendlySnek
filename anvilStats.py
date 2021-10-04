@@ -76,7 +76,7 @@ def getSsgRep():
         for filename in sorted(ftp.nlst()):
             if filename.endswith(".rpt"):
                 ftp.retrlines(f"RETR {filename}", lambda l, r=reports: (r.append(l) if "SSG REP" in l else None))
-    return reports
+    return sorted(reports, reverse=True)
 
 if __name__ == '__main__':
     anvil.server.wait_forever()

@@ -22,7 +22,6 @@ from constants import *
 from __main__ import log, cogsReady, DEBUG
 if DEBUG:
     from constants.debug import *
-import anvilController
 
 WORKSHOP_INTEREST_FILE = "data/workshopInterest.json"
 

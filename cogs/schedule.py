@@ -22,7 +22,6 @@ from constants import *
 from __main__ import log, cogsReady, DEBUG
 if DEBUG:
     from constants.debug import *
-import anvilController
 
 EVENT_TIME_FORMAT = "%Y-%m-%d %I:%M %p"
 EVENTS_FILE = "data/events.json"
@@ -269,8 +268,6 @@ class Schedule(commands.Cog):
     
     async def updateSchedule(self):
         self.lastUpdate = datetime.utcnow()
-        if not anvilController.isScheduleWallOpen():
-            return
         channel = self.bot.get_channel(SCHEDULE)
         await channel.purge(limit=None, check=lambda m: m.author.id in (FRIENDLY_SNEK, FRIENDLY_SNEK_DEV))
         
@@ -520,9 +517,6 @@ class Schedule(commands.Cog):
             log.debug(f"{member.display_name}({member.name}#{member.discriminator}) was reserving a role but schedule was updated")
     
     async def editEvent(self, author, event):
-        if not anvilController.isScheduleWallOpen():
-            await author.send("Schedule is currently disabled for technical reasons. Try again later")
-            return
         editingTime = datetime.utcnow()
         log.debug(f"{author.display_name}({author.name}#{author.discriminator}) is editing an event")
         embed = Embed(title=":pencil2: What would you like to edit?", color=Colour.gold())
@@ -869,9 +863,6 @@ class Schedule(commands.Cog):
         await self.scheduleOperation(ctx)
     
     async def scheduleOperation(self, ctx):
-        if not anvilController.isScheduleWallOpen():
-            await ctx.send("Schedule is currently disabled for technical reasons. Try again later")
-            return
         await ctx.send("Scheduling... Standby for :b:op")
         log.debug(f"{ctx.author.display_name}({ctx.author.name}#{ctx.author.discriminator}) is creating an operation")
         
@@ -1151,9 +1142,6 @@ class Schedule(commands.Cog):
     # workshop.add_check(lambda ctx: any(role.id == UNIT_STAFF or role in SME_ROLES for role in ctx.author.roles))
     
     async def scheduleWorkshop(self, ctx):
-        if not anvilController.isScheduleWallOpen():
-            await ctx.send("Schedule is currently disabled for technical reasons. Try again later")
-            return
         await ctx.send("Scheduling workshop...")
         log.debug(f"{ctx.author.display_name}({ctx.author.name}#{ctx.author.discriminator}) is creating a workshop")
         
@@ -1523,9 +1511,6 @@ class Schedule(commands.Cog):
         await self.scheduleEvent(ctx)
     
     async def scheduleEvent(self, ctx):
-        if not anvilController.isScheduleWallOpen():
-            await ctx.send("Schedule is currently disabled for technical reasons. Try again later")
-            return
         await ctx.send("Scheduling generic event...")
         log.debug(f"{ctx.author.display_name}({ctx.author.name}#{ctx.author.discriminator}) is creating an event")
         

@@ -21,7 +21,6 @@ from constants import *
 from __main__ import log, cogsReady, DEBUG
 if DEBUG:
     from constants.debug import *
-import anvilController
 import secret
 
 TIMEOUT_EMBED = Embed(title="Time ran out. Try again. :anguished: ", color=Colour.red())
@@ -78,9 +77,6 @@ class MissionUploader(commands.Cog):
                            ]
                        })
     async def uploadMission(self, ctx: SlashContext):
-        if not anvilController.isMissionUploaderWallOpen():
-            await ctx.send("Mission Upload is currently disabled for technical reasons. Try again later")
-            return
         await ctx.send("Upload mission file in DMs")
         log.info(f"{ctx.author.display_name}({ctx.author.name}#{ctx.author.discriminator}) is uploading a mission file")
         

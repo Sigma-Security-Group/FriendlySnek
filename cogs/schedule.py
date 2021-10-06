@@ -30,6 +30,7 @@ TIMEOUT_EMBED = Embed(title="Time ran out. Try again. :anguished: ", color=Colou
 # EVENTS_STATS_FILE = "data/eventsStats.json"
 EVENTS_HISTORY_FILE = "data/eventsHistory.json"
 WORKSHOP_TEMPLATES_FILE = "data/workshopTemplates.json"
+WORKSHOP_INTEREST_FILE = "data/workshopInterest.json"
 
 MAPS = [
     "Altis",
@@ -113,7 +114,7 @@ class Schedule(commands.Cog):
         self.autoDeleteEvents.start()
         self.checkAcceptedReminder.start()
     
-    def saveEventToHistory(self, event, autoDeleted=False):
+    async def saveEventToHistory(self, event, autoDeleted=False):
         # if event.get("type", "Operation") == "Operation":
         #     startTime = UTC.localize(datetime.strptime(event["time"], EVENT_TIME_FORMAT))
         #     with open(EVENTS_STATS_FILE) as f:
@@ -136,6 +137,27 @@ class Schedule(commands.Cog):
         #         json.dump(eventsStats, f, indent=4)
         
         guild = self.bot.get_guild(SERVER)
+        
+        if event.get("type", "Operation") == "Workshop":
+            if (workshopInterestName := event.get("workshopInterest")) is not None:
+                with open(WORKSHOP_INTEREST_FILE) as f:
+                    workshopInterest = json.load(f)
+                if (workshop := workshopInterest.get(workshopInterestName)) is not None:
+                    accepted = event["accepted"]
+                    if event["maxPlayers"] is not None:
+                        accepted = accepted[:event["maxPlayers"]]
+                    updateWorkshopInterest = False
+                    for memberId in accepted:
+                        if memberId in workshop["members"]:
+                            updateWorkshopInterest = True
+                            workshop["members"].remove(memberId)
+                    if updateWorkshopInterest:
+                        with open(WORKSHOP_INTEREST_FILE, "w") as f:
+                            json.dump(workshopInterest, f, indent=4)
+                        embed = self.bot.get_cog("WorkshopInterest").getWorkshopEmbed(workshop)
+                        workshopMessage = await self.bot.get_channel(WORKSHOP_INTEREST).fetch_message(workshop["messageId"])
+                        await workshopMessage.edit(embed=embed)
+        
         with open(EVENTS_HISTORY_FILE) as f:
             eventsHistory = json.load(f)
         eventCopy = deepcopy(event)
@@ -177,7 +199,7 @@ class Schedule(commands.Cog):
                     # author = self.bot.get_guild(SERVER).get_member(event["authorId"])
                     # await self.bot.get_channel(ARMA_DISCUSSION).send(f"{author.mention} You silly goose, you forgot to delete your operation. I'm not your mother, but this time I will do it for you")
                     if event["maxPlayers"] != 0:
-                        self.saveEventToHistory(event, autoDeleted=True)
+                        await self.saveEventToHistory(event, autoDeleted=True)
                         # startTime = UTC.localize(datetime.strptime(event["time"], EVENT_TIME_FORMAT))
                         # with open(EVENTS_STATS_FILE) as f:
                         #     eventsStats = json.load(f)
@@ -359,6 +381,8 @@ class Schedule(commands.Cog):
     
     @commands.Cog.listener()
     async def on_raw_reaction_add(self, payload):
+        if payload.channel_id != SCHEDULE:
+            return
         if False and self.eventsFileLock:
             while self.eventsFileLock:
                 while self.eventsFileLock:
@@ -821,7 +845,7 @@ class Schedule(commands.Cog):
         utcNow = UTC.localize(datetime.utcnow())
         startTime = UTC.localize(datetime.strptime(event["time"], EVENT_TIME_FORMAT))
         if event["maxPlayers"] != 0 and utcNow > startTime + timedelta(minutes=30):
-            self.saveEventToHistory(event)
+            await self.saveEventToHistory(event)
             # with open(EVENTS_STATS_FILE) as f:
             #     eventsStats = json.load(f)
             # while startTime.strftime(EVENT_TIME_FORMAT) in eventsStats:
@@ -1332,6 +1356,45 @@ class Schedule(commands.Cog):
             hours=int(duration.split("h")[0].strip()) if "h" in duration else 0,
             minutes=int(duration.split("h")[-1].replace("m", "").strip()) if duration.strip()[-1] != "h" else 0
         )
+        
+        if template is None:
+            with open(WORKSHOP_INTEREST_FILE) as f:
+                workshopInterestOptions = [{"name": name, "title": wsInterest["title"]} for name, wsInterest in json.load(f).items()]
+            embed = Embed(title=":link: Which workshop waiting list is your workshop linked to?", color=Colour.gold(), description="Choose a number from the list below or enter `none`")
+            embed.add_field(name="Workshop Lists", value="\n".join(f"**{idx}**   {wsInterest['title']}" for idx, wsInterest in enumerate(workshopInterestOptions, 1)))
+            await dmChannel.send(embed=embed)
+            try:
+                response = await self.bot.wait_for("message", timeout=600, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
+                workshopInterest = response.content.strip()
+                workshopInterestOk = True
+                if workshopInterest.isdigit() and int(workshopInterest) <= len(workshopInterestOptions) and int(workshopInterest) > 0:
+                    workshopInterest = workshopInterestOptions[int(workshopInterest) - 1]["name"]
+                elif workshopInterest.strip().lower() == "none":
+                    workshopInterest = None
+                else:
+                    workshopInterestOk = False
+            except asyncio.TimeoutError:
+                await dmChannel.send(embed=TIMEOUT_EMBED)
+                return
+            while not workshopInterestOk:
+                embed = Embed(title="❌ Wrong format", color=Colour.red(), description="Choose a number from the list below or enter `none`")
+                embed.add_field(name="Workshop Lists", value="\n".join(f"**{idx}**   {wsInterest['title']}" for idx, wsInterest in enumerate(workshopInterestOptions, 1)))
+                await dmChannel.send(embed=embed)
+                try:
+                    response = await self.bot.wait_for("message", timeout=600, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
+                    workshopInterest = response.content.strip()
+                    workshopInterestOk = True
+                    if workshopInterest.isdigit() and int(workshopInterest) <= len(workshopInterestOptions) and int(workshopInterest) > 0:
+                        workshopInterest = workshopInterestOptions[int(workshopInterest) - 1]
+                    elif workshopInterest.strip().lower() == "none":
+                        workshopInterest = None
+                    else:
+                        workshopInterestOk = False
+                except asyncio.TimeoutError:
+                    await dmChannel.send(embed=TIMEOUT_EMBED)
+                    return
+        else:
+            workshopInterest = template["workshopInterest"]
             
         with open(MEMBER_TIME_ZONES_FILE) as f:
             memberTimeZones = json.load(f)
@@ -1454,7 +1517,8 @@ class Schedule(commands.Cog):
                     "reservableRoles": reservableRoles,
                     "maxPlayers": maxPlayers,
                     "map": eventMap,
-                    "duration": duration
+                    "duration": duration,
+                    "workshopInterest": workshopInterest
                 }
                 with open(WORKSHOP_TEMPLATES_FILE) as f:
                     workshopTemplates = json.load(f)
@@ -1496,6 +1560,7 @@ class Schedule(commands.Cog):
                 "accepted": [],
                 "declined": [],
                 "tentative": [],
+                "workshopInterest": workshopInterest,
                 "type": "Workshop"  # Operation, Workshop, Event
             }
             events.append(newEvent)

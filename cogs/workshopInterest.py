@@ -34,9 +34,6 @@ class WorkshopInterest(commands.Cog):
         log.debug("WorkshopInterest Cog is ready", flush=True)
         cogsReady["workshopInterest"] = True
         
-        if not DEBUG:  # TODO remove before launching on Sigma server
-            return
-        
         if not os.path.exists(WORKSHOP_INTEREST_FILE):
             workshopInterest = {}
             for name, title in (("Newcomer", "Newcomer"), ("Rotary Wing", "Rotary Wing 🚁"), ("Fixed Wing", "Fixed Wing ✈️"), ("JTAC", "JTAC 📡"), ("Medic", "Medic 💉"), ("Heavy Weapons", "Heavy Weapons 💣"), ("Marksman", "Marksman 🎯"), ("Breacher", "Breacher 🚪"), ("Mechanised", "Mechanised 🛡️​"), ("RPV-SO", "RPV-SO 🛩️​")):
@@ -73,7 +70,7 @@ class WorkshopInterest(commands.Cog):
     
     @commands.Cog.listener()
     async def on_raw_reaction_add(self, payload):
-        if not DEBUG:
+        if payload.channel_id != WORKSHOP_INTEREST:
             return
         try:
             with open(WORKSHOP_INTEREST_FILE) as f:

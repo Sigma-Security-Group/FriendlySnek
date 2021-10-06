@@ -73,6 +73,8 @@ class WorkshopInterest(commands.Cog):
     
     @commands.Cog.listener()
     async def on_raw_reaction_add(self, payload):
+        if not DEBUG:
+            return
         try:
             with open(WORKSHOP_INTEREST_FILE) as f:
                 workshopInterest = json.load(f)

@@ -17,10 +17,10 @@ import json
 import pytz
 from glob import glob
 from datetime import datetime
-from apscheduler.schedulers.asyncio import AsyncIOScheduler
+# from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 import discord
-from discord.ext import commands
+from discord.ext import commands, tasks
 from discord_slash import SlashCommand
 
 from constants import *
@@ -49,7 +49,10 @@ UTC = pytz.utc
 
 newcomers = set()
 
+@tasks.loop(minutes=10)
 async def logActivity():
+    while not bot.ready:
+        await asyncio.sleep(1)
     log.debug("Logging discord activity")
     now = UTC.localize(datetime.utcnow()).strftime("%Y-%m-%d %I:%M %p")
     
@@ -92,8 +95,8 @@ async def logActivity():
     with open(ACTIVITY_FILE, "w") as f:
         json.dump(activity, f, indent=4)
 
-activityMonitorScheduler = AsyncIOScheduler()
-activityMonitorScheduler.add_job(logActivity, "interval", minutes=10)
+# activityMonitorScheduler = AsyncIOScheduler()
+# activityMonitorScheduler.add_job(logActivity, "interval", minutes=10)
 
 @bot.event
 async def on_ready():
@@ -131,8 +134,9 @@ async def on_ready():
             activity[t] = {"online": online, "staffOnline": staffOnline, "messages": messagesPerChannel, "voiceChannels": voiceChannels}
         with open(ACTIVITY_FILE, "w") as f:
             json.dump(activity, f, indent=4)
-    if not activityMonitorScheduler.running:
-        activityMonitorScheduler.start()
+    # if not activityMonitorScheduler.running:
+    #     activityMonitorScheduler.start()
+    logActivity.start()
 
 @bot.event
 async def on_message(message):

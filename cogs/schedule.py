@@ -6,12 +6,12 @@ from copy import deepcopy
 from datetime import datetime, timedelta
 from dateutil.parser import parse as datetimeParse
 import pytz
-from apscheduler.schedulers.asyncio import AsyncIOScheduler
+# from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 import discord
 from discord import Embed
 from discord import Colour
-from discord.ext import commands
+from discord.ext import commands, tasks
 from discord_slash import cog_ext, SlashContext
 from discord_slash.utils.manage_commands import create_permission, create_multi_ids_permission
 from discord_slash.utils.manage_components import create_button, create_actionrow
@@ -87,10 +87,10 @@ class Schedule(commands.Cog):
         self.bot = bot
         self.eventsFileLock = False
         self.memberTimeZonesFileLock = False
-        self.autoDeleteScheduler = AsyncIOScheduler()
-        self.autoDeleteScheduler.add_job(self.autoDeleteEvents, "interval", minutes=10)
-        self.acceptedReminderScheduler = AsyncIOScheduler()
-        self.acceptedReminderScheduler.add_job(self.checkAcceptedReminder, "interval", minutes=10)
+        # self.autoDeleteScheduler = AsyncIOScheduler()
+        # self.autoDeleteScheduler.add_job(self.autoDeleteEvents, "interval", minutes=10)
+        # self.acceptedReminderScheduler = AsyncIOScheduler()
+        # self.acceptedReminderScheduler.add_job(self.checkAcceptedReminder, "interval", minutes=10)
     
     @commands.Cog.listener()
     async def on_ready(self):
@@ -106,10 +106,12 @@ class Schedule(commands.Cog):
             with open(WORKSHOP_TEMPLATES_FILE, "w") as f:
                 json.dump([], f, indent=4)
         await self.updateSchedule()
-        if not self.autoDeleteScheduler.running:
-            self.autoDeleteScheduler.start()
-        if not self.acceptedReminderScheduler.running:
-            self.acceptedReminderScheduler.start()
+        # if not self.autoDeleteScheduler.running:
+        #     self.autoDeleteScheduler.start()
+        # if not self.acceptedReminderScheduler.running:
+        #     self.acceptedReminderScheduler.start()
+        self.autoDeleteEvents.start()
+        self.checkAcceptedReminder.start()
     
     def saveEventToHistory(self, event, autoDeleted=False):
         # if event.get("type", "Operation") == "Operation":
@@ -148,7 +150,10 @@ class Schedule(commands.Cog):
         with open(EVENTS_HISTORY_FILE, "w") as f:
             json.dump(eventsHistory, f, indent=4)
     
+    @tasks.loop(minutes=10)
     async def autoDeleteEvents(self):
+        while not self.bot.ready:
+            await asyncio.sleep(1)
         guild = self.bot.get_guild(SERVER)
         log.debug("Checking to auto delete events")
         if False and self.eventsFileLock:
@@ -216,7 +221,10 @@ class Schedule(commands.Cog):
         finally:
             self.eventsFileLock = False
     
+    @tasks.loop(minutes=10)
     async def checkAcceptedReminder(self):
+        while not self.bot.ready:
+            await asyncio.sleep(1)
         guild = self.bot.get_guild(SERVER)
         log.debug("Checking for accepted reminders")
         try:

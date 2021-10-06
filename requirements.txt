@@ -1,7 +1,6 @@
 discord.py[voice]
 discord-py-slash-command
 pytz
-apscheduler
 dateutils
 tqdm
 anvil-uplink

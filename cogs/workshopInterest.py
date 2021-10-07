@@ -55,8 +55,11 @@ class WorkshopInterest(commands.Cog):
     
     def getWorkshopEmbed(self, workshop):
         guild = self.bot.get_guild(SERVER)
-        description = workshop.get("description", "-")
-        embed = Embed(title=workshop["title"], description=description)
+        description = workshop.get("description")
+        if description is not None:
+            embed = Embed(title=workshop["title"], description=description)
+        else:
+            embed = Embed(title=workshop["title"])
         interestedList = "\n".join(member.display_name for memberId in workshop["members"] if (member := guild.get_member(memberId)) is not None)
         if interestedList == "":
             interestedList = "-"

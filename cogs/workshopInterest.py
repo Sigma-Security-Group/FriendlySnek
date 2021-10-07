@@ -36,15 +36,27 @@ class WorkshopInterest(commands.Cog):
         
         if not os.path.exists(WORKSHOP_INTEREST_FILE):
             workshopInterest = {}
-            for name, title in (("Newcomer", "Newcomer"), ("Rotary Wing", "Rotary Wing 🚁"), ("Fixed Wing", "Fixed Wing ✈️"), ("JTAC", "JTAC 📡"), ("Medic", "Medic 💉"), ("Heavy Weapons", "Heavy Weapons 💣"), ("Marksman", "Marksman 🎯"), ("Breacher", "Breacher 🚪"), ("Mechanised", "Mechanised 🛡️​"), ("RPV-SO", "RPV-SO 🛩️​")):
-                workshopInterest[name] = {"title": title, "members": [], "messageId": None}
+            for name, title, description in (
+                ("Newcomer", "Newcomer", "Newcomer"),
+                ("Rotary Wing", "Rotary Wing 🚁", "Rotary Wing 🚁"),
+                ("Fixed Wing", "Fixed Wing ✈️", "Fixed Wing ✈️"),
+                ("JTAC", "JTAC 📡", "JTAC 📡"),
+                ("Medic", "Medic 💉", "Medic 💉"),
+                ("Heavy Weapons", "Heavy Weapons 💣", "Heavy Weapons 💣"),
+                ("Marksman", "Marksman 🎯", "Marksman 🎯"),
+                ("Breacher", "Breacher 🚪", "Breacher 🚪"),
+                ("Mechanised", "Mechanised 🛡️​", "Mechanised 🛡️​"),
+                ("RPV-SO", "RPV-SO 🛩️​", "RPV-SO 🛩️​")
+            ):
+                workshopInterest[name] = {"title": title, "description": description, "members": [], "messageId": None}
             with open(WORKSHOP_INTEREST_FILE, "w") as f:
                 json.dump(workshopInterest, f, indent=4)
         await self.updateChannel()
     
     def getWorkshopEmbed(self, workshop):
         guild = self.bot.get_guild(SERVER)
-        embed = Embed(title=workshop["title"])
+        description = workshop.get("description", "-")
+        embed = Embed(title=workshop["title"], description=description)
         interestedList = "\n".join(member.display_name for memberId in workshop["members"] if (member := guild.get_member(memberId)) is not None)
         if interestedList == "":
             interestedList = "-"

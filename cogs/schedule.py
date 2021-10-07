@@ -1394,7 +1394,7 @@ class Schedule(commands.Cog):
                     await dmChannel.send(embed=TIMEOUT_EMBED)
                     return
         else:
-            workshopInterest = template["workshopInterest"]
+            workshopInterest = template.get("workshopInterest")
             
         with open(MEMBER_TIME_ZONES_FILE) as f:
             memberTimeZones = json.load(f)

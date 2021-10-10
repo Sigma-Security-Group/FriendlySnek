@@ -257,6 +257,8 @@ class Schedule(commands.Cog):
             for event in events:
                 if event.get("checkedAcceptedReminders", False):
                     continue
+                if event.get("type", "Operation") != "Operation":
+                    continue
                 startTime = UTC.localize(datetime.strptime(event["time"], EVENT_TIME_FORMAT))
                 if utcNow > startTime + timedelta(minutes=30):
                     acceptedMembers = [guild.get_member(memberId) for memberId in event["accepted"]]

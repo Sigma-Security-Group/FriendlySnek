@@ -584,17 +584,8 @@ class Schedule(commands.Cog):
         
         reorderEvents = False
 
-        if choice == "0":
-            embed = Embed(title=":pencil2: What is the type of your event?", description="Please choose a number from the list below", color=Colour.gold())
-            embed.add_field(name="Type", value="**1** 🟩 Operation\n**2** 🟦 Workshop\n**3** 🟨 Event")
-            await dmChannel.send(embed=embed)
-            try:
-                response = await self.bot.wait_for("message", timeout=60, check=lambda msg, author=author, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
-                eventTypeNum = response.content.strip()
-            except asyncio.TimeoutError:
-                await dmChannel.send(embed=TIMEOUT_EMBED)
-                return False
-            while eventTypeNum not in ("1", "2", "3"):
+        match choice:
+            case "0":
                 embed = Embed(title=":pencil2: What is the type of your event?", description="Please choose a number from the list below", color=Colour.gold())
                 embed.add_field(name="Type", value="**1** 🟩 Operation\n**2** 🟦 Workshop\n**3** 🟨 Event")
                 await dmChannel.send(embed=embed)
@@ -604,85 +595,78 @@ class Schedule(commands.Cog):
                 except asyncio.TimeoutError:
                     await dmChannel.send(embed=TIMEOUT_EMBED)
                     return False
-            event["type"] = {"1": "Operation", "2": "Workshop", "3": "Event"}.get(eventTypeNum, "Operation")
-        
-        elif choice == "1":
-            embed = Embed(title=f":pencil2: What is the title of your {event.get('type', 'Operation').lower()}?", color=Colour.gold())
-            await dmChannel.send(embed=embed)
-            try:
-                response = await self.bot.wait_for("message", timeout=600, check=lambda msg, author=author, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
-                title = response.content.strip()
-            except asyncio.TimeoutError:
-                await dmChannel.send(embed=TIMEOUT_EMBED)
-                return False
-            event["title"] = title
+                while eventTypeNum not in ("1", "2", "3"):
+                    embed = Embed(title=":pencil2: What is the type of your event?", description="Please choose a number from the list below", color=Colour.gold())
+                    embed.add_field(name="Type", value="**1** 🟩 Operation\n**2** 🟦 Workshop\n**3** 🟨 Event")
+                    await dmChannel.send(embed=embed)
+                    try:
+                        response = await self.bot.wait_for("message", timeout=60, check=lambda msg, author=author, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
+                        eventTypeNum = response.content.strip()
+                    except asyncio.TimeoutError:
+                        await dmChannel.send(embed=TIMEOUT_EMBED)
+                        return False
+                event["type"] = {"1": "Operation", "2": "Workshop", "3": "Event"}.get(eventTypeNum, "Operation")
             
-        elif choice == "2":
-            embed = Embed(title=":notepad_spiral: What is the event description?", description=f"Current description:\n```{event['description']}```", color=Colour.gold())
-            await dmChannel.send(embed=embed)
-            try:
-                response = await self.bot.wait_for("message", timeout=1800, check=lambda msg, author=author, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
-                description = response.content.strip()
-            except asyncio.TimeoutError:
-                await dmChannel.send(embed=TIMEOUT_EMBED)
-                return False
-            event["description"] = description
-            
-        elif choice == "3":
-            embed = Embed(title=":notebook_with_decorative_cover: Enter none or a URL \n e.g. Signup sheet / Briefing / OPORD", color=Colour.gold())
-            await dmChannel.send(embed=embed)
-            try:
-                response = await self.bot.wait_for("message", timeout=600, check=lambda msg, author=author, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
-                externalURL = response.content.strip()
-                if externalURL.strip().lower() == "none":
-                    externalURL = None
-            except asyncio.TimeoutError:
-                await dmChannel.send(embed=TIMEOUT_EMBED)
-                return False
-            event["externalURL"] = externalURL
-            
-        elif choice == "4":
-            embed = Embed(title="Are there any reservable roles?", color=Colour.gold(), description="Type yes or y if there are reservable roles or type anything else if there are not")
-            await dmChannel.send(embed=embed)
-            try:
-                response = await self.bot.wait_for("message", timeout=600, check=lambda msg, author=author, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
-                reservableRolesPresent = response.content.strip().lower() in ("yes", "y")
-            except asyncio.TimeoutError:
-                await dmChannel.send(embed=TIMEOUT_EMBED)
-                return
-            if reservableRolesPresent:
-                embed = Embed(title="Type each reservable role in its own line (in a single message)", color=Colour.gold(), description="Press Shift + Enter to insert a newline. Editting the name of a role will make it vacant, but roles which keep their exact names will keep their reservations")
-                embed.add_field(name="Current reservable roles", value=("```\n" + "\n".join(event["reservableRoles"].keys()) + "```") if event["reservableRoles"] is not None else "None")
+            case "1":
+                embed = Embed(title=f":pencil2: What is the title of your {event.get('type', 'Operation').lower()}?", color=Colour.gold())
                 await dmChannel.send(embed=embed)
                 try:
                     response = await self.bot.wait_for("message", timeout=600, check=lambda msg, author=author, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
-                    reservableRoles = {role.strip(): event["reservableRoles"][role.strip()] if event["reservableRoles"] is not None and role.strip() in event["reservableRoles"] else None for role in response.content.split("\n") if len(role.strip()) > 0}
+                    title = response.content.strip()
                 except asyncio.TimeoutError:
                     await dmChannel.send(embed=TIMEOUT_EMBED)
                     return False
-            else:
-                reservableRoles = None
-            event["reservableRoles"] = reservableRoles
-            reorderEvents = True
-            
-        elif choice == "5":
-            embed = Embed(title=":globe_with_meridians: Enter Your Map Number", color=Colour.gold(), description="Choose from the list below or enter none for no map")
-            embed.add_field(name="Map", value="\n".join(f"**{idx}**   {mapName}" for idx, mapName in enumerate(MAPS, 1)))
-            await dmChannel.send(embed=embed)
-            try:
-                response = await self.bot.wait_for("message", timeout=600, check=lambda msg, author=author, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
-                eventMap = response.content.strip()
-                mapOK = True
-                if eventMap.isdigit() and int(eventMap) <= len(MAPS) and int(eventMap) > 0:
-                    eventMap = MAPS[int(eventMap) - 1]
-                elif eventMap.strip().lower() == "none":
-                    eventMap = None
+                event["title"] = title
+                
+            case "2":
+                embed = Embed(title=":notepad_spiral: What is the event description?", description=f"Current description:\n```{event['description']}```", color=Colour.gold())
+                await dmChannel.send(embed=embed)
+                try:
+                    response = await self.bot.wait_for("message", timeout=1800, check=lambda msg, author=author, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
+                    description = response.content.strip()
+                except asyncio.TimeoutError:
+                    await dmChannel.send(embed=TIMEOUT_EMBED)
+                    return False
+                event["description"] = description
+                
+            case "3":
+                embed = Embed(title=":notebook_with_decorative_cover: Enter none or a URL \n e.g. Signup sheet / Briefing / OPORD", color=Colour.gold())
+                await dmChannel.send(embed=embed)
+                try:
+                    response = await self.bot.wait_for("message", timeout=600, check=lambda msg, author=author, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
+                    externalURL = response.content.strip()
+                    if externalURL.strip().lower() == "none":
+                        externalURL = None
+                except asyncio.TimeoutError:
+                    await dmChannel.send(embed=TIMEOUT_EMBED)
+                    return False
+                event["externalURL"] = externalURL
+                
+            case "4":
+                embed = Embed(title="Are there any reservable roles?", color=Colour.gold(), description="Type yes or y if there are reservable roles or type anything else if there are not")
+                await dmChannel.send(embed=embed)
+                try:
+                    response = await self.bot.wait_for("message", timeout=600, check=lambda msg, author=author, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
+                    reservableRolesPresent = response.content.strip().lower() in ("yes", "y")
+                except asyncio.TimeoutError:
+                    await dmChannel.send(embed=TIMEOUT_EMBED)
+                    return
+                if reservableRolesPresent:
+                    embed = Embed(title="Type each reservable role in its own line (in a single message)", color=Colour.gold(), description="Press Shift + Enter to insert a newline. Editting the name of a role will make it vacant, but roles which keep their exact names will keep their reservations")
+                    embed.add_field(name="Current reservable roles", value=("```\n" + "\n".join(event["reservableRoles"].keys()) + "```") if event["reservableRoles"] is not None else "None")
+                    await dmChannel.send(embed=embed)
+                    try:
+                        response = await self.bot.wait_for("message", timeout=600, check=lambda msg, author=author, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
+                        reservableRoles = {role.strip(): event["reservableRoles"][role.strip()] if event["reservableRoles"] is not None and role.strip() in event["reservableRoles"] else None for role in response.content.split("\n") if len(role.strip()) > 0}
+                    except asyncio.TimeoutError:
+                        await dmChannel.send(embed=TIMEOUT_EMBED)
+                        return False
                 else:
-                    mapOK = False
-            except asyncio.TimeoutError:
-                await dmChannel.send(embed=TIMEOUT_EMBED)
-                return False
-            while not mapOK:
+                    reservableRoles = None
+                event["reservableRoles"] = reservableRoles
+                reorderEvents = True
+                
+            case "5":
                 embed = Embed(title=":globe_with_meridians: Enter Your Map Number", color=Colour.gold(), description="Choose from the list below or enter none for no map")
                 embed.add_field(name="Map", value="\n".join(f"**{idx}**   {mapName}" for idx, mapName in enumerate(MAPS, 1)))
                 await dmChannel.send(embed=embed)
@@ -699,74 +683,77 @@ class Schedule(commands.Cog):
                 except asyncio.TimeoutError:
                     await dmChannel.send(embed=TIMEOUT_EMBED)
                     return False
-            event["map"] = eventMap
-            
-        elif choice == "6":
-            embed = Embed(title=":family_man_boy_boy: What is the maximum number of attendees?", color=Colour.gold(), description="Enter none or a non-negative number")
-            await dmChannel.send(embed=embed)
-            try:
-                response = await self.bot.wait_for("message", timeout=600, check=lambda msg, author=author, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
-                maxPlayers = response.content.strip()
-                if maxPlayers.isdigit():
-                    maxPlayers = int(maxPlayers)
-                else:
-                    maxPlayers = None
-            except asyncio.TimeoutError:
-                await dmChannel.send(embed=TIMEOUT_EMBED)
-                return False
-            event["maxPlayers"] = maxPlayers
-            
-        elif choice == "7":
-            with open(MEMBER_TIME_ZONES_FILE) as f:
-                memberTimeZones = json.load(f)
-            
-            if str(author.id) in memberTimeZones:
-                try:
-                    timeZone = pytz.timezone(memberTimeZones[str(author.id)])
-                except pytz.exceptions.UnknownTimeZoneError:
-                    timeZone = UTC
-            else:
-                embed = Embed(title=":clock1: It appears that you haven't set your prefered time zone yet. What is your prefered time zone?", color=Colour.gold(), description="Enter `none`, a number from the list or any time zone name from the column 'TZ DATABASE NAME' in the following Wikipedia article (https://en.wikipedia.org/wiki/List_of_tz_database_time_zones) to make your choice. If you enter `none` or something invalid UTC will be assumed and you will be asked again the next time you schedule an event. You can change or delete your prefered time zone at any time with the `/changeTimeZone` command.")
-                embed.add_field(name="Time Zone", value="\n".join(f"**{idx}**   {tz}" for idx, tz in enumerate(TIME_ZONES, 1)))
+                while not mapOK:
+                    embed = Embed(title=":globe_with_meridians: Enter Your Map Number", color=Colour.gold(), description="Choose from the list below or enter none for no map")
+                    embed.add_field(name="Map", value="\n".join(f"**{idx}**   {mapName}" for idx, mapName in enumerate(MAPS, 1)))
+                    await dmChannel.send(embed=embed)
+                    try:
+                        response = await self.bot.wait_for("message", timeout=600, check=lambda msg, author=author, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
+                        eventMap = response.content.strip()
+                        mapOK = True
+                        if eventMap.isdigit() and int(eventMap) <= len(MAPS) and int(eventMap) > 0:
+                            eventMap = MAPS[int(eventMap) - 1]
+                        elif eventMap.strip().lower() == "none":
+                            eventMap = None
+                        else:
+                            mapOK = False
+                    except asyncio.TimeoutError:
+                        await dmChannel.send(embed=TIMEOUT_EMBED)
+                        return False
+                event["map"] = eventMap
+                
+            case "6":
+                embed = Embed(title=":family_man_boy_boy: What is the maximum number of attendees?", color=Colour.gold(), description="Enter none or a non-negative number")
                 await dmChannel.send(embed=embed)
                 try:
                     response = await self.bot.wait_for("message", timeout=600, check=lambda msg, author=author, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
-                    timeZone = response.content.strip()
-                    saveTimeZonepreference = True
-                    if timeZone.isdigit() and int(timeZone) <= len(TIME_ZONES) and int(timeZone) > 0:
-                        timeZone = pytz.timezone(list(TIME_ZONES.values())[int(timeZone) - 1])
+                    maxPlayers = response.content.strip()
+                    if maxPlayers.isdigit():
+                        maxPlayers = int(maxPlayers)
                     else:
-                        try:
-                            timeZone = pytz.timezone(timeZone)
-                        except pytz.exceptions.UnknownTimeZoneError:
-                            timeZone = UTC
-                            saveTimeZonepreference = False
-                    if saveTimeZonepreference:
-                        memberTimeZones[str(author.id)] = timeZone.zone
-                        with open(MEMBER_TIME_ZONES_FILE, "w") as f:
-                            json.dump(memberTimeZones, f, indent=4)
+                        maxPlayers = None
                 except asyncio.TimeoutError:
                     await dmChannel.send(embed=TIMEOUT_EMBED)
                     return False
-            
-            newTimeOk = False
-            while not newTimeOk:
-                embed = Embed(title="What is the time of the event?", color=Colour.gold(), description=f"Your selected time zone is '{timeZone.zone}'")
-                embed.add_field(name="Current Value", value=UTC.localize(datetime.strptime(event["time"], EVENT_TIME_FORMAT)).astimezone(timeZone).strftime(EVENT_TIME_FORMAT))
-                await dmChannel.send(embed=embed)
-                try:
-                    response = await self.bot.wait_for("message", timeout=600, check=lambda msg, author=author, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
-                    startTime = response.content.strip()
-                except asyncio.TimeoutError:
-                    await dmChannel.send(embed=TIMEOUT_EMBED)
-                    return False
-                try:
-                    startTime = datetimeParse(startTime)
-                    isFormatCorrect = True
-                except ValueError:
-                    isFormatCorrect = False
-                while not isFormatCorrect:
-                    embed = Embed(title="❌ Wrong format", colour=Colour.red(), description="e.g. 2021-08-08 9:30 PM")
+                event["maxPlayers"] = maxPlayers
+                
+            case "7":
+                with open(MEMBER_TIME_ZONES_FILE) as f:
+                    memberTimeZones = json.load(f)
+                
+                if str(author.id) in memberTimeZones:
+                    try:
+                        timeZone = pytz.timezone(memberTimeZones[str(author.id)])
+                    except pytz.exceptions.UnknownTimeZoneError:
+                        timeZone = UTC
+                else:
+                    embed = Embed(title=":clock1: It appears that you haven't set your prefered time zone yet. What is your prefered time zone?", color=Colour.gold(), description="Enter `none`, a number from the list or any time zone name from the column 'TZ DATABASE NAME' in the following Wikipedia article (https://en.wikipedia.org/wiki/List_of_tz_database_time_zones) to make your choice. If you enter `none` or something invalid UTC will be assumed and you will be asked again the next time you schedule an event. You can change or delete your prefered time zone at any time with the `/changeTimeZone` command.")
+                    embed.add_field(name="Time Zone", value="\n".join(f"**{idx}**   {tz}" for idx, tz in enumerate(TIME_ZONES, 1)))
+                    await dmChannel.send(embed=embed)
+                    try:
+                        response = await self.bot.wait_for("message", timeout=600, check=lambda msg, author=author, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
+                        timeZone = response.content.strip()
+                        saveTimeZonepreference = True
+                        if timeZone.isdigit() and int(timeZone) <= len(TIME_ZONES) and int(timeZone) > 0:
+                            timeZone = pytz.timezone(list(TIME_ZONES.values())[int(timeZone) - 1])
+                        else:
+                            try:
+                                timeZone = pytz.timezone(timeZone)
+                            except pytz.exceptions.UnknownTimeZoneError:
+                                timeZone = UTC
+                                saveTimeZonepreference = False
+                        if saveTimeZonepreference:
+                            memberTimeZones[str(author.id)] = timeZone.zone
+                            with open(MEMBER_TIME_ZONES_FILE, "w") as f:
+                                json.dump(memberTimeZones, f, indent=4)
+                    except asyncio.TimeoutError:
+                        await dmChannel.send(embed=TIMEOUT_EMBED)
+                        return False
+                
+                newTimeOk = False
+                while not newTimeOk:
+                    embed = Embed(title="What is the time of the event?", color=Colour.gold(), description=f"Your selected time zone is '{timeZone.zone}'")
+                    embed.add_field(name="Current Value", value=UTC.localize(datetime.strptime(event["time"], EVENT_TIME_FORMAT)).astimezone(timeZone).strftime(EVENT_TIME_FORMAT))
                     await dmChannel.send(embed=embed)
                     try:
                         response = await self.bot.wait_for("message", timeout=600, check=lambda msg, author=author, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
@@ -779,49 +766,54 @@ class Schedule(commands.Cog):
                         isFormatCorrect = True
                     except ValueError:
                         isFormatCorrect = False
-                startTime = timeZone.localize(startTime).astimezone(UTC)
-                if startTime < editingTime:
-                    embed = Embed(title="It appears that the new time is in the past. Are you sure you want to set it to this?", description="Enter 'yes' or 'y' to keep this time. Enter anything else to change it to another time.")
-                    await dmChannel.send(embed=embed)
-                    try:
-                        response = await self.bot.wait_for("message", timeout=60, check=lambda msg, author=author, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
-                        keepNewTime = response.content.strip()
-                    except asyncio.TimeoutError:
-                        await dmChannel.send(embed=TIMEOUT_EMBED)
-                        return False
-                    if keepNewTime.lower() in ("yes", "y"):
+                    while not isFormatCorrect:
+                        embed = Embed(title="❌ Wrong format", colour=Colour.red(), description="e.g. 2021-08-08 9:30 PM")
+                        await dmChannel.send(embed=embed)
+                        try:
+                            response = await self.bot.wait_for("message", timeout=600, check=lambda msg, author=author, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
+                            startTime = response.content.strip()
+                        except asyncio.TimeoutError:
+                            await dmChannel.send(embed=TIMEOUT_EMBED)
+                            return False
+                        try:
+                            startTime = datetimeParse(startTime)
+                            isFormatCorrect = True
+                        except ValueError:
+                            isFormatCorrect = False
+                    startTime = timeZone.localize(startTime).astimezone(UTC)
+                    if startTime < editingTime:
+                        embed = Embed(title="It appears that the new time is in the past. Are you sure you want to set it to this?", description="Enter 'yes' or 'y' to keep this time. Enter anything else to change it to another time.")
+                        await dmChannel.send(embed=embed)
+                        try:
+                            response = await self.bot.wait_for("message", timeout=60, check=lambda msg, author=author, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
+                            keepNewTime = response.content.strip()
+                        except asyncio.TimeoutError:
+                            await dmChannel.send(embed=TIMEOUT_EMBED)
+                            return False
+                        if keepNewTime.lower() in ("yes", "y"):
+                            newTimeOk = True
+                    else:
                         newTimeOk = True
-                else:
-                    newTimeOk = True
-            
-            duration = event["duration"]
-            d = timedelta(
-                hours=int(duration.split("h")[0].strip()) if "h" in duration else 0,
-                minutes=int(duration.split("h")[-1].replace("m", "").strip()) if duration.strip()[-1] != "h" else 0
-            )
-            endTime = startTime + d
-            oldStartTime = event["time"]
-            event["time"] = startTime.strftime(EVENT_TIME_FORMAT)
-            event["endTime"] = endTime.strftime(EVENT_TIME_FORMAT)
-            reorderEvents = True
-            guild = self.bot.get_guild(SERVER)
-            for memberId in event["accepted"] + event.get("declinedForTiming", []) + event["tentative"]:
-                member = guild.get_member(memberId)
-                if member is not None:
-                    embed = Embed(title=f":clock3: The starting time has changed for: {event['title']}", description=f"From: <t:{round(UTC.localize(datetime.strptime(oldStartTime, EVENT_TIME_FORMAT)).timestamp())}:F>\n\u2000\u2000To: <t:{round(UTC.localize(datetime.strptime(event['time'], EVENT_TIME_FORMAT)).timestamp())}:F>")
-                    await member.send(embed=embed)
-            
-        elif choice == "8":
-            embed = Embed(title="What is the duration of the event?", color=Colour.gold(), description="e.g. 30m\ne.g. 2h\ne.g. 4h 30m\ne.g. 2h30")
-            await dmChannel.send(embed=embed)
-            try:
-                response = await self.bot.wait_for("message", timeout=600, check=lambda msg, author=author, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
-                duration = response.content.strip()
-            except asyncio.TimeoutError:
-                await dmChannel.send(embed=TIMEOUT_EMBED)
-                return False
-            while not re.match(r"^\s*((([1-9]\d*)?\d\s*h(\s*([0-5])?\d\s*m?)?)|(([0-5])?\d\s*m))\s*$", duration):
-                embed = Embed(title="❌ Wrong format", colour=Colour.red(), description="e.g. 30m\ne.g. 2h\ne.g. 4h 30m\ne.g. 2h30")
+                
+                duration = event["duration"]
+                d = timedelta(
+                    hours=int(duration.split("h")[0].strip()) if "h" in duration else 0,
+                    minutes=int(duration.split("h")[-1].replace("m", "").strip()) if duration.strip()[-1] != "h" else 0
+                )
+                endTime = startTime + d
+                oldStartTime = event["time"]
+                event["time"] = startTime.strftime(EVENT_TIME_FORMAT)
+                event["endTime"] = endTime.strftime(EVENT_TIME_FORMAT)
+                reorderEvents = True
+                guild = self.bot.get_guild(SERVER)
+                for memberId in event["accepted"] + event.get("declinedForTiming", []) + event["tentative"]:
+                    member = guild.get_member(memberId)
+                    if member is not None:
+                        embed = Embed(title=f":clock3: The starting time has changed for: {event['title']}", description=f"From: <t:{round(UTC.localize(datetime.strptime(oldStartTime, EVENT_TIME_FORMAT)).timestamp())}:F>\n\u2000\u2000To: <t:{round(UTC.localize(datetime.strptime(event['time'], EVENT_TIME_FORMAT)).timestamp())}:F>")
+                        await member.send(embed=embed)
+                
+            case "8":
+                embed = Embed(title="What is the duration of the event?", color=Colour.gold(), description="e.g. 30m\ne.g. 2h\ne.g. 4h 30m\ne.g. 2h30")
                 await dmChannel.send(embed=embed)
                 try:
                     response = await self.bot.wait_for("message", timeout=600, check=lambda msg, author=author, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
@@ -829,14 +821,23 @@ class Schedule(commands.Cog):
                 except asyncio.TimeoutError:
                     await dmChannel.send(embed=TIMEOUT_EMBED)
                     return False
-            startTime = UTC.localize(datetime.strptime(event["time"], EVENT_TIME_FORMAT))
-            d = timedelta(
-                hours=int(duration.split("h")[0].strip()) if "h" in duration else 0,
-                minutes=int(duration.split("h")[-1].replace("m", "").strip()) if duration.strip()[-1] != "h" else 0
-            )
-            endTime = startTime + d
-            event["duration"] = duration
-            event["endTime"] = endTime.strftime(EVENT_TIME_FORMAT)
+                while not re.match(r"^\s*((([1-9]\d*)?\d\s*h(\s*([0-5])?\d\s*m?)?)|(([0-5])?\d\s*m))\s*$", duration):
+                    embed = Embed(title="❌ Wrong format", colour=Colour.red(), description="e.g. 30m\ne.g. 2h\ne.g. 4h 30m\ne.g. 2h30")
+                    await dmChannel.send(embed=embed)
+                    try:
+                        response = await self.bot.wait_for("message", timeout=600, check=lambda msg, author=author, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
+                        duration = response.content.strip()
+                    except asyncio.TimeoutError:
+                        await dmChannel.send(embed=TIMEOUT_EMBED)
+                        return False
+                startTime = UTC.localize(datetime.strptime(event["time"], EVENT_TIME_FORMAT))
+                d = timedelta(
+                    hours=int(duration.split("h")[0].strip()) if "h" in duration else 0,
+                    minutes=int(duration.split("h")[-1].replace("m", "").strip()) if duration.strip()[-1] != "h" else 0
+                )
+                endTime = startTime + d
+                event["duration"] = duration
+                event["endTime"] = endTime.strftime(EVENT_TIME_FORMAT)
         
         if editingTime > self.lastUpdate:
             embed = Embed(title="✅ Event edited", color=Colour.green())

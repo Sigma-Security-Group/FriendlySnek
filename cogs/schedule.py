@@ -462,9 +462,10 @@ class Schedule(commands.Cog):
                             return
                 elif payload.emoji.name == "🗑":
                     if payload.member.id == event["authorId"] or any(role.id == UNIT_STAFF for role in payload.member.roles):
-                        await self.deleteEvent(payload.member, eventMessage, event)
-                        events.remove(event)
-                        removeReaction = False
+                        eventDeleted = await self.deleteEvent(payload.member, eventMessage, event)
+                        if eventDeleted:
+                            events.remove(event)
+                            removeReaction = False
                     scheduleNeedsUpdate = False
                 else:
                     scheduleNeedsUpdate = False
@@ -839,7 +840,7 @@ class Schedule(commands.Cog):
             _ = await self.bot.wait_for("reaction_add", timeout=60, check=lambda reaction, user, author=author: reaction.emoji == "🗑" and user == author)
         except asyncio.TimeoutError:
             await author.send(embed=TIMEOUT_EMBED)
-            return
+            return False
         await message.delete()
         embed = Embed(title="✅ Event deleted", color=Colour.green())
         await author.send(embed=embed)
@@ -887,6 +888,7 @@ class Schedule(commands.Cog):
                 if member is not None:
                     embed = Embed(title=f"🗑 {event.get('type', 'Operation')} deleted: {event['title']}", description=f"Was scheduled for:\n<t:{round(UTC.localize(datetime.strptime(event['time'], EVENT_TIME_FORMAT)).timestamp())}:F>")
                     await member.send(embed=embed)
+        return True
     
     @cog_ext.cog_slash(name="bop", description="Create an operation to add to the schedule.", guild_ids=[SERVER])
     async def bop(self, ctx: SlashContext):

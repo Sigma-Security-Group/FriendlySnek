@@ -750,8 +750,8 @@ class Schedule(commands.Cog):
                         await dmChannel.send(embed=TIMEOUT_EMBED)
                         return False
                 
-                newTimeOk = False
-                while not newTimeOk:
+                startTimeOk = False
+                while not startTimeOk:
                     embed = Embed(title="What is the time of the event?", color=Colour.gold(), description=f"Your selected time zone is '{timeZone.zone}'")
                     embed.add_field(name="Current Value", value=UTC.localize(datetime.strptime(event["time"], EVENT_TIME_FORMAT)).astimezone(timeZone).strftime(EVENT_TIME_FORMAT))
                     await dmChannel.send(embed=embed)
@@ -781,19 +781,27 @@ class Schedule(commands.Cog):
                         except ValueError:
                             isFormatCorrect = False
                     startTime = timeZone.localize(startTime).astimezone(UTC)
-                    if startTime < editingTime:
-                        embed = Embed(title="It appears that the new time is in the past. Are you sure you want to set it to this?", description="Enter 'yes' or 'y' to keep this time. Enter anything else to change it to another time.")
-                        await dmChannel.send(embed=embed)
-                        try:
-                            response = await self.bot.wait_for("message", timeout=60, check=lambda msg, author=author, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
-                            keepNewTime = response.content.strip()
-                        except asyncio.TimeoutError:
-                            await dmChannel.send(embed=TIMEOUT_EMBED)
-                            return False
-                        if keepNewTime.lower() in ("yes", "y"):
-                            newTimeOk = True
+                    utcNow = editingTime
+                    if startTime < UTC.localize(utcNow):
+                        if (delta := UTC.localize(utcNow) - startTime) > timedelta(hours=1) and delta < timedelta(days=1):
+                            newStartTime = startTime + timedelta(days=1)
+                            embed = Embed(title="Time was detected to be in the past 24h and was set to tomorrow.", description=f"Input time: <t:{round(startTime.timestamp())}:F>\nSelected time: <t:{round(newStartTime.timestamp())}:F>")
+                            await dmChannel.send(embed=embed)
+                            startTime = newStartTime
+                            startTimeOk = True
+                        else:
+                            embed = Embed(title="It appears that the selected time is in the past. Are you sure you want to set it to this?", description="Enter 'yes' or 'y' to keep this time. Enter anything else to change it to another time.")
+                            await dmChannel.send(embed=embed)
+                            try:
+                                response = await self.bot.wait_for("message", timeout=60, check=lambda msg, author=author, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
+                                keepStartTime = response.content.strip()
+                            except asyncio.TimeoutError:
+                                await dmChannel.send(embed=TIMEOUT_EMBED)
+                                return False
+                            if keepStartTime.lower() in ("yes", "y"):
+                                startTimeOk = True
                     else:
-                        newTimeOk = True
+                        startTimeOk = True
                 
                 duration = event["duration"]
                 d = timedelta(
@@ -919,7 +927,7 @@ class Schedule(commands.Cog):
         await ctx.send("Scheduling... Standby for :b:op")
         log.debug(f"{ctx.author.display_name}({ctx.author.name}#{ctx.author.discriminator}) is creating an operation")
         
-        utcNow = datetime.utcnow()
+        utcNow = UTC.localize(datetime.utcnow())
         
         authorId = ctx.author.id
 
@@ -1113,17 +1121,24 @@ class Schedule(commands.Cog):
                     except ValueError:
                         isFormatCorrect = False
                 startTime = timeZone.localize(startTime).astimezone(UTC)
-                if startTime < utcNow:
-                    embed = Embed(title="It appears that the selected time is in the past. Are you sure you want to set it to this?", description="Enter 'yes' or 'y' to keep this time. Enter anything else to change it to another time.")
-                    await dmChannel.send(embed=embed)
-                    try:
-                        response = await self.bot.wait_for("message", timeout=60, check=lambda msg, author=author, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
-                        keepNewTime = response.content.strip()
-                    except asyncio.TimeoutError:
-                        await dmChannel.send(embed=TIMEOUT_EMBED)
-                        return False
-                    if keepNewTime.lower() in ("yes", "y"):
+                if startTime < UTC.localize(utcNow):
+                    if (delta := UTC.localize(utcNow) - startTime) > timedelta(hours=1) and delta < timedelta(days=1):
+                        newStartTime = startTime + timedelta(days=1)
+                        embed = Embed(title="Time was detected to be in the past 24h and was set to tomorrow.", description=f"Input time: <t:{round(startTime.timestamp())}:F>\nSelected time: <t:{round(newStartTime.timestamp())}:F>")
+                        await dmChannel.send(embed=embed)
+                        startTime = newStartTime
                         startTimeOk = True
+                    else:
+                        embed = Embed(title="It appears that the selected time is in the past. Are you sure you want to set it to this?", description="Enter 'yes' or 'y' to keep this time. Enter anything else to change it to another time.")
+                        await dmChannel.send(embed=embed)
+                        try:
+                            response = await self.bot.wait_for("message", timeout=60, check=lambda msg, author=ctx.author, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
+                            keepStartTime = response.content.strip()
+                        except asyncio.TimeoutError:
+                            await dmChannel.send(embed=TIMEOUT_EMBED)
+                            return False
+                        if keepStartTime.lower() in ("yes", "y"):
+                            startTimeOk = True
                 else:
                     startTimeOk = True
             endTime = startTime + d
@@ -1215,7 +1230,7 @@ class Schedule(commands.Cog):
         await ctx.send("Scheduling workshop...")
         log.debug(f"{ctx.author.display_name}({ctx.author.name}#{ctx.author.discriminator}) is creating a workshop")
         
-        utcNow = datetime.utcnow()
+        utcNow = UTC.localize(datetime.utcnow())
         
         authorId = ctx.author.id
         
@@ -1505,17 +1520,24 @@ class Schedule(commands.Cog):
                     except ValueError:
                         isFormatCorrect = False
                 startTime = timeZone.localize(startTime).astimezone(UTC)
-                if startTime < utcNow:
-                    embed = Embed(title="It appears that the selected time is in the past. Are you sure you want to set it to this?", description="Enter 'yes' or 'y' to keep this time. Enter anything else to change it to another time.")
-                    await dmChannel.send(embed=embed)
-                    try:
-                        response = await self.bot.wait_for("message", timeout=60, check=lambda msg, author=author, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
-                        keepNewTime = response.content.strip()
-                    except asyncio.TimeoutError:
-                        await dmChannel.send(embed=TIMEOUT_EMBED)
-                        return False
-                    if keepNewTime.lower() in ("yes", "y"):
+                if startTime < UTC.localize(utcNow):
+                    if (delta := UTC.localize(utcNow) - startTime) > timedelta(hours=1) and delta < timedelta(days=1):
+                        newStartTime = startTime + timedelta(days=1)
+                        embed = Embed(title="Time was detected to be in the past 24h and was set to tomorrow.", description=f"Input time: <t:{round(startTime.timestamp())}:F>\nSelected time: <t:{round(newStartTime.timestamp())}:F>")
+                        await dmChannel.send(embed=embed)
+                        startTime = newStartTime
                         startTimeOk = True
+                    else:
+                        embed = Embed(title="It appears that the selected time is in the past. Are you sure you want to set it to this?", description="Enter 'yes' or 'y' to keep this time. Enter anything else to change it to another time.")
+                        await dmChannel.send(embed=embed)
+                        try:
+                            response = await self.bot.wait_for("message", timeout=60, check=lambda msg, author=ctx.author, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
+                            keepStartTime = response.content.strip()
+                        except asyncio.TimeoutError:
+                            await dmChannel.send(embed=TIMEOUT_EMBED)
+                            return False
+                        if keepStartTime.lower() in ("yes", "y"):
+                            startTimeOk = True
                 else:
                     startTimeOk = True
             endTime = startTime + d
@@ -1829,17 +1851,24 @@ class Schedule(commands.Cog):
                 except ValueError:
                     isFormatCorrect = False
             startTime = timeZone.localize(startTime).astimezone(UTC)
-            if startTime < utcNow:
-                embed = Embed(title="It appears that the selected time is in the past. Are you sure you want to set it to this?", description="Enter 'yes' or 'y' to keep this time. Enter anything else to change it to another time.")
-                await dmChannel.send(embed=embed)
-                try:
-                    response = await self.bot.wait_for("message", timeout=60, check=lambda msg, author=author, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
-                    keepNewTime = response.content.strip()
-                except asyncio.TimeoutError:
-                    await dmChannel.send(embed=TIMEOUT_EMBED)
-                    return False
-                if keepNewTime.lower() in ("yes", "y"):
+            if startTime < UTC.localize(utcNow):
+                if (delta := UTC.localize(utcNow) - startTime) > timedelta(hours=1) and delta < timedelta(days=1):
+                    newStartTime = startTime + timedelta(days=1)
+                    embed = Embed(title="Time was detected to be in the past 24h and was set to tomorrow.", description=f"Input time: <t:{round(startTime.timestamp())}:F>\nSelected time: <t:{round(newStartTime.timestamp())}:F>")
+                    await dmChannel.send(embed=embed)
+                    startTime = newStartTime
                     startTimeOk = True
+                else:
+                    embed = Embed(title="It appears that the selected time is in the past. Are you sure you want to set it to this?", description="Enter 'yes' or 'y' to keep this time. Enter anything else to change it to another time.")
+                    await dmChannel.send(embed=embed)
+                    try:
+                        response = await self.bot.wait_for("message", timeout=60, check=lambda msg, author=ctx.author, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
+                        keepStartTime = response.content.strip()
+                    except asyncio.TimeoutError:
+                        await dmChannel.send(embed=TIMEOUT_EMBED)
+                        return False
+                    if keepStartTime.lower() in ("yes", "y"):
+                        startTimeOk = True
             else:
                 startTimeOk = True
         endTime = startTime + d

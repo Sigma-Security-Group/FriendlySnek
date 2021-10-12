@@ -607,7 +607,7 @@ class Schedule(commands.Cog):
             event["type"] = {"1": "Operation", "2": "Workshop", "3": "Event"}.get(eventTypeNum, "Operation")
         
         elif choice == "1":
-            embed = Embed(title=":pencil2: What is the title of your operation?", description="Remeber, operation names should start with the word 'Operation'\ne.g. Operation Red Tide", color=Colour.gold())
+            embed = Embed(title=f":pencil2: What is the title of your {event.get('type', 'Operation').lower()}?", color=Colour.gold())
             await dmChannel.send(embed=embed)
             try:
                 response = await self.bot.wait_for("message", timeout=600, check=lambda msg, author=author, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
@@ -749,22 +749,10 @@ class Schedule(commands.Cog):
                     await dmChannel.send(embed=TIMEOUT_EMBED)
                     return False
             
-            embed = Embed(title="What is the time of the event?", color=Colour.gold(), description=f"Your selected time zone is '{timeZone.zone}'")
-            embed.add_field(name="Current Value", value=UTC.localize(datetime.strptime(event["time"], EVENT_TIME_FORMAT)).astimezone(timeZone).strftime(EVENT_TIME_FORMAT))
-            await dmChannel.send(embed=embed)
-            try:
-                response = await self.bot.wait_for("message", timeout=600, check=lambda msg, author=author, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
-                startTime = response.content.strip()
-            except asyncio.TimeoutError:
-                await dmChannel.send(embed=TIMEOUT_EMBED)
-                return False
-            try:
-                startTime = datetimeParse(startTime)
-                isFormatCorrect = True
-            except ValueError:
-                isFormatCorrect = False
-            while not isFormatCorrect:
-                embed = Embed(title="❌ Wrong format", colour=Colour.red(), description="e.g. 2021-08-08 9:30 PM")
+            newTimeOk = False
+            while not newTimeOk:
+                embed = Embed(title="What is the time of the event?", color=Colour.gold(), description=f"Your selected time zone is '{timeZone.zone}'")
+                embed.add_field(name="Current Value", value=UTC.localize(datetime.strptime(event["time"], EVENT_TIME_FORMAT)).astimezone(timeZone).strftime(EVENT_TIME_FORMAT))
                 await dmChannel.send(embed=embed)
                 try:
                     response = await self.bot.wait_for("message", timeout=600, check=lambda msg, author=author, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
@@ -777,7 +765,35 @@ class Schedule(commands.Cog):
                     isFormatCorrect = True
                 except ValueError:
                     isFormatCorrect = False
-            startTime = timeZone.localize(startTime).astimezone(UTC)
+                while not isFormatCorrect:
+                    embed = Embed(title="❌ Wrong format", colour=Colour.red(), description="e.g. 2021-08-08 9:30 PM")
+                    await dmChannel.send(embed=embed)
+                    try:
+                        response = await self.bot.wait_for("message", timeout=600, check=lambda msg, author=author, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
+                        startTime = response.content.strip()
+                    except asyncio.TimeoutError:
+                        await dmChannel.send(embed=TIMEOUT_EMBED)
+                        return False
+                    try:
+                        startTime = datetimeParse(startTime)
+                        isFormatCorrect = True
+                    except ValueError:
+                        isFormatCorrect = False
+                startTime = timeZone.localize(startTime).astimezone(UTC)
+                if startTime < editingTime:
+                    embed = Embed(title="It appears that the new time is in the past. Are you sure you want to set it to this?", description="Enter 'yes' or 'y' to keep this time. Enter anything else to change it to another time.")
+                    await dmChannel.send(embed=embed)
+                    try:
+                        response = await self.bot.wait_for("message", timeout=60, check=lambda msg, author=author, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
+                        keepNewTime = response.content.strip()
+                    except asyncio.TimeoutError:
+                        await dmChannel.send(embed=TIMEOUT_EMBED)
+                        return False
+                    if keepNewTime.lower() in ("yes", "y"):
+                        newTimeOk = True
+                else:
+                    newTimeOk = True
+            
             duration = event["duration"]
             d = timedelta(
                 hours=int(duration.split("h")[0].strip()) if "h" in duration else 0,

@@ -650,7 +650,7 @@ class Schedule(commands.Cog):
                     reservableRolesPresent = response.content.strip().lower() in ("yes", "y")
                 except asyncio.TimeoutError:
                     await dmChannel.send(embed=TIMEOUT_EMBED)
-                    return
+                    return False
                 if reservableRolesPresent:
                     embed = Embed(title="Type each reservable role in its own line (in a single message)", color=Colour.gold(), description="Press Shift + Enter to insert a newline. Editting the name of a role will make it vacant, but roles which keep their exact names will keep their reservations")
                     embed.add_field(name="Current reservable roles", value=("```\n" + "\n".join(event["reservableRoles"].keys()) + "```") if event["reservableRoles"] is not None else "None")

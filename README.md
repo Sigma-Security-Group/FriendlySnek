@@ -4,7 +4,7 @@ Friendly Snek is a discord bot made for Sigma Security Group that implements cus
 
 # Requirements
 
-The bot requires Python 3.8+ to run.
+The bot requires Python 3.10+ to run.
 
 # Getting Started
 

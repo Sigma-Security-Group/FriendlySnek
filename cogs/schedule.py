@@ -869,52 +869,58 @@ class Schedule(commands.Cog):
             await author.send(embed=TIMEOUT_EMBED)
             return False
         await message.delete()
-        embed = Embed(title="✅ Event deleted", color=Colour.green())
-        await author.send(embed=embed)
-        
-        utcNow = UTC.localize(datetime.utcnow())
-        startTime = UTC.localize(datetime.strptime(event["time"], EVENT_TIME_FORMAT))
-        if event["maxPlayers"] != 0 and utcNow > startTime + timedelta(minutes=30):
-            await self.saveEventToHistory(event)
-            # with open(EVENTS_STATS_FILE) as f:
-            #     eventsStats = json.load(f)
-            # while startTime.strftime(EVENT_TIME_FORMAT) in eventsStats:
-            #     startTime = startTime + timedelta(minutes=1)
-            # eventsStats[startTime.strftime(EVENT_TIME_FORMAT)] = {
-            #     "accepted": min(event["maxPlayers"], len("accepted")) if event["maxPlayers"] is not None else len(event["accepted"]),
-            #     "standby": max(0, len("accepted") - event["maxPlayers"]) if event["maxPlayers"] is not None else 0,
-            #     "declined": len(event["declined"]),
-            #     "tentative": len(event["tentative"]),
-            #     "maxPlayers": event["maxPlayers"],
-            #     "reservableRoles": len(event["reservableRoles"]) if event["reservableRoles"] is not None else 0,
-            #     "reservedRoles": len([role for role, member in event["reservableRoles"].items() if member is not None]) if event["reservableRoles"] is not None else 0,
-            #     "map": event["map"],
-            #     "duration": event["duration"],
-            #     "autoDeleted": False
-            # }
-            # with open(EVENTS_STATS_FILE, "w") as f:
-            #     json.dump(eventsStats, f, indent=4)
+        try:
+            embed = Embed(title="✅ Event deleted", color=Colour.green())
+            await author.send(embed=embed)
             
-            # guild = self.bot.get_guild(SERVER)
-            # with open(EVENTS_HISTORY_FILE) as f:
-            #     eventsHistory = json.load(f)
-            # eventCopy = deepcopy(event)
-            # eventCopy["autoDeleted"] = False
-            # eventCopy["authorName"] = member.display_name if (member := guild.get_member(eventCopy["authorId"])) is not None else "UNKNOWN"
-            # eventCopy["acceptedNames"] = [member.display_name if (member := guild.get_member(memberId)) is not None else "UNKNOWN" for memberId in eventCopy["accepted"]]
-            # eventCopy["declinedNames"] = [member.display_name if (member := guild.get_member(memberId)) is not None else "UNKNOWN" for memberId in eventCopy["declined"]]
-            # eventCopy["tentativeNames"] = [member.display_name if (member := guild.get_member(memberId)) is not None else "UNKNOWN" for memberId in eventCopy["tentative"]]
-            # eventCopy["reservableRolesNames"] = {role: ((member.display_name if (member := guild.get_member(memberId)) is not None else "UNKNOWN") if memberId is not None else "VACANT") for role, memberId in eventCopy["reservableRoles"].items()} if eventCopy["reservableRoles"] is not None else {}
-            # eventsHistory.append(eventCopy)
-            # with open(EVENTS_HISTORY_FILE, "w") as f:
-            #     json.dump(eventsHistory, f, indent=4)
-        else:
-            guild = self.bot.get_guild(SERVER)
-            for memberId in event["accepted"] + event.get("declinedForTiming", []) + event["tentative"]:
-                member = guild.get_member(memberId)
-                if member is not None:
-                    embed = Embed(title=f"🗑 {event.get('type', 'Operation')} deleted: {event['title']}", description=f"Was scheduled for:\n<t:{round(UTC.localize(datetime.strptime(event['time'], EVENT_TIME_FORMAT)).timestamp())}:F>")
-                    await member.send(embed=embed)
+            utcNow = UTC.localize(datetime.utcnow())
+            startTime = UTC.localize(datetime.strptime(event["time"], EVENT_TIME_FORMAT))
+            if event["maxPlayers"] != 0 and utcNow > startTime + timedelta(minutes=30):
+                await self.saveEventToHistory(event)
+                # with open(EVENTS_STATS_FILE) as f:
+                #     eventsStats = json.load(f)
+                # while startTime.strftime(EVENT_TIME_FORMAT) in eventsStats:
+                #     startTime = startTime + timedelta(minutes=1)
+                # eventsStats[startTime.strftime(EVENT_TIME_FORMAT)] = {
+                #     "accepted": min(event["maxPlayers"], len("accepted")) if event["maxPlayers"] is not None else len(event["accepted"]),
+                #     "standby": max(0, len("accepted") - event["maxPlayers"]) if event["maxPlayers"] is not None else 0,
+                #     "declined": len(event["declined"]),
+                #     "tentative": len(event["tentative"]),
+                #     "maxPlayers": event["maxPlayers"],
+                #     "reservableRoles": len(event["reservableRoles"]) if event["reservableRoles"] is not None else 0,
+                #     "reservedRoles": len([role for role, member in event["reservableRoles"].items() if member is not None]) if event["reservableRoles"] is not None else 0,
+                #     "map": event["map"],
+                #     "duration": event["duration"],
+                #     "autoDeleted": False
+                # }
+                # with open(EVENTS_STATS_FILE, "w") as f:
+                #     json.dump(eventsStats, f, indent=4)
+                
+                # guild = self.bot.get_guild(SERVER)
+                # with open(EVENTS_HISTORY_FILE) as f:
+                #     eventsHistory = json.load(f)
+                # eventCopy = deepcopy(event)
+                # eventCopy["autoDeleted"] = False
+                # eventCopy["authorName"] = member.display_name if (member := guild.get_member(eventCopy["authorId"])) is not None else "UNKNOWN"
+                # eventCopy["acceptedNames"] = [member.display_name if (member := guild.get_member(memberId)) is not None else "UNKNOWN" for memberId in eventCopy["accepted"]]
+                # eventCopy["declinedNames"] = [member.display_name if (member := guild.get_member(memberId)) is not None else "UNKNOWN" for memberId in eventCopy["declined"]]
+                # eventCopy["tentativeNames"] = [member.display_name if (member := guild.get_member(memberId)) is not None else "UNKNOWN" for memberId in eventCopy["tentative"]]
+                # eventCopy["reservableRolesNames"] = {role: ((member.display_name if (member := guild.get_member(memberId)) is not None else "UNKNOWN") if memberId is not None else "VACANT") for role, memberId in eventCopy["reservableRoles"].items()} if eventCopy["reservableRoles"] is not None else {}
+                # eventsHistory.append(eventCopy)
+                # with open(EVENTS_HISTORY_FILE, "w") as f:
+                #     json.dump(eventsHistory, f, indent=4)
+            else:
+                guild = self.bot.get_guild(SERVER)
+                for memberId in event["accepted"] + event.get("declinedForTiming", []) + event["tentative"]:
+                    member = guild.get_member(memberId)
+                    if member is not None:
+                        embed = Embed(title=f"🗑 {event.get('type', 'Operation')} deleted: {event['title']}", description=f"Was scheduled for:\n<t:{round(UTC.localize(datetime.strptime(event['time'], EVENT_TIME_FORMAT)).timestamp())}:F>")
+                        try:
+                            await member.send(embed=embed)
+                        except Exception as e:
+                            print(member, e)
+        except Exception as e:
+            print(e)
         return True
     
     @cog_ext.cog_slash(name="bop", description="Create an operation to add to the schedule.", guild_ids=[SERVER])

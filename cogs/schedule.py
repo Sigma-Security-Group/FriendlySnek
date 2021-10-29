@@ -291,7 +291,9 @@ class Schedule(commands.Cog):
                        permissions={
                            SERVER: [
                                create_permission(EVERYONE, SlashCommandPermissionType.ROLE, False),
-                               create_permission(UNIT_STAFF, SlashCommandPermissionType.ROLE, True)
+                               create_permission(UNIT_STAFF, SlashCommandPermissionType.ROLE, True),
+                               create_permission(ZEUS, SlashCommandPermissionType.ROLE, True),
+                               create_permission(CURATOR, SlashCommandPermissionType.ROLE, True),
                            ]
                        })
     async def refreshSchedule(self, ctx: SlashContext):

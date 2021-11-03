@@ -510,6 +510,7 @@ class Schedule(commands.Cog):
             except Exception as e:
                 print(member, e)
                 try:
+                    print("Sending friend request...")
                     await member.send_friend_request()
                 except Exception as e:
                     print(e)
@@ -527,6 +528,7 @@ class Schedule(commands.Cog):
         except Exception as e:
             print(member, e)
             try:
+                print("Sending friend request...")
                 await member.send_friend_request()
             except Exception as e:
                 print(e)
@@ -586,6 +588,7 @@ class Schedule(commands.Cog):
         except Exception as e:
             print(author, e)
             try:
+                print("Sending friend request...")
                 await author.send_friend_request()
             except Exception as e:
                 print(e)
@@ -848,6 +851,7 @@ class Schedule(commands.Cog):
                         except Exception as e:
                             print(member, e)
                             try:
+                                print("Sending friend request...")
                                 await member.send_friend_request()
                             except Exception as e:
                                 print(e)
@@ -896,6 +900,7 @@ class Schedule(commands.Cog):
         except Exception as e:
             print(author, e)
             try:
+                print("Sending friend request...")
                 await author.send_friend_request()
             except Exception as e:
                 print(e)
@@ -958,6 +963,7 @@ class Schedule(commands.Cog):
                         except Exception as e:
                             print(member, e)
                             try:
+                                print("Sending friend request...")
                                 await member.send_friend_request()
                             except Exception as e:
                                 print(e)
@@ -987,6 +993,7 @@ class Schedule(commands.Cog):
         except Exception as e:
             print(ctx.author, e)
             try:
+                print("Sending friend request...")
                 await ctx.author.send_friend_request()
             except Exception as e:
                 print(e)
@@ -1302,6 +1309,7 @@ class Schedule(commands.Cog):
         except Exception as e:
             print(ctx.author, e)
             try:
+                print("Sending friend request...")
                 await ctx.author.send_friend_request()
             except Exception as e:
                 print(e)
@@ -1738,6 +1746,7 @@ class Schedule(commands.Cog):
         except Exception as e:
             print(ctx.author, e)
             try:
+                print("Sending friend request...")
                 await ctx.author.send_friend_request()
             except Exception as e:
                 print(e)
@@ -2009,6 +2018,7 @@ class Schedule(commands.Cog):
         except Exception as e:
             print(ctx.author, e)
             try:
+                print("Sending friend request...")
                 await ctx.author.send_friend_request()
             except Exception as e:
                 print(e)

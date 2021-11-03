@@ -505,7 +505,10 @@ class Schedule(commands.Cog):
         
         if event["maxPlayers"] is not None and len(event["accepted"]) >= event["maxPlayers"] and member.id not in event["accepted"]:
             embed = Embed(title="❌ Sorry, seems like there's no space left in :b:op")
-            member.send(embed=embed)
+            try:
+                await member.send(embed=embed)
+            except Exception as e:
+                print(member, e)
             return
 
         vacantRoles = [roleName for roleName, memberId in event["reservableRoles"].items() if memberId is None or guild.get_member(memberId) is None]
@@ -515,7 +518,7 @@ class Schedule(commands.Cog):
         embed.add_field(name="Your current role", value=currentRole if currentRole is not None else "None", inline=False)
         embed.add_field(name="Vacant roles", value="\n".join(f"**{idx}**   {roleName}" for idx, roleName in enumerate(vacantRoles, 1)) if len(vacantRoles) > 0 else "None", inline=False)
         
-        msg = await member.send(embed=embed)
+        msg = await (embed=embed)
         dmChannel = msg.channel
         try:
             response = await self.bot.wait_for("message", timeout=300, check=lambda msg, author=member, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
@@ -566,7 +569,11 @@ class Schedule(commands.Cog):
         embed.add_field(name="**6** Max Players", value=f"```{event['maxPlayers']}```", inline=False)
         embed.add_field(name="**7** Time", value=f"<t:{round(UTC.localize(datetime.strptime(event['time'], EVENT_TIME_FORMAT)).timestamp())}:F>", inline=False)
         embed.add_field(name="**8** Duration", value=f"```{event['duration']}```", inline=False)
-        msg = await author.send(embed=embed)
+        try:
+            msg = await author.send(embed=embed)
+        except Exception as e:
+            print(author, e)
+            return False
         dmChannel = msg.channel
         try:
             response = await self.bot.wait_for("message", timeout=120, check=lambda msg, author=author, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
@@ -816,11 +823,14 @@ class Schedule(commands.Cog):
                 event["endTime"] = endTime.strftime(EVENT_TIME_FORMAT)
                 reorderEvents = True
                 guild = self.bot.get_guild(SERVER)
+                embed = Embed(title=f":clock3: The starting time has changed for: {event['title']}", description=f"From: <t:{round(UTC.localize(datetime.strptime(oldStartTime, EVENT_TIME_FORMAT)).timestamp())}:F>\n\u2000\u2000To: <t:{round(UTC.localize(datetime.strptime(event['time'], EVENT_TIME_FORMAT)).timestamp())}:F>")
                 for memberId in event["accepted"] + event.get("declinedForTiming", []) + event["tentative"]:
                     member = guild.get_member(memberId)
                     if member is not None:
-                        embed = Embed(title=f":clock3: The starting time has changed for: {event['title']}", description=f"From: <t:{round(UTC.localize(datetime.strptime(oldStartTime, EVENT_TIME_FORMAT)).timestamp())}:F>\n\u2000\u2000To: <t:{round(UTC.localize(datetime.strptime(event['time'], EVENT_TIME_FORMAT)).timestamp())}:F>")
-                        await member.send(embed=embed)
+                        try:
+                            await member.send(embed=embed)
+                        except Exception as e:
+                            print(member, e)
                 
             case "8":
                 embed = Embed(title="What is the duration of the event?", color=Colour.gold(), description="e.g. 30m\ne.g. 2h\ne.g. 4h 30m\ne.g. 2h30")
@@ -861,7 +871,11 @@ class Schedule(commands.Cog):
             return False
     
     async def deleteEvent(self, author, message, event):
-        msg = await author.send("Are you sure you want to delete this event?")
+        try:
+            msg = await author.send("Are you sure you want to delete this event?")
+        except Exception as e:
+            print(author, e)
+            return False
         await msg.add_reaction("🗑")
         try:
             _ = await self.bot.wait_for("reaction_add", timeout=60, check=lambda reaction, user, author=author: reaction.emoji == "🗑" and user == author)
@@ -940,7 +954,11 @@ class Schedule(commands.Cog):
         authorId = ctx.author.id
 
         embed = Embed(title=":pencil2: What is the title of your operation?", description="Remeber, operation names should start with the word 'Operation'\ne.g. Operation Red Tide", color=Colour.gold())
-        msg = await ctx.author.send(embed=embed)
+        try:
+            msg = await ctx.author.send(embed=embed)
+        except Exception as e:
+            print(ctx.author, e)
+            return
         dmChannel = msg.channel
         try:
             response = await self.bot.wait_for("message", timeout=600, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
@@ -1247,7 +1265,11 @@ class Schedule(commands.Cog):
         
         embed = Embed(title=":clipboard: Select a template.", description="Enter a template number or `none` to make a workshop from scratch", color=Colour.gold())
         embed.add_field(name="Template", value="\n".join(f"**{idx}**   {template['name']}" for idx, template in enumerate(workshopTemplates, 1)) if len(workshopTemplates) > 0 else "-")
-        msg = await ctx.author.send(embed=embed)
+        try:
+            msg = await ctx.author.send(embed=embed)
+        except Exception as e:
+            print(ctx.author, e)
+            return
         dmChannel = msg.channel
         try:
             response = await self.bot.wait_for("message", timeout=600, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
@@ -1675,7 +1697,11 @@ class Schedule(commands.Cog):
         authorId = ctx.author.id
 
         embed = Embed(title=":pencil2: What is the title of your event?", color=Colour.gold())
-        msg = await ctx.author.send(embed=embed)
+        try:
+            msg = await ctx.author.send(embed=embed)
+        except Exception as e:
+            print(ctx.author, e)
+            return
         dmChannel = msg.channel
         try:
             response = await self.bot.wait_for("message", timeout=600, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
@@ -1938,7 +1964,11 @@ class Schedule(commands.Cog):
         embed = Embed(title=":clock1: What is your prefered time zone?", color=Colour.gold(), description=(f"Your current time zone preference is '{memberTimeZones[str(ctx.author.id)]}'." if str(ctx.author.id) in memberTimeZones else "You don't have a prefered time zone set.") + " Enter `none`, a number from the list or any time zone name from the column 'TZ DATABASE NAME' in the following Wikipedia article (https://en.wikipedia.org/wiki/List_of_tz_database_time_zones) to make your choice. If you enter `none` or something invalid your current preference will be deleted and you will be asked again the next time you schedule an event. You can change or delete your prefered time zone at any time with the `/changetimezone` command.")
         embed.add_field(name="Time Zone", value="\n".join(f"**{idx}**   {tz}" for idx, tz in enumerate(TIME_ZONES, 1)))
         embed.set_footer(text="Enter `cancel` to keep your current preference")
-        msg = await ctx.author.send(embed=embed)
+        try:
+            msg = await ctx.author.send(embed=embed)
+        except Exception as e:
+            print(ctx.author, e)
+            return
         dmChannel = msg.channel
         try:
             response = await self.bot.wait_for("message", timeout=600, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)

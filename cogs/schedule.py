@@ -518,7 +518,11 @@ class Schedule(commands.Cog):
         embed.add_field(name="Your current role", value=currentRole if currentRole is not None else "None", inline=False)
         embed.add_field(name="Vacant roles", value="\n".join(f"**{idx}**   {roleName}" for idx, roleName in enumerate(vacantRoles, 1)) if len(vacantRoles) > 0 else "None", inline=False)
         
-        msg = await (embed=embed)
+        try:
+            msg = await member.send(embed=embed)
+        except Exception as e:
+            print(member, e)
+            return
         dmChannel = msg.channel
         try:
             response = await self.bot.wait_for("message", timeout=300, check=lambda msg, author=member, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)

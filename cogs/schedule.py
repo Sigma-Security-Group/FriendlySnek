@@ -509,6 +509,10 @@ class Schedule(commands.Cog):
                 await member.send(embed=embed)
             except Exception as e:
                 print(member, e)
+                try:
+                    await member.send_friend_request()
+                except Exception as e:
+                    print(e)
             return
 
         vacantRoles = [roleName for roleName, memberId in event["reservableRoles"].items() if memberId is None or guild.get_member(memberId) is None]
@@ -522,6 +526,10 @@ class Schedule(commands.Cog):
             msg = await member.send(embed=embed)
         except Exception as e:
             print(member, e)
+            try:
+                await member.send_friend_request()
+            except Exception as e:
+                print(e)
             return
         dmChannel = msg.channel
         try:
@@ -577,6 +585,10 @@ class Schedule(commands.Cog):
             msg = await author.send(embed=embed)
         except Exception as e:
             print(author, e)
+            try:
+                await author.send_friend_request()
+            except Exception as e:
+                print(e)
             return False
         dmChannel = msg.channel
         try:
@@ -835,6 +847,10 @@ class Schedule(commands.Cog):
                             await member.send(embed=embed)
                         except Exception as e:
                             print(member, e)
+                            try:
+                                await member.send_friend_request()
+                            except Exception as e:
+                                print(e)
                 
             case "8":
                 embed = Embed(title="What is the duration of the event?", color=Colour.gold(), description="e.g. 30m\ne.g. 2h\ne.g. 4h 30m\ne.g. 2h30")
@@ -879,6 +895,10 @@ class Schedule(commands.Cog):
             msg = await author.send("Are you sure you want to delete this event?")
         except Exception as e:
             print(author, e)
+            try:
+                await author.send_friend_request()
+            except Exception as e:
+                print(e)
             return False
         await msg.add_reaction("🗑")
         try:
@@ -937,6 +957,10 @@ class Schedule(commands.Cog):
                             await member.send(embed=embed)
                         except Exception as e:
                             print(member, e)
+                            try:
+                                await member.send_friend_request()
+                            except Exception as e:
+                                print(e)
         except Exception as e:
             print(e)
         return True
@@ -962,6 +986,10 @@ class Schedule(commands.Cog):
             msg = await ctx.author.send(embed=embed)
         except Exception as e:
             print(ctx.author, e)
+            try:
+                await ctx.author.send_friend_request()
+            except Exception as e:
+                print(e)
             return
         dmChannel = msg.channel
         try:
@@ -1273,6 +1301,10 @@ class Schedule(commands.Cog):
             msg = await ctx.author.send(embed=embed)
         except Exception as e:
             print(ctx.author, e)
+            try:
+                await ctx.author.send_friend_request()
+            except Exception as e:
+                print(e)
             return
         dmChannel = msg.channel
         try:
@@ -1705,6 +1737,10 @@ class Schedule(commands.Cog):
             msg = await ctx.author.send(embed=embed)
         except Exception as e:
             print(ctx.author, e)
+            try:
+                await ctx.author.send_friend_request()
+            except Exception as e:
+                print(e)
             return
         dmChannel = msg.channel
         try:
@@ -1972,6 +2008,10 @@ class Schedule(commands.Cog):
             msg = await ctx.author.send(embed=embed)
         except Exception as e:
             print(ctx.author, e)
+            try:
+                await ctx.author.send_friend_request()
+            except Exception as e:
+                print(e)
             return
         dmChannel = msg.channel
         try:

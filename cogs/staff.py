@@ -60,10 +60,11 @@ class Staff(commands.Cog):
             log.warning(f"No member found for search term: {searchTerm}")
             await ctx.send(f"No member found for search term: {searchTerm}")
             return
-        log.critical(f"---------\n{ctx.author.display_name} ({ctx.author.name}#{ctx.author.discriminator}) is purging all messages from {searchTerm}: {member.display_name} ({member.name}#{member.discriminator})\n---------")
+        log.critical(f"\n---------\n{ctx.author.display_name} ({ctx.author.name}#{ctx.author.discriminator}) is purging all messages from {searchTerm}: {member.display_name} ({member.name}#{member.discriminator})\n---------")
         await ctx.send(f"Purging messages by {member.display_name} ({member.name}#{member.discriminator})")
         guild = self.bot.get_guild(SERVER)
         for channel in guild.text_channels:
+            log.debug(f"Purging {channel}")
             try:
                 await channel.purge(limit=None, check=lambda m: m.author.id == member.id)
             except Exception:

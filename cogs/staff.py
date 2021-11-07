@@ -61,6 +61,7 @@ class Staff(commands.Cog):
             await ctx.send(f"No member found for search term: {searchTerm}")
             return
         log.critical(f"---------\n{ctx.author.display_name} ({ctx.author.name}#{ctx.author.discriminator}) is purging all messages from {searchTerm}: {member.display_name} ({member.name}#{member.discriminator})\n---------")
+        await ctx.send(f"Purging messages by {member.display_name} ({member.name}#{member.discriminator})")
         guild = self.bot.get_guild(SERVER)
         for channel in guild.text_channels:
             try:
@@ -68,6 +69,7 @@ class Staff(commands.Cog):
             except Exception:
                 log.warning(f"could not purge messages from channel {channel}")
         log.debug("Done purging messages")
+        await ctx.send(f"Done purging messages by {member.display_name} ({member.name}#{member.discriminator})")
     
     @commands.command(help="Promote a member to the next rank")
     @commands.has_any_role(UNIT_STAFF)

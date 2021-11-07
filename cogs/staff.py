@@ -19,7 +19,7 @@ class Staff(commands.Cog):
         log.debug("Staff Cog is ready", flush=True)
         cogsReady["staff"] = True
     
-    def getMember(self, searchTerm):
+    def _getMember(self, searchTerm):
         member = None
         for member_ in self.bot.get_guild(SERVER).members:
             if searchTerm.replace("<", "").replace("@", "").replace("!", "").replace(">", "").isdigit() and int(searchTerm.replace("<", "").replace("@", "").replace("!", "").replace(">", "")) == member_.id:
@@ -37,13 +37,41 @@ class Staff(commands.Cog):
                 member = member_
         return member
     
+    @commands.command(help="Get a member")
+    @commands.has_any_role(UNIT_STAFF)
+    async def getMember(self, ctx, *, searchTerm):
+        """
+        Get a member
+        """
+        member = self._getMember(searchTerm)
+        if member is None:
+            await ctx.send(f"No member found for search term: {searchTerm}")
+        else:
+            await ctx.send(f"Member found: {member.display_name} ({member.name}#{member.discriminator})")
+    
+    @commands.command(help="Purge all messages from a member")
+    @commands.has_any_role(UNIT_STAFF)
+    async def purgeAllMessages(self, ctx, *, searchTerm):
+        """
+        Purge all messages from a member
+        """
+        member = self._getMember(searchTerm)
+        if member is None:
+            log.warning(f"No member found for search term: {searchTerm}")
+            await ctx.send(f"No member found for search term: {searchTerm}")
+            return
+        guild = self.bot.get_guild(SERVER)
+        for channel in guild.text_channels:
+            try:
+                await channel.purge(limit=None, check=lambda m: m.author.id == member.id)
+    
     @commands.command(help="Promote a member to the next rank")
     @commands.has_any_role(UNIT_STAFF)
     async def promote(self, ctx, *, searchTerm):
         """
         Promote a member to the next rank
         """
-        member = self.getMember(searchTerm)
+        member = self._getMember(searchTerm)
         if member is None:
             log.warning(f"No member found for search term: {searchTerm}")
             await ctx.send(f"No member found for search term: {searchTerm}")
@@ -74,7 +102,7 @@ class Staff(commands.Cog):
         """
         Demote a member to the previous rank
         """
-        member = self.getMember(searchTerm)
+        member = self._getMember(searchTerm)
         if member is None:
             log.warning(f"No member found for search term: {searchTerm}")
             await ctx.send(f"No member found for search term: {searchTerm}")
@@ -96,7 +124,7 @@ class Staff(commands.Cog):
         """
         Demote a member to the previous rank
         """
-        member = self.getMember(searchTerm)
+        member = self._getMember(searchTerm)
         if member is None:
             log.warning(f"No member found for search term: {searchTerm}")
             log.debug(f"Searching Moderation Logs for search term: {searchTerm}")

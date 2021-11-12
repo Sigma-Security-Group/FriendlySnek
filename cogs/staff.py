@@ -1,7 +1,9 @@
 import re
 import json
+from datetime import datetime
 from tqdm import tqdm
 import discord
+from discord import Embed
 from discord.ext import commands
 
 from constants import *
@@ -61,16 +63,76 @@ class Staff(commands.Cog):
             await ctx.send(f"No member found for search term: {searchTerm}")
             return
         log.critical(f"\n---------\n{ctx.author.display_name} ({ctx.author.name}#{ctx.author.discriminator}) is purging all messages from {searchTerm}: {member.display_name} ({member.name}#{member.discriminator})\n---------")
-        await ctx.send(f"Purging messages by {member.display_name} ({member.name}#{member.discriminator})")
+        await ctx.send(f"Purging messages by {member.display_name} ({member.name}#{member.discriminator}). This may take a while")
         guild = self.bot.get_guild(SERVER)
         for channel in guild.text_channels:
             log.debug(f"Purging {channel}")
             try:
                 await channel.purge(limit=None, check=lambda m: m.author.id == member.id)
             except Exception:
-                log.warning(f"could not purge messages from channel {channel}")
+                log.warning(f"Could not purge messages from channel {channel}")
         log.debug("Done purging messages")
         await ctx.send(f"Done purging messages by {member.display_name} ({member.name}#{member.discriminator})")
+    
+    @commands.command(help="Get last activity for all members")
+    @commands.has_any_role(UNIT_STAFF)
+    async def lastActivity(self, ctx):
+        """
+        Get last activity for all members
+        """
+        lastMessagePerMember = {}
+        log.debug(f"Analyzing members' last activity")
+        await ctx.send(f"Analyzing members' last activity. This may take a while")
+        guild = self.bot.get_guild(SERVER)
+        for member in guild.members:
+            lastMessage = None
+            for channel in guild.text_channels:
+                try:
+                    lastMessageInChannel = await channel.history(limit=None).find(lambda m: m.author.id == member.id)
+                    if lastMessageInChannel is None:
+                        continue
+                    if lastMessage is None or lastMessageInChannel.created_at > lastMessage.created_at:
+                        lastMessage = lastMessageInChannel
+                except Exception:
+                    log.warning(f"Could not search messages from channel {channel} for member {member}")
+            lastMessagePerMember[member] = lastMessage
+        log.debug("Done searching messages")
+        lastActivityPerMember = [(f"{member.display_name} ({member.name}#{member.discriminator})", f"<t:{round(lastMessage.created_at.timestamp())}:F>" if lastMessage is not None else "UNKNOWN")
+                                 for member, lastMessage in sorted(lastMessagePerMember.items(), key=lambda x: x[1].created_at if x[1] is not None else datetime(1970, 1, 1))]
+        for i in range(0, len(lastActivityPerMember), 25):
+            embed = Embed(title=f"Last activity per member ({i + 1} - {min(i + 25, len(lastActivityPerMember))} / {len(lastActivityPerMember)})")
+            for j in range(i, min(i + 25, len(lastActivityPerMember))):
+                embed.add_field(name=lastActivityPerMember[j][0], value=lastActivityPerMember[j][1], inline=False)
+            await ctx.send(embed=embed)
+    
+    @commands.command(help="Get last activity for member")
+    @commands.has_any_role(UNIT_STAFF)
+    async def lastActivityForMember(self, ctx, *, searchTerm):
+        """
+        Get last activity for member
+        """
+        member = self._getMember(searchTerm)
+        if member is None:
+            log.warning(f"No member found for search term: {searchTerm}")
+            await ctx.send(f"No member found for search term: {searchTerm}")
+            return
+        await ctx.send(f"Searching messages by {member.display_name} ({member.name}#{member.discriminator})")
+        guild = self.bot.get_guild(SERVER)
+        lastMessage = None
+        for channel in guild.text_channels:
+            try:
+                lastMessageInChannel = await channel.history(limit=None).find(lambda m: m.author.id == member.id)
+                if lastMessageInChannel is None:
+                    continue
+                if lastMessage is None or lastMessageInChannel.created_at > lastMessage.created_at:
+                    lastMessage = lastMessageInChannel
+            except Exception:
+                log.warning(f"Could not search messages from channel {channel}")
+        log.debug("Done searching messages")
+        if lastMessage is None:
+            await ctx.send(f"Last activity by {member.display_name} ({member.name}#{member.discriminator}): Not found")
+        else:
+            await ctx.send(f"Last activity by {member.display_name} ({member.name}#{member.discriminator}): <t:{round(lastMessage.created_at.timestamp())}:F>")
     
     @commands.command(help="Promote a member to the next rank")
     @commands.has_any_role(UNIT_STAFF)

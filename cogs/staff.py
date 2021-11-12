@@ -51,7 +51,7 @@ class Staff(commands.Cog):
     
     @commands.command(help="Purge all messages from a member")
     @commands.has_any_role(UNIT_STAFF)
-    async def purgeMessages(self, ctx, *, searchTerm):
+    async def purgeMessagesFromMember(self, ctx, *, searchTerm):
         """
         Purge all messages from a member
         """

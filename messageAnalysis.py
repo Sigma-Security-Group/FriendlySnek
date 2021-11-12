@@ -40,7 +40,16 @@ async def analyzeCombatFootage(bot, message):
     if any(videoUrl in message.content for videoUrl in ("://www.youtube.com", "://youtu.be", "://clips.twitch.tv", "://www.twitch.tv", "://streamable.com")):
         return
     await message.delete()
-    await message.author.send("The message you just posted in #combat-footage was deleted because no video was detected in it. If this is an error, then please ask staff to post the video for you and inform Adrian about the issue.")
+    try:
+        await message.author.send("The message you just posted in #combat-footage was deleted because no video was detected in it. If this is an error, then please ask staff to post the video for you and inform Adrian about the issue.")
+    except Exception as e:
+        print(message.author, e)
+        try:
+            print("Sending friend request...")
+            await message.author.send_friend_request()
+        except Exception as e:
+            print(e)
+    return
 
 async def analyzePropaganda(bot, message):
     if message.channel.id != PROPAGANDA:
@@ -50,4 +59,13 @@ async def analyzePropaganda(bot, message):
     if any(attachment.content_type.startswith("image/") for attachment in message.attachments):
         return
     await message.delete()
-    await message.author.send("The message you just posted in #propaganda was deleted because no image was detected in it. If this is an error, then please ask staff to post the image for you and inform Adrian about the issue.")
+    try:
+        await message.author.send("The message you just posted in #propaganda was deleted because no image was detected in it. If this is an error, then please ask staff to post the image for you and inform Adrian about the issue.")
+    except Exception as e:
+        print(message.author, e)
+        try:
+            print("Sending friend request...")
+            await message.author.send_friend_request()
+        except Exception as e:
+            print(e)
+    return

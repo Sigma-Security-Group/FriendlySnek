@@ -110,7 +110,7 @@ class Staff(commands.Cog):
             for j in range(i, min(i + 25, len(lastActivityPerMember))):
                 embed.add_field(name=lastActivityPerMember[j][0], value=lastActivityPerMember[j][1], inline=False)
             await ctx.send(embed=embed)
-        await ctx.send(f"{ctx.author.mention} Last activity analysis has finished")
+        await ctx.send(f"{guild.get_role(UNIT_STAFF).mention} Last activity analysis has finished")
     
     @commands.command(help="Get last activity for member")
     @commands.has_any_role(UNIT_STAFF)

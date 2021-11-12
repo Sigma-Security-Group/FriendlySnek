@@ -80,24 +80,26 @@ class Staff(commands.Cog):
         """
         Get last activity for all members
         """
-        lastMessagePerMember = {}
         log.debug(f"Analyzing members' last activity")
         await ctx.send(f"Analyzing members' last activity. This may take a while")
         guild = self.bot.get_guild(SERVER)
-        for member in guild.members:
-            lastMessage = None
-            for channel in guild.text_channels:
-                try:
-                    lastMessageInChannel = await channel.history(limit=None).find(lambda m: m.author.id == member.id)
-                    if lastMessageInChannel is None:
-                        continue
-                    if lastMessage is None or lastMessageInChannel.created_at > lastMessage.created_at:
-                        lastMessage = lastMessageInChannel
-                except Exception:
-                    log.warning(f"Could not search messages from channel {channel} for member {member}")
-            lastMessagePerMember[member] = lastMessage
+        lastMessagePerMember = {member: None for member in guild.members}
+        msg = await ctx.send("Checking channel:")
+        for i, channel in enumerate(guild.text_channels, 1):
+            await msg.edit(content=f"Checking channel: {channel.name} ({i} / {len(guild.text_channels)})")
+            membersNotChecked = set(channel.members)
+            async for message in channel.history(limit=None):
+                for member in set(membersNotChecked):
+                    if lastMessagePerMember[member] is not None and lastMessagePerMember[member].created_at > message.created_at:
+                        membersNotChecked.discard(member)
+                if message.author in membersNotChecked:
+                    membersNotChecked.discard(message.author)
+                    if lastMessagePerMember[message.author] is None or message.created_at > lastMessagePerMember[message.author].created_at:
+                        lastMessagePerMember[message.author] = message
+                if len(membersNotChecked) == 0:
+                    break
         log.debug("Done searching messages")
-        lastActivityPerMember = [(f"{member.display_name} ({member.name}#{member.discriminator})", f"<t:{round(lastMessage.created_at.timestamp())}:F>" if lastMessage is not None else "UNKNOWN")
+        lastActivityPerMember = [(f"{member.display_name} ({member.name}#{member.discriminator})", f"<t:{round(lastMessage.created_at.timestamp())}:F>\n{lastMessage.jump_url}" if lastMessage is not None else "NOT FOUND")
                                  for member, lastMessage in sorted(lastMessagePerMember.items(), key=lambda x: x[1].created_at if x[1] is not None else datetime(1970, 1, 1))]
         for i in range(0, len(lastActivityPerMember), 25):
             embed = Embed(title=f"Last activity per member ({i + 1} - {min(i + 25, len(lastActivityPerMember))} / {len(lastActivityPerMember)})")

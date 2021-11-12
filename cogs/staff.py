@@ -90,6 +90,9 @@ class Staff(commands.Cog):
             membersNotChecked = set(channel.members)
             async for message in channel.history(limit=None):
                 for member in set(membersNotChecked):
+                    if member.bot:
+                        membersNotChecked.discard(member)
+                        continue
                     if lastMessagePerMember[member] is not None and lastMessagePerMember[member].created_at > message.created_at:
                         membersNotChecked.discard(member)
                 if message.author in membersNotChecked:

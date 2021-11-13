@@ -103,7 +103,6 @@ class Staff(commands.Cog):
                     break
         log.debug("Done searching messages")
         await msg.edit(content=f"Done searching messages")
-        # lastActivityPerMember = [(f"{member.display_name} ({member.name}#{member.discriminator})", f"<t:{round(lastMessage.created_at.timestamp())}:F>\n{lastMessage.jump_url}" if lastMessage is not None else "NOT FOUND")
         lastActivityPerMember = [(f"{member.display_name} ({member.name}#{member.discriminator})", f"{member.mention}\n<t:{round(lastMessage.created_at.timestamp())}:F>\n{lastMessage.jump_url}" if lastMessage is not None else f"{member.mention}\nNOT FOUND")
                                  for member, lastMessage in sorted(lastMessagePerMember.items(), key=lambda x: x[1].created_at if x[1] is not None else datetime(1970, 1, 1))]
         for i in range(0, len(lastActivityPerMember), 25):

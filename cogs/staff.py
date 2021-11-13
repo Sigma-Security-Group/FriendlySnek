@@ -76,7 +76,7 @@ class Staff(commands.Cog):
     
     @commands.command(help="Get last activity for all members")
     @commands.has_any_role(UNIT_STAFF)
-    async def lastActivity(self, ctx):
+    async def lastActivity(self, ctx, pingStaff="yes"):
         """
         Get last activity for all members
         """
@@ -110,7 +110,8 @@ class Staff(commands.Cog):
             for j in range(i, min(i + 25, len(lastActivityPerMember))):
                 embed.add_field(name=lastActivityPerMember[j][0], value=lastActivityPerMember[j][1], inline=False)
             await ctx.send(embed=embed)
-        await ctx.send(f"{guild.get_role(UNIT_STAFF).mention} Last activity analysis has finished")
+        if pingStaff.lower() in ("y", "yes", "ping"):
+            await ctx.send(f"{guild.get_role(UNIT_STAFF).mention} Last activity analysis has finished")
     
     @commands.command(help="Get last activity for member")
     @commands.has_any_role(UNIT_STAFF)

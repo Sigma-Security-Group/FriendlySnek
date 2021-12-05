@@ -53,7 +53,6 @@ MAPS = [
     "Zargabad",
     "Training Map",
     "Laghisola",
-    "Uzbin Valley",
     "Isla Abramia",
     "Desert",
     "Colombia",
@@ -66,6 +65,10 @@ MAPS = [
     "Gulfcoast Islands",
     "Lingor/Dingor Island",
     "GOS Leskovets",
+    "Fapovo",
+    "Kunduz",
+    "Virolahti",
+    "Uzbin Valley",
 ]
 
 UTC = pytz.utc

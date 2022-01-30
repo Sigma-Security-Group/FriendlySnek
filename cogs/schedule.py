@@ -114,8 +114,14 @@ class Schedule(commands.Cog):
         #     self.autoDeleteScheduler.start()
         # if not self.acceptedReminderScheduler.running:
         #     self.acceptedReminderScheduler.start()
-        self.autoDeleteEvents.start()
-        self.checkAcceptedReminder.start()
+        try:
+            self.autoDeleteEvents.start()
+        except Exception:
+            log.warning("Couldn't start autoDeleteEvents scheduler")
+        try:
+            self.checkAcceptedReminder.start()
+        except Exception:
+            log.warning("Couldn't start checkAcceptedReminder scheduler")
     
     async def saveEventToHistory(self, event, autoDeleted=False):
         # if event.get("type", "Operation") == "Operation":

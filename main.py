@@ -136,7 +136,10 @@ async def on_ready():
             json.dump(activity, f, indent=4)
     # if not activityMonitorScheduler.running:
     #     activityMonitorScheduler.start()
-    logActivity.start()
+    try:
+        logActivity.start()
+    except:
+        log.warning("Couldn't start logActivity scheduler")
 
 @bot.event
 async def on_message(message):

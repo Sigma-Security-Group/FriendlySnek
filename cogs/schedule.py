@@ -98,6 +98,8 @@ class Schedule(commands.Cog):
     
     @commands.Cog.listener()
     async def on_ready(self):
+        if cogsReady["schedule"]:
+            return
         log.debug("Schedule Cog is ready", flush=True)
         cogsReady["schedule"] = True
         # if not os.path.exists(EVENTS_STATS_FILE):

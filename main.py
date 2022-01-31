@@ -100,6 +100,8 @@ async def logActivity():
 
 @bot.event
 async def on_ready():
+    if bot.ready:
+        return
     while not all(cogsReady.values()):
         await asyncio.sleep(1)
     bot.ready = True

@@ -1,4 +1,3 @@
-import os
 import json
 from ftplib import FTP
 import anvil.server

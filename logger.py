@@ -8,7 +8,7 @@ STD_OUT = sys.stdout
 class Logger:
     def stop(self):
         STD_OUT.flush()
-    
+
     def _log(self, level: str, message: str, flush=False):
         """
         Log message.
@@ -31,37 +31,37 @@ class Logger:
         STD_OUT.write(logStrPrint)
         if flush:
             STD_OUT.flush()
-    
+
     def debug(self, message: str, flush=False):
         """
             Log debug message
         """
         self._log("DEBUG", message, flush)
-    
+
     def info(self, message: str, flush=False):
         """
             Log info message
         """
         self._log("INFO", message, flush)
-    
+
     def warning(self, message: str, flush=False):
         """
             Log warning message
         """
         self._log("WARNING", message, flush)
-    
+
     def error(self, message: str, flush=False):
         """
             Log error message
         """
         self._log("ERROR", message, flush)
-    
+
     def critical(self, message: str, flush=False):
         """
             Log critical message
         """
         self._log("CRITICAL", message, flush)
-    
+
     def exception(self, message: str, flush=False):
         """
             Log error message followed by traceback

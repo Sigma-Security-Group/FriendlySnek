@@ -42,7 +42,7 @@
         [0, 2, 2],
         [[2, 7, 9]],
         [],
-        "Use reactions to move. Use :cyclone: to warp through the different layers of existence in the level. Your goal is to find your way to the :trophy:"
+        "Use reactions to move. Use :cyclone: to warp through the different layers of existence in the level. Your goal is to find your way to the :trophy:!"
     ],
     [
         "Level 2",
@@ -87,7 +87,7 @@
         [0, 1, 1],
         [[1, 4, 8]],
         [],
-        "This level looks more difficult, but it works exactly the same"
+        "This level looks more difficult, but it works exactly the same!"
     ],
     [
         "Level 3",
@@ -123,7 +123,7 @@
             {"l": [0, 6, 3], "d": [0, 3, 4], "m": 8},
             {"l": [0, 6, 6], "d": [1, 6, 7], "m": 8}
         ],
-        "This level only has 2 layers, but it has doors (:orange_square:). To open a door, you need to move on top of the correct lever (:large_orange_diamond:). When a door is opened, it will close after a certain amount of steps. Each door has its own timer. Doors and levers don't need to be on the same layer"
+        "This level only has 2 layers, but it has doors (:orange_square:). To open a door, you need to move on top of the correct lever (:large_orange_diamond:). When a door is opened, it will close after a certain amount of steps. Each door has its own timer. Doors and levers don't need to be on the same layer!"
     ],
     [
         "Level 4",
@@ -158,7 +158,7 @@
         [0, 3, 3],
         [[0, 7, 5]],
         [],
-        "For this one you will need to think a bit outside the box"
+        "For this one you will need to think a bit outside the box..."
     ],
     [
         "Level 5",
@@ -181,7 +181,7 @@
         [0, 4, 2],
         [[0, 4, 9], [0, 6, 9]],
         [],
-        "Layers don't need to be rectangular. You may need to think outside the box a bit more"
+        "Layers don't need to be rectangular. You may need to think outside the box a bit more..."
     ],
     [
         "Level 6",
@@ -234,6 +234,6 @@
         [0, 4, 2],
         [[0, 4, 9], [0, 6, 9]],
         [],
-        "Different layers of existence don't need to have the same size as each other. This works similarly to different size rows"
+        "Different layers of existence don't need to have the same size as each other. This works similarly to different size rows!"
     ]
 ]

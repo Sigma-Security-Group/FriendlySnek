@@ -14,7 +14,7 @@ async def runMessageAnalysis(bot, message):
 
 async def staffPingAnalysis(bot, message):
     staffRoles = STAFF_ROLES
-    
+
     # Handle staff ping replies
     if message.reference is not None and message.reference.message_id in staffPings:
         unitStaffRole = message.guild.get_role(UNIT_STAFF)
@@ -23,7 +23,7 @@ async def staffPingAnalysis(bot, message):
             log.debug(f"Staff replied to ping in message: {pingMessage.jump_url}")
             await botMessage.edit(content=f"{' '.join(role.mention for role in pingMessage.role_mentions if role.id in staffRoles)}: {pingMessage.jump_url}\nReplied by {message.author.display_name}: {message.jump_url}")
             del staffPings[message.reference.message_id]
-    
+
     # Handle staff pings
     if any(role.id in staffRoles for role in message.role_mentions):
         log.debug(f"Staff Pinged\nMessage Link: {message.jump_url}\nMessage Author: {message.author.display_name}({message.author.name}#{message.author.discriminator})")
@@ -41,7 +41,7 @@ async def analyzeCombatFootage(bot, message):
         return
     await message.delete()
     try:
-        await message.author.send("The message you just posted in #combat-footage was deleted because no video was detected in it. If this is an error, then please ask staff to post the video for you and inform Adrian about the issue.")
+        await message.author.send(f"The message you just posted in #combat-footage was deleted because no video was detected in it. If this is an error, then please ask staff to post the video for you and inform {message.guild.get_member(ADRIAN).display_name} about the issue.")
     except Exception as e:
         print(message.author, e)
         try:
@@ -60,7 +60,7 @@ async def analyzePropaganda(bot, message):
         return
     await message.delete()
     try:
-        await message.author.send("The message you just posted in #propaganda was deleted because no image was detected in it. If this is an error, then please ask staff to post the image for you and inform Adrian about the issue.")
+        await message.author.send(f"The message you just posted in #propaganda was deleted because no image was detected in it. If this is an error, then please ask staff to post the image for you and inform {message.guild.get_member(ADRIAN).display_name} about the issue.")
     except Exception as e:
         print(message.author, e)
         try:

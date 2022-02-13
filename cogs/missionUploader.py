@@ -1,20 +1,13 @@
-import os
-import re
-import json
 import asyncio
 from datetime import datetime
-from dateutil.parser import parse as datetimeParse
 import pytz
 from ftplib import FTP
 
-import discord
-from discord import Embed
-from discord import Colour
+from discord import Embed, Colour
 from discord.ext import commands
 from discord_slash import cog_ext, SlashContext
 from discord_slash.utils.manage_commands import create_permission
-from discord_slash.utils.manage_components import create_button, create_actionrow
-from discord_slash.model import ButtonStyle, SlashCommandPermissionType
+from discord_slash.model import SlashCommandPermissionType
 
 from constants import *
 
@@ -33,12 +26,12 @@ UTC = pytz.utc
 class MissionUploader(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-    
+
     @commands.Cog.listener()
     async def on_ready(self):
         log.debug("MissionUploader Cog is ready", flush=True)
         cogsReady["missionUploader"] = True
-    
+
     async def checkAttachments(self, dmChannel, author, attachments):
         with FTP() as ftp:
             ftp.connect(host=secret.ftpHost, port=secret.ftpPort)
@@ -63,7 +56,7 @@ class MissionUploader(commands.Cog):
             else:
                 attachmentOk = True
         return attachmentOk
-    
+
     @cog_ext.cog_slash(name="uploadmission",
                        description="Upload a mission pbo file to the server.",
                        guild_ids=[SERVER],
@@ -79,7 +72,7 @@ class MissionUploader(commands.Cog):
     async def uploadMission(self, ctx: SlashContext):
         await ctx.send("Upload mission file in DMs")
         log.info(f"{ctx.author.display_name}({ctx.author.name}#{ctx.author.discriminator}) is uploading a mission file")
-        
+
         embed = Embed(title="Upload the mission file you want to put on the server.", color=Colour.gold())
         msg = await ctx.author.send(embed=embed)
         dmChannel = msg.channel
@@ -99,13 +92,13 @@ class MissionUploader(commands.Cog):
                 await dmChannel.send(embed=TIMEOUT_EMBED)
                 return
         attachment = attachments[0]
-        
+
         embed = Embed(title="Uploading mission file...", color=Colour.green())
         await dmChannel.send(embed=embed)
-        
+
         with open(f"tmp/{attachment.filename}", "wb") as f:
             await attachment.save(f)
-        
+
         with FTP() as ftp:
             ftp.connect(host=secret.ftpHost, port=secret.ftpPort)
             ftp.login(user=secret.ftpUsername, passwd=secret.ftpPassword)
@@ -113,15 +106,15 @@ class MissionUploader(commands.Cog):
             if not DEBUG:
                 with open(f"tmp/{attachment.filename}", "rb") as f:
                     ftp.storbinary(f"STOR {attachment.filename}", f)
-        
+
         filename = attachment.filename
         utcTime = UTC.localize(datetime.utcnow())
         member = f"{ctx.author.display_name}({ctx.author.name}#{ctx.author.discriminator})"
         memberId = ctx.author.id
-        
+
         with open(MISSIONS_UPLOADED_FILE, "a") as f:
             f.write(f"\nFilename: {filename}\nUTC Time: {utcTime.strftime(UPLOAD_TIME_FORMAT)}\nMember: {member}\nMember ID: {memberId}\n")
-        
+
         botLogChannel = self.bot.get_channel(BOT)
         embed = Embed(title="Mission file uploaded", color=Colour.blue())
         embed.add_field(name="Filename", value=filename)
@@ -129,7 +122,7 @@ class MissionUploader(commands.Cog):
         embed.add_field(name="Member", value=member)
         embed.add_field(name="Member ID", value=memberId)
         await botLogChannel.send(embed=embed)
-        
+
         log.info(f"{ctx.author.display_name}({ctx.author.name}#{ctx.author.discriminator}) uploaded a mission file")
         embed = Embed(title="Mission file uploaded", color=Colour.green())
         await dmChannel.send(embed=embed)

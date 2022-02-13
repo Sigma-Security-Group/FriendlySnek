@@ -55,12 +55,12 @@ async def logActivity():
         await asyncio.sleep(1)
     log.debug("Logging discord activity")
     now = UTC.localize(datetime.utcnow()).strftime("%Y-%m-%d %I:%M %p")
-    
+
     with open(MESSAGES_FILE) as f:
         messages = json.load(f)
     with open(MESSAGES_FILE, "w") as f:
         json.dump([], f, indent=4)
-    
+
     with open(FULL_ACTIVITY_FILE) as f:
         fullActivity = json.load(f)
     guild = bot.get_guild(SERVER)
@@ -69,13 +69,13 @@ async def logActivity():
     fullActivity[now] = {"messages": messages, "online": online, "inVoiceChannel": inVoiceChannel}
     with open(FULL_ACTIVITY_FILE, "w") as f:
         json.dump(fullActivity, f, indent=4)
-    
+
     with open(MEMBERS_FILE) as f:
         members = json.load(f)
     members.update({str(member.id): member.display_name for member in guild.members})
     with open(MEMBERS_FILE, "w") as f:
         json.dump(members, f, indent=4)
-    
+
     with open(ACTIVITY_FILE) as f:
         activity = json.load(f)
     online = len([member for member in guild.members if member.status != discord.Status.offline])
@@ -106,6 +106,7 @@ async def on_ready():
         await asyncio.sleep(1)
     bot.ready = True
     log.info("Bot Ready")
+    await bot.change_presence(activity=discord.Activity("<:adrian:864880935224737792>"))
     if not os.path.exists(MESSAGES_FILE):
         with open(MESSAGES_FILE, "w") as f:
             json.dump([], f, indent=4)
@@ -150,30 +151,30 @@ async def on_message(message):
         return
     if DEBUG and message.author.id == FRIENDLY_SNEK_DEV:
         return
-    
+
     # Ignore messages that were not sent on the correct server
     if message.guild is None or message.guild.id != SERVER:
         # log.warning("Wrong server")
         return
-    
+
     if not message.author.bot:
         with open(MESSAGES_FILE) as f:
             messages = json.load(f)
         messages.append({"authorId": message.author.id, "authorName": message.author.display_name, "channelId": message.channel.id, "channelName": message.channel.name})
         with open(MESSAGES_FILE, "w") as f:
             json.dump(messages, f, indent=4)
-    
+
     # Execute commands
     if message.content.startswith(COMMAND_PREFIX) or message.content.startswith("/"):
         log.debug(f"{message.author.display_name}({message.author.name}#{message.author.discriminator}) > {message.content}")
         await bot.process_commands(message)
-    
+
     # Unmark newcomer pinging unit staff as needing a reminder to ping unit staff
     if message.author.id in newcomers:
         unitStaffRole = message.guild.get_role(UNIT_STAFF)
         if unitStaffRole in message.role_mentions:
             newcomers.remove(message.author.id)
-    
+
     # Run message content analysis
     await runMessageAnalysis(bot, message)
 
@@ -228,6 +229,6 @@ async def reload(ctx):
 if __name__ == "__main__":
     try:
         bot.run(secret.tokenDev if DEBUG else secret.token)
-        log.info("Bot Stopped")
+        log.info("Bot stopped")
     except Exception:
         log.exception("An error occured")

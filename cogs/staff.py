@@ -1,8 +1,5 @@
 import re
-import json
 from datetime import datetime
-from tqdm import tqdm
-import discord
 from discord import Embed
 from discord.ext import commands
 
@@ -15,12 +12,12 @@ if DEBUG:
 class Staff(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-    
+
     @commands.Cog.listener()
     async def on_ready(self):
         log.debug("Staff Cog is ready", flush=True)
         cogsReady["staff"] = True
-    
+
     def _getMember(self, searchTerm):
         member = None
         for member_ in self.bot.get_guild(SERVER).members:
@@ -38,7 +35,7 @@ class Staff(commands.Cog):
             if searchTerm.lower() in member_.display_name.lower() or searchTerm.lower() in member_.name.lower() or searchTerm.lower() in member_.mention.lower() or searchTerm.lower() in member_.mention.lower().replace("<@", "<@!") or searchTerm.lower() in member_.mention.lower().replace("<@!", "<@"):
                 member = member_
         return member
-    
+
     @commands.command(help="Get a member")
     @commands.has_any_role(UNIT_STAFF)
     async def getMember(self, ctx, *, searchTerm):
@@ -50,7 +47,7 @@ class Staff(commands.Cog):
             await ctx.send(f"No member found for search term: {searchTerm}")
         else:
             await ctx.send(f"Member found: {member.display_name} ({member.name}#{member.discriminator})")
-    
+
     @commands.command(help="Purge all messages from a member")
     @commands.has_any_role(UNIT_STAFF)
     async def purgeMessagesFromMember(self, ctx, *, searchTerm):
@@ -73,7 +70,7 @@ class Staff(commands.Cog):
                 log.warning(f"Could not purge messages from channel {channel}")
         log.debug("Done purging messages")
         await ctx.send(f"Done purging messages by {member.display_name} ({member.name}#{member.discriminator})")
-    
+
     @commands.command(help="Get last activity for all members")
     @commands.has_any_role(UNIT_STAFF)
     async def lastActivity(self, ctx, pingStaff="yes"):
@@ -112,7 +109,7 @@ class Staff(commands.Cog):
             await ctx.send(embed=embed)
         if pingStaff.lower() in ("y", "yes", "ping"):
             await ctx.send(f"{guild.get_role(UNIT_STAFF).mention} Last activity analysis has finished")
-    
+
     @commands.command(help="Get last activity for member")
     @commands.has_any_role(UNIT_STAFF)
     async def lastActivityForMember(self, ctx, *, searchTerm):
@@ -141,7 +138,7 @@ class Staff(commands.Cog):
             await ctx.send(f"Last activity by {member.display_name} ({member.name}#{member.discriminator}): Not found")
         else:
             await ctx.send(f"Last activity by {member.display_name} ({member.name}#{member.discriminator}): <t:{round(lastMessage.created_at.timestamp())}:F>")
-    
+
     @commands.command(help="Promote a member to the next rank")
     @commands.has_any_role(UNIT_STAFF)
     async def promote(self, ctx, *, searchTerm):
@@ -194,7 +191,7 @@ class Staff(commands.Cog):
                 break
         else:
             log.warning(f"No demotion possible for {member.display_name}")
-    
+
     @commands.command(help="Search through the moderation logs")
     @commands.has_any_role(UNIT_STAFF)
     async def searchModLogs(self, ctx, *, searchTerm):

@@ -140,8 +140,7 @@ async def on_ready():
     # if not activityMonitorScheduler.running:
     #     activityMonitorScheduler.start()
     try:
-        if not logActivity.running:
-            logActivity.start()
+        logActivity.start()
     except:
         log.warning("Couldn't start logActivity scheduler")
 

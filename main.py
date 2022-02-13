@@ -100,8 +100,8 @@ async def logActivity():
 
 @bot.event
 async def on_ready():
-    if bot.ready:
-        return
+    # if bot.ready:
+    #     return
     while not all(cogsReady.values()):
         await asyncio.sleep(1)
     bot.ready = True
@@ -140,7 +140,8 @@ async def on_ready():
     # if not activityMonitorScheduler.running:
     #     activityMonitorScheduler.start()
     try:
-        logActivity.start()
+        if not logActivity.running:
+            logActivity.start()
     except:
         log.warning("Couldn't start logActivity scheduler")
 

@@ -106,7 +106,7 @@ async def on_ready():
         await asyncio.sleep(1)
     bot.ready = True
     log.info("Bot Ready")
-    await bot.change_presence(activity=discord.Activity(type=discord.ActivityType.unknown, name="🐍"))
+    await bot.change_presence(activity=discord.Activity(type=discord.ActivityType.watching, name="you"))  # 🐍
     if not os.path.exists(MESSAGES_FILE):
         with open(MESSAGES_FILE, "w") as f:
             json.dump([], f, indent=4)

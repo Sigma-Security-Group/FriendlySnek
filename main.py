@@ -49,51 +49,51 @@ UTC = pytz.utc
 
 newcomers = set()
 
-@tasks.loop(minutes=10)
-async def logActivity():
-    while not bot.ready:
-        await asyncio.sleep(1)
-    log.debug("Logging discord activity")
-    now = UTC.localize(datetime.utcnow()).strftime("%Y-%m-%d %I:%M %p")
+# @tasks.loop(minutes=10)
+# async def logActivity():
+#     while not bot.ready:
+#         await asyncio.sleep(1)
+#     log.debug("Logging discord activity")
+#     now = UTC.localize(datetime.utcnow()).strftime("%Y-%m-%d %I:%M %p")
 
-    with open(MESSAGES_FILE) as f:
-        messages = json.load(f)
-    with open(MESSAGES_FILE, "w") as f:
-        json.dump([], f, indent=4)
+#     with open(MESSAGES_FILE) as f:
+#         messages = json.load(f)
+#     with open(MESSAGES_FILE, "w") as f:
+#         json.dump([], f, indent=4)
 
-    with open(FULL_ACTIVITY_FILE) as f:
-        fullActivity = json.load(f)
-    guild = bot.get_guild(SERVER)
-    online = [(member.id, member.display_name, any(role.id == UNIT_STAFF for role in member.roles)) for member in guild.members if member.status != discord.Status.offline]
-    inVoiceChannel = [{"channelId": channel.id, "channelName": channel.name, "members": [(member.id, member.display_name) for member in channel.members]} for channel in guild.voice_channels]
-    fullActivity[now] = {"messages": messages, "online": online, "inVoiceChannel": inVoiceChannel}
-    with open(FULL_ACTIVITY_FILE, "w") as f:
-        json.dump(fullActivity, f, indent=4)
+#     with open(FULL_ACTIVITY_FILE) as f:
+#         fullActivity = json.load(f)
+#     guild = bot.get_guild(SERVER)
+#     online = [(member.id, member.display_name, any(role.id == UNIT_STAFF for role in member.roles)) for member in guild.members if member.status != discord.Status.offline]
+#     inVoiceChannel = [{"channelId": channel.id, "channelName": channel.name, "members": [(member.id, member.display_name) for member in channel.members]} for channel in guild.voice_channels]
+#     fullActivity[now] = {"messages": messages, "online": online, "inVoiceChannel": inVoiceChannel}
+#     with open(FULL_ACTIVITY_FILE, "w") as f:
+#         json.dump(fullActivity, f, indent=4)
 
-    with open(MEMBERS_FILE) as f:
-        members = json.load(f)
-    members.update({str(member.id): member.display_name for member in guild.members})
-    with open(MEMBERS_FILE, "w") as f:
-        json.dump(members, f, indent=4)
+#     with open(MEMBERS_FILE) as f:
+#         members = json.load(f)
+#     members.update({str(member.id): member.display_name for member in guild.members})
+#     with open(MEMBERS_FILE, "w") as f:
+#         json.dump(members, f, indent=4)
 
-    with open(ACTIVITY_FILE) as f:
-        activity = json.load(f)
-    online = len([member for member in guild.members if member.status != discord.Status.offline])
-    staffOnline = len([member for member in guild.members if member.status != discord.Status.offline and any(role.id == UNIT_STAFF for role in member.roles)])
-    messagesPerChannel = {}
-    for message in messages:
-        if message["channelName"] not in messagesPerChannel:
-            messagesPerChannel[message["channelName"]] = 0
-        messagesPerChannel[message["channelName"]] += 1
-    voiceChannels = {
-        "Bar and Mess Hall": len([member for channel in guild.voice_channels for member in channel.members if channel.id in (THE_BAR, MESS_HALL)]),
-        "Game Rooms": len([member for channel in guild.voice_channels for member in channel.members if channel.id in (GAME_ROOM_ONE, GAME_ROOM_TWO, GAME_ROOM_THREE)]),
-        "Command": len([member for channel in guild.voice_channels for member in channel.members if channel.id == COMMAND]),
-        "Deployed": len([member for channel in guild.voice_channels for member in channel.members if channel.id == DEPLOYED])
-    }
-    activity[now] = {"online": online, "staffOnline": staffOnline, "messages": messagesPerChannel, "voiceChannels": voiceChannels}
-    with open(ACTIVITY_FILE, "w") as f:
-        json.dump(activity, f, indent=4)
+#     with open(ACTIVITY_FILE) as f:
+#         activity = json.load(f)
+#     online = len([member for member in guild.members if member.status != discord.Status.offline])
+#     staffOnline = len([member for member in guild.members if member.status != discord.Status.offline and any(role.id == UNIT_STAFF for role in member.roles)])
+#     messagesPerChannel = {}
+#     for message in messages:
+#         if message["channelName"] not in messagesPerChannel:
+#             messagesPerChannel[message["channelName"]] = 0
+#         messagesPerChannel[message["channelName"]] += 1
+#     voiceChannels = {
+#         "Bar and Mess Hall": len([member for channel in guild.voice_channels for member in channel.members if channel.id in (THE_BAR, MESS_HALL)]),
+#         "Game Rooms": len([member for channel in guild.voice_channels for member in channel.members if channel.id in (GAME_ROOM_ONE, GAME_ROOM_TWO, GAME_ROOM_THREE)]),
+#         "Command": len([member for channel in guild.voice_channels for member in channel.members if channel.id == COMMAND]),
+#         "Deployed": len([member for channel in guild.voice_channels for member in channel.members if channel.id == DEPLOYED])
+#     }
+#     activity[now] = {"online": online, "staffOnline": staffOnline, "messages": messagesPerChannel, "voiceChannels": voiceChannels}
+#     with open(ACTIVITY_FILE, "w") as f:
+#         json.dump(activity, f, indent=4)
 
 # activityMonitorScheduler = AsyncIOScheduler()
 # activityMonitorScheduler.add_job(logActivity, "interval", minutes=10)
@@ -139,10 +139,10 @@ async def on_ready():
             json.dump(activity, f, indent=4)
     # if not activityMonitorScheduler.running:
     #     activityMonitorScheduler.start()
-    try:
-        logActivity.start()
-    except:
-        log.warning("Couldn't start logActivity scheduler")
+    # try:
+    #     logActivity.start()
+    # except:
+    #     log.warning("Couldn't start logActivity scheduler")
 
 @bot.event
 async def on_message(message):

@@ -220,7 +220,7 @@ class Schedule(commands.Cog):
                         json.dump(events, f, indent=4)
                     if len(acceptedMembersNotOnline) > 0:
                         log.debug(f"Pinging members in accepted not in VC: {[member.display_name for member in acceptedMembersNotOnline]}")
-                        await channel.send(" ".join(member.mention for member in acceptedMembersNotOnline) + f" If you are in-game, please get in ⚪ Command or 🔵 Deployed. If you are not making it to this {event['type'].lower()}, please hit decline :x: on the schedule.")
+                        await channel.send(" ".join(member.mention for member in acceptedMembersNotOnline) + f" If you are in-game, please get in <#{COMMAND}> or <#{DEPLOYED}>. If you are not making it to this {event['type'].lower()}, please hit decline :x: on the schedule.")
                     if len(onlineMembersNotAccepted) > 0:
                         log.debug(f"Pinging members in VC not in accepted: {[member.display_name for member in onlineMembersNotAccepted]}")
                         await channel.send(" ".join(member.mention for member in onlineMembersNotAccepted) + f" If you are in-game, please please hit accept :white_check_mark: on the schedule.")

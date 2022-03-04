@@ -35,14 +35,10 @@ MAPS = [
     "Altis",
     "Anizay",
     "Chernarus",
-    # "Colombia",
     "Desert",
     "Fapovo",
-    # "GOS Leskovets",
-    # "Gulfcoast Islands",
     "Hellanmaa Winter",
     "Hellanmaa",
-    # "Isla Abramia",
     "Kidal",
     "Kujari",
     "Kunduz",
@@ -50,15 +46,11 @@ MAPS = [
     "Lingor/Dingor Island",
     "Livonia",
     "Malden 2035",
-    # "Panthera Winter",
-    # "Panthera",
     "Porto",
     "Pulau",
-    # "Rosche, Germany",
     "Sahrani",
     "Shapur",
     "Stratis",
-    # "Sugar Lake",
     "Takistan",
     "Tanoa",
     "Utes",
@@ -159,13 +151,13 @@ class Schedule(commands.Cog):
     async def autoDeleteEvents(self):
         while not self.bot.ready:
             await asyncio.sleep(1)
-        guild = self.bot.get_guild(SERVER)
+        # guild = self.bot.get_guild(SERVER)
         log.debug("Checking to auto delete events")
-        if False and self.eventsFileLock:
-            while self.eventsFileLock:
-                while self.eventsFileLock:
-                    await asyncio.sleep(0.5)
-                await asyncio.sleep(0.5)
+        # if False and self.eventsFileLock:
+        #     while self.eventsFileLock:
+        #         while self.eventsFileLock:
+        #             await asyncio.sleep(0.5)
+        #         await asyncio.sleep(0.5)
         self.eventsFileLock = False
         try:
             with open(EVENTS_FILE) as f:
@@ -228,10 +220,10 @@ class Schedule(commands.Cog):
                         json.dump(events, f, indent=4)
                     if len(acceptedMembersNotOnline) > 0:
                         log.debug(f"Pinging members in accepted not in VC: {[member.display_name for member in acceptedMembersNotOnline]}")
-                        await channel.send(" ".join(member.mention for member in acceptedMembersNotOnline) + f" If you are in-game, please get in Command or Deployed. If you are not making it to this {event['type'].lower()}, please hit decline on the schedule.")
+                        await channel.send(" ".join(member.mention for member in acceptedMembersNotOnline) + f" If you are in-game, please get in ⚪ Command or 🔵 Deployed. If you are not making it to this {event['type'].lower()}, please hit decline :x: on the schedule.")
                     if len(onlineMembersNotAccepted) > 0:
                         log.debug(f"Pinging members in VC not in accepted: {[member.display_name for member in onlineMembersNotAccepted]}")
-                        await channel.send(" ".join(member.mention for member in onlineMembersNotAccepted) + f" If you are in-game, please please hit accept on the schedule.")
+                        await channel.send(" ".join(member.mention for member in onlineMembersNotAccepted) + f" If you are in-game, please please hit accept :white_check_mark: on the schedule.")
         except Exception as e:
             print(e)
 
@@ -337,11 +329,11 @@ class Schedule(commands.Cog):
     async def on_raw_reaction_add(self, payload):
         if payload.channel_id != SCHEDULE:
             return
-        if False and self.eventsFileLock:
-            while self.eventsFileLock:
-                while self.eventsFileLock:
-                    await asyncio.sleep(0.5)
-                await asyncio.sleep(0.5)
+        #if False and self.eventsFileLock:
+        #    while self.eventsFileLock:
+        #        while self.eventsFileLock:
+        #            await asyncio.sleep(0.5)
+        #        await asyncio.sleep(0.5)
         self.eventsFileLock = False
         try:
             with open(EVENTS_FILE) as f:
@@ -487,7 +479,6 @@ class Schedule(commands.Cog):
         try:
             response = await self.bot.wait_for("message", timeout=300, check=lambda msg, author=member, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
             reservedRole = response.content.strip()
-            mapOK = True
             if reservedRole.isdigit() and int(reservedRole) <= len(vacantRoles) and int(reservedRole) > 0:
                 reservedRole = vacantRoles[int(reservedRole) - 1]
             elif reservedRole.strip().lower() == "none":
@@ -630,7 +621,7 @@ class Schedule(commands.Cog):
                     await dmChannel.send(embed=TIMEOUT_EMBED)
                     return False
                 if reservableRolesPresent:
-                    embed = Embed(title="Type each reservable role in its own line (in a single message)", color=Colour.gold(), description="Press Shift + Enter to insert a newline. Editting the name of a role will make it vacant, but roles which keep their exact names will keep their reservations")
+                    embed = Embed(title="Type each reservable role in its own line (in a single message)", color=Colour.gold(), description="Press Shift + Enter to insert a newline. Editing the name of a role will make it vacant, but roles which keep their exact names will keep their reservations")
                     embed.add_field(name="Current reservable roles", value=("```\n" + "\n".join(event["reservableRoles"].keys()) + "```") if event["reservableRoles"] is not None else "None")
                     await dmChannel.send(embed=embed)
                     try:
@@ -681,7 +672,7 @@ class Schedule(commands.Cog):
                 event["map"] = eventMap
 
             case "6":
-                embed = Embed(title=":family_man_boy_boy: What is the maximum number of attendees?", color=Colour.gold(), description="Enter `none` or a non-negative number")
+                embed = Embed(title=":family_man_boy_boy: What is the maximum number of attendees?", color=Colour.gold(), description="Enter `none` or a non-negative number.")
                 await dmChannel.send(embed=embed)
                 try:
                     response = await self.bot.wait_for("message", timeout=600, check=lambda msg, author=author, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
@@ -998,7 +989,7 @@ class Schedule(commands.Cog):
                 await dmChannel.send(embed=TIMEOUT_EMBED)
                 return
 
-        embed = Embed(title=":family_man_boy_boy: What is the maximum number of attendees?", color=Colour.gold(), description="Enter `none` or a non-negative number")
+        embed = Embed(title=":family_man_boy_boy: What is the maximum number of attendees?", color=Colour.gold(), description="Enter `none` or a non-negative number.")
         await dmChannel.send(embed=embed)
         try:
             response = await self.bot.wait_for("message", timeout=600, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
@@ -1150,13 +1141,13 @@ class Schedule(commands.Cog):
                     await dmChannel.send(embed=embed)
                     break
 
-        if False and self.eventsFileLock:
-            embed = Embed(title=":clock3: Someone else is creating or editing an event at the same time. This happens rarely, but give it just a few seconds")
-            await dmChannel.send(embed=embed)
-            while self.eventsFileLock:
-                while self.eventsFileLock:
-                    await asyncio.sleep(0.5)
-                await asyncio.sleep(0.5)
+        #if False and self.eventsFileLock:
+        #    embed = Embed(title=":clock3: Someone else is creating or editing an event at the same time. This happens rarely, but give it just a few seconds")
+        #    await dmChannel.send(embed=embed)
+        #    while self.eventsFileLock:
+        #        while self.eventsFileLock:
+        #            await asyncio.sleep(0.5)
+        #        await asyncio.sleep(0.5)
         self.eventsFileLock = False
         try:
             if os.path.exists(EVENTS_FILE):
@@ -1359,7 +1350,7 @@ class Schedule(commands.Cog):
             eventMap = template["map"]
 
         if template is None:
-            embed = Embed(title=":family_man_boy_boy: What is the maximum number of attendees?", color=Colour.gold(), description="Enter `none` or a non-negative number")
+            embed = Embed(title=":family_man_boy_boy: What is the maximum number of attendees?", color=Colour.gold(), description="Enter `none` or a non-negative number.")
             await dmChannel.send(embed=embed)
             try:
                 response = await self.bot.wait_for("message", timeout=600, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
@@ -1596,13 +1587,13 @@ class Schedule(commands.Cog):
                 embed = Embed(title="Template not saved", color=Colour.gold())
                 await dmChannel.send(embed=embed)
 
-        if False and self.eventsFileLock:
-            embed = Embed(title=":clock3: Someone else is creating or editing an event at the same time. This happens rarely, but give it just a few seconds")
-            await dmChannel.send(embed=embed)
-            while self.eventsFileLock:
-                while self.eventsFileLock:
-                    await asyncio.sleep(0.5)
-                await asyncio.sleep(0.5)
+        #if False and self.eventsFileLock:
+        #    embed = Embed(title=":clock3: Someone else is creating or editing an event at the same time. This happens rarely, but give it just a few seconds")
+        #    await dmChannel.send(embed=embed)
+        #    while self.eventsFileLock:
+        #        while self.eventsFileLock:
+        #            await asyncio.sleep(0.5)
+        #        await asyncio.sleep(0.5)
         self.eventsFileLock = False
         try:
             if os.path.exists(EVENTS_FILE):
@@ -1747,7 +1738,7 @@ class Schedule(commands.Cog):
                 await dmChannel.send(embed=TIMEOUT_EMBED)
                 return
 
-        embed = Embed(title=":family_man_boy_boy: What is the maximum number of attendees?", color=Colour.gold(), description="Enter `none` or a non-negative number")
+        embed = Embed(title=":family_man_boy_boy: What is the maximum number of attendees?", color=Colour.gold(), description="Enter `none` or a non-negative number.")
         await dmChannel.send(embed=embed)
         try:
             response = await self.bot.wait_for("message", timeout=600, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
@@ -1870,13 +1861,13 @@ class Schedule(commands.Cog):
                 startTimeOk = True
         endTime = startTime + d
 
-        if False and self.eventsFileLock:
-            embed = Embed(title=":clock3: Someone else is creating or editing an event at the same time. This happens rarely, but give it just a few seconds")
-            await dmChannel.send(embed=embed)
-            while self.eventsFileLock:
-                while self.eventsFileLock:
-                    await asyncio.sleep(0.5)
-                await asyncio.sleep(0.5)
+        #if False and self.eventsFileLock:
+        #    embed = Embed(title=":clock3: Someone else is creating or editing an event at the same time. This happens rarely, but give it just a few seconds")
+        #    await dmChannel.send(embed=embed)
+        #    while self.eventsFileLock:
+        #        while self.eventsFileLock:
+        #            await asyncio.sleep(0.5)
+        #        await asyncio.sleep(0.5)
         self.eventsFileLock = False
         try:
             if os.path.exists(EVENTS_FILE):

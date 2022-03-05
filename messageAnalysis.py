@@ -9,8 +9,8 @@ staffPings = {}
 
 async def runMessageAnalysis(bot, message):
     # await staffPingAnalysis(bot, message)
-    await analyzeCombatFootage(bot, message)
-    await analyzePropaganda(bot, message)
+    await analyzeChannel(message, COMBAT_FOOTAGE, "video")
+    await analyzeChannel(message, PROPAGANDA, "image")
 
 async def staffPingAnalysis(bot, message):
     staffRoles = STAFF_ROLES
@@ -30,37 +30,21 @@ async def staffPingAnalysis(bot, message):
         botMessage = await bot.get_channel(STAFF_CHAT).send(f"{' '.join(role.mention for role in message.role_mentions if role.id in staffRoles)}: {message.jump_url}")
         staffPings[message.id] = (message, botMessage)
 
-async def analyzeCombatFootage(bot, message):
-    if message.channel.id != COMBAT_FOOTAGE:
+async def analyzeChannel(message, channelID:int, attachmentContentType:str):
+    if message.channel.id != channelID:
         return
-    if any(role.id == UNIT_STAFF for role in message.author.roles):
+    elif any(role.id == UNIT_STAFF for role in message.author.roles):
         return
-    if any(attachment.content_type.startswith("video/") for attachment in message.attachments):
+    elif any(attachment.content_type.startswith(f"{attachmentContentType}/") for attachment in message.attachments):
         return
-    if any(videoUrl in message.content for videoUrl in ("://www.youtube.com", "://youtu.be", "://clips.twitch.tv", "://www.twitch.tv", "://streamable.com")):
+    elif attachmentContentType == "video" and any(videoUrl in message.content for videoUrl in ("://www.youtube.com", "://youtu.be", "://clips.twitch.tv", "://www.twitch.tv", "://streamable.com")):
         return
-    await message.delete()
     try:
-        await message.author.send(f"The message you just posted in <#{COMBAT_FOOTAGE}> was deleted because no video was detected in it. If this is an error, then please ask staff to post the video for you and inform {message.guild.get_member(ADRIAN).display_name} about the issue.")
-    except Exception as e:
-        print(message.author, e)
-        try:
-            print("Sending friend request...")
-            await message.author.send_friend_request()
-        except Exception as e:
-            print(e)
-    return
-
-async def analyzePropaganda(bot, message):
-    if message.channel.id != PROPAGANDA:
-        return
-    if any(role.id == UNIT_STAFF for role in message.author.roles):
-        return
-    if any(attachment.content_type.startswith("image/") for attachment in message.attachments):
-        return
-    await message.delete()
+        await message.delete()
+    except Exception:
+        pass
     try:
-        await message.author.send(f"The message you just posted in <#{PROPAGANDA}> was deleted because no image was detected in it. If this is an error, then please ask staff to post the image for you and inform {message.guild.get_member(ADRIAN).display_name} about the issue.")
+        await message.author.send(f"The message you just posted in <#{channelID}> was deleted because no {attachmentContentType} was detected in it. If this is an error, then please ask staff to post the {attachmentContentType} for you and inform {message.guild.get_member(ADRIAN).display_name} about the issue.")
     except Exception as e:
         print(message.author, e)
         try:

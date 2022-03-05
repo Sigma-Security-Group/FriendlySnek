@@ -16,11 +16,10 @@ if platform.system() == 'Windows':
 import json
 import pytz
 from glob import glob
-from datetime import datetime
 # from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 import discord
-from discord.ext import commands, tasks
+from discord.ext import commands
 from discord_slash import SlashCommand
 
 from constants import *
@@ -141,7 +140,7 @@ async def on_ready():
     #     activityMonitorScheduler.start()
     # try:
     #     logActivity.start()
-    # except:
+    # except Exception:
     #     log.warning("Couldn't start logActivity scheduler")
 
 @bot.event

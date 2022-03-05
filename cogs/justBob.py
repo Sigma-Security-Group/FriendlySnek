@@ -78,7 +78,13 @@ Levels structure. WIP levels use emojis for easier level design, but when a leve
 LEVELS_FILE = "cogs/justBob/levels.json"
 PLAYERS_PROGRESS_FILE = "data/justBobPlayersProgress.json"
 LEVEL_NUMBERS = ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣", "🔟"]
-DIRECTIONS = {"👈": (0, 0, -1), "👇": (0, 1, 0), "👆": (0, -1, 0), "👉": (0, 0, 1), "🌀": (1, 0, 0)}
+DIRECTIONS = {
+    "👈": (0, 0, -1),
+    "👇": (0, 1, 0),
+    "👆": (0, -1, 0),
+    "👉": (0, 0, 1),
+    "🌀": (1, 0, 0)
+}
 STOP = "🗑"
 
 PLAYER = "🙂"
@@ -112,7 +118,7 @@ class JustBob(commands.Cog):
     async def justBob(self, ctx):
         # await ctx.message.delete()
         if ctx.channel.id != GENERAL:
-            await ctx.send("Sorry, but you can only play Just Bob in #general!")
+            await ctx.send(f"Sorry, but you can only play Just Bob in <#{GENERAL}>!")
             return
         await ctx.send("Playing Just Bob")
         await self.levelSelect(ctx.channel, ctx.author)
@@ -151,7 +157,7 @@ class JustBob(commands.Cog):
                 game["playerPos"] = startPos
                 game["trophyPositions"] = trophyPositions
                 game["doorLevers"] = doorLevers
-                game["openDoors"] = []  # format for each open door is [[door layer, door row, door column], remaining moves until close]
+                game["openDoors"] = []  # Format for each open door is [[door layer, door row, door column], remaining moves until close]
                 game["description"] = description
                 game["playerId"] = payload.member.id
                 await gameMessage.delete()

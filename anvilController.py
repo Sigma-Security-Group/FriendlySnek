@@ -97,7 +97,7 @@ def closeScheduleWall():
     with open(ANVIL_CONTROLLER_FILE, "w") as f:
         json.dump(anvilController, f, indent=4)
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     if not os.path.exists(ANVIL_CONTROLLER_FILE):
         with open(ANVIL_CONTROLLER_FILE, "w") as f:
             json.dump({

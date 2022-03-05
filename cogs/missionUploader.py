@@ -16,7 +16,7 @@ if DEBUG:
     from constants.debug import *
 import secret
 
-TIMEOUT_EMBED = Embed(title="Time ran out. Try again. :anguished: ", color=Colour.red())
+TIMEOUT_EMBED = Embed(title="Time ran out. Try again. :anguished:", color=Colour.red())
 MISSIONS_UPLOADED_FILE = "data/missionsUploaded.log"
 UPLOAD_TIME_FORMAT = "%Y-%m-%d %I:%M %p"
 FTP_MISSIONS_DIR = "/144.48.106.194_2316/mpmissions"
@@ -32,7 +32,7 @@ class MissionUploader(commands.Cog):
         log.debug("MissionUploader Cog is ready", flush=True)
         cogsReady["missionUploader"] = True
 
-    async def checkAttachments(self, dmChannel, author, attachments):
+    async def checkAttachments(self, dmChannel, attachments):
         with FTP() as ftp:
             ftp.connect(host=secret.ftpHost, port=secret.ftpPort)
             ftp.login(user=secret.ftpUsername, passwd=secret.ftpPassword)
@@ -40,25 +40,25 @@ class MissionUploader(commands.Cog):
             missionFilesOnServer = ftp.nlst()
         attachmentOk = False
         if len(attachments) == 0:
-            embed = Embed(title="❌ You didn't upload any file. Please upload the mission file", color=Colour.red())
+            embed = Embed(title="❌ You didn't upload a file. Please upload the mission file!", color=Colour.red())
             await dmChannel.send(embed=embed)
         elif len(attachments) > 1:
-            embed = Embed(title="❌ You supplied too many files. Plese upload only one file", color=Colour.red())
+            embed = Embed(title="❌ You supplied too many files. Plese only upload one file!", color=Colour.red())
             await dmChannel.send(embed=embed)
         else:
             attachment = attachments[0]
             if not attachment.filename.endswith(".pbo"):
-                embed = Embed(title="❌ This is not a pbo file. Please upload a pbo file", color=Colour.red())
+                embed = Embed(title="❌ This is not a PBO file. Please upload a PBO file!", color=Colour.red())
                 await dmChannel.send(embed=embed)
             elif attachment.filename in missionFilesOnServer:
-                embed = Embed(title="❌ This file already exists. Please rename the file and reupload it", color=Colour.red())
+                embed = Embed(title="❌ This file already exists. Please rename the file and reupload it!", color=Colour.red())
                 await dmChannel.send(embed=embed)
             else:
                 attachmentOk = True
         return attachmentOk
 
     @cog_ext.cog_slash(name="uploadmission",
-                       description="Upload a mission pbo file to the server.",
+                       description="Upload a mission PBO file to the server.",
                        guild_ids=[SERVER],
                        permissions={
                            SERVER: [
@@ -79,7 +79,7 @@ class MissionUploader(commands.Cog):
         try:
             response = await self.bot.wait_for("message", timeout=120, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
             attachments = response.attachments
-            attachmentOk = await self.checkAttachments(dmChannel, ctx.author, attachments)
+            attachmentOk = await self.checkAttachments(dmChannel, attachments)
         except asyncio.TimeoutError:
             await dmChannel.send(embed=TIMEOUT_EMBED)
             return
@@ -87,7 +87,7 @@ class MissionUploader(commands.Cog):
             try:
                 response = await self.bot.wait_for("message", timeout=120, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
                 attachments = response.attachments
-                attachmentOk = await self.checkAttachments(dmChannel, ctx.author, attachments)
+                attachmentOk = await self.checkAttachments(dmChannel, attachments)
             except asyncio.TimeoutError:
                 await dmChannel.send(embed=TIMEOUT_EMBED)
                 return

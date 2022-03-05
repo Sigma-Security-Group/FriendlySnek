@@ -220,10 +220,10 @@ class Schedule(commands.Cog):
                         json.dump(events, f, indent=4)
                     if len(acceptedMembersNotOnline) > 0:
                         log.debug(f"Pinging members in accepted not in VC: {[member.display_name for member in acceptedMembersNotOnline]}")
-                        await channel.send(" ".join(member.mention for member in acceptedMembersNotOnline) + f" If you are in-game, please get in <#{COMMAND}> or <#{DEPLOYED}>. If you are not making it to this {event['type'].lower()}, please hit decline :x: on the schedule.")
+                        await channel.send(" ".join(member.mention for member in acceptedMembersNotOnline) + f" If you are in-game, please get in <#{COMMAND}> or <#{DEPLOYED}>. If you are not making it to this {event['type'].lower()}, please hit decline :x: on the <#{SCHEDULE}>.")
                     if len(onlineMembersNotAccepted) > 0:
                         log.debug(f"Pinging members in VC not in accepted: {[member.display_name for member in onlineMembersNotAccepted]}")
-                        await channel.send(" ".join(member.mention for member in onlineMembersNotAccepted) + f" If you are in-game, please please hit accept :white_check_mark: on the schedule.")
+                        await channel.send(" ".join(member.mention for member in onlineMembersNotAccepted) + f" If you are in-game, please please hit accept :white_check_mark: on the <#{SCHEDULE}>.")
         except Exception as e:
             print(e)
 
@@ -446,7 +446,7 @@ class Schedule(commands.Cog):
             event["accepted"].append(member.id)
 
         if event["maxPlayers"] is not None and len(event["accepted"]) >= event["maxPlayers"] and member.id not in event["accepted"]:
-            embed = Embed(title="❌ Sorry, seems like there's no space left in :b:op")
+            embed = Embed(title="❌ Sorry, seems like there's no space left in the :b:op")
             try:
                 await member.send(embed=embed)
             except Exception as e:
@@ -507,7 +507,7 @@ class Schedule(commands.Cog):
             embed = Embed(title="Role reservation completed", color=Colour.green())
             await dmChannel.send(embed=embed)
         else:
-            embed = Embed(title="❌ Schedule was updated while you were reserving a role. Try again.", color=Colour.red())
+            embed = Embed(title="❌ Schedule was updated while you were reserving a role. Try again!", color=Colour.red())
             await dmChannel.send(embed=embed)
             log.debug(f"{member.display_name}({member.name}#{member.discriminator}) was reserving a role but schedule was updated")
 
@@ -830,7 +830,7 @@ class Schedule(commands.Cog):
             log.info(f"{author.display_name}({author.name}#{author.discriminator}) edited an event")
             return reorderEvents
         else:
-            embed = Embed(title="❌ Schedule was updated while you were editing your operation. Try again.", color=Colour.red())
+            embed = Embed(title="❌ Schedule was updated while you were editing your operation. Try again!", color=Colour.red())
             await dmChannel.send(embed=embed)
             log.info(f"{author.display_name}({author.name}#{author.discriminator}) was editing an event but schedule was updated")
             return False

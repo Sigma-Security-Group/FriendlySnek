@@ -41,7 +41,7 @@ async def analyzeCombatFootage(bot, message):
         return
     await message.delete()
     try:
-        await message.author.send(f"The message you just posted in #combat-footage was deleted because no video was detected in it. If this is an error, then please ask staff to post the video for you and inform {message.guild.get_member(ADRIAN).display_name} about the issue.")
+        await message.author.send(f"The message you just posted in <#{COMBAT_FOOTAGE}> was deleted because no video was detected in it. If this is an error, then please ask staff to post the video for you and inform {message.guild.get_member(ADRIAN).display_name} about the issue.")
     except Exception as e:
         print(message.author, e)
         try:
@@ -60,7 +60,7 @@ async def analyzePropaganda(bot, message):
         return
     await message.delete()
     try:
-        await message.author.send(f"The message you just posted in #propaganda was deleted because no image was detected in it. If this is an error, then please ask staff to post the image for you and inform {message.guild.get_member(ADRIAN).display_name} about the issue.")
+        await message.author.send(f"The message you just posted in <#{PROPAGANDA}> was deleted because no image was detected in it. If this is an error, then please ask staff to post the image for you and inform {message.guild.get_member(ADRIAN).display_name} about the issue.")
     except Exception as e:
         print(message.author, e)
         try:

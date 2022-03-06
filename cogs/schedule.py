@@ -22,7 +22,7 @@ if DEBUG:
 EVENT_TIME_FORMAT = "%Y-%m-%d %I:%M %p"
 EVENTS_FILE = "data/events.json"
 MEMBER_TIME_ZONES_FILE = "data/memberTimeZones.json"
-TIMEOUT_EMBED = Embed(title="Time ran out. Try again. :anguished: ", color=Colour.red())
+TIMEOUT_EMBED = Embed(title="Time ran out. Try again. :anguished:", color=Colour.red())
 EVENTS_HISTORY_FILE = "data/eventsHistory.json"
 WORKSHOP_TEMPLATES_FILE = "data/workshopTemplates.json"
 WORKSHOP_INTEREST_FILE = "data/workshopInterest.json"
@@ -39,6 +39,7 @@ MAPS = [
     "Fapovo",
     "Hellanmaa Winter",
     "Hellanmaa",
+    "Isla Abramia",
     "Kidal",
     "Kujari",
     "Kunduz",

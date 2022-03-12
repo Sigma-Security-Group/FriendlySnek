@@ -890,7 +890,7 @@ class Schedule(commands.Cog):
         await self.scheduleOperation(ctx)
 
     async def scheduleOperation(self, ctx):
-        await ctx.send("Scheduling... Standby for :b:op")
+        await ctx.send("Scheduling... Standby for :b:op.")
         log.info(f"{ctx.author.display_name}({ctx.author.name}#{ctx.author.discriminator}) is creating an operation")
 
         utcNow = UTC.localize(datetime.utcnow())
@@ -1187,7 +1187,7 @@ class Schedule(commands.Cog):
 
         await self.updateSchedule()
 
-        await ctx.send(":b:op on schedule!")
+        await ctx.send(f":b:op on <#{SCHEDULE}>!")
 
     @cog_ext.cog_slash(name="ws", description="Create a workshop to add to the schedule.", guild_ids=[SERVER])
     async def ws(self, ctx: SlashContext):
@@ -1198,7 +1198,7 @@ class Schedule(commands.Cog):
         await self.scheduleWorkshop(ctx)
 
     async def scheduleWorkshop(self, ctx):
-        await ctx.send("Scheduling workshop...")
+        await ctx.send("Scheduling... Standby for a workshop.")
         log.info(f"{ctx.author.display_name}({ctx.author.name}#{ctx.author.discriminator}) is creating a workshop")
 
         utcNow = UTC.localize(datetime.utcnow())
@@ -1634,14 +1634,14 @@ class Schedule(commands.Cog):
 
         await self.updateSchedule()
 
-        await ctx.send("Workshop scheduled")
+        await ctx.send(f"Workshop on <#{SCHEDULE}>")
 
     @cog_ext.cog_slash(name="event", description="Create a generic event to add to the schedule.", guild_ids=[SERVER])
     async def event(self, ctx: SlashContext):
         await self.scheduleEvent(ctx)
 
     async def scheduleEvent(self, ctx):
-        await ctx.send("Scheduling generic event...")
+        await ctx.send("Scheduling... Standby for a generic event.")
         log.info(f"{ctx.author.display_name}({ctx.author.name}#{ctx.author.discriminator}) is creating an event")
 
         authorId = ctx.author.id
@@ -1907,7 +1907,7 @@ class Schedule(commands.Cog):
 
         await self.updateSchedule()
 
-        await ctx.send("Event scheduled")
+        await ctx.send(f"Event on <#{SCHEDULE}>!")
 
     @cog_ext.cog_slash(name="changetimezone", description="Change your time zone preferences for the next time you schedule an event.", guild_ids=[SERVER])
     async def changeTimeZone(self, ctx: SlashContext):

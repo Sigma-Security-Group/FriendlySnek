@@ -19,7 +19,8 @@ import secret
 TIMEOUT_EMBED = Embed(title="Time ran out. Try again. :anguished:", color=Colour.red())
 MISSIONS_UPLOADED_FILE = "data/missionsUploaded.log"
 UPLOAD_TIME_FORMAT = "%Y-%m-%d %I:%M %p"
-FTP_MISSIONS_DIR = "/144.48.106.194_2316/mpmissions"
+# FTP_MISSIONS_DIR = "/144.48.106.194_2316/mpmissions"  # Host Havoc
+FTP_MISSIONS_DIR = "/euc-ogs7.armahosts.com_2482/mpmissions"  # Dwarf's server
 
 UTC = pytz.utc
 

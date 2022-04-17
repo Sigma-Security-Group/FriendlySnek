@@ -96,7 +96,7 @@ DOOR = "🟧"
 LEVER = "🔶"
 
 class JustBob(commands.Cog):
-    def __init__(self, bot):
+    def __init__(self, bot) -> None:
         self.bot = bot
         if not os.path.exists(PLAYERS_PROGRESS_FILE):
             with open(PLAYERS_PROGRESS_FILE, "w") as f:
@@ -104,7 +104,7 @@ class JustBob(commands.Cog):
         self.games = {}
 
     @commands.Cog.listener()
-    async def on_ready(self):
+    async def on_ready(self) -> None:
         log.debug("JustBob Cog is ready", flush=True)
         cogsReady["justBob"] = True
 
@@ -115,7 +115,7 @@ class JustBob(commands.Cog):
 
     # @commands.command(name="Le75P14yJu5780b", hidden=True)
     @cog_ext.cog_slash(name="justbob", description="Play the minigame Just Bob", guild_ids=[SERVER])
-    async def justBob(self, ctx):
+    async def justBob(self, ctx) -> None:
         # await ctx.message.delete()
         if ctx.channel.id != GENERAL or ctx.channel.id != BOT_SPAM:
             await ctx.send(f"Sorry, but you can only play Just Bob in <#{GENERAL}> or in <#{BOT_SPAM}>!")
@@ -123,7 +123,7 @@ class JustBob(commands.Cog):
         await ctx.send("Playing Just Bob")
         await self.levelSelect(ctx.channel, ctx.author)
 
-    async def levelSelect(self, channel, player):
+    async def levelSelect(self, channel, player) -> None:
         with open(LEVELS_FILE) as f:
             levels = json.load(f)
         with open(PLAYERS_PROGRESS_FILE) as f:
@@ -139,7 +139,7 @@ class JustBob(commands.Cog):
         await msg.add_reaction(STOP)
 
     @commands.Cog.listener()
-    async def on_raw_reaction_add(self, payload):
+    async def on_raw_reaction_add(self, payload) -> None:
         if self.bot.ready and payload.member is not None and not payload.member.bot and ((payload.member is not None and payload.member.id in self.games and self.games[payload.member.id]["messageId"] == payload.message_id) or (any(role is not None and role.id == UNIT_STAFF for role in payload.member.roles) and payload.emoji.name == STOP)):
             channel = self.bot.get_channel(payload.channel_id)
             try:
@@ -185,7 +185,7 @@ class JustBob(commands.Cog):
             except Exception:
                 pass
 
-    def getGameEmbed(self, game):
+    def getGameEmbed(self, game) -> Embed:
         guild = self.bot.get_guild(SERVER)
 
         embed = Embed(title=f"Just Bob (Lvl {game['levelNum'] + 1})", description=game["description"], color=Colour.blue())
@@ -281,5 +281,5 @@ class JustBob(commands.Cog):
         return levelComplete
 
 
-def setup(bot):
+def setup(bot) -> None:
     bot.add_cog(JustBob(bot))

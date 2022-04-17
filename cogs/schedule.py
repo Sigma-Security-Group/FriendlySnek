@@ -1178,6 +1178,7 @@ class Schedule(commands.Cog):
                 json.dump(events, f, indent=4)
         except Exception as e:
             print(e)
+            newEvent = None
         finally:
             self.eventsFileLock = False
 
@@ -1187,7 +1188,8 @@ class Schedule(commands.Cog):
 
         await self.updateSchedule()
 
-        await ctx.send(":b:op on schedule!")
+        if newEvent is not None:
+            await ctx.send(f":b:op on [schedule](https://discord.com/channels/{SERVER}/{SCHEDULE}/{newEvent['messageId']})!")
 
     @cog_ext.cog_slash(name="ws", description="Create a workshop to add to the schedule.", guild_ids=[SERVER])
     async def ws(self, ctx: SlashContext):
@@ -1625,6 +1627,7 @@ class Schedule(commands.Cog):
                 json.dump(events, f, indent=4)
         except Exception as e:
             print(e)
+            newEvent = None
         finally:
             self.eventsFileLock = False
 
@@ -1634,7 +1637,8 @@ class Schedule(commands.Cog):
 
         await self.updateSchedule()
 
-        await ctx.send("Workshop scheduled")
+        if newEvent is not None:
+            await ctx.send(f"Workshop on [schedule](https://discord.com/channels/{SERVER}/{SCHEDULE}/{newEvent['messageId']})")
 
     @cog_ext.cog_slash(name="event", description="Create a generic event to add to the schedule.", guild_ids=[SERVER])
     async def event(self, ctx: SlashContext):
@@ -1898,6 +1902,7 @@ class Schedule(commands.Cog):
                 json.dump(events, f, indent=4)
         except Exception as e:
             print(e)
+            newEvent = None
         finally:
             self.eventsFileLock = False
 
@@ -1907,7 +1912,8 @@ class Schedule(commands.Cog):
 
         await self.updateSchedule()
 
-        await ctx.send("Event scheduled")
+        if newEvent is not None:
+            await ctx.send(f"Event on [schedule](https://discord.com/channels/{SERVER}/{SCHEDULE}/{newEvent['messageId']})")
 
     @cog_ext.cog_slash(name="changetimezone", description="Change your time zone preferences for the next time you schedule an event.", guild_ids=[SERVER])
     async def changeTimeZone(self, ctx: SlashContext):

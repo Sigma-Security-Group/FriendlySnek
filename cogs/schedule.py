@@ -29,6 +29,7 @@ WORKSHOP_INTEREST_FILE = "data/workshopInterest.json"
 
 MAX_SERVER_ATTENDANCE = 50
 
+# Training map first, then the rest in alphabetical order
 MAPS = [
     "Training Map",
     "Al Salman, Iraq",

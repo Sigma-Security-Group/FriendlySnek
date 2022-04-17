@@ -241,7 +241,7 @@ class Schedule(commands.Cog):
                            ]
                        })
     async def refreshSchedule(self, ctx: SlashContext):
-        await ctx.send("Updating schedule")
+        await ctx.send(f"Refreshing <#{SCHEDULE}>...")
         await self.updateSchedule()
 
     async def updateSchedule(self):
@@ -321,7 +321,7 @@ class Schedule(commands.Cog):
                 embed.add_field(name=f"Standby ({len(standby)}) :clock3:", value="\n".join(name for name in standby), inline=False)
 
         author = guild.get_member(event["authorId"])
-        embed.set_footer(text=f"Created by {author.display_name}")
+        embed.set_footer(text=f"Created by {author.display_name}") if author else embed.set_footer(text="Created by Unknown User")
         embed.timestamp = UTC.localize(datetime.strptime(event["time"], EVENT_TIME_FORMAT))
 
         return embed
@@ -1911,7 +1911,7 @@ class Schedule(commands.Cog):
 
     @cog_ext.cog_slash(name="changetimezone", description="Change your time zone preferences for the next time you schedule an event.", guild_ids=[SERVER])
     async def changeTimeZone(self, ctx: SlashContext):
-        await ctx.send("Changing Time Zone Preferences")
+        await ctx.send("Changing time zone preferences...")
 
         with open(MEMBER_TIME_ZONES_FILE) as f:
             memberTimeZones = json.load(f)

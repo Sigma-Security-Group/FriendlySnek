@@ -78,7 +78,13 @@ Levels structure. WIP levels use emojis for easier level design, but when a leve
 LEVELS_FILE = "cogs/justBob/levels.json"
 PLAYERS_PROGRESS_FILE = "data/justBobPlayersProgress.json"
 LEVEL_NUMBERS = ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣", "🔟"]
-DIRECTIONS = {"👈": (0, 0, -1), "👇": (0, 1, 0), "👆": (0, -1, 0), "👉": (0, 0, 1), "🌀": (1, 0, 0)}
+DIRECTIONS = {
+    "👈": (0, 0, -1),
+    "👇": (0, 1, 0),
+    "👆": (0, -1, 0),
+    "👉": (0, 0, 1),
+    "🌀": (1, 0, 0)
+}
 STOP = "🗑"
 
 PLAYER = "🙂"
@@ -90,7 +96,7 @@ DOOR = "🟧"
 LEVER = "🔶"
 
 class JustBob(commands.Cog):
-    def __init__(self, bot):
+    def __init__(self, bot) -> None:
         self.bot = bot
         if not os.path.exists(PLAYERS_PROGRESS_FILE):
             with open(PLAYERS_PROGRESS_FILE, "w") as f:
@@ -98,7 +104,7 @@ class JustBob(commands.Cog):
         self.games = {}
 
     @commands.Cog.listener()
-    async def on_ready(self):
+    async def on_ready(self) -> None:
         log.debug("JustBob Cog is ready", flush=True)
         cogsReady["justBob"] = True
 
@@ -109,22 +115,22 @@ class JustBob(commands.Cog):
 
     # @commands.command(name="Le75P14yJu5780b", hidden=True)
     @cog_ext.cog_slash(name="justbob", description="Play the minigame Just Bob", guild_ids=[SERVER])
-    async def justBob(self, ctx):
+    async def justBob(self, ctx) -> None:
         # await ctx.message.delete()
-        if ctx.channel.id != GENERAL:
-            await ctx.send("Sorry, but you can only play Just Bob in #general!")
+        if ctx.channel.id != GENERAL or ctx.channel.id != BOT_SPAM:
+            await ctx.send(f"Sorry, but you can only play Just Bob in <#{GENERAL}> or in <#{BOT_SPAM}>!")
             return
         await ctx.send("Playing Just Bob")
         await self.levelSelect(ctx.channel, ctx.author)
 
-    async def levelSelect(self, channel, player):
+    async def levelSelect(self, channel, player) -> None:
         with open(LEVELS_FILE) as f:
             levels = json.load(f)
         with open(PLAYERS_PROGRESS_FILE) as f:
             playersProgress = json.load(f)
         lastLevelUnlocked = playersProgress.get(str(player.id), 1)
         gameComplete = lastLevelUnlocked > len(levels)
-        embed = Embed(title="Just Bob", description=f"Congratulations, you completed all the levels, but you can replay them if you want{'. More levels coming soon!' * (len(levels) < 10)}" if gameComplete else f"Choose a level\n({(lastLevelUnlocked - 1) / len(levels) * 100:.2f}% complete)", color=Colour.green() if gameComplete else Colour.blue())
+        embed = Embed(title="Just Bob", description="Congratulations, you completed all levels! 🎉\nYou can replay them if you'd like.\nMore levels coming soon!" if gameComplete else f"Choose a level\n({(lastLevelUnlocked - 1) / len(levels) * 100:.2f}% complete)", color=Colour.green() if gameComplete else Colour.blue())
         embed.set_footer(text=f"Player: {player.display_name}")
         msg = await channel.send(embed=embed)
         self.games[player.id] = {"levelNum": None, "level": None, "playerPos": None, "trophyPositions": None, "doorLevers": None, "openDoors": None, "description": None, "playerId": None, "messageId": msg.id}
@@ -133,7 +139,7 @@ class JustBob(commands.Cog):
         await msg.add_reaction(STOP)
 
     @commands.Cog.listener()
-    async def on_raw_reaction_add(self, payload):
+    async def on_raw_reaction_add(self, payload) -> None:
         if self.bot.ready and payload.member is not None and not payload.member.bot and ((payload.member is not None and payload.member.id in self.games and self.games[payload.member.id]["messageId"] == payload.message_id) or (any(role is not None and role.id == UNIT_STAFF for role in payload.member.roles) and payload.emoji.name == STOP)):
             channel = self.bot.get_channel(payload.channel_id)
             try:
@@ -151,7 +157,7 @@ class JustBob(commands.Cog):
                 game["playerPos"] = startPos
                 game["trophyPositions"] = trophyPositions
                 game["doorLevers"] = doorLevers
-                game["openDoors"] = []  # format for each open door is [[door layer, door row, door column], remaining moves until close]
+                game["openDoors"] = []  # Format for each open door is [[door layer, door row, door column], remaining moves until close]
                 game["description"] = description
                 game["playerId"] = payload.member.id
                 await gameMessage.delete()
@@ -179,7 +185,7 @@ class JustBob(commands.Cog):
             except Exception:
                 pass
 
-    def getGameEmbed(self, game):
+    def getGameEmbed(self, game) -> Embed:
         guild = self.bot.get_guild(SERVER)
 
         embed = Embed(title=f"Just Bob (Lvl {game['levelNum'] + 1})", description=game["description"], color=Colour.blue())
@@ -275,5 +281,5 @@ class JustBob(commands.Cog):
         return levelComplete
 
 
-def setup(bot):
+def setup(bot) -> None:
     bot.add_cog(JustBob(bot))

@@ -22,7 +22,7 @@ if DEBUG:
 EVENT_TIME_FORMAT = "%Y-%m-%d %I:%M %p"
 EVENTS_FILE = "data/events.json"
 MEMBER_TIME_ZONES_FILE = "data/memberTimeZones.json"
-TIMEOUT_EMBED = Embed(title="Time ran out. Try again. :anguished: ", color=Colour.red())
+TIMEOUT_EMBED = Embed(title="Time ran out. Try again. :anguished:", color=Colour.red())
 EVENTS_HISTORY_FILE = "data/eventsHistory.json"
 WORKSHOP_TEMPLATES_FILE = "data/workshopTemplates.json"
 WORKSHOP_INTEREST_FILE = "data/workshopInterest.json"
@@ -40,6 +40,7 @@ MAPS = [
     "Fapovo",
     "Hellanmaa Winter",
     "Hellanmaa",
+    "Isla Abramia",
     "Kidal",
     "Kujari",
     "Kunduz",
@@ -106,11 +107,11 @@ class Schedule(commands.Cog):
         try:
             self.autoDeleteEvents.start()
         except Exception:
-            log.warning("Couldn't start autoDeleteEvents scheduler")
+            log.warning("Couldn't start autoDeleteEvents scheduler!")
         try:
             self.checkAcceptedReminder.start()
         except Exception:
-            log.warning("Couldn't start checkAcceptedReminder scheduler")
+            log.warning("Couldn't start checkAcceptedReminder scheduler!")
 
     async def saveEventToHistory(self, event, autoDeleted=False):
         guild = self.bot.get_guild(SERVER)
@@ -153,7 +154,7 @@ class Schedule(commands.Cog):
         while not self.bot.ready:
             await asyncio.sleep(1)
         # guild = self.bot.get_guild(SERVER)
-        log.debug("Checking to auto delete events")
+        log.debug("Checking to auto delete events...")
         # if False and self.eventsFileLock:
         #     while self.eventsFileLock:
         #         while self.eventsFileLock:
@@ -177,7 +178,7 @@ class Schedule(commands.Cog):
                     if event["maxPlayers"] != 0:
                         await self.saveEventToHistory(event, autoDeleted=True)
             if len(deletedEvents) == 0:
-                log.debug("No events were auto deleted")
+                log.debug("No events were auto deleted.")
             for event in deletedEvents:
                 events.remove(event)
             with open(EVENTS_FILE, "w") as f:
@@ -221,10 +222,10 @@ class Schedule(commands.Cog):
                         json.dump(events, f, indent=4)
                     if len(acceptedMembersNotOnline) > 0:
                         log.debug(f"Pinging members in accepted not in VC: {[member.display_name for member in acceptedMembersNotOnline]}")
-                        await channel.send(" ".join(member.mention for member in acceptedMembersNotOnline) + f" If you are in-game, please get in <#{COMMAND}> or <#{DEPLOYED}>. If you are not making it to this {event['type'].lower()}, please hit decline :x: on the schedule.")
+                        await channel.send(" ".join(member.mention for member in acceptedMembersNotOnline) + SCHEDULE_REMINDER_VOICE.format(COMMAND, DEPLOYED, event['type'].lower(), SCHEDULE))
                     if len(onlineMembersNotAccepted) > 0:
                         log.debug(f"Pinging members in VC not in accepted: {[member.display_name for member in onlineMembersNotAccepted]}")
-                        await channel.send(" ".join(member.mention for member in onlineMembersNotAccepted) + f" If you are in-game, please please hit accept :white_check_mark: on the schedule.")
+                        await channel.send(" ".join(member.mention for member in onlineMembersNotAccepted) + SCHEDULE_REMINDER_INGAME.format(SCHEDULE))
         except Exception as e:
             print(e)
 
@@ -241,7 +242,7 @@ class Schedule(commands.Cog):
                            ]
                        })
     async def refreshSchedule(self, ctx: SlashContext):
-        await ctx.send("Updating schedule")
+        await ctx.send(f"Refreshing <#{SCHEDULE}>...")
         await self.updateSchedule()
 
     async def updateSchedule(self):
@@ -249,7 +250,7 @@ class Schedule(commands.Cog):
         channel = self.bot.get_channel(SCHEDULE)
         await channel.purge(limit=None, check=lambda m: m.author.id in (FRIENDLY_SNEK, FRIENDLY_SNEK_DEV))
 
-        await channel.send(f"Welcome to the schedule channel. To schedule an operation you can use the **`/operation`** command (or **`/bop`**) and follow the instructions through DMs. For a workshop use **`/workshop`** or **`/ws`** and for a generic event use **`/event`**. If you haven't set a preferred time zone yet you will be prompted to do so when you schedule any kind of event. If you want to set, change or delete your time zone preference you can do so with the **`/changetimezone`** command.\n\nYou can use the colored strip to the left of each event to quickly know its type at a glance. The colors are:\n🟩 Operation `/operation` or `/bop`\n🟦 Workshop `/workshop` or `/ws`\n🟨 Event `/event`\n\nIf you have any features suggestions or encounter any bugs, please contact {channel.guild.get_member(ADRIAN).display_name}.")
+        await channel.send(SCHEDULE_INTRO_MESSAGE.format(channel.guild.get_member(ADRIAN).display_name, channel.guild.get_member(FROGGI).display_name))
 
         if os.path.exists(EVENTS_FILE):
             try:
@@ -321,7 +322,7 @@ class Schedule(commands.Cog):
                 embed.add_field(name=f"Standby ({len(standby)}) :clock3:", value="\n".join(name for name in standby), inline=False)
 
         author = guild.get_member(event["authorId"])
-        embed.set_footer(text=f"Created by {author.display_name}")
+        embed.set_footer(text=f"Created by {author.display_name}") if author else embed.set_footer(text="Created by Unknown User")
         embed.timestamp = UTC.localize(datetime.strptime(event["time"], EVENT_TIME_FORMAT))
 
         return embed
@@ -447,7 +448,7 @@ class Schedule(commands.Cog):
             event["accepted"].append(member.id)
 
         if event["maxPlayers"] is not None and len(event["accepted"]) >= event["maxPlayers"] and member.id not in event["accepted"]:
-            embed = Embed(title="❌ Sorry, seems like there's no space left in :b:op")
+            embed = Embed(title="❌ Sorry, seems like there's no space left in the :b:op!")
             try:
                 await member.send(embed=embed)
             except Exception as e:
@@ -508,7 +509,7 @@ class Schedule(commands.Cog):
             embed = Embed(title="Role reservation completed", color=Colour.green())
             await dmChannel.send(embed=embed)
         else:
-            embed = Embed(title="❌ Schedule was updated while you were reserving a role. Try again.", color=Colour.red())
+            embed = Embed(title="❌ Schedule was updated while you were reserving a role. Try again!", color=Colour.red())
             await dmChannel.send(embed=embed)
             log.debug(f"{member.display_name}({member.name}#{member.discriminator}) was reserving a role but schedule was updated")
 
@@ -831,7 +832,7 @@ class Schedule(commands.Cog):
             log.info(f"{author.display_name}({author.name}#{author.discriminator}) edited an event")
             return reorderEvents
         else:
-            embed = Embed(title="❌ Schedule was updated while you were editing your operation. Try again.", color=Colour.red())
+            embed = Embed(title="❌ Schedule was updated while you were editing your operation. Try again!", color=Colour.red())
             await dmChannel.send(embed=embed)
             log.info(f"{author.display_name}({author.name}#{author.discriminator}) was editing an event but schedule was updated")
             return False
@@ -890,7 +891,7 @@ class Schedule(commands.Cog):
         await self.scheduleOperation(ctx)
 
     async def scheduleOperation(self, ctx):
-        await ctx.send("Scheduling... Standby for :b:op")
+        await ctx.send("Scheduling... Standby for :b:op.")
         log.info(f"{ctx.author.display_name}({ctx.author.name}#{ctx.author.discriminator}) is creating an operation")
 
         utcNow = UTC.localize(datetime.utcnow())
@@ -1200,7 +1201,7 @@ class Schedule(commands.Cog):
         await self.scheduleWorkshop(ctx)
 
     async def scheduleWorkshop(self, ctx):
-        await ctx.send("Scheduling workshop...")
+        await ctx.send("Scheduling... Standby for a workshop.")
         log.info(f"{ctx.author.display_name}({ctx.author.name}#{ctx.author.discriminator}) is creating a workshop")
 
         utcNow = UTC.localize(datetime.utcnow())
@@ -1645,7 +1646,7 @@ class Schedule(commands.Cog):
         await self.scheduleEvent(ctx)
 
     async def scheduleEvent(self, ctx):
-        await ctx.send("Scheduling generic event...")
+        await ctx.send("Scheduling... Standby for a generic event.")
         log.info(f"{ctx.author.display_name}({ctx.author.name}#{ctx.author.discriminator}) is creating an event")
 
         authorId = ctx.author.id
@@ -1906,9 +1907,9 @@ class Schedule(commands.Cog):
         finally:
             self.eventsFileLock = False
 
-        embed = Embed(title="✅ Event created", color=Colour.green())
+        embed = Embed(title=SCHEDULE_EVENT_DONE, color=Colour.green())
         await dmChannel.send(embed=embed)
-        log.info(f"{ctx.author.display_name}({ctx.author.name}#{ctx.author.discriminator}) created an event")
+        log.info(f"{ctx.author.display_name}({ctx.author.name}#{ctx.author.discriminator}) created an event.")
 
         await self.updateSchedule()
 
@@ -1917,12 +1918,12 @@ class Schedule(commands.Cog):
 
     @cog_ext.cog_slash(name="changetimezone", description="Change your time zone preferences for the next time you schedule an event.", guild_ids=[SERVER])
     async def changeTimeZone(self, ctx: SlashContext):
-        await ctx.send("Changing Time Zone Preferences")
+        await ctx.send(SCHEDULE_TIME_ZONE_CHANGING)
 
         with open(MEMBER_TIME_ZONES_FILE) as f:
             memberTimeZones = json.load(f)
 
-        embed = Embed(title=":clock1: What is your preferred time zone?", color=Colour.gold(), description=(f"Your current time zone preference is '{memberTimeZones[str(ctx.author.id)]}'." if str(ctx.author.id) in memberTimeZones else "You don't have a preferred time zone set.") + " Enter `none`, a number from the list or any time zone name from the column \"TZ DATABASE NAME\" in the following [Wikipedia article](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones) to make your choice. If you enter `none` or something invalid your current preference will be deleted and you will be asked again the next time you schedule an event. You can change or delete your preferred time zone at any time with the `/changetimezone` command.")
+        embed = Embed(title=SCHEDULE_TIME_ZONE_QUESTION, color=Colour.gold(), description=(f"Your current time zone preference is '{memberTimeZones[str(ctx.author.id)]}'." if str(ctx.author.id) in memberTimeZones else SCHEDULE_TIME_ZONE_UNSET) + SCHEDULE_TIME_ZONE_INFORMATION)
         embed.add_field(name="Time Zone", value="\n".join(f"**{idx}**   {tz}" for idx, tz in enumerate(TIME_ZONES, 1)))
         embed.set_footer(text="Enter `cancel` to keep your current preference")
         try:
@@ -1940,7 +1941,7 @@ class Schedule(commands.Cog):
             response = await self.bot.wait_for("message", timeout=600, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
             timeZone = response.content.strip()
             if self.memberTimeZonesFileLock:
-                embed = Embed(title=":clock3: Time zones file is occupied. This happens rarely, but give it just a few seconds")
+                embed = Embed(title=SCHEDULE_TIME_ZONE_FILE_OCCUPIED)
                 await ctx.author.send(embed=embed)
                 while self.memberTimeZonesFileLock:
                     while self.memberTimeZonesFileLock:
@@ -1963,7 +1964,7 @@ class Schedule(commands.Cog):
                         del memberTimeZones[str(ctx.author.id)]
             with open(MEMBER_TIME_ZONES_FILE, "w") as f:
                 json.dump(memberTimeZones, f, indent=4)
-            embed = Embed(title="✅ Time zone preferences changed", color=Colour.green())
+            embed = Embed(title=SCHEDULE_TIME_ZONE_DONE, color=Colour.green())
             await dmChannel.send(embed=embed)
         except asyncio.TimeoutError:
             await dmChannel.send(embed=TIMEOUT_EMBED)

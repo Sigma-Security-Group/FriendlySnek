@@ -12,7 +12,7 @@ MEMBERS_FILE = "data/members.json"
 
 FTP_A3DS_FOLDER = "/144.48.106.194_2316/A3DS"
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     anvil.server.connect(secret.anvilStatsUplinkKey)
 
 @anvil.server.callable
@@ -80,5 +80,5 @@ def getSsgRep(numLogs=2):
             ftp.retrlines(f"RETR {filename}", lambda l, r=reports: (r.append(l) if "SSG REP" in l and "SSG REP JIP Exec added" not in l and "SSG REP Added " not in l else None))
     return sorted(reports, reverse=True)
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     anvil.server.wait_forever()

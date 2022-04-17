@@ -24,16 +24,17 @@ class WorkshopInterest(commands.Cog):
         if not os.path.exists(WORKSHOP_INTEREST_FILE):
             workshopInterest = {}
             for name, title, description in (
-                ("Newcomer", "Newcomer", "Newcomer"),
-                ("Rotary Wing", "Rotary Wing 🚁", "Rotary Wing 🚁"),
-                ("Fixed Wing", "Fixed Wing ✈️", "Fixed Wing ✈️"),
-                ("JTAC", "JTAC 📡", "JTAC 📡"),
-                ("Medic", "Medic 💉", "Medic 💉"),
-                ("Heavy Weapons", "Heavy Weapons 💣", "Heavy Weapons 💣"),
-                ("Marksman", "Marksman 🎯", "Marksman 🎯"),
-                ("Breacher", "Breacher 🚪", "Breacher 🚪"),
-                ("Mechanised", "Mechanised 🛡️​", "Mechanised 🛡️​"),
-                ("RPV-SO", "RPV-SO 🛩️​", "RPV-SO 🛩️​")
+                ("Newcomer", "Newcomer", ""),
+                ("Rotary Wing", "Rotary Wing 🚁", "Learn to fly helicopters and provide with transport and close air support."),
+                ("Fixed Wing", "Fixed Wing ✈️", "Learn the dynamics of using fixed wing and fighter jet aircraft."),
+                ("JTAC", "JTAC 📡", ""),
+                ("Medic", "Medic 💉", ""),
+                ("Heavy Weapons", "Heavy Weapons 💣", "Learn how to efficiently operate as a machine gun crew, use grenade launchers, and shoot cretins out of shitboxes (AT & AA)."),
+                ("Marksman", "Marksman 🎯", "Learn how to shoot big bullet far."),
+                ("Breacher", "Breacher 🚪", ""),
+                ("Mechanised", "Mechanised 🛡️​", "A short course on driving, gunning, and commanding a 6.21 million dollar reason the heavy weapons guy is useless."),
+                ("RPV-SO", "RPV-SO 🛩️​", ""),
+                ("Team Leading", "Team Leading", "")
             ):
                 workshopInterest[name] = {"title": title, "description": description, "members": [], "messageId": None}
             with open(WORKSHOP_INTEREST_FILE, "w") as f:

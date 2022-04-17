@@ -16,11 +16,10 @@ if platform.system() == 'Windows':
 import json
 import pytz
 from glob import glob
-from datetime import datetime
 # from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 import discord
-from discord.ext import commands, tasks
+from discord.ext import commands
 from discord_slash import SlashCommand
 
 from constants import *
@@ -141,7 +140,7 @@ async def on_ready():
     #     activityMonitorScheduler.start()
     # try:
     #     logActivity.start()
-    # except:
+    # except Exception:
     #     log.warning("Couldn't start logActivity scheduler")
 
 @bot.event
@@ -186,7 +185,7 @@ async def on_member_join(member):
         return
     newcomers.add(member.id)
     log.debug("Member joined")
-    await asyncio.sleep(24 * 60 * 60)  # seconds
+    await asyncio.sleep(24 * 60 * 60)  # Seconds
     if member.id not in newcomers:
         log.debug(f"Newcomer is no longer in the server {member.display_name}({member.name}#{member.discriminator})")
         return

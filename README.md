@@ -1,12 +1,14 @@
-# Introduction
+# FriendlySnek
+
+## Introduction
 
 Friendly Snek is a Discord bot made for *Sigma Security Group* that implements custom commands and features to make Sigma members' lifes easier.
 
-# Prerequisites
+## Prerequisites
 
 The bot requires Python 3.10+ to run.
 
-# Getting Started
+## Getting Started
 
 You must have a [Discord Application](https://discord.com/developers/applications) with Bot enabled as well as all intents.
 
@@ -25,6 +27,6 @@ You can easily control whether the bot should use the debug server instead of th
 
 Make sure that you have all dependencies installed by running `python3 -m pip install -r requirements.txt`.
 
-To run the bot, just run `python3 main.py`.
+To run the bot, just run `python3 -OO main.py`.
 
 To setup slash commands then you need to do something. GIYF & RTFM.

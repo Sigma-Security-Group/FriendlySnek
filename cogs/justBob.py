@@ -114,7 +114,7 @@ class JustBob(commands.Cog):
     #     await self.letsPlayJustBob(ctx)
 
     # @commands.command(name="Le75P14yJu5780b", hidden=True)
-    @cog_ext.cog_slash(name="justbob", description="Play the minigame Just Bob", guild_ids=[SERVER])
+    @cog_ext.cog_slash(name="justbob", description="Play the minigame Just Bob.", guild_ids=[SERVER])
     async def justBob(self, ctx) -> None:
         # await ctx.message.delete()
         if ctx.channel.id != GENERAL or ctx.channel.id != BOT_SPAM:

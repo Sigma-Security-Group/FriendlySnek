@@ -82,16 +82,12 @@ class Schedule(commands.Cog):
         self.bot = bot
         self.eventsFileLock = False
         self.memberTimeZonesFileLock = False
-        # self.autoDeleteScheduler = AsyncIOScheduler()
-        # self.autoDeleteScheduler.add_job(self.autoDeleteEvents, "interval", minutes=10)
-        # self.acceptedReminderScheduler = AsyncIOScheduler()
-        # self.acceptedReminderScheduler.add_job(self.checkAcceptedReminder, "interval", minutes=10)
 
     @commands.Cog.listener()
     async def on_ready(self):
         if cogsReady["schedule"]:
             return
-        log.debug("Schedule Cog is ready", flush=True)
+        log.debug(LOG_IS_READY.format("Schedule"), flush=True)
         cogsReady["schedule"] = True
         if not os.path.exists(EVENTS_HISTORY_FILE):
             with open(EVENTS_HISTORY_FILE, "w") as f:
@@ -100,18 +96,14 @@ class Schedule(commands.Cog):
             with open(WORKSHOP_TEMPLATES_FILE, "w") as f:
                 json.dump([], f, indent=4)
         await self.updateSchedule()
-        # if not self.autoDeleteScheduler.running:
-        #     self.autoDeleteScheduler.start()
-        # if not self.acceptedReminderScheduler.running:
-        #     self.acceptedReminderScheduler.start()
         try:
             self.autoDeleteEvents.start()
         except Exception:
-            log.warning("Couldn't start autoDeleteEvents scheduler!")
+            log.warning(LOG_COULDNT_START.format("autoDeleteEvents scheduler"))
         try:
             self.checkAcceptedReminder.start()
         except Exception:
-            log.warning("Couldn't start checkAcceptedReminder scheduler!")
+            log.warning(LOG_COULDNT_START.format("checkAcceptedReminder scheduler"))
 
     async def saveEventToHistory(self, event, autoDeleted=False):
         guild = self.bot.get_guild(SERVER)
@@ -153,13 +145,7 @@ class Schedule(commands.Cog):
     async def autoDeleteEvents(self):
         while not self.bot.ready:
             await asyncio.sleep(1)
-        # guild = self.bot.get_guild(SERVER)
-        log.debug("Checking to auto delete events...")
-        # if False and self.eventsFileLock:
-        #     while self.eventsFileLock:
-        #         while self.eventsFileLock:
-        #             await asyncio.sleep(0.5)
-        #         await asyncio.sleep(0.5)
+        log.debug(LOG_CHECKING.format("to auto delete events"))
         self.eventsFileLock = False
         try:
             with open(EVENTS_FILE) as f:
@@ -169,7 +155,7 @@ class Schedule(commands.Cog):
             for event in events:
                 endTime = UTC.localize(datetime.strptime(event["endTime"], EVENT_TIME_FORMAT))
                 if utcNow > endTime + timedelta(minutes=90):
-                    log.debug(f"Auto deleting: {event['title']}")
+                    log.debug(LOG_DELETE_EVENT_ACTION.format(event['title']))
                     deletedEvents.append(event)
                     eventMessage = await self.bot.get_channel(SCHEDULE).fetch_message(event["messageId"])
                     await eventMessage.delete()
@@ -178,7 +164,7 @@ class Schedule(commands.Cog):
                     if event["maxPlayers"] != 0:
                         await self.saveEventToHistory(event, autoDeleted=True)
             if len(deletedEvents) == 0:
-                log.debug("No events were auto deleted.")
+                log.debug(LOG_DELETE_EVENT_NONE)
             for event in deletedEvents:
                 events.remove(event)
             with open(EVENTS_FILE, "w") as f:
@@ -193,7 +179,7 @@ class Schedule(commands.Cog):
         while not self.bot.ready:
             await asyncio.sleep(1)
         guild = self.bot.get_guild(SERVER)
-        log.debug("Checking for accepted reminders")
+        log.debug(LOG_CHECKING.format("for accepted reminders"))
         try:
             with open(EVENTS_FILE) as f:
                 events = json.load(f)
@@ -221,34 +207,33 @@ class Schedule(commands.Cog):
                     with open(EVENTS_FILE, "w") as f:
                         json.dump(events, f, indent=4)
                     if len(acceptedMembersNotOnline) > 0:
-                        log.debug(f"Pinging members in accepted not in VC: {[member.display_name for member in acceptedMembersNotOnline]}")
+                        log.debug(LOG_NOTIFICATION_ACCEPTED.format([member.display_name for member in acceptedMembersNotOnline]))
                         await channel.send(" ".join(member.mention for member in acceptedMembersNotOnline) + SCHEDULE_REMINDER_VOICE.format(COMMAND, DEPLOYED, event['type'].lower(), SCHEDULE))
                     if len(onlineMembersNotAccepted) > 0:
-                        log.debug(f"Pinging members in VC not in accepted: {[member.display_name for member in onlineMembersNotAccepted]}")
+                        log.debug(LOG_NOTIFICATION_VC.format([member.display_name for member in onlineMembersNotAccepted]))
                         await channel.send(" ".join(member.mention for member in onlineMembersNotAccepted) + SCHEDULE_REMINDER_INGAME.format(SCHEDULE))
         except Exception as e:
             print(e)
 
-
     @cog_ext.cog_slash(name="refreshschedule",
-                       description="Refresh the schedule. Use this command if an event was deleted without using the reactions.",
-                       guild_ids=[SERVER],
-                       permissions={
-                           SERVER: [
-                               create_permission(EVERYONE, SlashCommandPermissionType.ROLE, False),
-                               create_permission(UNIT_STAFF, SlashCommandPermissionType.ROLE, True),
-                               create_permission(ZEUS, SlashCommandPermissionType.ROLE, True),
-                               create_permission(CURATOR, SlashCommandPermissionType.ROLE, True),
-                           ]
-                       })
+                        description=REFRESH_SCHEDULE_COMMAND_DESCRIPTION,
+                        guild_ids=[SERVER],
+                        permissions={
+                            SERVER: [
+                                create_permission(EVERYONE, SlashCommandPermissionType.ROLE, False),
+                                create_permission(UNIT_STAFF, SlashCommandPermissionType.ROLE, True),
+                                create_permission(ZEUS, SlashCommandPermissionType.ROLE, True),
+                                create_permission(CURATOR, SlashCommandPermissionType.ROLE, True),
+                            ]
+                        })
     async def refreshSchedule(self, ctx: SlashContext):
-        await ctx.send(f"Refreshing <#{SCHEDULE}>...")
+        await ctx.send(SCHEDULE_REFRESHING.format(SCHEDULE))
         await self.updateSchedule()
 
     async def updateSchedule(self):
         self.lastUpdate = datetime.utcnow()
         channel = self.bot.get_channel(SCHEDULE)
-        await channel.purge(limit=None, check=lambda m: m.author.id in (FRIENDLY_SNEK, FRIENDLY_SNEK_DEV))
+        await channel.purge(limit=None, check=lambda m: m.author.id in FRIENDLY_SNEKS)
 
         await channel.send(SCHEDULE_INTRO_MESSAGE.format(channel.guild.get_member(ADRIAN).display_name, channel.guild.get_member(FROGGI).display_name))
 
@@ -258,8 +243,8 @@ class Schedule(commands.Cog):
                 with open(EVENTS_FILE) as f:
                     events = json.load(f)
                 if len(events) == 0:
-                    await channel.send("...\nNo bop?\n...\nSnek is sad")
-                    await channel.send(":cry:")
+                    await channel.send(SCHEDULE_EMPTY_1)
+                    await channel.send(SCHEDULE_EMPTY_2)
                 for event in sorted(events, key=lambda e: datetime.strptime(e["time"], EVENT_TIME_FORMAT), reverse=True):
                     embed = self.getEventEmbed(event)
                     msg = await channel.send(embed=embed)
@@ -307,7 +292,6 @@ class Schedule(commands.Cog):
 
         accepted = [member.display_name for memberId in event["accepted"] if (member := guild.get_member(memberId)) is not None]
         standby = []
-        numReservableRoles = 0 if event["reservableRoles"] is None else len(event["reservableRoles"])
         if event["maxPlayers"] is not None and len(accepted) > event["maxPlayers"]:
             accepted, standby = accepted[:event["maxPlayers"]], accepted[event["maxPlayers"]:]
         declined = [member.display_name for memberId in event["declined"] if (member := guild.get_member(memberId)) is not None]
@@ -320,6 +304,10 @@ class Schedule(commands.Cog):
             embed.add_field(name=f"Tentative ({len(tentative)}) ❓", value="\n".join(name for name in tentative) if len(tentative) > 0 else "-", inline=True)
             if len(standby) > 0:
                 embed.add_field(name=f"Standby ({len(standby)}) :clock3:", value="\n".join(name for name in standby), inline=False)
+        else:
+            embed.add_field(name=f"Accepted ({len(accepted + standby)}) ✅", value="\u200B", inline=True)
+            embed.add_field(name=f"Declined ({len(declinedForTiming)}) ⏱/❌ ({len(declined)})", value="\u200B", inline=True)
+            embed.add_field(name=f"Tentative ({len(tentative)}) ❓", value="\u200B", inline=True)
 
         author = guild.get_member(event["authorId"])
         embed.set_footer(text=f"Created by {author.display_name}") if author else embed.set_footer(text="Created by Unknown User")
@@ -331,11 +319,6 @@ class Schedule(commands.Cog):
     async def on_raw_reaction_add(self, payload):
         if payload.channel_id != SCHEDULE:
             return
-        #if False and self.eventsFileLock:
-        #    while self.eventsFileLock:
-        #        while self.eventsFileLock:
-        #            await asyncio.sleep(0.5)
-        #        await asyncio.sleep(0.5)
         self.eventsFileLock = False
         try:
             with open(EVENTS_FILE) as f:
@@ -448,13 +431,13 @@ class Schedule(commands.Cog):
             event["accepted"].append(member.id)
 
         if event["maxPlayers"] is not None and len(event["accepted"]) >= event["maxPlayers"] and member.id not in event["accepted"]:
-            embed = Embed(title="❌ Sorry, seems like there's no space left in the :b:op!")
+            embed = Embed(title=SCHEDULE_BOP_NO_SPACE)
             try:
                 await member.send(embed=embed)
             except Exception as e:
                 print(member, e)
                 try:
-                    print("Sending friend request...")
+                    print(LOG_FRIEND_REQ)
                     await member.send_friend_request()
                 except Exception as e:
                     print(e)
@@ -463,7 +446,7 @@ class Schedule(commands.Cog):
         vacantRoles = [roleName for roleName, memberId in event["reservableRoles"].items() if memberId is None or guild.get_member(memberId) is None]
         currentRole = [roleName for roleName, memberId in event["reservableRoles"].items() if memberId == member.id][0] if member.id in event["reservableRoles"].values() else None
 
-        embed = Embed(title="Which role would you like to reserve?", color=Colour.gold(), description="Enter a number from the list, `none` to free up the role you currently have reserved. If you enter anything invalid it will cancel the role reservation")
+        embed = Embed(title=SCHEDULE_RESERVABLE_QUESTION, color=Colour.gold(), description=SCHEDULE_RESERVABLE_PROMPT)
         embed.add_field(name="Your current role", value=currentRole if currentRole is not None else "None", inline=False)
         embed.add_field(name="Vacant roles", value="\n".join(f"**{idx}**   {roleName}" for idx, roleName in enumerate(vacantRoles, 1)) if len(vacantRoles) > 0 else "None", inline=False)
 
@@ -472,7 +455,7 @@ class Schedule(commands.Cog):
         except Exception as e:
             print(member, e)
             try:
-                print("Sending friend request...")
+                print(LOG_FRIEND_REQ)
                 await member.send_friend_request()
             except Exception as e:
                 print(e)
@@ -486,7 +469,7 @@ class Schedule(commands.Cog):
             elif reservedRole.strip().lower() == "none":
                 reservedRole = None
             else:
-                embed = Embed(title="Role reservation cancelled", color=Colour.red())
+                embed = Embed(title=SCHEDULE_RESERVABLE_CANCELLED, color=Colour.red())
                 await dmChannel.send(embed=embed)
                 return
         except asyncio.TimeoutError:
@@ -506,17 +489,17 @@ class Schedule(commands.Cog):
                         event["reservableRoles"][roleName] = None
 
         if reservationTime > self.lastUpdate:
-            embed = Embed(title="Role reservation completed", color=Colour.green())
+            embed = Embed(title=SCHEDULE_RESERVABLE_COMPLETED, color=Colour.green())
             await dmChannel.send(embed=embed)
         else:
-            embed = Embed(title="❌ Schedule was updated while you were reserving a role. Try again!", color=Colour.red())
+            embed = Embed(title=SCHEDULE_RESERVABLE_SCHEDULE_ERROR, color=Colour.red())
             await dmChannel.send(embed=embed)
-            log.debug(f"{member.display_name}({member.name}#{member.discriminator}) was reserving a role but schedule was updated")
+            log.debug(LOG_SCHEDULE_UPDATE_ERROR.format(member.display_name, member.name, member.discriminator, "reserving a role"))
 
     async def editEvent(self, author, event):
         editingTime = datetime.utcnow()
-        log.info(f"{author.display_name}({author.name}#{author.discriminator}) is editing an event")
-        embed = Embed(title=":pencil2: What would you like to edit?", color=Colour.gold())
+        log.info(LOG_EDITING_EVENT.format(author.display_name, author.name, author.discriminator, "an event"))
+        embed = Embed(title=SCHEDULE_EVENT_EDIT, color=Colour.gold())
         embed.add_field(name="**0** Type", value=f"```{event['type']}```", inline=False)
         embed.add_field(name="**1** Title", value=f"```{event['title']}```", inline=False)
         embed.add_field(name="**2** Description", value=f"```{event['description'] if len(event['description']) < 500 else event['description'][:500] + ' [...]'}```", inline=False)
@@ -531,7 +514,7 @@ class Schedule(commands.Cog):
         except Exception as e:
             print(author, e)
             try:
-                print("Sending friend request...")
+                print(LOG_FRIEND_REQ)
                 await author.send_friend_request()
             except Exception as e:
                 print(e)
@@ -544,7 +527,7 @@ class Schedule(commands.Cog):
             await dmChannel.send(embed=TIMEOUT_EMBED)
             return False
         while choice not in ("0", "1", "2", "3", "4", "5", "6", "7", "8"):
-            embed = Embed(title="❌ Wrong input", colour=Colour.red(), description="Enter the number of an attribute")
+            embed = Embed(title=SCHEDULE_INPUT_ERROR, colour=Colour.red(), description=SCHEDULE_NUMBER_FROM_TO.format(0, 8))
             await dmChannel.send(embed=embed)
             try:
                 response = await self.bot.wait_for("message", timeout=120, check=lambda msg, author=author, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
@@ -557,17 +540,9 @@ class Schedule(commands.Cog):
 
         match choice:
             case "0":
-                embed = Embed(title=":pencil2: What is the type of your event?", description="Please choose a number from the list below", color=Colour.gold())
-                embed.add_field(name="Type", value="**1** 🟩 Operation\n**2** 🟦 Workshop\n**3** 🟨 Event")
-                await dmChannel.send(embed=embed)
-                try:
-                    response = await self.bot.wait_for("message", timeout=60, check=lambda msg, author=author, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
-                    eventTypeNum = response.content.strip()
-                except asyncio.TimeoutError:
-                    await dmChannel.send(embed=TIMEOUT_EMBED)
-                    return False
+                eventTypeNum = None
                 while eventTypeNum not in ("1", "2", "3"):
-                    embed = Embed(title=":pencil2: What is the type of your event?", description="Please choose a number from the list below", color=Colour.gold())
+                    embed = Embed(title=SCHEDULE_EVENT_TYPE, description=SCHEDULE_NUMBER_FROM_TO.format(1, 3), color=Colour.gold())
                     embed.add_field(name="Type", value="**1** 🟩 Operation\n**2** 🟦 Workshop\n**3** 🟨 Event")
                     await dmChannel.send(embed=embed)
                     try:
@@ -579,7 +554,7 @@ class Schedule(commands.Cog):
                 event["type"] = {"1": "Operation", "2": "Workshop", "3": "Event"}.get(eventTypeNum, "Operation")
 
             case "1":
-                embed = Embed(title=f":pencil2: What is the title of your {event.get('type', 'Operation').lower()}?", color=Colour.gold())
+                embed = Embed(title=SCHEDULE_EVENT_TITLE.format(event.get('type', 'Operation').lower()), color=Colour.gold())
                 await dmChannel.send(embed=embed)
                 try:
                     response = await self.bot.wait_for("message", timeout=600, check=lambda msg, author=author, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
@@ -590,7 +565,7 @@ class Schedule(commands.Cog):
                 event["title"] = title
 
             case "2":
-                embed = Embed(title=":notepad_spiral: What is the event description?", description=f"Current description:\n```{event['description']}```", color=Colour.gold())
+                embed = Embed(title=SCHEDULE_EVENT_DESCRIPTION_QUESTION, description=SCHEDULE_EVENT_DESCRIPTION.format(event["description"]), color=Colour.gold())
                 await dmChannel.send(embed=embed)
                 try:
                     response = await self.bot.wait_for("message", timeout=1800, check=lambda msg, author=author, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
@@ -601,7 +576,7 @@ class Schedule(commands.Cog):
                 event["description"] = description
 
             case "3":
-                embed = Embed(title=":notebook_with_decorative_cover: Enter `none` or a URL \n e.g. Signup sheet / Briefing / OPORD", color=Colour.gold())
+                embed = Embed(title=SCHEDULE_EVENT_URL_TITLE, description=SCHEDULE_EVENT_URL_DESCRIPTION, color=Colour.gold())
                 await dmChannel.send(embed=embed)
                 try:
                     response = await self.bot.wait_for("message", timeout=600, check=lambda msg, author=author, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
@@ -614,7 +589,7 @@ class Schedule(commands.Cog):
                 event["externalURL"] = externalURL
 
             case "4":
-                embed = Embed(title="Are there any reservable roles?", color=Colour.gold(), description="Enter `yes` or `y` if there are reservable roles or enter anything else if there are not.")
+                embed = Embed(title=SCHEDULE_EVENT_RESERVABLE_QUESTION, color=Colour.gold(), description=SCHEDULE_EVENT_RESERVABLE_PROMPT)
                 await dmChannel.send(embed=embed)
                 try:
                     response = await self.bot.wait_for("message", timeout=600, check=lambda msg, author=author, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
@@ -623,8 +598,8 @@ class Schedule(commands.Cog):
                     await dmChannel.send(embed=TIMEOUT_EMBED)
                     return False
                 if reservableRolesPresent:
-                    embed = Embed(title="Type each reservable role in its own line (in a single message)", color=Colour.gold(), description="Press Shift + Enter to insert a newline. Editing the name of a role will make it vacant, but roles which keep their exact names will keep their reservations")
-                    embed.add_field(name="Current reservable roles", value=("```\n" + "\n".join(event["reservableRoles"].keys()) + "```") if event["reservableRoles"] is not None else "None")
+                    embed = Embed(title=SCHEDULE_EVENT_RESERVABLE_LIST_TITLE, color=Colour.gold(), description=SCHEDULE_EVENT_RESERVABLE_LIST_DESCRIPTION)
+                    embed.add_field(name=SCHEDULE_EVENT_RESERVABLE_LIST_CURRENT, value=("```\n" + "\n".join(event["reservableRoles"].keys()) + "```") if event["reservableRoles"] is not None else "None")
                     await dmChannel.send(embed=embed)
                     try:
                         response = await self.bot.wait_for("message", timeout=600, check=lambda msg, author=author, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
@@ -638,24 +613,11 @@ class Schedule(commands.Cog):
                 reorderEvents = True
 
             case "5":
-                embed = Embed(title=":globe_with_meridians: Enter Your Map Number", color=Colour.gold(), description="Choose from the list below or enter `none` for no map.")
-                embed.add_field(name="Map", value="\n".join(f"**{idx}**   {mapName}" for idx, mapName in enumerate(MAPS, 1)))
-                await dmChannel.send(embed=embed)
-                try:
-                    response = await self.bot.wait_for("message", timeout=600, check=lambda msg, author=author, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
-                    eventMap = response.content.strip()
-                    mapOK = True
-                    if eventMap.isdigit() and int(eventMap) <= len(MAPS) and int(eventMap) > 0:
-                        eventMap = MAPS[int(eventMap) - 1]
-                    elif eventMap.strip().lower() == "none":
-                        eventMap = None
-                    else:
-                        mapOK = False
-                except asyncio.TimeoutError:
-                    await dmChannel.send(embed=TIMEOUT_EMBED)
-                    return False
+                mapOK = False
+                color = Colour.gold()
                 while not mapOK:
-                    embed = Embed(title=":globe_with_meridians: Enter Your Map Number", color=Colour.gold(), description="Choose from the list below or enter `none` for no map.")
+                    embed = Embed(title=SCHEDULE_EVENT_MAP_PROMPT, color=color, description=SCHEDULE_NUMBER_FROM_TO_OR_NONE.format(1, len(MAPS)))
+                    color = Colour.red()
                     embed.add_field(name="Map", value="\n".join(f"**{idx}**   {mapName}" for idx, mapName in enumerate(MAPS, 1)))
                     await dmChannel.send(embed=embed)
                     try:
@@ -674,7 +636,7 @@ class Schedule(commands.Cog):
                 event["map"] = eventMap
 
             case "6":
-                embed = Embed(title=":family_man_boy_boy: What is the maximum number of attendees?", color=Colour.gold(), description="Enter `none` or a non-negative number.")
+                embed = Embed(title=SCHEDULE_EVENT_MAX_PLAYERS, color=Colour.gold(), description=SCHEDULE_NUMBER_NON_NEGATIVE_OR_NONE)
                 await dmChannel.send(embed=embed)
                 try:
                     response = await self.bot.wait_for("message", timeout=600, check=lambda msg, author=author, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
@@ -698,7 +660,7 @@ class Schedule(commands.Cog):
                     except pytz.exceptions.UnknownTimeZoneError:
                         timeZone = UTC
                 else:
-                    embed = Embed(title=":clock1: It appears that you haven't set your preferred time zone yet. What is your preferred time zone?", color=Colour.gold(), description="Enter `none`, a number from the list or any time zone name from the column \"TZ DATABASE NAME\" in the following [Wikipedia article](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones) to make your choice. If you enter `none` or something invalid UTC will be assumed and you will be asked again the next time you schedule an event. You can change or delete your preferred time zone at any time with the `/changeTimeZone` command.")
+                    embed = Embed(title=SCHEDULE_EVENT_TIME_ZONE_QUESTION, color=Colour.gold(), description=SCHEDULE_EVENT_TIME_ZONE_PROMPT)
                     embed.add_field(name="Time Zone", value="\n".join(f"**{idx}**   {tz}" for idx, tz in enumerate(TIME_ZONES, 1)))
                     await dmChannel.send(embed=embed)
                     try:
@@ -723,7 +685,7 @@ class Schedule(commands.Cog):
 
                 startTimeOk = False
                 while not startTimeOk:
-                    embed = Embed(title="What is the time of the event?", color=Colour.gold(), description=f"Your selected time zone is '{timeZone.zone}'")
+                    embed = Embed(title=SCHEDULE_EVENT_TIME.format("event"), color=Colour.gold(), description=SCHEDULE_EVENT_SELECTED_TIME_ZONE.format(timeZone.zone))
                     embed.add_field(name="Current Value", value=UTC.localize(datetime.strptime(event["time"], EVENT_TIME_FORMAT)).astimezone(timeZone).strftime(EVENT_TIME_FORMAT))
                     await dmChannel.send(embed=embed)
                     try:
@@ -738,7 +700,7 @@ class Schedule(commands.Cog):
                     except ValueError:
                         isFormatCorrect = False
                     while not isFormatCorrect:
-                        embed = Embed(title="❌ Wrong format", colour=Colour.red(), description="e.g. 2021-08-08 9:30 PM")
+                        embed = Embed(title=SCHEDULE_INPUT_ERROR, colour=Colour.red(), description=SCHEDULE_EVENT_TIME_FORMAT)
                         await dmChannel.send(embed=embed)
                         try:
                             response = await self.bot.wait_for("message", timeout=600, check=lambda msg, author=author, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
@@ -756,12 +718,12 @@ class Schedule(commands.Cog):
                     if startTime < UTC.localize(utcNow):
                         if (delta := UTC.localize(utcNow) - startTime) > timedelta(hours=1) and delta < timedelta(days=1):
                             newStartTime = startTime + timedelta(days=1)
-                            embed = Embed(title="Time was detected to be in the past 24h and was set to tomorrow.", description=f"Input time: <t:{round(startTime.timestamp())}:F>\nSelected time: <t:{round(newStartTime.timestamp())}:F>")
+                            embed = Embed(title=SCHEDULE_EVENT_TIME_TOMORROW, description=SCHEDULE_EVENT_TIME_TOMORROW_PREVIEW.format(round(startTime.timestamp()), round(newStartTime.timestamp())))
                             await dmChannel.send(embed=embed)
                             startTime = newStartTime
                             startTimeOk = True
                         else:
-                            embed = Embed(title="It appears that the selected time is in the past. Are you sure you want to set it to this?", description="Enter `yes` or `y` to keep this time. Enter anything else to change it to another time.")
+                            embed = Embed(title=SCHEDULE_EVENT_TIME_PAST_QUESTION, description=SCHEDULE_EVENT_TIME_PAST_PROMPT)
                             await dmChannel.send(embed=embed)
                             try:
                                 response = await self.bot.wait_for("message", timeout=60, check=lambda msg, author=author, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
@@ -785,7 +747,7 @@ class Schedule(commands.Cog):
                 event["endTime"] = endTime.strftime(EVENT_TIME_FORMAT)
                 reorderEvents = True
                 guild = self.bot.get_guild(SERVER)
-                embed = Embed(title=f":clock3: The starting time has changed for: {event['title']}", description=f"From: <t:{round(UTC.localize(datetime.strptime(oldStartTime, EVENT_TIME_FORMAT)).timestamp())}:F>\n\u2000\u2000To: <t:{round(UTC.localize(datetime.strptime(event['time'], EVENT_TIME_FORMAT)).timestamp())}:F>")
+                embed = Embed(title=SCHEDULE_EVENT_START_TIME_CHANGE_TITLE.format(event["title"]), description=SCHEDULE_EVENT_START_TIME_CHANGE_DESCRIPTION.format(round(UTC.localize(datetime.strptime(oldStartTime, EVENT_TIME_FORMAT)).timestamp()), round(UTC.localize(datetime.strptime(event['time'], EVENT_TIME_FORMAT)).timestamp())))
                 for memberId in event["accepted"] + event.get("declinedForTiming", []) + event["tentative"]:
                     member = guild.get_member(memberId)
                     if member is not None:
@@ -794,13 +756,13 @@ class Schedule(commands.Cog):
                         except Exception as e:
                             print(member, e)
                             try:
-                                print("Sending friend request...")
+                                print(LOG_FRIEND_REQ)
                                 await member.send_friend_request()
                             except Exception as e:
                                 print(e)
 
             case "8":
-                embed = Embed(title="What is the duration of the event?", color=Colour.gold(), description="e.g. 30m\ne.g. 2h\ne.g. 4h 30m\ne.g. 2h30")
+                embed = Embed(title=SCHEDULE_EVENT_DURATION_QUESTION.format("event"), color=Colour.gold(), description=SCHEDULE_EVENT_DURATION_PROMPT)
                 await dmChannel.send(embed=embed)
                 try:
                     response = await self.bot.wait_for("message", timeout=600, check=lambda msg, author=author, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
@@ -808,8 +770,8 @@ class Schedule(commands.Cog):
                 except asyncio.TimeoutError:
                     await dmChannel.send(embed=TIMEOUT_EMBED)
                     return False
-                while not re.match(r"^\s*((([1-9]\d*)?\d\s*h(\s*([0-5])?\d\s*m?)?)|(([0-5])?\d\s*m))\s*$", duration):
-                    embed = Embed(title="❌ Wrong format", colour=Colour.red(), description="e.g. 30m\ne.g. 2h\ne.g. 4h 30m\ne.g. 2h30")
+                while not re.match(SCHEDULE_EVENT_DURATION_REGEX, duration):
+                    embed = Embed(title=SCHEDULE_INPUT_ERROR, colour=Colour.red(), description=SCHEDULE_EVENT_DURATION_PROMPT)
                     await dmChannel.send(embed=embed)
                     try:
                         response = await self.bot.wait_for("message", timeout=600, check=lambda msg, author=author, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
@@ -827,23 +789,23 @@ class Schedule(commands.Cog):
                 event["endTime"] = endTime.strftime(EVENT_TIME_FORMAT)
 
         if editingTime > self.lastUpdate:
-            embed = Embed(title="✅ Event edited", color=Colour.green())
+            embed = Embed(title=SCHEDULE_EVENT_EDITED.format(event["type"]), color=Colour.green())
             await dmChannel.send(embed=embed)
-            log.info(f"{author.display_name}({author.name}#{author.discriminator}) edited an event")
+            log.info(LOG_EDITED_EVENT.format(author.display_name, author.name, author.discriminator, "an event"))
             return reorderEvents
         else:
-            embed = Embed(title="❌ Schedule was updated while you were editing your operation. Try again!", color=Colour.red())
+            embed = Embed(title=SCHEDULE_EVENT_EDIT_ERROR, color=Colour.red())
             await dmChannel.send(embed=embed)
-            log.info(f"{author.display_name}({author.name}#{author.discriminator}) was editing an event but schedule was updated")
+            log.info(LOG_SCHEDULE_UPDATE_ERROR.format(author.display_name, author.name, author.discriminator, "editing an event"))
             return False
 
     async def deleteEvent(self, author, message, event):
         try:
-            msg = await author.send("Are you sure you want to delete this event?")
+            msg = await author.send(SCHEDULE_EVENT_CONFIRM_DELETE)
         except Exception as e:
             print(author, e)
             try:
-                print("Sending friend request...")
+                print(LOG_FRIEND_REQ)
                 await author.send_friend_request()
             except Exception as e:
                 print(e)
@@ -856,7 +818,7 @@ class Schedule(commands.Cog):
             return False
         await message.delete()
         try:
-            embed = Embed(title="✅ Event deleted", color=Colour.green())
+            embed = Embed(title=SCHEDULE_EVENT_DELETED.format(event["type"]), color=Colour.green())
             await author.send(embed=embed)
 
             utcNow = UTC.localize(datetime.utcnow())
@@ -868,13 +830,13 @@ class Schedule(commands.Cog):
                 for memberId in event["accepted"] + event.get("declinedForTiming", []) + event["tentative"]:
                     member = guild.get_member(memberId)
                     if member is not None:
-                        embed = Embed(title=f"🗑 {event.get('type', 'Operation')} deleted: {event['title']}", description=f"Was scheduled for:\n<t:{round(UTC.localize(datetime.strptime(event['time'], EVENT_TIME_FORMAT)).timestamp())}:F>")
+                        embed = Embed(title=SCHEDULE_EVENT_DELETED_TITLE.format(event.get("type", "Operation"), event["title"]), description=SCHEDULE_EVENT_DELETED_DESCRIPTION.format(event.get("type", "Operation").lower(), event["title"], round(UTC.localize(datetime.strptime(event['time'], EVENT_TIME_FORMAT)).timestamp())))
                         try:
                             await member.send(embed=embed)
                         except Exception as e:
                             print(member, e)
                             try:
-                                print("Sending friend request...")
+                                print(LOG_FRIEND_REQ)
                                 await member.send_friend_request()
                             except Exception as e:
                                 print(e)
@@ -882,29 +844,28 @@ class Schedule(commands.Cog):
             print(e)
         return True
 
-    @cog_ext.cog_slash(name="bop", description="Create an operation to add to the schedule.", guild_ids=[SERVER])
+    @cog_ext.cog_slash(name="bop", description=SCHEDULE_COMMAND_DESCRIPTION.format("an operation"), guild_ids=[SERVER])
     async def bop(self, ctx: SlashContext):
         await self.scheduleOperation(ctx)
 
-    @cog_ext.cog_slash(name="operation", description="Create an operation to add to the schedule.", guild_ids=[SERVER])
+    @cog_ext.cog_slash(name="operation", description=SCHEDULE_COMMAND_DESCRIPTION.format("an operation"), guild_ids=[SERVER])
     async def operation(self, ctx: SlashContext):
         await self.scheduleOperation(ctx)
 
     async def scheduleOperation(self, ctx):
-        await ctx.send("Scheduling... Standby for :b:op.")
-        log.info(f"{ctx.author.display_name}({ctx.author.name}#{ctx.author.discriminator}) is creating an operation")
+        await ctx.send(SCHEDULE_EVENT_MESSAGE_PROGRESS.format(":b:op."))
+        log.info(LOG_CREATING_EVENT.format(ctx.author.display_name, ctx.author.name, ctx.author.discriminator, "an operation"))
 
         utcNow = UTC.localize(datetime.utcnow())
-
         authorId = ctx.author.id
 
-        embed = Embed(title=":pencil2: What is the title of your operation?", description="Remeber, operation names should start with the word 'Operation'\ne.g. Operation Red Tide", color=Colour.gold())
+        embed = Embed(title=SCHEDULE_EVENT_TITLE.format("operation"), description=SCHEDULE_EVENT_TITLE_OPERATION_REMINDER, color=Colour.gold())
         try:
             msg = await ctx.author.send(embed=embed)
         except Exception as e:
             print(ctx.author, e)
             try:
-                print("Sending friend request...")
+                print(LOG_FRIEND_REQ)
                 await ctx.author.send_friend_request()
             except Exception as e:
                 print(e)
@@ -917,7 +878,7 @@ class Schedule(commands.Cog):
             await dmChannel.send(embed=TIMEOUT_EMBED)
             return
 
-        embed = Embed(title=":notepad_spiral: What is the description?", color=Colour.gold())
+        embed = Embed(title=SCHEDULE_EVENT_DESCRIPTION_QUESTION, color=Colour.gold())
         await dmChannel.send(embed=embed)
         try:
             response = await self.bot.wait_for("message", timeout=1800, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
@@ -926,7 +887,7 @@ class Schedule(commands.Cog):
             await dmChannel.send(embed=TIMEOUT_EMBED)
             return
 
-        embed = Embed(title=":notebook_with_decorative_cover: Enter `none` or a URL \n e.g. Signup sheet / Briefing / OPORD", color=Colour.gold())
+        embed = Embed(title=SCHEDULE_EVENT_URL_TITLE, description=SCHEDULE_EVENT_URL_DESCRIPTION, color=Colour.gold())
         await dmChannel.send(embed=embed)
         try:
             response = await self.bot.wait_for("message", timeout=600, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
@@ -937,7 +898,7 @@ class Schedule(commands.Cog):
             await dmChannel.send(embed=TIMEOUT_EMBED)
             return
 
-        embed = Embed(title="Are there any reservable roles?", color=Colour.gold(), description="Enter `yes` or `y` if there are reservable roles or enter anything else if there are not.")
+        embed = Embed(title=SCHEDULE_EVENT_RESERVABLE_QUESTION, color=Colour.gold(), description=SCHEDULE_EVENT_RESERVABLE_PROMPT)
         await dmChannel.send(embed=embed)
         try:
             response = await self.bot.wait_for("message", timeout=600, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
@@ -946,7 +907,7 @@ class Schedule(commands.Cog):
             await dmChannel.send(embed=TIMEOUT_EMBED)
             return
         if reservableRolesPresent:
-            embed = Embed(title="Type each reservable role in its own line (in a single message)", color=Colour.gold(), description="Press Shift + Enter to insert a newline")
+            embed = Embed(title=SCHEDULE_EVENT_RESERVABLE_LIST_TITLE, color=Colour.gold(), description=SCHEDULE_EVENT_RESERVABLE_LIST_DESCRIPTION)
             await dmChannel.send(embed=embed)
             try:
                 response = await self.bot.wait_for("message", timeout=600, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
@@ -957,24 +918,11 @@ class Schedule(commands.Cog):
         else:
             reservableRoles = None
 
-        embed = Embed(title=":globe_with_meridians: Enter Your Map Number", color=Colour.gold(), description="Choose a number from the list below or enter `none` for no map.")
-        embed.add_field(name="Map", value="\n".join(f"**{idx}**   {mapName}" for idx, mapName in enumerate(MAPS, 1)))
-        await dmChannel.send(embed=embed)
-        try:
-            response = await self.bot.wait_for("message", timeout=600, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
-            eventMap = response.content.strip()
-            mapOK = True
-            if eventMap.isdigit() and int(eventMap) <= len(MAPS) and int(eventMap) > 0:
-                eventMap = MAPS[int(eventMap) - 1]
-            elif eventMap.strip().lower() == "none":
-                eventMap = None
-            else:
-                mapOK = False
-        except asyncio.TimeoutError:
-            await dmChannel.send(embed=TIMEOUT_EMBED)
-            return
+        mapOK = False
+        color = Colour.gold()
         while not mapOK:
-            embed = Embed(title="❌ Wrong format", color=Colour.red(), description="Choose a number from the list below or enter `none` for no map.")
+            embed = Embed(title=SCHEDULE_EVENT_MAP_PROMPT, color=color, description=SCHEDULE_NUMBER_FROM_TO_OR_NONE.format(1, len(MAPS)))
+            color = Colour.red()
             embed.add_field(name="Map", value="\n".join(f"**{idx}**   {mapName}" for idx, mapName in enumerate(MAPS, 1)))
             await dmChannel.send(embed=embed)
             try:
@@ -991,7 +939,7 @@ class Schedule(commands.Cog):
                 await dmChannel.send(embed=TIMEOUT_EMBED)
                 return
 
-        embed = Embed(title=":family_man_boy_boy: What is the maximum number of attendees?", color=Colour.gold(), description="Enter `none` or a non-negative number.")
+        embed = Embed(title=SCHEDULE_EVENT_MAX_PLAYERS, color=Colour.gold(), description=SCHEDULE_NUMBER_NON_NEGATIVE_OR_NONE)
         await dmChannel.send(embed=embed)
         try:
             response = await self.bot.wait_for("message", timeout=600, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
@@ -1004,7 +952,7 @@ class Schedule(commands.Cog):
             await dmChannel.send(embed=TIMEOUT_EMBED)
             return
 
-        embed = Embed(title="What is the duration of the operation?", color=Colour.gold(), description="e.g. 30m\ne.g. 2h\ne.g. 4h 30m\ne.g. 2h30")
+        embed = Embed(title=SCHEDULE_EVENT_DURATION_QUESTION.format("operation"), color=Colour.gold(), description=SCHEDULE_EVENT_DURATION_PROMPT)
         await dmChannel.send(embed=embed)
         try:
             response = await self.bot.wait_for("message", timeout=600, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
@@ -1012,8 +960,8 @@ class Schedule(commands.Cog):
         except asyncio.TimeoutError:
             await dmChannel.send(embed=TIMEOUT_EMBED)
             return
-        while not re.match(r"^\s*((([1-9]\d*)?\d\s*h(\s*([0-5])?\d\s*m?)?)|(([0-5])?\d\s*m))\s*$", duration):
-            embed = Embed(title="❌ Wrong format", colour=Colour.red(), description="e.g. 30m\ne.g. 2h\ne.g. 4h 30m\ne.g. 2h30")
+        while not re.match(SCHEDULE_EVENT_DURATION_REGEX, duration):
+            embed = Embed(title=SCHEDULE_INPUT_ERROR, colour=Colour.red(), description=SCHEDULE_EVENT_DURATION_PROMPT)
             await dmChannel.send(embed=embed)
             try:
                 response = await self.bot.wait_for("message", timeout=600, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
@@ -1036,7 +984,7 @@ class Schedule(commands.Cog):
             except pytz.exceptions.UnknownTimeZoneError:
                 timeZone = UTC
         else:
-            embed = Embed(title=":clock1: It appears that you don't have a preferred time zone currently set. What is your preferred time zone?", color=Colour.gold(), description="Enter `none`, a number from the list or any time zone name from the column \"TZ DATABASE NAME\" in the following [Wikipedia article](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones) to make your choice. If you enter `none` or something invalid UTC will be assumed and you will be asked again the next time you schedule an event. You can change or delete your preferred time zone at any time with the `/changetimezone` command.")
+            embed = Embed(title=SCHEDULE_EVENT_TIME_ZONE_QUESTION, color=Colour.gold(), description=SCHEDULE_EVENT_TIME_ZONE_PROMPT)
             embed.add_field(name="Time Zone", value="\n".join(f"**{idx}**   {tz}" for idx, tz in enumerate(TIME_ZONES, 1)))
             await dmChannel.send(embed=embed)
             try:
@@ -1066,7 +1014,7 @@ class Schedule(commands.Cog):
 
             startTimeOk = False
             while not startTimeOk:
-                embed = Embed(title="What is the time of the operation?", color=Colour.gold(), description=f"Your selected time zone is '{timeZone.zone}'")
+                embed = Embed(title=SCHEDULE_EVENT_TIME.format("operation"), color=Colour.gold(), description=SCHEDULE_EVENT_SELECTED_TIME_ZONE.format(timeZone.zone))
                 utcNow = datetime.utcnow()
                 nextHalfHour = utcNow + (datetime.min - utcNow) % timedelta(minutes=30)
                 embed.add_field(name="Example", value=UTC.localize(nextHalfHour).astimezone(timeZone).strftime(EVENT_TIME_FORMAT))
@@ -1083,7 +1031,7 @@ class Schedule(commands.Cog):
                 except ValueError:
                     isFormatCorrect = False
                 while not isFormatCorrect:
-                    embed = Embed(title="❌ Wrong format", colour=Colour.red(), description="e.g. 2021-08-08 9:30 PM")
+                    embed = Embed(title=SCHEDULE_INPUT_ERROR, colour=Colour.red(), description=SCHEDULE_EVENT_TIME_FORMAT)
                     await dmChannel.send(embed=embed)
                     try:
                         response = await self.bot.wait_for("message", timeout=600, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
@@ -1100,12 +1048,12 @@ class Schedule(commands.Cog):
                 if startTime < UTC.localize(utcNow):
                     if (delta := UTC.localize(utcNow) - startTime) > timedelta(hours=1) and delta < timedelta(days=1):
                         newStartTime = startTime + timedelta(days=1)
-                        embed = Embed(title="Time was detected to be in the past 24h and was set to tomorrow.", description=f"Input time: <t:{round(startTime.timestamp())}:F>\nSelected time: <t:{round(newStartTime.timestamp())}:F>")
+                        embed = Embed(title=SCHEDULE_EVENT_TIME_TOMORROW, description=SCHEDULE_EVENT_TIME_TOMORROW_PREVIEW.format(round(startTime.timestamp()), round(newStartTime.timestamp())))
                         await dmChannel.send(embed=embed)
                         startTime = newStartTime
                         startTimeOk = True
                     else:
-                        embed = Embed(title="It appears that the selected time is in the past. Are you sure you want to set it to this?", description="Enter `yes` or `y` to keep this time. Enter anything else to change it to another time.")
+                        embed = Embed(title=SCHEDULE_EVENT_TIME_PAST_QUESTION, description=SCHEDULE_EVENT_TIME_PAST_PROMPT)
                         await dmChannel.send(embed=embed)
                         try:
                             response = await self.bot.wait_for("message", timeout=60, check=lambda msg, author=ctx.author, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
@@ -1129,27 +1077,20 @@ class Schedule(commands.Cog):
                 eventEndTime = UTC.localize(datetime.strptime(event["endTime"], EVENT_TIME_FORMAT))
                 if (eventStartTime <= startTime < eventEndTime) or (eventStartTime <= endTime < eventEndTime) or (startTime <= eventStartTime < endTime):
                     eventCollision = True
-                    embed = Embed(title=":clock3:❌ There is a collision with another event", colour=Colour.red(), description="Check the schedule and try inputing a another time")
-                    await dmChannel.send(embed=embed)
-                    break
-                elif endTime < eventStartTime and endTime + timedelta(hours=1) > eventStartTime:
-                    eventCollision = True
-                    embed = Embed(title=":clock3:❌ There is another event starting less than an hour after this one ends", colour=Colour.red(), description="Check the schedule and try inputing a another time")
+                    embed = Embed(title=SCHEDULE_EVENT_ERROR_COLLISION, colour=Colour.red(), description=SCHEDULE_EVENT_ERROR_DESCRIPTION)
                     await dmChannel.send(embed=embed)
                     break
                 elif eventEndTime < startTime and eventEndTime + timedelta(hours=1) > startTime:
                     eventCollision = True
-                    embed = Embed(title=":clock3:❌ Your operation would start less than an hour after the previous event ends", colour=Colour.red(), description="Check the schedule and try inputing a another time")
+                    embed = Embed(title=SCHEDULE_EVENT_ERROR_PADDING_EARLY, colour=Colour.red(), description=SCHEDULE_EVENT_ERROR_DESCRIPTION)
+                    await dmChannel.send(embed=embed)
+                    break
+                elif endTime < eventStartTime and endTime + timedelta(hours=1) > eventStartTime:
+                    eventCollision = True
+                    embed = Embed(title=SCHEDULE_EVENT_ERROR_PADDING_LATE, colour=Colour.red(), description=SCHEDULE_EVENT_ERROR_DESCRIPTION)
                     await dmChannel.send(embed=embed)
                     break
 
-        #if False and self.eventsFileLock:
-        #    embed = Embed(title=":clock3: Someone else is creating or editing an event at the same time. This happens rarely, but give it just a few seconds")
-        #    await dmChannel.send(embed=embed)
-        #    while self.eventsFileLock:
-        #        while self.eventsFileLock:
-        #            await asyncio.sleep(0.5)
-        #        await asyncio.sleep(0.5)
         self.eventsFileLock = False
         try:
             if os.path.exists(EVENTS_FILE):
@@ -1183,42 +1124,42 @@ class Schedule(commands.Cog):
         finally:
             self.eventsFileLock = False
 
-        embed = Embed(title="✅ Operation created", color=Colour.green())
+        embed = Embed(title=SCHEDULE_EVENT_CREATED.format("Operation"), color=Colour.green())
         await dmChannel.send(embed=embed)
-        log.info(f"{ctx.author.display_name}({ctx.author.name}#{ctx.author.discriminator}) created an operation")
+        log.info(LOG_CREATED_EVENT.format(ctx.author.display_name, ctx.author.name, ctx.author.discriminator, "an operation"))
 
         await self.updateSchedule()
 
         if newEvent is not None:
-            await ctx.send(f":b:op on [schedule](<https://discord.com/channels/{SERVER}/{SCHEDULE}/{newEvent['messageId']}>)!")
+            with open(EVENTS_FILE) as f:
+                events = json.load(f)
+            await ctx.send(SCHEDULE_EVENT_MESSAGE_DONE.format(":b:op", SERVER, SCHEDULE, events[-1]["messageId"]))
 
-    @cog_ext.cog_slash(name="ws", description="Create a workshop to add to the schedule.", guild_ids=[SERVER])
+    @cog_ext.cog_slash(name="ws", description=SCHEDULE_COMMAND_DESCRIPTION.format("a workshop"), guild_ids=[SERVER])
     async def ws(self, ctx: SlashContext):
         await self.scheduleWorkshop(ctx)
 
-    @cog_ext.cog_slash(name="workshop", description="Create a workshop to add to the schedule.", guild_ids=[SERVER])
+    @cog_ext.cog_slash(name="workshop", description=SCHEDULE_COMMAND_DESCRIPTION.format("a workshop"), guild_ids=[SERVER])
     async def workshop(self, ctx: SlashContext):
         await self.scheduleWorkshop(ctx)
 
     async def scheduleWorkshop(self, ctx):
-        await ctx.send("Scheduling... Standby for a workshop.")
-        log.info(f"{ctx.author.display_name}({ctx.author.name}#{ctx.author.discriminator}) is creating a workshop")
+        await ctx.send(SCHEDULE_EVENT_MESSAGE_PROGRESS.format("workshop"))
+        log.info(LOG_CREATING_EVENT.format(ctx.author.display_name, ctx.author.name, ctx.author.discriminator, "a workshop"))
 
         utcNow = UTC.localize(datetime.utcnow())
-
         authorId = ctx.author.id
-
         with open(WORKSHOP_TEMPLATES_FILE) as f:
             workshopTemplates = json.load(f)
 
-        embed = Embed(title=":clipboard: Select a template.", description="Enter a template number or `none` to make a workshop from scratch", color=Colour.gold())
+        embed = Embed(title=SCHEDULE_EVENT_TEMPLATE_TITLE, description=SCHEDULE_EVENT_TEMPLATE_DESCRIPTION, color=Colour.gold())
         embed.add_field(name="Template", value="\n".join(f"**{idx}**   {template['name']}" for idx, template in enumerate(workshopTemplates, 1)) if len(workshopTemplates) > 0 else "-")
         try:
             msg = await ctx.author.send(embed=embed)
         except Exception as e:
             print(ctx.author, e)
             try:
-                print("Sending friend request...")
+                print(LOG_FRIEND_REQ)
                 await ctx.author.send_friend_request()
             except Exception as e:
                 print(e)
@@ -1238,8 +1179,8 @@ class Schedule(commands.Cog):
             await dmChannel.send(embed=TIMEOUT_EMBED)
             return
         while not templateOk:
-            embed = Embed(title="❌ Wrong format", color=Colour.red(), description="Choose a number from the list below or enter `none` to make a workshop from scratch")
-            embed.add_field(name="Template", value="\n".join(f"**{idx}**   {template['name']}" for idx, template in enumerate(workshopTemplates, 1)))
+            embed = Embed(title=SCHEDULE_INPUT_ERROR, color=Colour.red(), description=SCHEDULE_EVENT_TEMPLATE_DESCRIPTION)
+            embed.add_field(name="Template", value="\n".join(f"**{idx}**   {template['name']}" for idx, template in enumerate(workshopTemplates, 1)) if len(workshopTemplates) > 0 else "-")
             await dmChannel.send(embed=embed)
             try:
                 response = await self.bot.wait_for("message", timeout=600, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
@@ -1256,7 +1197,7 @@ class Schedule(commands.Cog):
                 return
 
         if template is None:
-            embed = Embed(title=":pencil2: What is the title of your workshop?", color=Colour.gold())
+            embed = Embed(title=SCHEDULE_EVENT_TITLE.format("workshop"), color=Colour.gold())
             await dmChannel.send(embed=embed)
             try:
                 response = await self.bot.wait_for("message", timeout=600, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
@@ -1268,7 +1209,7 @@ class Schedule(commands.Cog):
             title = template["title"]
 
         if template is None:
-            embed = Embed(title=":notepad_spiral: What is the description?", color=Colour.gold())
+            embed = Embed(title=SCHEDULE_EVENT_DESCRIPTION_QUESTION, color=Colour.gold())
             await dmChannel.send(embed=embed)
             try:
                 response = await self.bot.wait_for("message", timeout=1800, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
@@ -1280,7 +1221,7 @@ class Schedule(commands.Cog):
             description = template["description"]
 
         if template is None:
-            embed = Embed(title=":notebook_with_decorative_cover: Enter `none` or a URL", color=Colour.gold())
+            embed = Embed(title=SCHEDULE_EVENT_URL_TITLE, description=SCHEDULE_EVENT_URL_DESCRIPTION, color=Colour.gold())
             await dmChannel.send(embed=embed)
             try:
                 response = await self.bot.wait_for("message", timeout=600, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
@@ -1294,7 +1235,7 @@ class Schedule(commands.Cog):
             externalURL = template["externalURL"]
 
         if template is None:
-            embed = Embed(title="Are there any reservable roles?", color=Colour.gold(), description="Enter `yes` or `y` if there are reservable roles or enter anything else if there are not.")
+            embed = Embed(title=SCHEDULE_EVENT_RESERVABLE_QUESTION, color=Colour.gold(), description=SCHEDULE_EVENT_RESERVABLE_PROMPT)
             await dmChannel.send(embed=embed)
             try:
                 response = await self.bot.wait_for("message", timeout=600, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
@@ -1303,7 +1244,7 @@ class Schedule(commands.Cog):
                 await dmChannel.send(embed=TIMEOUT_EMBED)
                 return
             if reservableRolesPresent:
-                embed = Embed(title="Type each reservable role in its own line (in a single message)", color=Colour.gold(), description="Press Shift + Enter to insert a newline")
+                embed = Embed(title=SCHEDULE_EVENT_RESERVABLE_LIST_TITLE, color=Colour.gold(), description=SCHEDULE_EVENT_RESERVABLE_LIST_DESCRIPTION)
                 await dmChannel.send(embed=embed)
                 try:
                     response = await self.bot.wait_for("message", timeout=600, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
@@ -1316,8 +1257,10 @@ class Schedule(commands.Cog):
         else:
             reservableRoles = template["reservableRoles"]
 
+        color=Colour.gold()
         if template is None:
-            embed = Embed(title=":globe_with_meridians: Enter Your Map Number", color=Colour.gold(), description="Choose a number from the list below or enter `none` for no map.")
+            embed = Embed(title=SCHEDULE_EVENT_MAP_PROMPT, color=color, description=SCHEDULE_NUMBER_FROM_TO_OR_NONE.format(1, len(MAPS)))
+            color=Colour.red()
             embed.add_field(name="Map", value="\n".join(f"**{idx}**   {mapName}" for idx, mapName in enumerate(MAPS, 1)))
             await dmChannel.send(embed=embed)
             try:
@@ -1334,7 +1277,7 @@ class Schedule(commands.Cog):
                 await dmChannel.send(embed=TIMEOUT_EMBED)
                 return
             while not mapOK:
-                embed = Embed(title="❌ Wrong format", color=Colour.red(), description="Choose a number from the list below or enter `none` for no map.")
+                embed = Embed(title=SCHEDULE_INPUT_ERROR, color=Colour.red(), description=SCHEDULE_NUMBER_FROM_TO_OR_NONE.format(1, len(MAPS)))
                 embed.add_field(name="Map", value="\n".join(f"**{idx}**   {mapName}" for idx, mapName in enumerate(MAPS, 1)))
                 await dmChannel.send(embed=embed)
                 try:
@@ -1354,7 +1297,7 @@ class Schedule(commands.Cog):
             eventMap = template["map"]
 
         if template is None:
-            embed = Embed(title=":family_man_boy_boy: What is the maximum number of attendees?", color=Colour.gold(), description="Enter `none` or a non-negative number.")
+            embed = Embed(title=SCHEDULE_EVENT_MAX_PLAYERS, color=Colour.gold(), description=SCHEDULE_NUMBER_NON_NEGATIVE_OR_NONE)
             await dmChannel.send(embed=embed)
             try:
                 response = await self.bot.wait_for("message", timeout=600, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
@@ -1370,7 +1313,7 @@ class Schedule(commands.Cog):
             maxPlayers = template["maxPlayers"]
 
         if template is None:
-            embed = Embed(title="What is the duration of the workshop?", color=Colour.gold(), description="e.g. 30m\ne.g. 2h\ne.g. 4h 30m\ne.g. 2h30")
+            embed = Embed(title=SCHEDULE_EVENT_DURATION_QUESTION.format("workshop"), color=Colour.gold(), description=SCHEDULE_EVENT_DURATION_PROMPT)
             await dmChannel.send(embed=embed)
             try:
                 response = await self.bot.wait_for("message", timeout=600, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
@@ -1378,8 +1321,8 @@ class Schedule(commands.Cog):
             except asyncio.TimeoutError:
                 await dmChannel.send(embed=TIMEOUT_EMBED)
                 return
-            while not re.match(r"^\s*((([1-9]\d*)?\d\s*h(\s*([0-5])?\d\s*m?)?)|(([0-5])?\d\s*m))\s*$", duration):
-                embed = Embed(title="❌ Wrong format", colour=Colour.red(), description="e.g. 30m\ne.g. 2h\ne.g. 4h 30m\ne.g. 2h30")
+            while not re.match(SCHEDULE_EVENT_DURATION_REGEX, duration):
+                embed = Embed(title=SCHEDULE_INPUT_ERROR, colour=Colour.red(), description=SCHEDULE_EVENT_DURATION_PROMPT)
                 await dmChannel.send(embed=embed)
                 try:
                     response = await self.bot.wait_for("message", timeout=600, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
@@ -1398,7 +1341,7 @@ class Schedule(commands.Cog):
         if template is None:
             with open(WORKSHOP_INTEREST_FILE) as f:
                 workshopInterestOptions = [{"name": name, "title": wsInterest["title"]} for name, wsInterest in json.load(f).items()]
-            embed = Embed(title=":link: Which workshop waiting list is your workshop linked to?", color=Colour.gold(), description="Choose a number from the list below or enter `none`")
+            embed = Embed(title=SCHEDULE_EVENT_WAITING_LIST, color=Colour.gold(), description=SCHEDULE_NUMBER_FROM_TO_OR_NONE.format(1, len(workshopInterestOptions)))
             embed.add_field(name="Workshop Lists", value="\n".join(f"**{idx}**   {wsInterest['title']}" for idx, wsInterest in enumerate(workshopInterestOptions, 1)))
             await dmChannel.send(embed=embed)
             try:
@@ -1415,7 +1358,7 @@ class Schedule(commands.Cog):
                 await dmChannel.send(embed=TIMEOUT_EMBED)
                 return
             while not workshopInterestOk:
-                embed = Embed(title="❌ Wrong format", color=Colour.red(), description="Choose a number from the list below or enter `none`")
+                embed = Embed(title=SCHEDULE_INPUT_ERROR, color=Colour.red(), description=SCHEDULE_NUMBER_FROM_TO_OR_NONE.format(1, len(workshopInterestOptions)))
                 embed.add_field(name="Workshop Lists", value="\n".join(f"**{idx}**   {wsInterest['title']}" for idx, wsInterest in enumerate(workshopInterestOptions, 1)))
                 await dmChannel.send(embed=embed)
                 try:
@@ -1443,7 +1386,7 @@ class Schedule(commands.Cog):
             except pytz.exceptions.UnknownTimeZoneError:
                 timeZone = UTC
         else:
-            embed = Embed(title=":clock1: It appears that you don't have a preferred time zone currently set. What is your preferred time zone?", color=Colour.gold(), description="Enter `none`, a number from the list or any time zone name from the column \"TZ DATABASE NAME\" in the following [Wikipedia article](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones) to make your choice. If you enter `none` or something invalid UTC will be assumed and you will be asked again the next time you schedule an event. You can change or delete your preferred time zone at any time with the `/changetimezone` command.")
+            embed = Embed(title=SCHEDULE_EVENT_TIME_ZONE_QUESTION, color=Colour.gold(), description=SCHEDULE_EVENT_TIME_ZONE_PROMPT)
             embed.add_field(name="Time Zone", value="\n".join(f"**{idx}**   {tz}" for idx, tz in enumerate(TIME_ZONES, 1)))
             await dmChannel.send(embed=embed)
             try:
@@ -1472,7 +1415,7 @@ class Schedule(commands.Cog):
 
             startTimeOk = False
             while not startTimeOk:
-                embed = Embed(title="What is the time of the workshop?", color=Colour.gold(), description=f"Your selected time zone is '{timeZone.zone}'")
+                embed = Embed(title=SCHEDULE_EVENT_TIME.format("workshop"), color=Colour.gold(), description=SCHEDULE_EVENT_SELECTED_TIME_ZONE.format(timeZone.zone))
                 utcNow = datetime.utcnow()
                 nextHalfHour = utcNow + (datetime.min - utcNow) % timedelta(minutes=30)
                 embed.add_field(name="Example", value=UTC.localize(nextHalfHour).astimezone(timeZone).strftime(EVENT_TIME_FORMAT))
@@ -1489,7 +1432,7 @@ class Schedule(commands.Cog):
                 except ValueError:
                     isFormatCorrect = False
                 while not isFormatCorrect:
-                    embed = Embed(title="❌ Wrong format", colour=Colour.red(), description="e.g. 2021-08-08 9:30 PM")
+                    embed = Embed(title=SCHEDULE_INPUT_ERROR, colour=Colour.red(), description=SCHEDULE_EVENT_TIME_FORMAT)
                     await dmChannel.send(embed=embed)
                     try:
                         response = await self.bot.wait_for("message", timeout=600, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
@@ -1506,12 +1449,12 @@ class Schedule(commands.Cog):
                 if startTime < UTC.localize(utcNow):
                     if (delta := UTC.localize(utcNow) - startTime) > timedelta(hours=1) and delta < timedelta(days=1):
                         newStartTime = startTime + timedelta(days=1)
-                        embed = Embed(title="Time was detected to be in the past 24h and was set to tomorrow.", description=f"Input time: <t:{round(startTime.timestamp())}:F>\nSelected time: <t:{round(newStartTime.timestamp())}:F>")
+                        embed = Embed(title=SCHEDULE_EVENT_TIME_TOMORROW, description=SCHEDULE_EVENT_TIME_TOMORROW_PREVIEW.format(round(startTime.timestamp()), round(newStartTime.timestamp())))
                         await dmChannel.send(embed=embed)
                         startTime = newStartTime
                         startTimeOk = True
                     else:
-                        embed = Embed(title="It appears that the selected time is in the past. Are you sure you want to set it to this?", description="Enter `yes` or `y` to keep this time. Enter anything else to change it to another time.")
+                        embed = Embed(title=SCHEDULE_EVENT_TIME_PAST_QUESTION, description=SCHEDULE_EVENT_TIME_PAST_PROMPT)
                         await dmChannel.send(embed=embed)
                         try:
                             response = await self.bot.wait_for("message", timeout=60, check=lambda msg, author=ctx.author, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
@@ -1535,22 +1478,22 @@ class Schedule(commands.Cog):
                 eventEndTime = UTC.localize(datetime.strptime(event["endTime"], EVENT_TIME_FORMAT))
                 if (eventStartTime <= startTime < eventEndTime) or (eventStartTime <= endTime < eventEndTime) or (startTime <= eventStartTime < endTime):
                     eventCollision = True
-                    embed = Embed(title=":clock3:❌ There is a collision with an operation", colour=Colour.red(), description="Check the schedule and try inputing a another time")
-                    await dmChannel.send(embed=embed)
-                    break
-                elif endTime < eventStartTime and endTime + timedelta(hours=1) > eventStartTime:
-                    eventCollision = True
-                    embed = Embed(title=":clock3:❌ There is an operation starting less than an hour after this one ends", colour=Colour.red(), description="Check the schedule and try inputing a another time")
+                    embed = Embed(title=SCHEDULE_EVENT_ERROR_COLLISION, colour=Colour.red(), description=SCHEDULE_EVENT_ERROR_DESCRIPTION)
                     await dmChannel.send(embed=embed)
                     break
                 elif eventEndTime < startTime and eventEndTime + timedelta(hours=1) > startTime:
                     eventCollision = True
-                    embed = Embed(title=":clock3:❌ Your workshop would start less than an hour after the previous operation ends", colour=Colour.red(), description="Check the schedule and try inputing a another time")
+                    embed = Embed(title=SCHEDULE_EVENT_ERROR_PADDING_EARLY, colour=Colour.red(), description=SCHEDULE_EVENT_ERROR_DESCRIPTION)
+                    await dmChannel.send(embed=embed)
+                    break
+                elif endTime < eventStartTime and endTime + timedelta(hours=1) > eventStartTime:
+                    eventCollision = True
+                    embed = Embed(title=SCHEDULE_EVENT_ERROR_PADDING_LATE, colour=Colour.red(), description=SCHEDULE_EVENT_ERROR_DESCRIPTION)
                     await dmChannel.send(embed=embed)
                     break
 
         if template is None:
-            embed = Embed(title="Do you want to save this workshop as a template?", color=Colour.gold(), description="Enter `yes` or `y` if you want to save it or enter anything else otherwise.")
+            embed = Embed(title=SCHEDULE_EVENT_TEMPLATE_SAVE_QUESTION, color=Colour.gold(), description=SCHEDULE_EVENT_TEMPLATE_SAVE_PROMPT)
             await dmChannel.send(embed=embed)
             try:
                 response = await self.bot.wait_for("message", timeout=600, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
@@ -1559,7 +1502,7 @@ class Schedule(commands.Cog):
                 await dmChannel.send(embed=TIMEOUT_EMBED)
                 return
             if saveTemplate:
-                embed = Embed(title="Which name would you like to save the template as?", color=Colour.gold(), description="Enter `none` to make it the same as the title")
+                embed = Embed(title=SCHEDULE_EVENT_TEMPLATE_SAVE_NAME_QUESTION, color=Colour.gold(), description=SCHEDULE_EVENT_TEMPLATE_SAVE_NAME_PROMPT)
                 await dmChannel.send(embed=embed)
                 try:
                     response = await self.bot.wait_for("message", timeout=600, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
@@ -1585,19 +1528,12 @@ class Schedule(commands.Cog):
                 workshopTemplates.append(newTemplate)
                 with open(WORKSHOP_TEMPLATES_FILE, "w") as f:
                     json.dump(workshopTemplates, f, indent=4)
-                embed = Embed(title="✅ Template saved", color=Colour.green())
+                embed = Embed(title=SCHEDULE_TEMPLATE_SAVED, color=Colour.green())
                 await dmChannel.send(embed=embed)
             else:
-                embed = Embed(title="Template not saved", color=Colour.gold())
+                embed = Embed(title=SCHEDULE_TEMPLATE_DISCARD, color=Colour.gold())
                 await dmChannel.send(embed=embed)
 
-        #if False and self.eventsFileLock:
-        #    embed = Embed(title=":clock3: Someone else is creating or editing an event at the same time. This happens rarely, but give it just a few seconds")
-        #    await dmChannel.send(embed=embed)
-        #    while self.eventsFileLock:
-        #        while self.eventsFileLock:
-        #            await asyncio.sleep(0.5)
-        #        await asyncio.sleep(0.5)
         self.eventsFileLock = False
         try:
             if os.path.exists(EVENTS_FILE):
@@ -1632,32 +1568,32 @@ class Schedule(commands.Cog):
         finally:
             self.eventsFileLock = False
 
-        embed = Embed(title="✅ Workshop created", color=Colour.green())
+        embed = Embed(title=SCHEDULE_EVENT_CREATED.format("Workshop"), color=Colour.green())
         await dmChannel.send(embed=embed)
-        log.info(f"{ctx.author.display_name}({ctx.author.name}#{ctx.author.discriminator}) created a workshop")
+        log.info(LOG_CREATED_EVENT.format(ctx.author.display_name, ctx.author.name, ctx.author.discriminator, "a workshop"))
 
         await self.updateSchedule()
 
         if newEvent is not None:
-            await ctx.send(f"Workshop on [schedule](<https://discord.com/channels/{SERVER}/{SCHEDULE}/{newEvent['messageId']}>)")
+            with open(EVENTS_FILE) as f:
+                events = json.load(f)
+            await ctx.send(SCHEDULE_EVENT_MESSAGE_DONE.format("Workshop", SERVER, SCHEDULE, events[-1]['messageId']))
 
-    @cog_ext.cog_slash(name="event", description="Create a generic event to add to the schedule.", guild_ids=[SERVER])
+    @cog_ext.cog_slash(name="event", description=SCHEDULE_COMMAND_DESCRIPTION.format("a generic event"), guild_ids=[SERVER])
     async def event(self, ctx: SlashContext):
         await self.scheduleEvent(ctx)
 
     async def scheduleEvent(self, ctx):
-        await ctx.send("Scheduling... Standby for a generic event.")
-        log.info(f"{ctx.author.display_name}({ctx.author.name}#{ctx.author.discriminator}) is creating an event")
-
+        await ctx.send(SCHEDULE_EVENT_MESSAGE_PROGRESS.format("generic event"))
+        log.info(LOG_CREATING_EVENT.format(ctx.author.display_name, ctx.author.name, ctx.author.discriminator, "an event"))
         authorId = ctx.author.id
-
-        embed = Embed(title=":pencil2: What is the title of your event?", color=Colour.gold())
+        embed = Embed(title=SCHEDULE_EVENT_TITLE.format("event"), color=Colour.gold())
         try:
             msg = await ctx.author.send(embed=embed)
         except Exception as e:
             print(ctx.author, e)
             try:
-                print("Sending friend request...")
+                print(LOG_FRIEND_REQ)
                 await ctx.author.send_friend_request()
             except Exception as e:
                 print(e)
@@ -1670,7 +1606,7 @@ class Schedule(commands.Cog):
             await dmChannel.send(embed=TIMEOUT_EMBED)
             return
 
-        embed = Embed(title=":notepad_spiral: What is the description?", color=Colour.gold())
+        embed = Embed(title=SCHEDULE_EVENT_DESCRIPTION_QUESTION, color=Colour.gold())
         await dmChannel.send(embed=embed)
         try:
             response = await self.bot.wait_for("message", timeout=1800, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
@@ -1679,7 +1615,7 @@ class Schedule(commands.Cog):
             await dmChannel.send(embed=TIMEOUT_EMBED)
             return
 
-        embed = Embed(title=":notebook_with_decorative_cover: Enter `none` or a URL \n e.g. Signup sheet / Briefing / OPORD", color=Colour.gold())
+        embed = Embed(title=SCHEDULE_EVENT_URL_TITLE, description=SCHEDULE_EVENT_URL_DESCRIPTION, color=Colour.gold())
         await dmChannel.send(embed=embed)
         try:
             response = await self.bot.wait_for("message", timeout=600, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
@@ -1690,7 +1626,7 @@ class Schedule(commands.Cog):
             await dmChannel.send(embed=TIMEOUT_EMBED)
             return
 
-        embed = Embed(title="Are there any reservable roles?", color=Colour.gold(), description="Enter `yes` or `y` if there are reservable roles or enter anything else if there are not.")
+        embed = Embed(title=SCHEDULE_EVENT_RESERVABLE_QUESTION, color=Colour.gold(), description=SCHEDULE_EVENT_RESERVABLE_PROMPT)
         await dmChannel.send(embed=embed)
         try:
             response = await self.bot.wait_for("message", timeout=600, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
@@ -1699,7 +1635,7 @@ class Schedule(commands.Cog):
             await dmChannel.send(embed=TIMEOUT_EMBED)
             return
         if reservableRolesPresent:
-            embed = Embed(title="Type each reservable role in its own line (in a single message)", color=Colour.gold(), description="Press Shift + Enter to insert a newline")
+            embed = Embed(title=SCHEDULE_EVENT_RESERVABLE_LIST_TITLE, color=Colour.gold(), description=SCHEDULE_EVENT_RESERVABLE_LIST_DESCRIPTION)
             await dmChannel.send(embed=embed)
             try:
                 response = await self.bot.wait_for("message", timeout=600, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
@@ -1710,24 +1646,11 @@ class Schedule(commands.Cog):
         else:
             reservableRoles = None
 
-        embed = Embed(title=":globe_with_meridians: Enter Your Map Number", color=Colour.gold(), description="Choose a number from the list below or enter `none` for no map.")
-        embed.add_field(name="Map", value="\n".join(f"**{idx}**   {mapName}" for idx, mapName in enumerate(MAPS, 1)))
-        await dmChannel.send(embed=embed)
-        try:
-            response = await self.bot.wait_for("message", timeout=600, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
-            eventMap = response.content.strip()
-            mapOK = True
-            if eventMap.isdigit() and int(eventMap) <= len(MAPS) and int(eventMap) > 0:
-                eventMap = MAPS[int(eventMap) - 1]
-            elif eventMap.strip().lower() == "none":
-                eventMap = None
-            else:
-                mapOK = False
-        except asyncio.TimeoutError:
-            await dmChannel.send(embed=TIMEOUT_EMBED)
-            return
+        mapOK = False
+        color=Colour.gold()
         while not mapOK:
-            embed = Embed(title="❌ Wrong format", color=Colour.red(), description="Choose a number from the list below or enter `none` for no map.")
+            embed = Embed(title=SCHEDULE_EVENT_MAP_PROMPT, color=color, description=SCHEDULE_NUMBER_FROM_TO_OR_NONE.format(1, len(MAPS)))
+            color=Colour.red()
             embed.add_field(name="Map", value="\n".join(f"**{idx}**   {mapName}" for idx, mapName in enumerate(MAPS, 1)))
             await dmChannel.send(embed=embed)
             try:
@@ -1744,7 +1667,7 @@ class Schedule(commands.Cog):
                 await dmChannel.send(embed=TIMEOUT_EMBED)
                 return
 
-        embed = Embed(title=":family_man_boy_boy: What is the maximum number of attendees?", color=Colour.gold(), description="Enter `none` or a non-negative number.")
+        embed = Embed(title=SCHEDULE_EVENT_MAX_PLAYERS, color=Colour.gold(), description=SCHEDULE_NUMBER_NON_NEGATIVE_OR_NONE)
         await dmChannel.send(embed=embed)
         try:
             response = await self.bot.wait_for("message", timeout=600, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
@@ -1757,7 +1680,7 @@ class Schedule(commands.Cog):
             await dmChannel.send(embed=TIMEOUT_EMBED)
             return
 
-        embed = Embed(title="What is the duration of the event?", color=Colour.gold(), description="e.g. 30m\ne.g. 2h\ne.g. 4h 30m\ne.g. 2h30")
+        embed = Embed(title=SCHEDULE_EVENT_DURATION_QUESTION.format("event"), color=Colour.gold(), description=SCHEDULE_EVENT_DURATION_PROMPT)
         await dmChannel.send(embed=embed)
         try:
             response = await self.bot.wait_for("message", timeout=600, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
@@ -1765,8 +1688,8 @@ class Schedule(commands.Cog):
         except asyncio.TimeoutError:
             await dmChannel.send(embed=TIMEOUT_EMBED)
             return
-        while not re.match(r"^\s*((([1-9]\d*)?\d\s*h(\s*([0-5])?\d\s*m?)?)|(([0-5])?\d\s*m))\s*$", duration):
-            embed = Embed(title="❌ Wrong format", colour=Colour.red(), description="e.g. 30m\ne.g. 2h\ne.g. 4h 30m\ne.g. 2h30")
+        while not re.match(SCHEDULE_EVENT_DURATION_REGEX, duration):
+            embed = Embed(title=SCHEDULE_INPUT_ERROR, colour=Colour.red(), description=SCHEDULE_EVENT_DURATION_PROMPT)
             await dmChannel.send(embed=embed)
             try:
                 response = await self.bot.wait_for("message", timeout=600, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
@@ -1789,7 +1712,7 @@ class Schedule(commands.Cog):
             except pytz.exceptions.UnknownTimeZoneError:
                 timeZone = UTC
         else:
-            embed = Embed(title=":clock1: It appears that you don't have a preferred time zone currently set. What is your preferred time zone?", color=Colour.gold(), description="Enter `none`, a number from the list or any time zone name from the column \"TZ DATABASE NAME\" in the following [Wikipedia article](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones) to make your choice. If you enter `none` or something invalid UTC will be assumed and you will be asked again the next time you schedule an event. You can change or delete your preferred time zone at any time with the `/changetimezone` command.")
+            embed = Embed(title=SCHEDULE_EVENT_TIME_ZONE_QUESTION, color=Colour.gold(), description=SCHEDULE_EVENT_TIME_ZONE_PROMPT)
             embed.add_field(name="Time Zone", value="\n".join(f"**{idx}**   {tz}" for idx, tz in enumerate(TIME_ZONES, 1)))
             await dmChannel.send(embed=embed)
             try:
@@ -1814,7 +1737,7 @@ class Schedule(commands.Cog):
 
         startTimeOk = False
         while not startTimeOk:
-            embed = Embed(title="What is the time of the event?", color=Colour.gold(), description=f"Your selected time zone is '{timeZone.zone}'")
+            embed = Embed(title=SCHEDULE_EVENT_TIME.format("event"), color=Colour.gold(), description=SCHEDULE_EVENT_SELECTED_TIME_ZONE.format(timeZone.zone))
             utcNow = datetime.utcnow()
             nextHalfHour = utcNow + (datetime.min - utcNow) % timedelta(minutes=30)
             embed.add_field(name="Example", value=UTC.localize(nextHalfHour).astimezone(timeZone).strftime(EVENT_TIME_FORMAT))
@@ -1831,7 +1754,7 @@ class Schedule(commands.Cog):
             except ValueError:
                 isFormatCorrect = False
             while not isFormatCorrect:
-                embed = Embed(title="❌ Wrong format", colour=Colour.red(), description="e.g. 2021-08-08 9:30 PM")
+                embed = Embed(title=SCHEDULE_INPUT_ERROR, colour=Colour.red(), description=SCHEDULE_EVENT_TIME_FORMAT)
                 await dmChannel.send(embed=embed)
                 try:
                     response = await self.bot.wait_for("message", timeout=600, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
@@ -1848,12 +1771,12 @@ class Schedule(commands.Cog):
             if startTime < UTC.localize(utcNow):
                 if (delta := UTC.localize(utcNow) - startTime) > timedelta(hours=1) and delta < timedelta(days=1):
                     newStartTime = startTime + timedelta(days=1)
-                    embed = Embed(title="Time was detected to be in the past 24h and was set to tomorrow.", description=f"Input time: <t:{round(startTime.timestamp())}:F>\nSelected time: <t:{round(newStartTime.timestamp())}:F>")
+                    embed = Embed(title=SCHEDULE_EVENT_TIME_TOMORROW, description=SCHEDULE_EVENT_TIME_TOMORROW_PREVIEW.format(round(startTime.timestamp()), round(newStartTime.timestamp())))
                     await dmChannel.send(embed=embed)
                     startTime = newStartTime
                     startTimeOk = True
                 else:
-                    embed = Embed(title="It appears that the selected time is in the past. Are you sure you want to set it to this?", description="Enter `yes` or `y` to keep this time. Enter anything else to change it to another time.")
+                    embed = Embed(title=SCHEDULE_EVENT_TIME_PAST_QUESTION, description=SCHEDULE_EVENT_TIME_PAST_PROMPT)
                     await dmChannel.send(embed=embed)
                     try:
                         response = await self.bot.wait_for("message", timeout=60, check=lambda msg, author=ctx.author, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
@@ -1867,13 +1790,6 @@ class Schedule(commands.Cog):
                 startTimeOk = True
         endTime = startTime + d
 
-        #if False and self.eventsFileLock:
-        #    embed = Embed(title=":clock3: Someone else is creating or editing an event at the same time. This happens rarely, but give it just a few seconds")
-        #    await dmChannel.send(embed=embed)
-        #    while self.eventsFileLock:
-        #        while self.eventsFileLock:
-        #            await asyncio.sleep(0.5)
-        #        await asyncio.sleep(0.5)
         self.eventsFileLock = False
         try:
             if os.path.exists(EVENTS_FILE):
@@ -1907,31 +1823,33 @@ class Schedule(commands.Cog):
         finally:
             self.eventsFileLock = False
 
-        embed = Embed(title=SCHEDULE_EVENT_DONE, color=Colour.green())
+        embed = Embed(title=SCHEDULE_EVENT_CREATED.format("Event"), color=Colour.green())
         await dmChannel.send(embed=embed)
-        log.info(f"{ctx.author.display_name}({ctx.author.name}#{ctx.author.discriminator}) created an event.")
+        log.info(LOG_CREATED_EVENT.format(ctx.author.display_name, ctx.author.name, ctx.author.discriminator, "an event"))
 
         await self.updateSchedule()
 
         if newEvent is not None:
-            await ctx.send(f"Event on [schedule](<https://discord.com/channels/{SERVER}/{SCHEDULE}/{newEvent['messageId']}>)")
+            with open(EVENTS_FILE) as f:
+                events = json.load(f)
+            await ctx.send(SCHEDULE_EVENT_MESSAGE_DONE.format("Event", SERVER, SCHEDULE, events[-1]['messageId']))
 
-    @cog_ext.cog_slash(name="changetimezone", description="Change your time zone preferences for the next time you schedule an event.", guild_ids=[SERVER])
+    @cog_ext.cog_slash(name="changetimezone", description=CHANGE_TIME_ZONE_COMMAND_DESCRIPTION, guild_ids=[SERVER])
     async def changeTimeZone(self, ctx: SlashContext):
         await ctx.send(SCHEDULE_TIME_ZONE_CHANGING)
 
         with open(MEMBER_TIME_ZONES_FILE) as f:
             memberTimeZones = json.load(f)
 
-        embed = Embed(title=SCHEDULE_TIME_ZONE_QUESTION, color=Colour.gold(), description=(f"Your current time zone preference is '{memberTimeZones[str(ctx.author.id)]}'." if str(ctx.author.id) in memberTimeZones else SCHEDULE_TIME_ZONE_UNSET) + SCHEDULE_TIME_ZONE_INFORMATION)
+        embed = Embed(title=SCHEDULE_TIME_ZONE_QUESTION, color=Colour.gold(), description=(SCHEDULE_EVENT_SELECTED_TIME_ZONE.format(memberTimeZones[str(ctx.author.id)]) if str(ctx.author.id) in memberTimeZones else SCHEDULE_TIME_ZONE_UNSET) + SCHEDULE_TIME_ZONE_INFORMATION)
         embed.add_field(name="Time Zone", value="\n".join(f"**{idx}**   {tz}" for idx, tz in enumerate(TIME_ZONES, 1)))
-        embed.set_footer(text="Enter `cancel` to keep your current preference")
+        embed.set_footer(text=SCHEDULE_CANCEL)
         try:
             msg = await ctx.author.send(embed=embed)
         except Exception as e:
             print(ctx.author, e)
             try:
-                print("Sending friend request...")
+                print(LOG_FRIEND_REQ)
                 await ctx.author.send_friend_request()
             except Exception as e:
                 print(e)

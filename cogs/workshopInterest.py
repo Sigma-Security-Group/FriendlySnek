@@ -12,6 +12,73 @@ if DEBUG:
 
 WORKSHOP_INTEREST_FILE = "data/workshopInterest.json"
 
+DEFAULT_WORKSHOP_INTEREST_LISTS = (
+    (
+        "Newcomer", # ID
+        "Newcomer 🐣", # Name
+        [], # SME(s)
+        "" # Description
+    ),
+    (
+        "Rotary Wing",
+        "Rotary Wing 🚁",
+        [ADRIAN, EISEN, POLICE],
+        "Learn to fly helicopters and provide with transport and close air support."
+    ),
+    (
+        "Fixed Wing",
+        "Fixed Wing ✈️",
+        [GILAND, POLICE],
+        "Learn the dynamics of using fixed wing and fighter jet aircraft."
+    ),
+    (
+        "JTAC",
+        "JTAC 📡",
+        [],
+        ""
+        ),
+    (
+        "Medic",
+        "Medic 💉",
+        [MONTY, SD, SILENT],
+        ""
+    ),
+    (
+        "Heavy Weapons",
+        "Heavy Weapons 💣",
+        [SOAPY],
+        "Learn how to efficiently operate as a machine gun crew, use grenade launchers, and shoot cretins out of shitboxes (AT & AA)."),
+    (
+        "Marksman",
+        "Marksman 🎯",
+        [ASPIRE, BANSHEE, XYRAGE],
+        "Learn how to shoot big bullet far."),
+    (
+        "Breacher",
+        "Breacher 🚪",
+        [],
+        ""
+    ),
+    (
+        "Mechanised",
+        "Mechanised 🛡️​",
+        [SYSTEM],
+        "A short course on driving, gunning, and commanding a 6.21 million dollar reason the heavy weapons guy is useless."
+    ),
+    (
+        "RPV-SO",
+        "RPV-SO 🛩️​",
+        [WAFFLE],
+        ""
+    ),
+    (
+        "Team Leading",
+        "Team Leading 👨‍🏫",
+        [],
+        ""
+    )
+)
+
 class WorkshopInterest(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
@@ -23,42 +90,49 @@ class WorkshopInterest(commands.Cog):
 
         if not os.path.exists(WORKSHOP_INTEREST_FILE):
             workshopInterest = {}
-            for name, title, description in (
-                ("Newcomer", "Newcomer", ""),
-                ("Rotary Wing", "Rotary Wing 🚁", "Learn to fly helicopters and provide with transport and close air support."),
-                ("Fixed Wing", "Fixed Wing ✈️", "Learn the dynamics of using fixed wing and fighter jet aircraft."),
-                ("JTAC", "JTAC 📡", ""),
-                ("Medic", "Medic 💉", ""),
-                ("Heavy Weapons", "Heavy Weapons 💣", "Learn how to efficiently operate as a machine gun crew, use grenade launchers, and shoot cretins out of shitboxes (AT & AA)."),
-                ("Marksman", "Marksman 🎯", "Learn how to shoot big bullet far."),
-                ("Breacher", "Breacher 🚪", ""),
-                ("Mechanised", "Mechanised 🛡️​", "A short course on driving, gunning, and commanding a 6.21 million dollar reason the heavy weapons guy is useless."),
-                ("RPV-SO", "RPV-SO 🛩️​", ""),
-                ("Team Leading", "Team Leading", "")
-            ):
-                workshopInterest[name] = {"title": title, "description": description, "members": [], "messageId": None}
+            for name, title, sme, description in DEFAULT_WORKSHOP_INTEREST_LISTS:
+                workshopInterest[name] = {
+                    "title": title,
+                    "sme": sme,
+                    "description": description,
+                    "members": [],
+                    "messageId": None
+                }
+            with open(WORKSHOP_INTEREST_FILE, "w") as f:
+                json.dump(workshopInterest, f, indent=4)
+        else:
+            with open(WORKSHOP_INTEREST_FILE) as f:
+                workshopInterest = json.load(f)
+            for name, title, sme, description in DEFAULT_WORKSHOP_INTEREST_LISTS:
+                workshopInterest[name]["title"] = title
+                workshopInterest[name]["sme"] = sme
+                workshopInterest[name]["description"] = description
             with open(WORKSHOP_INTEREST_FILE, "w") as f:
                 json.dump(workshopInterest, f, indent=4)
         await self.updateChannel()
 
     def getWorkshopEmbed(self, workshop):
         guild = self.bot.get_guild(SERVER)
-        description = workshop.get("description")
-        if description is not None:
-            embed = Embed(title=workshop["title"], description=description)
-        else:
-            embed = Embed(title=workshop["title"])
-        interestedList = "\n".join(member.display_name for memberId in workshop["members"] if (member := guild.get_member(memberId)) is not None)
-        if interestedList == "":
-            interestedList = "-"
-        embed.add_field(name="Interested People", value=interestedList)
+        embed = Embed(title=workshop["title"], description=workshop["description"])
+        idsToMembers = lambda ids : [member.display_name for memberId in ids if (member := guild.get_member(memberId)) is not None]
+        interestedList = idsToMembers(workshop["members"])
+        interestedStr = "\n".join(interestedList)
+
+        if interestedStr == "":
+            interestedStr = "-"
+        embed.add_field(name=WORKSHOPINTEREST_INTERESTED_PEOPLE.format(len(interestedList)), value=interestedStr)
+        smes = idsToMembers(workshop['sme'])
+        if smes:
+            if len(smes) > 1:
+                embed.set_footer(text=f"SMEs: {', '.join(smes)}")
+            else:
+                embed.set_footer(text=f"SME: {smes[0]}")
         return embed
 
     async def updateChannel(self):
         channel = self.bot.get_channel(WORKSHOP_INTEREST)
-        await channel.purge(limit=None, check=lambda m: m.author.id in (FRIENDLY_SNEK, FRIENDLY_SNEK_DEV))
-
-        await channel.send("Welcome to the workshop interest channel. Here you can show interest for different workshops.")
+        await channel.purge(limit=None, check=lambda message: message.author.id in FRIENDLY_SNEKS)
+        await channel.send(WORKSHOPINTEREST_INTRO)
 
         with open(WORKSHOP_INTEREST_FILE) as f:
             workshopInterest = json.load(f)

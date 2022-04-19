@@ -39,63 +39,9 @@ slash = SlashCommand(bot, override_type=True, sync_commands=True, sync_on_cog_re
 for cog in COGS:
     bot.load_extension(f"cogs.{cog}")
 
-MESSAGES_FILE = "data/messagesLog.json"
-FULL_ACTIVITY_FILE = "data/fullActivityLog.json"
-ACTIVITY_FILE = "data/activityLog.json"
-MEMBERS_FILE = "data/members.json"
-
 UTC = pytz.utc
 
 newcomers = set()
-
-# @tasks.loop(minutes=10)
-# async def logActivity():
-#     while not bot.ready:
-#         await asyncio.sleep(1)
-#     log.debug("Logging discord activity")
-#     now = UTC.localize(datetime.utcnow()).strftime("%Y-%m-%d %I:%M %p")
-
-#     with open(MESSAGES_FILE) as f:
-#         messages = json.load(f)
-#     with open(MESSAGES_FILE, "w") as f:
-#         json.dump([], f, indent=4)
-
-#     with open(FULL_ACTIVITY_FILE) as f:
-#         fullActivity = json.load(f)
-#     guild = bot.get_guild(SERVER)
-#     online = [(member.id, member.display_name, any(role.id == UNIT_STAFF for role in member.roles)) for member in guild.members if member.status != discord.Status.offline]
-#     inVoiceChannel = [{"channelId": channel.id, "channelName": channel.name, "members": [(member.id, member.display_name) for member in channel.members]} for channel in guild.voice_channels]
-#     fullActivity[now] = {"messages": messages, "online": online, "inVoiceChannel": inVoiceChannel}
-#     with open(FULL_ACTIVITY_FILE, "w") as f:
-#         json.dump(fullActivity, f, indent=4)
-
-#     with open(MEMBERS_FILE) as f:
-#         members = json.load(f)
-#     members.update({str(member.id): member.display_name for member in guild.members})
-#     with open(MEMBERS_FILE, "w") as f:
-#         json.dump(members, f, indent=4)
-
-#     with open(ACTIVITY_FILE) as f:
-#         activity = json.load(f)
-#     online = len([member for member in guild.members if member.status != discord.Status.offline])
-#     staffOnline = len([member for member in guild.members if member.status != discord.Status.offline and any(role.id == UNIT_STAFF for role in member.roles)])
-#     messagesPerChannel = {}
-#     for message in messages:
-#         if message["channelName"] not in messagesPerChannel:
-#             messagesPerChannel[message["channelName"]] = 0
-#         messagesPerChannel[message["channelName"]] += 1
-#     voiceChannels = {
-#         "Bar and Mess Hall": len([member for channel in guild.voice_channels for member in channel.members if channel.id in (THE_BAR, MESS_HALL)]),
-#         "Game Rooms": len([member for channel in guild.voice_channels for member in channel.members if channel.id in (GAME_ROOM_ONE, GAME_ROOM_TWO, GAME_ROOM_THREE)]),
-#         "Command": len([member for channel in guild.voice_channels for member in channel.members if channel.id == COMMAND]),
-#         "Deployed": len([member for channel in guild.voice_channels for member in channel.members if channel.id == DEPLOYED])
-#     }
-#     activity[now] = {"online": online, "staffOnline": staffOnline, "messages": messagesPerChannel, "voiceChannels": voiceChannels}
-#     with open(ACTIVITY_FILE, "w") as f:
-#         json.dump(activity, f, indent=4)
-
-# activityMonitorScheduler = AsyncIOScheduler()
-# activityMonitorScheduler.add_job(logActivity, "interval", minutes=10)
 
 @bot.event
 async def on_ready():
@@ -106,42 +52,6 @@ async def on_ready():
     bot.ready = True
     log.info("Bot Ready")
     await bot.change_presence(activity=discord.Activity(type=discord.ActivityType.watching, name="you"))  # 🐍
-    if not os.path.exists(MESSAGES_FILE):
-        with open(MESSAGES_FILE, "w") as f:
-            json.dump([], f, indent=4)
-    if not os.path.exists(FULL_ACTIVITY_FILE):
-        with open(FULL_ACTIVITY_FILE, "w") as f:
-            json.dump({}, f, indent=4)
-    if not os.path.exists(MEMBERS_FILE):
-        with open(MEMBERS_FILE, "w") as f:
-            json.dump({}, f, indent=4)
-    if not os.path.exists(ACTIVITY_FILE):
-        with open(FULL_ACTIVITY_FILE) as f:
-            fullActivity = json.load(f)
-        activity = {}
-        for t, act in fullActivity.items():
-            online = len([member for member in act["online"]])
-            staffOnline = len([member for member in act["online"] if member[2]])
-            messagesPerChannel = {}
-            for message in act["messages"]:
-                if message["channelName"] not in messagesPerChannel:
-                    messagesPerChannel[message["channelName"]] = 0
-                messagesPerChannel[message["channelName"]] += 1
-            voiceChannels = {
-                "Bar and Mess Hall": len([member for channel in act["inVoiceChannel"] for member in channel["members"] if channel["channelId"] in (THE_BAR, MESS_HALL)]),
-                "Game Rooms": len([member for channel in act["inVoiceChannel"] for member in channel["members"] if channel["channelId"] in (GAME_ROOM_ONE, GAME_ROOM_TWO, GAME_ROOM_THREE)]),
-                "Command": len([member for channel in act["inVoiceChannel"] for member in channel["members"] if channel["channelId"] == COMMAND]),
-                "Deployed": len([member for channel in act["inVoiceChannel"] for member in channel["members"] if channel["channelId"] == DEPLOYED])
-            }
-            activity[t] = {"online": online, "staffOnline": staffOnline, "messages": messagesPerChannel, "voiceChannels": voiceChannels}
-        with open(ACTIVITY_FILE, "w") as f:
-            json.dump(activity, f, indent=4)
-    # if not activityMonitorScheduler.running:
-    #     activityMonitorScheduler.start()
-    # try:
-    #     logActivity.start()
-    # except Exception:
-    #     log.warning("Couldn't start logActivity scheduler")
 
 @bot.event
 async def on_message(message):
@@ -155,13 +65,6 @@ async def on_message(message):
     if message.guild is None or message.guild.id != SERVER:
         # log.warning("Wrong server")
         return
-
-    if not message.author.bot:
-        with open(MESSAGES_FILE) as f:
-            messages = json.load(f)
-        messages.append({"authorId": message.author.id, "authorName": message.author.display_name, "channelId": message.channel.id, "channelName": message.channel.name})
-        with open(MESSAGES_FILE, "w") as f:
-            json.dump(messages, f, indent=4)
 
     # Execute commands
     if message.content.startswith(COMMAND_PREFIX) or message.content.startswith("/"):

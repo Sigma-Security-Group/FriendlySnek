@@ -6,9 +6,6 @@ import anvil.users
 import secret
 
 EVENTS_HISTORY_FILE = "data/eventsHistory.json"
-FULL_ACTIVITY_FILE = "data/fullActivityLog.json"
-ACTIVITY_FILE = "data/activityLog.json"
-MEMBERS_FILE = "data/members.json"
 
 FTP_A3DS_FOLDER = "/144.48.106.194_2316/A3DS"
 
@@ -43,24 +40,6 @@ def getEventsHistory():
     with open(EVENTS_HISTORY_FILE) as f:
         eventsHistory = json.load(f)
     return eventsHistory
-
-@anvil.server.callable
-def getDiscordActivity():
-    with open(ACTIVITY_FILE) as f:
-        activity = json.load(f)
-    return activity
-
-@anvil.server.callable
-def getDiscordMembers():
-    with open(MEMBERS_FILE) as f:
-        members = json.load(f)
-    return members
-
-@anvil.server.callable
-def getFullDiscordActivity():
-    with open(FULL_ACTIVITY_FILE) as f:
-        fullActivity = json.load(f)
-    return fullActivity
 
 @anvil.server.callable
 def getSsgRep(numLogs=2):

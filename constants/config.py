@@ -1,10 +1,13 @@
+####################
 # Jokes.py
+####################
 
-## Command descriptions
-DADJOKE_COMMAND_DESCRIPTION = "Telling you a good joke using the icanhazdadjoke.com api."
+DADJOKE_COMMAND_DESCRIPTION = "Telling you a good joke using the icanhazdadjoke.com API."
 
 
-# Jokes.py
+####################
+# JustBob.py
+####################
 
 ## Command descriptions
 JUSTBOB_COMMAND_DESCRIPTION = "Play the minigame Just Bob."
@@ -15,7 +18,9 @@ JUSTBOB_PLAYING = "Playing Just Bob..."
 JUSTBOB_COMPLETION = "Congratulations, you completed all levels! 🎉\nYou can replay them if you'd like.\nMore levels coming soon!"
 
 
+####################
 # MissionUploader.py
+####################
 
 ## Command descriptions
 MISSION_UPLOAD_COMMAND_DESCRIPTION = "Upload a mission PBO file to the server."
@@ -26,10 +31,20 @@ MISSION_UPLOAD_ERROR_TOO_MANY_FILES = "❌ You supplied too many files. Plese on
 MISSION_UPLOAD_ERROR_NO_PBO = "❌ This is not a PBO file. Please upload a PBO file!"
 MISSION_UPLOAD_ERROR_DUPLICATE = "❌ This file already exists. Please rename the file and reupload it!"
 
+## Logging
+MISSION_UPLOAD_LOG_UPLOADING = "{0} ({1}#{2}) is uploading a mission file..."
+MISSION_UPLOAD_LOG_UPLOADED = "{0} ({1}#{2}) uploaded a mission file!"
+
 ## Misc
 MISSION_UPLOAD_RESPONSE = "Upload mission file in DMs..."
+MISSION_UPLOAD_PROMPT = "Upload the mission file you want to put on the server."
+MISSION_UPLOAD_UPLOADING = "Uploading mission file..."
+MISSION_UPLOAD_UPLOADED = "Mission file uploaded!"
 
+
+####################
 # Schedule.py
+####################
 
 ## Command descriptions
 SCHEDULE_COMMAND_DESCRIPTION = "Create {0} to add to the schedule."
@@ -37,7 +52,7 @@ CHANGE_TIME_ZONE_COMMAND_DESCRIPTION = "Change your time zone preferences for yo
 REFRESH_SCHEDULE_COMMAND_DESCRIPTION = "Refreshes the schedule. Use this command if an event was deleted without using the reactions."
 
 ## Schedule messages
-SCHEDULE_INTRO_MESSAGE = "Welcome to the schedule channel!\nTo schedule an operation you can use the `/operation` command (or `/bop`) and follow the instructions in your DM's.\nFor a workshop use `/workshop` or `/ws`.\nLastly, for generic events use `/event`.\n\nIf you haven't set a preferred time zone yet you will be prompted to do so when you schedule any kind of event. If you want to set, change or delete your time zone preference you may do so with the `/changetimezone` command.\n\nThe times you see on the schedule are based on your __local time zone__.\n\nThe event colors can be used to quickly identify what type of event it is:\n🟩 Operation `/operation` or `/bop`\n🟦 Workshop `/workshop` or `/ws`\n🟨 Event `/event`\n\nIf you have any suggestions for new features or encounter any bugs, please contact **{0}** and/or **{1}**."
+SCHEDULE_INTRO_MESSAGE = "Welcome to the schedule channel!\nTo schedule an operation you can use the `/operation` command (or `/bop`) and follow the instructions in your DMs.\nFor a workshop use `/workshop` or `/ws`.\nLastly, for generic events use `/event`.\n\nIf you haven't set a preferred time zone yet you will be prompted to do so when you schedule any kind of event. If you want to set, change or delete your time zone preference you may do so with the `/changetimezone` command.\n\nThe times you see on the schedule are based on your __local time zone__.\n\nThe event colors can be used to quickly identify what type of event it is:\n🟩 Operation `/operation` or `/bop`\n🟦 Workshop `/workshop` or `/ws`\n🟨 Event `/event`\n\nIf you have any suggestions for new features or encounter any bugs, please contact **{0}** and/or **{1}**."
 SCHEDULE_EMPTY_1 = "...\nNo bop?\n...\nSnek is sad"
 SCHEDULE_EMPTY_2 = ":cry:"
 
@@ -145,6 +160,9 @@ LOG_NOTIFICATION_VC = "Pinging members in VC not in accepted: {0}..."
 LOG_SCHEDULE_UPDATE_ERROR = "{0} ({1}#{2}) was {3} but schedule was updated!"
 
 
+####################
 # WorkshopInterest.py
+####################
+
 WORKSHOPINTEREST_INTRO = "Welcome to the workshop interest channel. Here you can show interest for different workshops."
 WORKSHOPINTEREST_INTERESTED_PEOPLE = "Interested People ({0})"

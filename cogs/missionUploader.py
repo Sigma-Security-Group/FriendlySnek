@@ -72,9 +72,9 @@ class MissionUploader(commands.Cog):
                        })
     async def uploadMission(self, ctx: SlashContext):
         await ctx.send(MISSION_UPLOAD_RESPONSE)
-        log.info(f"{ctx.author.display_name}({ctx.author.name}#{ctx.author.discriminator}) is uploading a mission file")
+        log.info(MISSION_UPLOAD_LOG_UPLOADING.format(ctx.author.display_name, ctx.author.name, ctx.author.discriminator))
 
-        embed = Embed(title="Upload the mission file you want to put on the server.", color=Colour.gold())
+        embed = Embed(title=MISSION_UPLOAD_PROMPT, color=Colour.gold())
         msg = await ctx.author.send(embed=embed)
         dmChannel = msg.channel
         try:
@@ -94,7 +94,7 @@ class MissionUploader(commands.Cog):
                 return
         attachment = attachments[0]
 
-        embed = Embed(title="Uploading mission file...", color=Colour.green())
+        embed = Embed(title=MISSION_UPLOAD_UPLOADING, color=Colour.green())
         await dmChannel.send(embed=embed)
 
         with open(f"tmp/{attachment.filename}", "wb") as f:
@@ -117,15 +117,15 @@ class MissionUploader(commands.Cog):
             f.write(f"\nFilename: {filename}\nUTC Time: {utcTime.strftime(UPLOAD_TIME_FORMAT)}\nMember: {member}\nMember ID: {memberId}\n")
 
         botLogChannel = self.bot.get_channel(BOT)
-        embed = Embed(title="Mission file uploaded", color=Colour.blue())
+        embed = Embed(title=MISSION_UPLOAD_UPLOADED, color=Colour.blue())
         embed.add_field(name="Filename", value=filename)
         embed.add_field(name="Time", value=f"<t:{round(utcTime.timestamp())}:F>")
         embed.add_field(name="Member", value=member)
         embed.add_field(name="Member ID", value=memberId)
         await botLogChannel.send(embed=embed)
 
-        log.info(f"{ctx.author.display_name}({ctx.author.name}#{ctx.author.discriminator}) uploaded a mission file")
-        embed = Embed(title="Mission file uploaded", color=Colour.green())
+        log.info(MISSION_UPLOAD_LOG_UPLOADED.format(ctx.author.display_name, ctx.author.name, ctx.author.discriminator))
+        embed = Embed(title=MISSION_UPLOAD_UPLOADED, color=Colour.green())
         await dmChannel.send(embed=embed)
 
 def setup(bot):

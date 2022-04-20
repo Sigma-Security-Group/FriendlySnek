@@ -114,13 +114,13 @@ class JustBob(commands.Cog):
     #     await self.letsPlayJustBob(ctx)
 
     # @commands.command(name="Le75P14yJu5780b", hidden=True)
-    @cog_ext.cog_slash(name="justbob", description="Play the minigame Just Bob.", guild_ids=[SERVER])
+    @cog_ext.cog_slash(name="justbob", description=JUSTBOB_COMMAND_DESCRIPTION, guild_ids=[SERVER])
     async def justBob(self, ctx) -> None:
         # await ctx.message.delete()
         if ctx.channel.id != GENERAL or ctx.channel.id != BOT_SPAM:
-            await ctx.send(f"Sorry, but you can only play Just Bob in <#{GENERAL}> or in <#{BOT_SPAM}>!")
+            await ctx.send(JUSTBOB_CHANNEL_RESTRAIN.format(GENERAL, BOT_SPAM))
             return
-        await ctx.send("Playing Just Bob")
+        await ctx.send(JUSTBOB_PLAYING)
         await self.levelSelect(ctx.channel, ctx.author)
 
     async def levelSelect(self, channel, player) -> None:
@@ -130,7 +130,7 @@ class JustBob(commands.Cog):
             playersProgress = json.load(f)
         lastLevelUnlocked = playersProgress.get(str(player.id), 1)
         gameComplete = lastLevelUnlocked > len(levels)
-        embed = Embed(title="Just Bob", description="Congratulations, you completed all levels! 🎉\nYou can replay them if you'd like.\nMore levels coming soon!" if gameComplete else f"Choose a level\n({(lastLevelUnlocked - 1) / len(levels) * 100:.2f}% complete)", color=Colour.green() if gameComplete else Colour.blue())
+        embed = Embed(title="Just Bob", description=JUSTBOB_COMPLETION if gameComplete else f"Choose a level\n({(lastLevelUnlocked - 1) / len(levels) * 100:.2f}% complete)", color=Colour.green() if gameComplete else Colour.blue())
         embed.set_footer(text=f"Player: {player.display_name}")
         msg = await channel.send(embed=embed)
         self.games[player.id] = {"levelNum": None, "level": None, "playerPos": None, "trophyPositions": None, "doorLevers": None, "openDoors": None, "description": None, "playerId": None, "messageId": msg.id}

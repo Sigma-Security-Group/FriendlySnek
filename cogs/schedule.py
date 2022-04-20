@@ -20,9 +20,9 @@ if DEBUG:
     from constants.debug import *
 
 EVENT_TIME_FORMAT = "%Y-%m-%d %I:%M %p"
+TIMEOUT_EMBED = Embed(title=ERROR_TIMEOUT, color=Colour.red())
 EVENTS_FILE = "data/events.json"
 MEMBER_TIME_ZONES_FILE = "data/memberTimeZones.json"
-TIMEOUT_EMBED = Embed(title="Time ran out. Try again. :anguished:", color=Colour.red())
 EVENTS_HISTORY_FILE = "data/eventsHistory.json"
 WORKSHOP_TEMPLATES_FILE = "data/workshopTemplates.json"
 WORKSHOP_INTEREST_FILE = "data/workshopInterest.json"

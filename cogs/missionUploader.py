@@ -16,7 +16,7 @@ if DEBUG:
     from constants.debug import *
 import secret
 
-TIMEOUT_EMBED = Embed(title="Time ran out. Try again. :anguished:", color=Colour.red())
+TIMEOUT_EMBED = Embed(title=ERROR_TIMEOUT, color=Colour.red())
 MISSIONS_UPLOADED_FILE = "data/missionsUploaded.log"
 UPLOAD_TIME_FORMAT = "%Y-%m-%d %I:%M %p"
 # FTP_MISSIONS_DIR = "/144.48.106.194_2316/mpmissions"  # Host Havoc
@@ -41,25 +41,25 @@ class MissionUploader(commands.Cog):
             missionFilesOnServer = ftp.nlst()
         attachmentOk = False
         if len(attachments) == 0:
-            embed = Embed(title="❌ You didn't upload a file. Please upload the mission file!", color=Colour.red())
+            embed = Embed(title=MISSION_UPLOAD_ERROR_NO_FILE, color=Colour.red())
             await dmChannel.send(embed=embed)
         elif len(attachments) > 1:
-            embed = Embed(title="❌ You supplied too many files. Plese only upload one file!", color=Colour.red())
+            embed = Embed(title=MISSION_UPLOAD_ERROR_TOO_MANY_FILES, color=Colour.red())
             await dmChannel.send(embed=embed)
         else:
             attachment = attachments[0]
             if not attachment.filename.endswith(".pbo"):
-                embed = Embed(title="❌ This is not a PBO file. Please upload a PBO file!", color=Colour.red())
+                embed = Embed(title=MISSION_UPLOAD_ERROR_NO_PBO, color=Colour.red())
                 await dmChannel.send(embed=embed)
             elif attachment.filename in missionFilesOnServer:
-                embed = Embed(title="❌ This file already exists. Please rename the file and reupload it!", color=Colour.red())
+                embed = Embed(title=MISSION_UPLOAD_ERROR_DUPLICATE, color=Colour.red())
                 await dmChannel.send(embed=embed)
             else:
                 attachmentOk = True
         return attachmentOk
 
     @cog_ext.cog_slash(name="uploadmission",
-                       description="Upload a mission PBO file to the server.",
+                       description=MISSION_UPLOAD_COMMAND_DESCRIPTION,
                        guild_ids=[SERVER],
                        permissions={
                            SERVER: [
@@ -71,7 +71,7 @@ class MissionUploader(commands.Cog):
                            ]
                        })
     async def uploadMission(self, ctx: SlashContext):
-        await ctx.send("Upload mission file in DMs")
+        await ctx.send(MISSION_UPLOAD_RESPONSE)
         log.info(f"{ctx.author.display_name}({ctx.author.name}#{ctx.author.discriminator}) is uploading a mission file")
 
         embed = Embed(title="Upload the mission file you want to put on the server.", color=Colour.gold())

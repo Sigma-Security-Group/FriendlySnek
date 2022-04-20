@@ -30,7 +30,7 @@ class MissionUploader(commands.Cog):
 
     @commands.Cog.listener()
     async def on_ready(self):
-        log.debug("MissionUploader Cog is ready", flush=True)
+        log.debug(LOG_COG_READY.format("MissionUploader"), flush=True)
         cogsReady["missionUploader"] = True
 
     async def checkAttachments(self, dmChannel, attachments):

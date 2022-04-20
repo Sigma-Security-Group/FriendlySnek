@@ -17,7 +17,7 @@ class Jokes(commands.Cog):
 
     @commands.Cog.listener()
     async def on_ready(self):
-        log.debug("Jokes Cog is ready", flush=True)
+        log.debug(LOG_COG_READY.format("Jokes"), flush=True)
         cogsReady["jokes"] = True
 
     @cog_ext.cog_slash(name="dadjoke", guild_ids=[SERVER], description=DADJOKE_COMMAND_DESCRIPTION)

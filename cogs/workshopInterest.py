@@ -85,7 +85,7 @@ class WorkshopInterest(commands.Cog):
 
     @commands.Cog.listener()
     async def on_ready(self):
-        log.debug("WorkshopInterest Cog is ready", flush=True)
+        log.debug(LOG_COG_READY.format("WorkshopInterest"), flush=True)
         cogsReady["workshopInterest"] = True
 
         if not os.path.exists(WORKSHOP_INTEREST_FILE):

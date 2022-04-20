@@ -105,7 +105,7 @@ class JustBob(commands.Cog):
 
     @commands.Cog.listener()
     async def on_ready(self) -> None:
-        log.debug("JustBob Cog is ready", flush=True)
+        log.debug(LOG_COG_READY.format("JustBob"), flush=True)
         cogsReady["justBob"] = True
 
     # @commands.command(name="justBob", aliases=["jb"], hidden=True)

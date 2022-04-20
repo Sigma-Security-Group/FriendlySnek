@@ -15,7 +15,7 @@ class Staff(commands.Cog):
 
     @commands.Cog.listener()
     async def on_ready(self):
-        log.debug("Staff Cog is ready", flush=True)
+        log.debug(LOG_COG_READY.format("Staff"), flush=True)
         cogsReady["staff"] = True
 
     def _getMember(self, searchTerm):

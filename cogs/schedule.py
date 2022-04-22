@@ -80,7 +80,6 @@ TIME_ZONES = {
 class Schedule(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.eventsFileLock = False
         self.memberTimeZonesFileLock = False
 
     @commands.Cog.listener()
@@ -146,7 +145,6 @@ class Schedule(commands.Cog):
         while not self.bot.ready:
             await asyncio.sleep(1)
         log.debug(LOG_CHECKING.format("to auto delete events"))
-        self.eventsFileLock = False
         try:
             with open(EVENTS_FILE) as f:
                 events = json.load(f)
@@ -171,8 +169,6 @@ class Schedule(commands.Cog):
                 json.dump(events, f, indent=4)
         except Exception as e:
             print(e)
-        finally:
-            self.eventsFileLock = False
 
     @tasks.loop(minutes=10)
     async def checkAcceptedReminder(self):
@@ -239,7 +235,6 @@ class Schedule(commands.Cog):
 
         if os.path.exists(EVENTS_FILE):
             try:
-                self.eventsFileLock = False
                 with open(EVENTS_FILE) as f:
                     events = json.load(f)
                 if len(events) == 0:
@@ -259,8 +254,6 @@ class Schedule(commands.Cog):
                     json.dump(events, f, indent=4)
             except Exception as e:
                 print(e)
-            finally:
-                self.eventsFileLock = False
         else:
             with open(EVENTS_FILE, "w") as f:
                 json.dump([], f, indent=4)
@@ -319,7 +312,6 @@ class Schedule(commands.Cog):
     async def on_raw_reaction_add(self, payload):
         if payload.channel_id != SCHEDULE:
             return
-        self.eventsFileLock = False
         try:
             with open(EVENTS_FILE) as f:
                 events = json.load(f)
@@ -414,8 +406,6 @@ class Schedule(commands.Cog):
                 json.dump(events, f, indent=4)
         except Exception as e:
             print(e)
-        finally:
-            self.eventsFileLock = False
 
     async def reserveRole(self, member, event):
         reservationTime = datetime.utcnow()
@@ -1091,7 +1081,6 @@ class Schedule(commands.Cog):
                     await dmChannel.send(embed=embed)
                     break
 
-        self.eventsFileLock = False
         try:
             if os.path.exists(EVENTS_FILE):
                 with open(EVENTS_FILE) as f:
@@ -1121,8 +1110,6 @@ class Schedule(commands.Cog):
         except Exception as e:
             print(e)
             newEvent = None
-        finally:
-            self.eventsFileLock = False
 
         embed = Embed(title=SCHEDULE_EVENT_CREATED.format("Operation"), color=Colour.green())
         await dmChannel.send(embed=embed)
@@ -1534,7 +1521,6 @@ class Schedule(commands.Cog):
                 embed = Embed(title=SCHEDULE_TEMPLATE_DISCARD, color=Colour.gold())
                 await dmChannel.send(embed=embed)
 
-        self.eventsFileLock = False
         try:
             if os.path.exists(EVENTS_FILE):
                 with open(EVENTS_FILE) as f:
@@ -1565,8 +1551,6 @@ class Schedule(commands.Cog):
         except Exception as e:
             print(e)
             newEvent = None
-        finally:
-            self.eventsFileLock = False
 
         embed = Embed(title=SCHEDULE_EVENT_CREATED.format("Workshop"), color=Colour.green())
         await dmChannel.send(embed=embed)
@@ -1790,7 +1774,6 @@ class Schedule(commands.Cog):
                 startTimeOk = True
         endTime = startTime + d
 
-        self.eventsFileLock = False
         try:
             if os.path.exists(EVENTS_FILE):
                 with open(EVENTS_FILE) as f:
@@ -1820,8 +1803,6 @@ class Schedule(commands.Cog):
         except Exception as e:
             print(e)
             newEvent = None
-        finally:
-            self.eventsFileLock = False
 
         embed = Embed(title=SCHEDULE_EVENT_CREATED.format("Event"), color=Colour.green())
         await dmChannel.send(embed=embed)

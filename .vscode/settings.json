@@ -1,3 +1,5 @@
 {
-    "kvlang.pythonPath": "python3.10"
+	"kvlang.pythonPath": "python3.10",
+    "editor.insertSpaces": true,
+    "editor.wordWrap": "on"
 }

@@ -14,12 +14,14 @@ You must have a [Discord Application](https://discord.com/developers/application
 
 The bot needs a file `secret.py` in the project's root folder which defines a few variables. These are:
 
-* token (str)
-* tokenDev (str)
-* ftpHost (str)
-* ftpPort (int)
-* ftpUsername (str)
-* ftpPassword (str)
+```py
+token:str
+tokenDev:str
+ftpHost:str
+ftpPort:int
+ftpUsername:str
+ftpPassword:str
+```
 
 All of the constants in `constants/debug.py` are made to work on Adrian's personal BTR (Bot Testing Range). If you want to make the bot work on another test server you will need to replace all the IDs in said file.
 

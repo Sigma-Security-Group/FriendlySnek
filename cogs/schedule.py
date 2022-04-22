@@ -65,11 +65,11 @@ MAPS = [
 UTC = pytz.utc
 TIME_ZONES = {
     "UTC": "UTC",
-    "Pacific American Time (LA)": "America/Los_Angeles",
-    "Eastern American Time (NY)": "America/New_York",
     "British Time (London)": "Europe/London",
     "Central European Time (Brussels)": "Europe/Brussels",
     "Eastern European Time (Sofia)": "Europe/Sofia",
+    "Pacific American Time (LA)": "America/Los_Angeles",
+    "Eastern American Time (NY)": "America/New_York",
     "Japanese Time (Tokyo)": "Asia/Tokyo",
     "Australian Western Time (Perth)": "Australia/Perth",
     "Australian Central Western Time (Eucla)": "Australia/Eucla",
@@ -80,7 +80,6 @@ TIME_ZONES = {
 class Schedule(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.memberTimeZonesFileLock = False
 
     @commands.Cog.listener()
     async def on_ready(self):
@@ -571,7 +570,7 @@ class Schedule(commands.Cog):
                 try:
                     response = await self.bot.wait_for("message", timeout=600, check=lambda msg, author=author, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
                     externalURL = response.content.strip()
-                    if externalURL.strip().lower() == "none":
+                    if externalURL.lower() == "none" or (len(externalURL) is 4 and "n" in externalURL.lower()):
                         externalURL = None
                 except asyncio.TimeoutError:
                     await dmChannel.send(embed=TIMEOUT_EMBED)
@@ -727,11 +726,10 @@ class Schedule(commands.Cog):
                         startTimeOk = True
 
                 duration = event["duration"]
-                d = timedelta(
-                    hours=int(duration.split("h")[0].strip()) if "h" in duration else 0,
-                    minutes=int(duration.split("h")[-1].replace("m", "").strip()) if duration.strip()[-1] != "h" else 0
-                )
-                endTime = startTime + d
+                hours = int(duration.split("h")[0].strip()) if "h" in duration else 0
+                minutes = int(duration.split("h")[-1].replace("m", "").strip()) if duration.strip()[-1] != "h" else 0
+                delta = timedelta(hours=hours, minutes=minutes)
+                endTime = startTime + delta
                 oldStartTime = event["time"]
                 event["time"] = startTime.strftime(EVENT_TIME_FORMAT)
                 event["endTime"] = endTime.strftime(EVENT_TIME_FORMAT)
@@ -770,12 +768,11 @@ class Schedule(commands.Cog):
                         await dmChannel.send(embed=TIMEOUT_EMBED)
                         return False
                 startTime = UTC.localize(datetime.strptime(event["time"], EVENT_TIME_FORMAT))
-                d = timedelta(
-                    hours=int(duration.split("h")[0].strip()) if "h" in duration else 0,
-                    minutes=int(duration.split("h")[-1].replace("m", "").strip()) if duration.strip()[-1] != "h" else 0
-                )
-                endTime = startTime + d
-                event["duration"] = duration
+                hours = int(duration.split("h")[0].strip()) if "h" in duration else 0
+                minutes = int(duration.split("h")[-1].replace("m", "").strip()) if duration.strip()[-1] != "h" else 0
+                delta = timedelta(hours=hours, minutes=minutes)
+                endTime = startTime + delta
+                event["duration"] = f"{(str(hours) + 'h')*(hours != 0)}{' '*(hours != 0 and minutes !=0)}{(str(minutes) + 'm')*(minutes != 0)}"
                 event["endTime"] = endTime.strftime(EVENT_TIME_FORMAT)
 
         if editingTime > self.lastUpdate:
@@ -882,7 +879,7 @@ class Schedule(commands.Cog):
         try:
             response = await self.bot.wait_for("message", timeout=600, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
             externalURL = response.content.strip()
-            if externalURL.strip().lower() == "none":
+            if externalURL.lower() == "none" or (len(externalURL) is 4 and "n" in externalURL.lower()):
                 externalURL = None
         except asyncio.TimeoutError:
             await dmChannel.send(embed=TIMEOUT_EMBED)
@@ -959,11 +956,9 @@ class Schedule(commands.Cog):
             except asyncio.TimeoutError:
                 await dmChannel.send(embed=TIMEOUT_EMBED)
                 return
-
-        d = timedelta(
-            hours=int(duration.split("h")[0].strip()) if "h" in duration else 0,
-            minutes=int(duration.split("h")[-1].replace("m", "").strip()) if duration.strip()[-1] != "h" else 0
-        )
+        hours = int(duration.split("h")[0].strip()) if "h" in duration else 0
+        minutes = int(duration.split("h")[-1].replace("m", "").strip()) if duration.strip()[-1] != "h" else 0
+        delta = timedelta(hours=hours, minutes=minutes)
 
         with open(MEMBER_TIME_ZONES_FILE) as f:
             memberTimeZones = json.load(f)
@@ -1055,7 +1050,7 @@ class Schedule(commands.Cog):
                             startTimeOk = True
                 else:
                     startTimeOk = True
-            endTime = startTime + d
+            endTime = startTime + delta
 
             with open(EVENTS_FILE) as f:
                 events = json.load(f)
@@ -1097,7 +1092,7 @@ class Schedule(commands.Cog):
                 "map": eventMap,
                 "time": startTime.strftime(EVENT_TIME_FORMAT),
                 "endTime": endTime.strftime(EVENT_TIME_FORMAT),
-                "duration": duration,
+                "duration": f"{(str(hours) + 'h')*(hours != 0)}{' '*(hours != 0 and minutes !=0)}{(str(minutes) + 'm')*(minutes != 0)}",
                 "messageId": None,
                 "accepted": [],
                 "declined": [],
@@ -1213,7 +1208,7 @@ class Schedule(commands.Cog):
             try:
                 response = await self.bot.wait_for("message", timeout=600, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
                 externalURL = response.content.strip()
-                if externalURL.strip().lower() == "none":
+                if externalURL.lower() == "none" or (len(externalURL) is 4 and "n" in externalURL.lower()):
                     externalURL = None
             except asyncio.TimeoutError:
                 await dmChannel.send(embed=TIMEOUT_EMBED)
@@ -1320,10 +1315,9 @@ class Schedule(commands.Cog):
         else:
             duration = template["duration"]
 
-        d = timedelta(
-            hours=int(duration.split("h")[0].strip()) if "h" in duration else 0,
-            minutes=int(duration.split("h")[-1].replace("m", "").strip()) if duration.strip()[-1] != "h" else 0
-        )
+        hours = int(duration.split("h")[0].strip()) if "h" in duration else 0
+        minutes = int(duration.split("h")[-1].replace("m", "").strip()) if duration.strip()[-1] != "h" else 0
+        delta = timedelta(hours=hours, minutes=minutes)
 
         if template is None:
             with open(WORKSHOP_INTEREST_FILE) as f:
@@ -1453,7 +1447,7 @@ class Schedule(commands.Cog):
                             startTimeOk = True
                 else:
                     startTimeOk = True
-            endTime = startTime + d
+            endTime = startTime + delta
 
             with open(EVENTS_FILE) as f:
                 events = json.load(f)
@@ -1507,7 +1501,7 @@ class Schedule(commands.Cog):
                     "reservableRoles": reservableRoles,
                     "maxPlayers": maxPlayers,
                     "map": eventMap,
-                    "duration": duration,
+                    "duration": f"{(str(hours) + 'h')*(hours != 0)}{' '*(hours != 0 and minutes !=0)}{(str(minutes) + 'm')*(minutes != 0)}",
                     "workshopInterest": workshopInterest
                 }
                 with open(WORKSHOP_TEMPLATES_FILE) as f:
@@ -1537,7 +1531,7 @@ class Schedule(commands.Cog):
                 "map": eventMap,
                 "time": startTime.strftime(EVENT_TIME_FORMAT),
                 "endTime": endTime.strftime(EVENT_TIME_FORMAT),
-                "duration": duration,
+                "duration": f"{(str(hours) + 'h')*(hours != 0)}{' '*(hours != 0 and minutes !=0)}{(str(minutes) + 'm')*(minutes != 0)}",
                 "messageId": None,
                 "accepted": [],
                 "declined": [],
@@ -1604,7 +1598,7 @@ class Schedule(commands.Cog):
         try:
             response = await self.bot.wait_for("message", timeout=600, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
             externalURL = response.content.strip()
-            if externalURL.strip().lower() == "none":
+            if externalURL.lower() == "none" or (len(externalURL) is 4 and "n" in externalURL.lower()):
                 externalURL = None
         except asyncio.TimeoutError:
             await dmChannel.send(embed=TIMEOUT_EMBED)
@@ -1682,10 +1676,9 @@ class Schedule(commands.Cog):
                 await dmChannel.send(embed=TIMEOUT_EMBED)
                 return
 
-        d = timedelta(
-            hours=int(duration.split("h")[0].strip()) if "h" in duration else 0,
-            minutes=int(duration.split("h")[-1].replace("m", "").strip()) if duration.strip()[-1] != "h" else 0
-        )
+        hours = int(duration.split("h")[0].strip()) if "h" in duration else 0
+        minutes = int(duration.split("h")[-1].replace("m", "").strip()) if duration.strip()[-1] != "h" else 0
+        delta = timedelta(hours=hours, minutes=minutes)
 
         with open(MEMBER_TIME_ZONES_FILE) as f:
             memberTimeZones = json.load(f)
@@ -1772,7 +1765,7 @@ class Schedule(commands.Cog):
                         startTimeOk = True
             else:
                 startTimeOk = True
-        endTime = startTime + d
+        endTime = startTime + delta
 
         try:
             if os.path.exists(EVENTS_FILE):
@@ -1790,7 +1783,7 @@ class Schedule(commands.Cog):
                 "map": eventMap,
                 "time": startTime.strftime(EVENT_TIME_FORMAT),
                 "endTime": endTime.strftime(EVENT_TIME_FORMAT),
-                "duration": duration,
+                "duration": f"{(str(hours) + 'h')*(hours != 0)}{' '*(hours != 0 and minutes !=0)}{(str(minutes) + 'm')*(minutes != 0)}",
                 "messageId": None,
                 "accepted": [],
                 "declined": [],
@@ -1839,14 +1832,6 @@ class Schedule(commands.Cog):
         try:
             response = await self.bot.wait_for("message", timeout=600, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
             timeZone = response.content.strip()
-            if self.memberTimeZonesFileLock:
-                embed = Embed(title=SCHEDULE_TIME_ZONE_FILE_OCCUPIED)
-                await ctx.author.send(embed=embed)
-                while self.memberTimeZonesFileLock:
-                    while self.memberTimeZonesFileLock:
-                        await asyncio.sleep(0.5)
-                    await asyncio.sleep(0.5)
-            self.memberTimeZonesFileLock = True
             with open(MEMBER_TIME_ZONES_FILE) as f:
                 memberTimeZones = json.load(f)
             if timeZone.strip().lower() == "cancel":
@@ -1868,7 +1853,6 @@ class Schedule(commands.Cog):
         except asyncio.TimeoutError:
             await dmChannel.send(embed=TIMEOUT_EMBED)
             return
-        self.memberTimeZonesFileLock = False
 
 def setup(bot):
     bot.add_cog(Schedule(bot))

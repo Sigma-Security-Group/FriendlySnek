@@ -140,7 +140,6 @@ SCHEDULE_CANCEL = "Enter `cancel` to keep your current preference."
 SCHEDULE_TIME_ZONE_QUESTION = ":clock1: What is your preferred time zone?"
 SCHEDULE_TIME_ZONE_CHANGING = "Changing time zone preferences..."
 SCHEDULE_TIME_ZONE_DONE = "✅ Time zone preferences changed!"
-SCHEDULE_TIME_ZONE_FILE_OCCUPIED = ":clock3: Time zones file is occupied. This happens rarely, but give it just a few seconds..."
 SCHEDULE_TIME_ZONE_UNSET = "You don't have a preferred time zone set."
 SCHEDULE_TIME_ZONE_INFORMATION = " Enter `none`, a number from the list or any time zone name from the column \"TZ DATABASE NAME\" in the following [Wikipedia article](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones) to make your choice. If you enter `none` or something invalid your current preference will be deleted and you will be asked again the next time you schedule an event. You can change or delete your preferred time zone at any time with the `/changetimezone` command."
 

@@ -36,7 +36,7 @@ DEFAULT_WORKSHOP_INTEREST_LISTS = (
         "JTAC 📡",
         [],
         ""
-        ),
+    ),
     (
         "Medic",
         "Medic 💉",
@@ -123,10 +123,7 @@ class WorkshopInterest(commands.Cog):
         embed.add_field(name=WORKSHOPINTEREST_INTERESTED_PEOPLE.format(len(interestedList)), value=interestedStr)
         smes = idsToMembers(workshop["sme"])
         if smes:
-            if len(smes) > 1:
-                embed.set_footer(text=f"SMEs: {', '.join(smes)}")
-            else:
-                embed.set_footer(text=f"SME: {smes[0]}")
+            embed.set_footer(text=f"SME{'s'*(len(smes) > 1)}: {', '.join(smes)}")
         return embed
 
     async def updateChannel(self):

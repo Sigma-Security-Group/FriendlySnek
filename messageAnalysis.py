@@ -37,18 +37,18 @@ async def analyzeChannel(message, channelID:int, attachmentContentType:str):
         return
     elif any(attachment.content_type.startswith(f"{attachmentContentType}/") for attachment in message.attachments):
         return
-    elif attachmentContentType == "video" and any(videoUrl in message.content for videoUrl in ("://www.youtube.com", "://youtu.be", "://clips.twitch.tv", "://www.twitch.tv", "://streamable.com")):
+    elif attachmentContentType == "video" and any(videoUrl in message.content for videoUrl in VIDEO_URLS):
         return
     try:
         await message.delete()
     except Exception:
         pass
     try:
-        await message.author.send(f"The message you just posted in <#{channelID}> was deleted because no {attachmentContentType} was detected in it. If this is an error, then please ask staff to post the {attachmentContentType} for you and inform {message.guild.get_member(ADRIAN).display_name} about the issue.")
+        await message.author.send(ANALYSIS_ILLEGAL_MESSAGE.format(channelID, attachmentContentType, attachmentContentType, message.guild.get_member(ADRIAN).display_name, message.guild.get_member(FROGGI).display_name))
     except Exception as e:
         print(message.author, e)
         try:
-            print("Sending friend request...")
+            print(LOG_FRIEND_REQ)
             await message.author.send_friend_request()
         except Exception as e:
             print(e)

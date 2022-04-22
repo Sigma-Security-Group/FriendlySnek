@@ -145,7 +145,6 @@ SCHEDULE_TIME_ZONE_UNSET = "You don't have a preferred time zone set."
 SCHEDULE_TIME_ZONE_INFORMATION = " Enter `none`, a number from the list or any time zone name from the column \"TZ DATABASE NAME\" in the following [Wikipedia article](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones) to make your choice. If you enter `none` or something invalid your current preference will be deleted and you will be asked again the next time you schedule an event. You can change or delete your preferred time zone at any time with the `/changetimezone` command."
 
 ## Logging
-SCHEDULE_LOG_FRIEND_REQ = "Sending friend request..."
 SCHEDULE_LOG_IS_READY = "{0} is ready!"
 SCHEDULE_LOG_COULDNT_START = "Couldn't start {0}!"
 LOG_EDITING_EVENT = "{0} ({1}#{2}) is editing {3}."
@@ -169,6 +168,13 @@ WORKSHOPINTEREST_INTERESTED_PEOPLE = "Interested People ({0})"
 
 
 ####################
+# MessageAnalysis.py
+####################
+
+VIDEO_URLS = ("://www.youtube.com", "://youtu.be", "://clips.twitch.tv", "://www.twitch.tv", "://streamable.com")
+ANALYSIS_ILLEGAL_MESSAGE = "The message you just posted in <#{0}> was deleted because no {1} was detected in it. If this is an error, then please ask staff to post the {2} for you and inform **{3}** and/or **{4}** about the issue."
+
+####################
 # Generic
 ####################
 
@@ -180,3 +186,4 @@ LOG_COG_READY = "{0} cog is ready"
 LOG_BOT_READY = "Bot Ready!"
 LOG_BOT_STOPPED = "Bot stopped!"
 LOG_ERROR = "An error occured!"
+LOG_FRIEND_REQ = "Sending friend request..."

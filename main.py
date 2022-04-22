@@ -13,7 +13,6 @@ import platform
 if platform.system() == "Windows":
 	asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
-import json
 import pytz
 from glob import glob
 # from apscheduler.schedulers.asyncio import AsyncIOScheduler
@@ -112,7 +111,7 @@ async def on_member_leave(member):
 
 @bot.event
 async def on_error(event, *args, **kwargs):
-    log.exception("An error occured")
+    log.exception(LOG_ERROR)
 
 @bot.event
 async def on_command_error(ctx, error):

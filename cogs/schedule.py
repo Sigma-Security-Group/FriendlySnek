@@ -427,7 +427,7 @@ class Schedule(commands.Cog):
             except Exception as e:
                 print(member, e)
                 try:
-                    print(SCHEDULE_LOG_FRIEND_REQ)
+                    print(LOG_FRIEND_REQ)
                     await member.send_friend_request()
                 except Exception as e:
                     print(e)
@@ -445,7 +445,7 @@ class Schedule(commands.Cog):
         except Exception as e:
             print(member, e)
             try:
-                print(SCHEDULE_LOG_FRIEND_REQ)
+                print(LOG_FRIEND_REQ)
                 await member.send_friend_request()
             except Exception as e:
                 print(e)
@@ -504,7 +504,7 @@ class Schedule(commands.Cog):
         except Exception as e:
             print(author, e)
             try:
-                print(SCHEDULE_LOG_FRIEND_REQ)
+                print(LOG_FRIEND_REQ)
                 await author.send_friend_request()
             except Exception as e:
                 print(e)
@@ -746,7 +746,7 @@ class Schedule(commands.Cog):
                         except Exception as e:
                             print(member, e)
                             try:
-                                print(SCHEDULE_LOG_FRIEND_REQ)
+                                print(LOG_FRIEND_REQ)
                                 await member.send_friend_request()
                             except Exception as e:
                                 print(e)
@@ -795,7 +795,7 @@ class Schedule(commands.Cog):
         except Exception as e:
             print(author, e)
             try:
-                print(SCHEDULE_LOG_FRIEND_REQ)
+                print(LOG_FRIEND_REQ)
                 await author.send_friend_request()
             except Exception as e:
                 print(e)
@@ -826,7 +826,7 @@ class Schedule(commands.Cog):
                         except Exception as e:
                             print(member, e)
                             try:
-                                print(SCHEDULE_LOG_FRIEND_REQ)
+                                print(LOG_FRIEND_REQ)
                                 await member.send_friend_request()
                             except Exception as e:
                                 print(e)
@@ -855,7 +855,7 @@ class Schedule(commands.Cog):
         except Exception as e:
             print(ctx.author, e)
             try:
-                print(SCHEDULE_LOG_FRIEND_REQ)
+                print(LOG_FRIEND_REQ)
                 await ctx.author.send_friend_request()
             except Exception as e:
                 print(e)
@@ -1146,7 +1146,7 @@ class Schedule(commands.Cog):
         except Exception as e:
             print(ctx.author, e)
             try:
-                print(SCHEDULE_LOG_FRIEND_REQ)
+                print(LOG_FRIEND_REQ)
                 await ctx.author.send_friend_request()
             except Exception as e:
                 print(e)
@@ -1577,7 +1577,7 @@ class Schedule(commands.Cog):
         except Exception as e:
             print(ctx.author, e)
             try:
-                print(SCHEDULE_LOG_FRIEND_REQ)
+                print(LOG_FRIEND_REQ)
                 await ctx.author.send_friend_request()
             except Exception as e:
                 print(e)
@@ -1830,7 +1830,7 @@ class Schedule(commands.Cog):
         except Exception as e:
             print(ctx.author, e)
             try:
-                print(SCHEDULE_LOG_FRIEND_REQ)
+                print(LOG_FRIEND_REQ)
                 await ctx.author.send_friend_request()
             except Exception as e:
                 print(e)

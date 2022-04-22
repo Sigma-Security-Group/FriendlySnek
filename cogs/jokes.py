@@ -9,7 +9,7 @@ if DEBUG:
     from constants.debug import *
 
 URL = "https://icanhazdadjoke.com/"
-headers = {'Accept': 'application/json'}
+headers = {"Accept": "application/json"}
 
 class Jokes(commands.Cog):
     def __init__(self, bot):
@@ -24,7 +24,7 @@ class Jokes(commands.Cog):
     async def dadjoke(self, ctx: SlashContext):
         r = requests.get(url=URL, headers=headers)
         data = r.json()
-        await ctx.send(data['joke'])
+        await ctx.send(data["joke"])
 
 def setup(bot):
     bot.add_cog(Jokes(bot))

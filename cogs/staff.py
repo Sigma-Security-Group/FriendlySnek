@@ -226,8 +226,8 @@ class Staff(commands.Cog):
                     if (member.display_name.lower() in message.content.lower() and not re.match(r"\w", message.content.lower()[message.content.lower().index(member.display_name.lower()) - 1]) and not re.match(r"\w", message.content.lower()[message.content.lower().index(member.display_name.lower()) + len(member.display_name)])) or\
                        (member.name.lower() in message.content.lower() and not re.match(r"\w", message.content.lower()[message.content.lower().index(member.name.lower()) - 1]) and not re.match(r"\w", message.content.lower()[message.content.lower().index(member.name.lower()) + len(member.name)])) or\
                        (member.mention in message.content and not re.match(r"\w", message.content[message.content.index(member.mention) - 1]) and not re.match(r"\w", message.content[message.content.index(member.mention) + len(member.mention)])) or\
-                       (member.mention.replace('<@', '<@!') in message.content and not re.match(r"\w", message.content[message.content.index(member.mention.replace('<@', '<@!')) - 1]) and not re.match(r"\w", message.content[message.content.index(member.mention.replace('<@', '<@!')) + len(member.mention.replace('<@', '<@!'))])) or\
-                       (member.mention.replace('<@!', '<@') in message.content and not re.match(r"\w", message.content[message.content.index(member.mention.replace('<@!', '<@')) - 1]) and not re.match(r"\w", message.content[message.content.index(member.mention.replace('<@!', '<@')) + len(member.mention.replace('<@!', '<@'))])) or\
+                       (member.mention.replace("<@", "<@!") in message.content and not re.match(r"\w", message.content[message.content.index(member.mention.replace("<@", "<@!")) - 1]) and not re.match(r"\w", message.content[message.content.index(member.mention.replace("<@", "<@!")) + len(member.mention.replace("<@", "<@!"))])) or\
+                       (member.mention.replace("<@!", "<@") in message.content and not re.match(r"\w", message.content[message.content.index(member.mention.replace("<@!", "<@")) - 1]) and not re.match(r"\w", message.content[message.content.index(member.mention.replace("<@!", "<@")) + len(member.mention.replace("<@!", "<@"))])) or\
                        str(member.id) in message.content:
                         messageLinksList.append(message.jump_url)
                 except Exception:
@@ -235,8 +235,8 @@ class Staff(commands.Cog):
                         if (member.display_name.lower() in message.content.lower() and not re.match(r"\w", message.content.lower()[message.content.lower().index(member.display_name.lower()) - 1])) or\
                            (member.name.lower() in message.content.lower() and not re.match(r"\w", message.content.lower()[message.content.lower().index(member.name.lower()) - 1])) or\
                            (member.mention in message.content and not re.match(r"\w", message.content[message.content.index(member.mention) - 1])) or\
-                           (member.mention.replace('<@', '<@!') in message.content and not re.match(r"\w", message.content[message.content.index(member.mention.replace('<@', '<@!')) - 1])) or\
-                           (member.mention.replace('<@!', '<@') in message.content and not re.match(r"\w", message.content[message.content.index(member.mention.replace('<@!', '<@')) - 1])) or\
+                           (member.mention.replace("<@", "<@!") in message.content and not re.match(r"\w", message.content[message.content.index(member.mention.replace("<@", "<@!")) - 1])) or\
+                           (member.mention.replace("<@!", "<@") in message.content and not re.match(r"\w", message.content[message.content.index(member.mention.replace("<@!", "<@")) - 1])) or\
                            str(member.id) in message.content:
                             messageLinksList.append(message.jump_url)
                     except Exception:

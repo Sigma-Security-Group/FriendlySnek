@@ -10,7 +10,7 @@ import asyncio
 
 # Set appropriate event loop policy to avoid runtime errors on windows
 import platform
-if platform.system() == 'Windows':
+if platform.system() == "Windows":
 	asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
 import json
@@ -28,7 +28,6 @@ if DEBUG:
 from messageAnalysis import runMessageAnalysis
 import secret
 
-COMMAND_PREFIX = "-"
 COGS = [os.path.basename(path)[:-3] for path in glob("cogs/*.py")]
 cogsReady = {cog: False for cog in COGS}
 
@@ -40,7 +39,6 @@ for cog in COGS:
     bot.load_extension(f"cogs.{cog}")
 
 UTC = pytz.utc
-
 newcomers = set()
 
 @bot.event
@@ -50,7 +48,7 @@ async def on_ready():
     while not all(cogsReady.values()):
         await asyncio.sleep(1)
     bot.ready = True
-    log.info("Bot Ready")
+    log.info(LOG_BOT_READY)
     await bot.change_presence(activity=discord.Activity(type=discord.ActivityType.watching, name="you"))  # 🐍
 
 @bot.event
@@ -58,7 +56,7 @@ async def on_message(message):
     # Ignore messages from itself
     if message.author.id == FRIENDLY_SNEK:
         return
-    if DEBUG and message.author.id == FRIENDLY_SNEK_DEV:
+    if DEBUG and message.author.id in FRIENDLY_SNEKS:
         return
 
     # Ignore messages that were not sent on the correct server
@@ -68,7 +66,7 @@ async def on_message(message):
 
     # Execute commands
     if message.content.startswith(COMMAND_PREFIX) or message.content.startswith("/"):
-        log.debug(f"{message.author.display_name}({message.author.name}#{message.author.discriminator}) > {message.content}")
+        log.debug(f"{message.author.display_name} ({message.author.name}#{message.author.discriminator}) > {message.content}")
         await bot.process_commands(message)
 
     # Unmark newcomer pinging unit staff as needing a reminder to ping unit staff
@@ -90,14 +88,14 @@ async def on_member_join(member):
     log.debug("Member joined")
     await asyncio.sleep(24 * 60 * 60)  # Seconds
     if member.id not in newcomers:
-        log.debug(f"Newcomer is no longer in the server {member.display_name}({member.name}#{member.discriminator})")
+        log.debug(f"Newcomer is no longer in the server {member.display_name} ({member.name}#{member.discriminator})")
         return
     currentMembers = await guild.fetch_members().flatten()
     if member in currentMembers:
         updatedMember = await guild.fetch_member(member.id)
         if len(updatedMember.roles) < 2:
             unitStaffRole = guild.get_role(UNIT_STAFF)
-            log.debug(f"Sending ping reminder to {updatedMember.display_name}({updatedMember.name}#{updatedMember.discriminator})")
+            log.debug(f"Sending ping reminder to {updatedMember.display_name} ({updatedMember.name}#{updatedMember.discriminator})")
             await bot.get_channel(WELCOME).send(f"{updatedMember.mention} Don't forget to ping {unitStaffRole.name} when you are ready.")
         else:
             log.debug(f"Newcomer is no longer in need of an interview {updatedMember.display_name}({updatedMember.name}#{updatedMember.discriminator})")
@@ -122,15 +120,15 @@ async def on_command_error(ctx, error):
 
 @bot.command(hidden=True, help="Reload bot (Dev only)")
 async def reload(ctx):
-    if ctx.author.id != ADRIAN:
+    if ctx.author.id != ADRIAN or ctx.author.id != FROGGI:
         return
     for cog in COGS:
         bot.reload_extension(f"cogs.{cog}")
-    await ctx.send("Reloaded")
+    await ctx.send("Reloaded!")
 
 if __name__ == "__main__":
     try:
         bot.run(secret.tokenDev if DEBUG else secret.token)
-        log.info("Bot stopped")
+        log.info(LOG_BOT_STOPPED)
     except Exception:
-        log.exception("An error occured")
+        log.exception(LOG_ERROR)

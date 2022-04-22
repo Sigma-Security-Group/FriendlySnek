@@ -155,7 +155,7 @@ class Schedule(commands.Cog):
             for event in events:
                 endTime = UTC.localize(datetime.strptime(event["endTime"], EVENT_TIME_FORMAT))
                 if utcNow > endTime + timedelta(minutes=90):
-                    log.debug(LOG_DELETE_EVENT_ACTION.format(event['title']))
+                    log.debug(LOG_DELETE_EVENT_ACTION.format(event["title"]))
                     deletedEvents.append(event)
                     eventMessage = await self.bot.get_channel(SCHEDULE).fetch_message(event["messageId"])
                     await eventMessage.delete()
@@ -208,7 +208,7 @@ class Schedule(commands.Cog):
                         json.dump(events, f, indent=4)
                     if len(acceptedMembersNotOnline) > 0:
                         log.debug(LOG_NOTIFICATION_ACCEPTED.format([member.display_name for member in acceptedMembersNotOnline]))
-                        await channel.send(" ".join(member.mention for member in acceptedMembersNotOnline) + SCHEDULE_REMINDER_VOICE.format(COMMAND, DEPLOYED, event['type'].lower(), SCHEDULE))
+                        await channel.send(" ".join(member.mention for member in acceptedMembersNotOnline) + SCHEDULE_REMINDER_VOICE.format(COMMAND, DEPLOYED, event["type"].lower(), SCHEDULE))
                     if len(onlineMembersNotAccepted) > 0:
                         log.debug(LOG_NOTIFICATION_VC.format([member.display_name for member in onlineMembersNotAccepted]))
                         await channel.send(" ".join(member.mention for member in onlineMembersNotAccepted) + SCHEDULE_REMINDER_INGAME.format(SCHEDULE))
@@ -283,7 +283,7 @@ class Schedule(commands.Cog):
             embed.add_field(name=f"Reservable Roles ({len([role for role, memberId in event['reservableRoles'].items() if memberId is not None])}/{len(event['reservableRoles'])}) 👤", value="\n".join(f"{roleName} - {('*' + member.display_name + '*' if (member := guild.get_member(memberId)) is not None else '**VACANT**') if memberId is not None else '**VACANT**'}" for roleName, memberId in event["reservableRoles"].items()), inline=False)
         embed.add_field(name="\u200B", value="\u200B", inline=False)
         embed.add_field(name="Time", value=f"<t:{round(UTC.localize(datetime.strptime(event['time'], EVENT_TIME_FORMAT)).timestamp())}:F> - <t:{round(UTC.localize(datetime.strptime(event['endTime'], EVENT_TIME_FORMAT)).timestamp())}:t>", inline=False)
-        embed.add_field(name="Duration", value=event['duration'], inline=False)
+        embed.add_field(name="Duration", value=event["duration"], inline=False)
         embed.add_field(name="Map", value="Unspecified" if event["map"] is None else event["map"], inline=False)
         if event["externalURL"] is not None:
             embed.add_field(name="\u200B", value="\u200B", inline=False)
@@ -554,7 +554,7 @@ class Schedule(commands.Cog):
                 event["type"] = {"1": "Operation", "2": "Workshop", "3": "Event"}.get(eventTypeNum, "Operation")
 
             case "1":
-                embed = Embed(title=SCHEDULE_EVENT_TITLE.format(event.get('type', 'Operation').lower()), color=Colour.gold())
+                embed = Embed(title=SCHEDULE_EVENT_TITLE.format(event.get("type", "Operation").lower()), color=Colour.gold())
                 await dmChannel.send(embed=embed)
                 try:
                     response = await self.bot.wait_for("message", timeout=600, check=lambda msg, author=author, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
@@ -747,7 +747,7 @@ class Schedule(commands.Cog):
                 event["endTime"] = endTime.strftime(EVENT_TIME_FORMAT)
                 reorderEvents = True
                 guild = self.bot.get_guild(SERVER)
-                embed = Embed(title=SCHEDULE_EVENT_START_TIME_CHANGE_TITLE.format(event["title"]), description=SCHEDULE_EVENT_START_TIME_CHANGE_DESCRIPTION.format(round(UTC.localize(datetime.strptime(oldStartTime, EVENT_TIME_FORMAT)).timestamp()), round(UTC.localize(datetime.strptime(event['time'], EVENT_TIME_FORMAT)).timestamp())))
+                embed = Embed(title=SCHEDULE_EVENT_START_TIME_CHANGE_TITLE.format(event["title"]), description=SCHEDULE_EVENT_START_TIME_CHANGE_DESCRIPTION.format(round(UTC.localize(datetime.strptime(oldStartTime, EVENT_TIME_FORMAT)).timestamp()), round(UTC.localize(datetime.strptime(event["time"], EVENT_TIME_FORMAT)).timestamp())))
                 for memberId in event["accepted"] + event.get("declinedForTiming", []) + event["tentative"]:
                     member = guild.get_member(memberId)
                     if member is not None:
@@ -830,7 +830,7 @@ class Schedule(commands.Cog):
                 for memberId in event["accepted"] + event.get("declinedForTiming", []) + event["tentative"]:
                     member = guild.get_member(memberId)
                     if member is not None:
-                        embed = Embed(title=SCHEDULE_EVENT_DELETED_TITLE.format(event.get("type", "Operation"), event["title"]), description=SCHEDULE_EVENT_DELETED_DESCRIPTION.format(event.get("type", "Operation").lower(), event["title"], round(UTC.localize(datetime.strptime(event['time'], EVENT_TIME_FORMAT)).timestamp())))
+                        embed = Embed(title=SCHEDULE_EVENT_DELETED_TITLE.format(event.get("type", "Operation"), event["title"]), description=SCHEDULE_EVENT_DELETED_DESCRIPTION.format(event.get("type", "Operation").lower(), event["title"], round(UTC.localize(datetime.strptime(event["time"], EVENT_TIME_FORMAT)).timestamp())))
                         try:
                             await member.send(embed=embed)
                         except Exception as e:
@@ -1577,7 +1577,7 @@ class Schedule(commands.Cog):
         if newEvent is not None:
             with open(EVENTS_FILE) as f:
                 events = json.load(f)
-            await ctx.send(SCHEDULE_EVENT_MESSAGE_DONE.format("Workshop", SERVER, SCHEDULE, events[-1]['messageId']))
+            await ctx.send(SCHEDULE_EVENT_MESSAGE_DONE.format("Workshop", SERVER, SCHEDULE, events[-1]["messageId"]))
 
     @cog_ext.cog_slash(name="event", description=SCHEDULE_COMMAND_DESCRIPTION.format("a generic event"), guild_ids=[SERVER])
     async def event(self, ctx: SlashContext):
@@ -1832,7 +1832,7 @@ class Schedule(commands.Cog):
         if newEvent is not None:
             with open(EVENTS_FILE) as f:
                 events = json.load(f)
-            await ctx.send(SCHEDULE_EVENT_MESSAGE_DONE.format("Event", SERVER, SCHEDULE, events[-1]['messageId']))
+            await ctx.send(SCHEDULE_EVENT_MESSAGE_DONE.format("Event", SERVER, SCHEDULE, events[-1]["messageId"]))
 
     @cog_ext.cog_slash(name="changetimezone", description=CHANGE_TIME_ZONE_COMMAND_DESCRIPTION, guild_ids=[SERVER])
     async def changeTimeZone(self, ctx: SlashContext):

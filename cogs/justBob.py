@@ -229,7 +229,7 @@ class JustBob(commands.Cog):
             boardRows.append("".join(boardRow))
         embed.add_field(name="\u200B", value="\n".join(boardRows) if len(boardRows) > 0 else "\u200B")
 
-        player = guild.get_member(game['playerId'])
+        player = guild.get_member(game["playerId"])
         embed.set_footer(text=f"Player: {player.display_name if player is not None else 'UNKNOWN'}")
 
         return embed

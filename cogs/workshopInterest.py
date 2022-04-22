@@ -121,7 +121,7 @@ class WorkshopInterest(commands.Cog):
         if interestedStr == "":
             interestedStr = "-"
         embed.add_field(name=WORKSHOPINTEREST_INTERESTED_PEOPLE.format(len(interestedList)), value=interestedStr)
-        smes = idsToMembers(workshop['sme'])
+        smes = idsToMembers(workshop["sme"])
         if smes:
             if len(smes) > 1:
                 embed.set_footer(text=f"SMEs: {', '.join(smes)}")

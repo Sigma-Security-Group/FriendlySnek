@@ -172,5 +172,11 @@ WORKSHOPINTEREST_INTERESTED_PEOPLE = "Interested People ({0})"
 # Generic
 ####################
 
+## Misc
+COMMAND_PREFIX = "-"
+
 ## Logging
 LOG_COG_READY = "{0} cog is ready"
+LOG_BOT_READY = "Bot Ready!"
+LOG_BOT_STOPPED = "Bot stopped!"
+LOG_ERROR = "An error occured!"

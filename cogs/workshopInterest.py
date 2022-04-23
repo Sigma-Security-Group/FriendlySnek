@@ -35,13 +35,13 @@ DEFAULT_WORKSHOP_INTEREST_LISTS = (
         "JTAC",
         "JTAC 📡",
         [],
-        ""
+        "Lear how to direct close-air support."  # Unverifed description.
     ),
     (
         "Medic",
         "Medic 💉",
         [MONTY, SD, SILENT],
-        ""
+        "Learn how to administer combat aid to wounded personnel in a timely and effective manner. "  # Unverifed description.
     ),
     (
         "Heavy Weapons",
@@ -57,7 +57,7 @@ DEFAULT_WORKSHOP_INTEREST_LISTS = (
         "Breacher",
         "Breacher 🚪",
         [],
-        ""
+        "Become an expert in close-quarters battle (CQB)."  # Unverifed description.
     ),
     (
         "Mechanised",
@@ -69,7 +69,7 @@ DEFAULT_WORKSHOP_INTEREST_LISTS = (
         "RPV-SO",
         "RPV-SO 🛩️​",
         [TUNDRA, WAFFLE],
-        ""
+        "Learn how to employ recon and attack Remote Piloted Vehicles (Drones)."  # Unverifed description.
     ),
     (
         "Team Leading",

@@ -46,7 +46,7 @@ DEFAULT_WORKSHOP_INTEREST_LISTS = (
     (
         "Heavy Weapons",
         "Heavy Weapons 💣",
-        [SOAPY],
+        [SOAPY, TUNDRA],
         "Learn how to efficiently operate as a machine gun crew, use grenade launchers, and shoot cretins out of shitboxes (AT & AA)."),
     (
         "Marksman",
@@ -68,7 +68,7 @@ DEFAULT_WORKSHOP_INTEREST_LISTS = (
     (
         "RPV-SO",
         "RPV-SO 🛩️​",
-        [WAFFLE],
+        [TUNDRA, WAFFLE],
         ""
     ),
     (

@@ -68,7 +68,7 @@ SCHEDULE_RESERVABLE_COMPLETED = "✅ Role reservation completed!"
 SCHEDULE_RESERVABLE_CANCELLED = "❌ Role reservation canceled!"
 SCHEDULE_EVENT_MESSAGE_PROGRESS = "Scheduling... Standby for {0}..."
 SCHEDULE_EVENT_MESSAGE_DONE = "{0} on [schedule](<https://discord.com/channels/{1}/{2}/{3}>)!"
-SCHEDULE_TEMPLATE_SAVED = "✅ Template saved!"
+SCHEDULE_TEMPLATE_SAVED = "✅ Template saved as {0}!"
 SCHEDULE_TEMPLATE_DISCARD = "❌ Template not saved!"
 SCHEDULE_REFRESHING = "Refreshing <#{0}>..."
 
@@ -89,14 +89,14 @@ SCHEDULE_EVENT_TITLE = ":pencil2: What is the title of your {0}?"
 SCHEDULE_EVENT_TITLE_OPERATION_REMINDER = "Remeber, operation names should start with the word `Operation`\nE.g. Operation Red Tide."
 SCHEDULE_EVENT_DESCRIPTION_QUESTION = ":notepad_spiral: What is the description?"
 SCHEDULE_EVENT_DESCRIPTION = "Current description:\n```{0}```"
-SCHEDULE_EVENT_URL_TITLE = ":notebook_with_decorative_cover: Enter `none` or a URL."
+SCHEDULE_EVENT_URL_TITLE = ":notebook_with_decorative_cover: Enter `none` or a URL"
 SCHEDULE_EVENT_URL_DESCRIPTION = "E.g. Signup sheet, Briefing, OPORD, etc."
 SCHEDULE_EVENT_RESERVABLE_QUESTION = "Are there any reservable roles?"
 SCHEDULE_EVENT_RESERVABLE_PROMPT = "Enter `yes` or `y` if there are reservable roles or enter anything else if there are not."
-SCHEDULE_EVENT_RESERVABLE_LIST_TITLE = "Type each reservable role in its own line (in a single message)."
+SCHEDULE_EVENT_RESERVABLE_LIST_TITLE = "Type each reservable role in its own line (in a single message)"
 SCHEDULE_EVENT_RESERVABLE_LIST_DESCRIPTION = "Press Shift + Enter to insert a newline. Editing the name of a role will make it vacant, but roles which keep their exact names will keep their reservations)."
 SCHEDULE_EVENT_RESERVABLE_LIST_CURRENT = "Current reservable roles."
-SCHEDULE_EVENT_MAP_PROMPT = ":globe_with_meridians: Choose a map."
+SCHEDULE_EVENT_MAP_PROMPT = ":globe_with_meridians: Choose a map"
 SCHEDULE_EVENT_MAX_PLAYERS = ":family_man_boy_boy: What is the maximum number of attendees?"
 SCHEDULE_EVENT_TIME_ZONE_QUESTION = ":clock1: It appears that you haven't set your preferred time zone yet. What is your preferred time zone?"
 SCHEDULE_EVENT_TIME_ZONE_PROMPT = "Enter `none`, a number from the list or any time zone name from the column \"TZ DATABASE NAME\" in the following [Wikipedia article](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones) to make your choice. If you enter `none` or something invalid UTC will be assumed and you will be asked again the next time you schedule an event. You can change or delete your preferred time zone at any time with the `/changeTimeZone` command."
@@ -110,14 +110,16 @@ SCHEDULE_EVENT_TIME_PAST_PROMPT = "Enter `yes` or `y` to keep this time. Enter a
 SCHEDULE_EVENT_DURATION_QUESTION = "What is the duration of the {0}?"
 SCHEDULE_EVENT_DURATION_PROMPT = "E.g.\n`30m`\n`2h`\n`4h 30m`\n`2h30`"
 SCHEDULE_EVENT_DURATION_REGEX = r"^\s*((([1-9]\d*)?\d\s*h(\s*([0-5])?\d\s*m?)?)|(([0-5])?\d\s*m))\s*$"
-SCHEDULE_EVENT_TEMPLATE_TITLE = ":clipboard: Select a template."
-SCHEDULE_EVENT_TEMPLATE_DESCRIPTION = "Enter a template number or `none` to make a workshop from scratch."
+SCHEDULE_EVENT_TEMPLATE_TITLE = ":clipboard: Templates"
+SCHEDULE_EVENT_TEMPLATE_DESCRIPTION = "Enter a template number or `none` to make a workshop from scratch.\n\nEdit template: `edit` + template number. E.g. `edit 2`.\nDelete template: `delete` + template number. E.g. `delete 4`. **IRREVERSIBLE!**"
+SCHEDULE_EVENT_TEMPLATE_LIST_TITLE = "Templates"
+SCHEDULE_EVENT_TEMPLATE_ACTION_REGEX = r"(edit |delete )?\d+"
 SCHEDULE_EVENT_TEMPLATE_SAVE_QUESTION = "Do you wish to save this workshop as a template?"
 SCHEDULE_EVENT_TEMPLATE_SAVE_PROMPT = "Enter `yes` or `y` if you want to save it or enter anything else otherwise."
 SCHEDULE_EVENT_TEMPLATE_SAVE_NAME_QUESTION = "Which name would you like to save the template as?"
 SCHEDULE_EVENT_TEMPLATE_SAVE_NAME_PROMPT = "Enter `none` to make it the same as the title."
 SCHEDULE_EVENT_WAITING_LIST = ":link: Which workshop waiting list is your workshop linked to?"
-SCHEDULE_EVENT_CONFIRM_DELETE = "Are you sure you want to delete this event?"
+SCHEDULE_EVENT_CONFIRM_DELETE = "Are you sure you want to delete this {0}?"
 
 ## Reservable roles
 SCHEDULE_RESERVABLE_QUESTION = "Which role would you like to reserve?"
@@ -155,6 +157,9 @@ LOG_DELETE_EVENT_NONE = "No events were auto deleted!"
 LOG_NOTIFICATION_ACCEPTED = "Pinging members in accepted not in VC: {0}..."
 LOG_NOTIFICATION_VC = "Pinging members in VC not in accepted: {0}..."
 LOG_SCHEDULE_UPDATE_ERROR = "{0} ({1}#{2}) was {3} but schedule was updated!"
+LOG_REFRESHING_SCHEDULE = "{0} ({1}#{2}) is refreshing the schedule..."
+LOG_TEMPLATE_EDITING = "{0} ({1}#{2}) is editing the workshop template: {3}..."
+LOG_TEMPLATE_DELETED = "{0} ({1}#{2}) deleted the workshop template: {3}!"
 
 
 ####################
@@ -177,12 +182,21 @@ MECHANISED_DESC = "A short course on driving, gunning, and commanding a 6.21 mil
 RPVSO_DESC = "Learn how to employ recon and attack Remote Piloted Vehicles (Drones)."  # Unverifed description.
 TL_DESC = "Learn how to effectively plan out and assault targets with a whole team and assets."  # Unverifed description.
 
+
 ####################
 # MessageAnalysis.py
 ####################
 
 VIDEO_URLS = ("://www.youtube.com", "://youtu.be", "://clips.twitch.tv", "://www.twitch.tv", "://streamable.com")
 ANALYSIS_ILLEGAL_MESSAGE = "The message you just posted in <#{0}> was deleted because no {1} was detected in it. If this is an error, then please ask staff to post the {2} for you and inform **{3}** and/or **{4}** about the issue."
+
+
+####################
+# Main.py
+####################
+
+MAIN_RELOAD_RESPONSE = "Cogs reloaded!"
+
 
 ####################
 # Generic
@@ -192,7 +206,7 @@ ANALYSIS_ILLEGAL_MESSAGE = "The message you just posted in <#{0}> was deleted be
 COMMAND_PREFIX = "-"
 
 ## Error
-ERROR_TIMEOUT = "Time ran out. Try again. :anguished:"
+ERROR_TIMEOUT = ":clock3: You were too slow, try again!"
 
 ## Logging
 LOG_COG_READY = "{0} cog is ready!"

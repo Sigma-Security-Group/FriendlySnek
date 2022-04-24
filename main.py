@@ -119,11 +119,11 @@ async def on_command_error(ctx, error):
 
 @bot.command(hidden=True, help="Reload bot (Dev only)")
 async def reload(ctx):
-    if ctx.author.id != ADRIAN or ctx.author.id != FROGGI:
+    if ctx.author.id != ADRIAN and ctx.author.id != FROGGI:
         return
     for cog in COGS:
         bot.reload_extension(f"cogs.{cog}")
-    await ctx.send("Reloaded!")
+    await ctx.send(MAIN_RELOAD_RESPONSE)
 
 if __name__ == "__main__":
     try:

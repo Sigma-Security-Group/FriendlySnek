@@ -419,7 +419,7 @@ class Schedule(commands.Cog):
         if member.id not in event["accepted"]:
             event["accepted"].append(member.id)
 
-        if event["maxPlayers"] is not None and len(event["accepted"]) >= event["maxPlayers"] and member.id not in event["accepted"]:
+        if event["maxPlayers"] is not None and event["accepted"].index(member.id) >= event["maxPlayers"]:
             embed = Embed(title=SCHEDULE_BOP_NO_SPACE)
             try:
                 await member.send(embed=embed)

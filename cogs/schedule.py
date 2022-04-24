@@ -420,7 +420,7 @@ class Schedule(commands.Cog):
             event["accepted"].append(member.id)
 
         if event["maxPlayers"] is not None and event["accepted"].index(member.id) >= event["maxPlayers"]:
-            embed = Embed(title=SCHEDULE_BOP_NO_SPACE)
+            embed = Embed(title=SCHEDULE_BOP_NO_SPACE, color=Colour.red())
             try:
                 await member.send(embed=embed)
             except Exception as e:
@@ -707,7 +707,7 @@ class Schedule(commands.Cog):
                     if startTime < UTC.localize(utcNow):
                         if (delta := UTC.localize(utcNow) - startTime) > timedelta(hours=1) and delta < timedelta(days=1):
                             newStartTime = startTime + timedelta(days=1)
-                            embed = Embed(title=SCHEDULE_EVENT_TIME_TOMORROW, description=SCHEDULE_EVENT_TIME_TOMORROW_PREVIEW.format(round(startTime.timestamp()), round(newStartTime.timestamp())))
+                            embed = Embed(title=SCHEDULE_EVENT_TIME_TOMORROW, description=SCHEDULE_EVENT_TIME_TOMORROW_PREVIEW.format(round(startTime.timestamp()), round(newStartTime.timestamp())), color=Colour.orange())
                             await dmChannel.send(embed=embed)
                             startTime = newStartTime
                             startTimeOk = True
@@ -1033,7 +1033,7 @@ class Schedule(commands.Cog):
                 if startTime < UTC.localize(utcNow):
                     if (delta := UTC.localize(utcNow) - startTime) > timedelta(hours=1) and delta < timedelta(days=1):
                         newStartTime = startTime + timedelta(days=1)
-                        embed = Embed(title=SCHEDULE_EVENT_TIME_TOMORROW, description=SCHEDULE_EVENT_TIME_TOMORROW_PREVIEW.format(round(startTime.timestamp()), round(newStartTime.timestamp())))
+                        embed = Embed(title=SCHEDULE_EVENT_TIME_TOMORROW, description=SCHEDULE_EVENT_TIME_TOMORROW_PREVIEW.format(round(startTime.timestamp()), round(newStartTime.timestamp())), color=Colour.orange())
                         await dmChannel.send(embed=embed)
                         startTime = newStartTime
                         startTimeOk = True
@@ -1430,7 +1430,7 @@ class Schedule(commands.Cog):
                 if startTime < UTC.localize(utcNow):
                     if (delta := UTC.localize(utcNow) - startTime) > timedelta(hours=1) and delta < timedelta(days=1):
                         newStartTime = startTime + timedelta(days=1)
-                        embed = Embed(title=SCHEDULE_EVENT_TIME_TOMORROW, description=SCHEDULE_EVENT_TIME_TOMORROW_PREVIEW.format(round(startTime.timestamp()), round(newStartTime.timestamp())))
+                        embed = Embed(title=SCHEDULE_EVENT_TIME_TOMORROW, description=SCHEDULE_EVENT_TIME_TOMORROW_PREVIEW.format(round(startTime.timestamp()), round(newStartTime.timestamp())), color=Colour.orange())
                         await dmChannel.send(embed=embed)
                         startTime = newStartTime
                         startTimeOk = True
@@ -1758,7 +1758,7 @@ class Schedule(commands.Cog):
             if startTime < UTC.localize(utcNow):
                 if (delta := UTC.localize(utcNow) - startTime) > timedelta(hours=1) and delta < timedelta(days=1):
                     newStartTime = startTime + timedelta(days=1)
-                    embed = Embed(title=SCHEDULE_EVENT_TIME_TOMORROW, description=SCHEDULE_EVENT_TIME_TOMORROW_PREVIEW.format(round(startTime.timestamp()), round(newStartTime.timestamp())))
+                    embed = Embed(title=SCHEDULE_EVENT_TIME_TOMORROW, description=SCHEDULE_EVENT_TIME_TOMORROW_PREVIEW.format(round(startTime.timestamp()), round(newStartTime.timestamp())), color=Colour.orange())
                     await dmChannel.send(embed=embed)
                     startTime = newStartTime
                     startTimeOk = True

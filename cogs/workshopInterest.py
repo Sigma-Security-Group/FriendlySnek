@@ -17,67 +17,67 @@ DEFAULT_WORKSHOP_INTEREST_LISTS = (
         "Newcomer",
         "Newcomer 🐣",
         [],
-        "Learn the basics of Arma and Sigma Security Group."  # Unverifed description.
+        NEWCOMER_DESC
     ),
     (
         "Rotary Wing",
         "Rotary Wing 🚁",
         [ADRIAN, POLICE, EISEN],
-        "Learn to fly helicopters and provide with transport and close air support."
+        RW_DESC
     ),
     (
         "Fixed Wing",
         "Fixed Wing ✈️",
         [GILAND, POLICE],
-        "Learn the dynamics of using fixed wing and fighter jet aircraft."
+        FW_DESC
     ),
     (
         "JTAC",
         "JTAC 📡",
         [],
-        "Learn how to direct close-air support."  # Unverifed description.
+        JTAC_DESC
     ),
     (
         "Medic",
         "Medic 💉",
         [SD, MONTY, SILENT],
-        "Learn how to administer combat aid to wounded personnel in a timely and effective manner. "  # Unverifed description.
+        MEDIC_DESC
     ),
     (
         "Heavy Weapons",
         "Heavy Weapons 💣",
         [SOAPY, TUNDRA],
-        "Learn how to efficiently operate as a machine gun crew, use grenade launchers, and shoot cretins out of shitboxes (AT & AA)."
+        HW_DESC
     ),
     (
         "Marksman",
         "Marksman 🎯",
         [XYRAGE, ASPIRE, BANSHEE],
-        "Learn how to shoot big bullet far."
+        MARKSMAN_DESC
     ),
     (
         "Breacher",
         "Breacher 🚪",
         [],
-        "Become an expert in close-quarters battle (CQB)."  # Unverifed description.
+        BREACHER_DESC
     ),
     (
         "Mechanised",
         "Mechanised 🛡️​",
         [SYSTEM],
-        "A short course on driving, gunning, and commanding a 6.21 million dollar reason the heavy weapons guy is useless."
+        MECHANISED_DESC
     ),
     (
         "RPV-SO",
         "RPV-SO 🛩️​",
         [WAFFLE, TUNDRA],
-        "Learn how to employ recon and attack Remote Piloted Vehicles (Drones)."  # Unverifed description.
+        RPVSO_DESC
     ),
     (
         "Team Leading",
         "Team Leading 👨‍🏫",
         [],
-        "Learn how to effectively plan out and assault targets with a whole team and assets."  # Unverifed description.
+        TL_DESC
     )
 )
 

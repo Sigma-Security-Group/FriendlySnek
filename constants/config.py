@@ -81,7 +81,6 @@ SCHEDULE_EVENT_ERROR_COLLISION = "❌ There is a collision with another event!"
 SCHEDULE_EVENT_ERROR_PADDING_EARLY = "❌ Your operation would start less than an hour after the previous event ends!"
 SCHEDULE_EVENT_ERROR_PADDING_LATE = "❌ There is another event starting less than an hour after this one ends!"
 SCHEDULE_EVENT_ERROR_DESCRIPTION = "Check the schedule and try inputting a another time!"
-ERROR_TIMEOUT = "Time ran out. Try again. :anguished:"
 
 ## Event
 SCHEDULE_EVENT_EDIT = ":pencil2: What would you like to edit?"
@@ -144,7 +143,7 @@ SCHEDULE_TIME_ZONE_UNSET = "You don't have a preferred time zone set."
 SCHEDULE_TIME_ZONE_INFORMATION = " Enter `none`, a number from the list or any time zone name from the column \"TZ DATABASE NAME\" in the following [Wikipedia article](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones) to make your choice. If you enter `none` or something invalid your current preference will be deleted and you will be asked again the next time you schedule an event. You can change or delete your preferred time zone at any time with the `/changetimezone` command."
 
 ## Logging
-SCHEDULE_LOG_COULDNT_START = "Couldn't start {0}!"
+LOG_COULDNT_START = "Couldn't start {0}!"
 LOG_EDITING_EVENT = "{0} ({1}#{2}) is editing {3}."
 LOG_EDITED_EVENT = "{0} ({1}#{2}) edited {3}."
 LOG_CREATING_EVENT = "{0} ({1}#{2}) is creating {3}."
@@ -164,6 +163,18 @@ LOG_SCHEDULE_UPDATE_ERROR = "{0} ({1}#{2}) was {3} but schedule was updated!"
 WORKSHOPINTEREST_INTRO = "Welcome to the Workshop Interest Channel! Here you can show interest for different workshops!"
 WORKSHOPINTEREST_INTERESTED_PEOPLE = "Interested People ({0})"
 
+## Descriptions
+NEWCOMER_DESC = "Learn the basics of Arma and Sigma Security Group."  # Unverifed description.
+RW_DESC = "Learn to fly helicopters and provide with transport and close air support."
+FW_DESC = "Learn the dynamics of using fixed wing and fighter jet aircraft."
+JTAC_DESC = "Learn how to direct close-air support."  # Unverifed description.
+MEDIC_DESC = "Learn how to administer combat aid to wounded personnel in a timely and effective manner. "  # Unverifed description.
+HW_DESC = "Learn how to efficiently operate as a machine gun crew, use grenade launchers, and shoot cretins out of shitboxes (AT & AA)."
+MARKSMAN_DESC = "Learn how to shoot big bullet far."
+BREACHER_DESC = "Become an expert in close-quarters battle (CQB)."  # Unverifed description.
+MECHANISED_DESC = "A short course on driving, gunning, and commanding a 6.21 million dollar reason the heavy weapons guy is useless."
+RPVSO_DESC = "Learn how to employ recon and attack Remote Piloted Vehicles (Drones)."  # Unverifed description.
+TL_DESC = "Learn how to effectively plan out and assault targets with a whole team and assets."  # Unverifed description.
 
 ####################
 # MessageAnalysis.py
@@ -178,6 +189,9 @@ ANALYSIS_ILLEGAL_MESSAGE = "The message you just posted in <#{0}> was deleted be
 
 ## Misc
 COMMAND_PREFIX = "-"
+
+## Error
+ERROR_TIMEOUT = "Time ran out. Try again. :anguished:"
 
 ## Logging
 LOG_COG_READY = "{0} cog is ready!"

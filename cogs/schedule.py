@@ -97,11 +97,11 @@ class Schedule(commands.Cog):
         try:
             self.autoDeleteEvents.start()
         except Exception:
-            log.warning(SCHEDULE_LOG_COULDNT_START.format("autoDeleteEvents scheduler"))
+            log.warning(LOG_COULDNT_START.format("autoDeleteEvents scheduler"))
         try:
             self.checkAcceptedReminder.start()
         except Exception:
-            log.warning(SCHEDULE_LOG_COULDNT_START.format("checkAcceptedReminder scheduler"))
+            log.warning(LOG_COULDNT_START.format("checkAcceptedReminder scheduler"))
 
     async def saveEventToHistory(self, event, autoDeleted=False):
         guild = self.bot.get_guild(SERVER)

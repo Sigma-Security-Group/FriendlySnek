@@ -1557,6 +1557,16 @@ class Schedule(commands.Cog):
                 events = json.load(f)
             await ctx.send(SCHEDULE_EVENT_MESSAGE_DONE.format("Workshop", SERVER, SCHEDULE, events[-1]["messageId"]))
 
+            if workshopInterest is not None:
+                with open(WORKSHOP_INTEREST_FILE) as f:
+                    workshopInterestItem = [{"name": name, "wsInterest": wsInterest} for name, wsInterest in json.load(f).items() if name == workshopInterest][0]
+                guild = self.bot.get_guild(SERVER)
+                message = ""
+                for memberId in workshopInterestItem["wsInterest"]["members"]:
+                    message += f"{guild.get_member(memberId).mention} "
+                if message != "":
+                    await ctx.send(f"{message}Check <#{SCHEDULE}> for workshop")
+
     @cog_ext.cog_slash(name="event", description=SCHEDULE_COMMAND_DESCRIPTION.format("a generic event"), guild_ids=[SERVER])
     async def event(self, ctx: SlashContext):
         await self.scheduleEvent(ctx)

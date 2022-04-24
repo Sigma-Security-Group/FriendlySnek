@@ -14,10 +14,10 @@ WORKSHOP_INTEREST_FILE = "data/workshopInterest.json"
 
 DEFAULT_WORKSHOP_INTEREST_LISTS = (
     (
-        "Newcomer", # ID
-        "Newcomer 🐣", # Name
-        [], # SME(s)
-        "" # Description
+        "Newcomer",
+        "Newcomer 🐣",
+        [],
+        "Learn the basics of Arma and Sigma Security Group."  # Unverifed description.
     ),
     (
         "Rotary Wing",
@@ -75,7 +75,7 @@ DEFAULT_WORKSHOP_INTEREST_LISTS = (
         "Team Leading",
         "Team Leading 👨‍🏫",
         [],
-        ""
+        "Learn how to effectively plan out and assault targets with a whole team and assets."  # Unverifed description.
     )
 )
 

@@ -85,7 +85,7 @@ class Schedule(commands.Cog):
     async def on_ready(self):
         if cogsReady["schedule"]:
             return
-        log.debug(SCHEDULE_LOG_IS_READY.format("Schedule"), flush=True)
+        log.debug(LOG_COG_READY.format("Schedule"), flush=True)
         cogsReady["schedule"] = True
         if not os.path.exists(EVENTS_HISTORY_FILE):
             with open(EVENTS_HISTORY_FILE, "w") as f:
@@ -570,7 +570,7 @@ class Schedule(commands.Cog):
                 try:
                     response = await self.bot.wait_for("message", timeout=600, check=lambda msg, author=author, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
                     externalURL = response.content.strip()
-                    if externalURL.lower() == "none" or (len(externalURL) is 4 and "n" in externalURL.lower()):
+                    if externalURL.lower() == "none" or (len(externalURL) == 4 and "n" in externalURL.lower()):
                         externalURL = None
                 except asyncio.TimeoutError:
                     await dmChannel.send(embed=TIMEOUT_EMBED)
@@ -879,7 +879,7 @@ class Schedule(commands.Cog):
         try:
             response = await self.bot.wait_for("message", timeout=600, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
             externalURL = response.content.strip()
-            if externalURL.lower() == "none" or (len(externalURL) is 4 and "n" in externalURL.lower()):
+            if externalURL.lower() == "none" or (len(externalURL) == 4 and "n" in externalURL.lower()):
                 externalURL = None
         except asyncio.TimeoutError:
             await dmChannel.send(embed=TIMEOUT_EMBED)
@@ -1208,7 +1208,7 @@ class Schedule(commands.Cog):
             try:
                 response = await self.bot.wait_for("message", timeout=600, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
                 externalURL = response.content.strip()
-                if externalURL.lower() == "none" or (len(externalURL) is 4 and "n" in externalURL.lower()):
+                if externalURL.lower() == "none" or (len(externalURL) == 4 and "n" in externalURL.lower()):
                     externalURL = None
             except asyncio.TimeoutError:
                 await dmChannel.send(embed=TIMEOUT_EMBED)
@@ -1598,7 +1598,7 @@ class Schedule(commands.Cog):
         try:
             response = await self.bot.wait_for("message", timeout=600, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
             externalURL = response.content.strip()
-            if externalURL.lower() == "none" or (len(externalURL) is 4 and "n" in externalURL.lower()):
+            if externalURL.lower() == "none" or (len(externalURL) == 4 and "n" in externalURL.lower()):
                 externalURL = None
         except asyncio.TimeoutError:
             await dmChannel.send(embed=TIMEOUT_EMBED)

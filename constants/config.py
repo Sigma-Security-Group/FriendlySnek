@@ -144,7 +144,6 @@ SCHEDULE_TIME_ZONE_UNSET = "You don't have a preferred time zone set."
 SCHEDULE_TIME_ZONE_INFORMATION = " Enter `none`, a number from the list or any time zone name from the column \"TZ DATABASE NAME\" in the following [Wikipedia article](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones) to make your choice. If you enter `none` or something invalid your current preference will be deleted and you will be asked again the next time you schedule an event. You can change or delete your preferred time zone at any time with the `/changetimezone` command."
 
 ## Logging
-SCHEDULE_LOG_IS_READY = "{0} is ready!"
 SCHEDULE_LOG_COULDNT_START = "Couldn't start {0}!"
 LOG_EDITING_EVENT = "{0} ({1}#{2}) is editing {3}."
 LOG_EDITED_EVENT = "{0} ({1}#{2}) edited {3}."
@@ -152,7 +151,7 @@ LOG_CREATING_EVENT = "{0} ({1}#{2}) is creating {3}."
 LOG_CREATED_EVENT = "{0} ({1}#{2}) created {3}."
 LOG_CHECKING = "Checking {0}..."
 LOG_DELETE_EVENT_ACTION = "Auto deleting: {0}."
-LOG_DELETE_EVENT_NONE = "No events were auto deleted."
+LOG_DELETE_EVENT_NONE = "No events were auto deleted!"
 LOG_NOTIFICATION_ACCEPTED = "Pinging members in accepted not in VC: {0}..."
 LOG_NOTIFICATION_VC = "Pinging members in VC not in accepted: {0}..."
 LOG_SCHEDULE_UPDATE_ERROR = "{0} ({1}#{2}) was {3} but schedule was updated!"
@@ -162,7 +161,7 @@ LOG_SCHEDULE_UPDATE_ERROR = "{0} ({1}#{2}) was {3} but schedule was updated!"
 # WorkshopInterest.py
 ####################
 
-WORKSHOPINTEREST_INTRO = "Welcome to the workshop interest channel. Here you can show interest for different workshops."
+WORKSHOPINTEREST_INTRO = "Welcome to the Workshop Interest Channel! Here you can show interest for different workshops!"
 WORKSHOPINTEREST_INTERESTED_PEOPLE = "Interested People ({0})"
 
 
@@ -181,7 +180,7 @@ ANALYSIS_ILLEGAL_MESSAGE = "The message you just posted in <#{0}> was deleted be
 COMMAND_PREFIX = "-"
 
 ## Logging
-LOG_COG_READY = "{0} cog is ready"
+LOG_COG_READY = "{0} cog is ready!"
 LOG_BOT_READY = "Bot Ready!"
 LOG_BOT_STOPPED = "Bot stopped!"
 LOG_ERROR = "An error occured!"

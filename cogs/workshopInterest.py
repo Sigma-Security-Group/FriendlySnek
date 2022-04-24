@@ -22,7 +22,7 @@ DEFAULT_WORKSHOP_INTEREST_LISTS = (
     (
         "Rotary Wing",
         "Rotary Wing 🚁",
-        [ADRIAN, EISEN, POLICE],
+        [ADRIAN, POLICE, EISEN],
         "Learn to fly helicopters and provide with transport and close air support."
     ),
     (
@@ -35,24 +35,26 @@ DEFAULT_WORKSHOP_INTEREST_LISTS = (
         "JTAC",
         "JTAC 📡",
         [],
-        "Lear how to direct close-air support."  # Unverifed description.
+        "Learn how to direct close-air support."  # Unverifed description.
     ),
     (
         "Medic",
         "Medic 💉",
-        [MONTY, SD, SILENT],
+        [SD, MONTY, SILENT],
         "Learn how to administer combat aid to wounded personnel in a timely and effective manner. "  # Unverifed description.
     ),
     (
         "Heavy Weapons",
         "Heavy Weapons 💣",
         [SOAPY, TUNDRA],
-        "Learn how to efficiently operate as a machine gun crew, use grenade launchers, and shoot cretins out of shitboxes (AT & AA)."),
+        "Learn how to efficiently operate as a machine gun crew, use grenade launchers, and shoot cretins out of shitboxes (AT & AA)."
+    ),
     (
         "Marksman",
         "Marksman 🎯",
-        [ASPIRE, BANSHEE, XYRAGE],
-        "Learn how to shoot big bullet far."),
+        [XYRAGE, ASPIRE, BANSHEE],
+        "Learn how to shoot big bullet far."
+    ),
     (
         "Breacher",
         "Breacher 🚪",
@@ -68,7 +70,7 @@ DEFAULT_WORKSHOP_INTEREST_LISTS = (
     (
         "RPV-SO",
         "RPV-SO 🛩️​",
-        [TUNDRA, WAFFLE],
+        [WAFFLE, TUNDRA],
         "Learn how to employ recon and attack Remote Piloted Vehicles (Drones)."  # Unverifed description.
     ),
     (

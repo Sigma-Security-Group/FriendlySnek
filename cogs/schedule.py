@@ -707,7 +707,7 @@ class Schedule(commands.Cog):
                     if startTime < UTC.localize(utcNow):
                         if (delta := UTC.localize(utcNow) - startTime) > timedelta(hours=1) and delta < timedelta(days=1):
                             newStartTime = startTime + timedelta(days=1)
-                            embed = Embed(title=SCHEDULE_EVENT_TIME_TOMORROW, description=SCHEDULE_EVENT_TIME_TOMORROW_PREVIEW.format(round(startTime.timestamp()), round(newStartTime.timestamp())))
+                            embed = Embed(title=SCHEDULE_EVENT_TIME_TOMORROW, description=SCHEDULE_EVENT_TIME_TOMORROW_PREVIEW.format(round(startTime.timestamp()), round(newStartTime.timestamp())), color=Colour.orange())
                             await dmChannel.send(embed=embed)
                             startTime = newStartTime
                             startTimeOk = True
@@ -1033,7 +1033,7 @@ class Schedule(commands.Cog):
                 if startTime < UTC.localize(utcNow):
                     if (delta := UTC.localize(utcNow) - startTime) > timedelta(hours=1) and delta < timedelta(days=1):
                         newStartTime = startTime + timedelta(days=1)
-                        embed = Embed(title=SCHEDULE_EVENT_TIME_TOMORROW, description=SCHEDULE_EVENT_TIME_TOMORROW_PREVIEW.format(round(startTime.timestamp()), round(newStartTime.timestamp())))
+                        embed = Embed(title=SCHEDULE_EVENT_TIME_TOMORROW, description=SCHEDULE_EVENT_TIME_TOMORROW_PREVIEW.format(round(startTime.timestamp()), round(newStartTime.timestamp())), color=Colour.orange())
                         await dmChannel.send(embed=embed)
                         startTime = newStartTime
                         startTimeOk = True
@@ -1430,7 +1430,7 @@ class Schedule(commands.Cog):
                 if startTime < UTC.localize(utcNow):
                     if (delta := UTC.localize(utcNow) - startTime) > timedelta(hours=1) and delta < timedelta(days=1):
                         newStartTime = startTime + timedelta(days=1)
-                        embed = Embed(title=SCHEDULE_EVENT_TIME_TOMORROW, description=SCHEDULE_EVENT_TIME_TOMORROW_PREVIEW.format(round(startTime.timestamp()), round(newStartTime.timestamp())))
+                        embed = Embed(title=SCHEDULE_EVENT_TIME_TOMORROW, description=SCHEDULE_EVENT_TIME_TOMORROW_PREVIEW.format(round(startTime.timestamp()), round(newStartTime.timestamp())), color=Colour.orange())
                         await dmChannel.send(embed=embed)
                         startTime = newStartTime
                         startTimeOk = True
@@ -1748,7 +1748,7 @@ class Schedule(commands.Cog):
             if startTime < UTC.localize(utcNow):
                 if (delta := UTC.localize(utcNow) - startTime) > timedelta(hours=1) and delta < timedelta(days=1):
                     newStartTime = startTime + timedelta(days=1)
-                    embed = Embed(title=SCHEDULE_EVENT_TIME_TOMORROW, description=SCHEDULE_EVENT_TIME_TOMORROW_PREVIEW.format(round(startTime.timestamp()), round(newStartTime.timestamp())))
+                    embed = Embed(title=SCHEDULE_EVENT_TIME_TOMORROW, description=SCHEDULE_EVENT_TIME_TOMORROW_PREVIEW.format(round(startTime.timestamp()), round(newStartTime.timestamp())), color=Colour.orange())
                     await dmChannel.send(embed=embed)
                     startTime = newStartTime
                     startTimeOk = True

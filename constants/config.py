@@ -90,7 +90,7 @@ SCHEDULE_EVENT_TITLE_OPERATION_REMINDER = "Remeber, operation names should start
 SCHEDULE_EVENT_DESCRIPTION_QUESTION = ":notepad_spiral: What is the description?"
 SCHEDULE_EVENT_DESCRIPTION = "Current description:\n```{0}```"
 SCHEDULE_EVENT_URL_TITLE = ":notebook_with_decorative_cover: Enter `none` or a URL."
-SCHEDULE_EVENT_URL_DESCRIPTION = "E.g. Signup sheet / Briefing / OPORD."
+SCHEDULE_EVENT_URL_DESCRIPTION = "E.g. Signup sheet, Briefing, OPORD, etc."
 SCHEDULE_EVENT_RESERVABLE_QUESTION = "Are there any reservable roles?"
 SCHEDULE_EVENT_RESERVABLE_PROMPT = "Enter `yes` or `y` if there are reservable roles or enter anything else if there are not."
 SCHEDULE_EVENT_RESERVABLE_LIST_TITLE = "Type each reservable role in its own line (in a single message)."
@@ -140,7 +140,8 @@ SCHEDULE_TIME_ZONE_QUESTION = ":clock1: What is your preferred time zone?"
 SCHEDULE_TIME_ZONE_CHANGING = "Changing time zone preferences..."
 SCHEDULE_TIME_ZONE_DONE = "✅ Time zone preferences changed!"
 SCHEDULE_TIME_ZONE_UNSET = "You don't have a preferred time zone set."
-SCHEDULE_TIME_ZONE_INFORMATION = " Enter `none`, a number from the list or any time zone name from the column \"TZ DATABASE NAME\" in the following [Wikipedia article](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones) to make your choice. If you enter `none` or something invalid your current preference will be deleted and you will be asked again the next time you schedule an event. You can change or delete your preferred time zone at any time with the `/changetimezone` command."
+SCHEDULE_TIME_ZONE_POPULAR = "Popular Time Zones"
+SCHEDULE_TIME_ZONE_INFORMATION = "\nEnter `none`, a number from the list or any time zone name from the column \"TZ DATABASE NAME\" in the following [Wikipedia article](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones) to make your choice. If you enter `none` or something invalid your current preference will be deleted and you will be asked again the next time you schedule an event. You can change or delete your preferred time zone at any time with the `/changetimezone` command."
 
 ## Logging
 LOG_COULDNT_START = "Couldn't start {0}!"

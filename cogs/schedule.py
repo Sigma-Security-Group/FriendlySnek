@@ -88,15 +88,19 @@ class Schedule(commands.Cog):
             return
         log.debug(LOG_COG_READY.format("Schedule"), flush=True)
         cogsReady["schedule"] = True
+
         if not os.path.exists(EVENTS_HISTORY_FILE):
             with open(EVENTS_HISTORY_FILE, "w") as f:
                 json.dump([], f, indent=4)
+
         if not os.path.exists(WORKSHOP_TEMPLATES_FILE):
             with open(WORKSHOP_TEMPLATES_FILE, "w") as f:
                 json.dump([], f, indent=4)
+
         if not os.path.exists(WORKSHOP_TEMPLATES_DELETED_FILE):
             with open(WORKSHOP_TEMPLATES_DELETED_FILE, "w") as f:
                 json.dump([], f, indent=4)
+
         await self.updateSchedule()
         try:
             self.autoDeleteEvents.start()
@@ -1172,9 +1176,14 @@ class Schedule(commands.Cog):
                     templateActionRepeat = False
                 elif re.search(SCHEDULE_EVENT_TEMPLATE_ACTION_REGEX, templateAction):
                     if templateAction.startswith("delete"):
-                        workshopTemplateName = (workshopTemplates[int(templateAction.split(" ")[-1]) - 1])["name"]
+                        templateNumber = templateAction.split(" ")[-1]
+                        if templateNumber.isdigit() and int(templateNumber) <= len(workshopTemplates) and int(templateNumber) > 0:
+                            workshopTemplate = workshopTemplates[int(templateNumber) - 1]
+                        else:
+                            templateOk = False
+
                         try:
-                            msg = await dmChannel.send(SCHEDULE_EVENT_CONFIRM_DELETE.format(f"template: `{workshopTemplateName}`"))
+                            msg = await dmChannel.send(SCHEDULE_EVENT_CONFIRM_DELETE.format(f"template: `{workshopTemplate['name']}`"))
                         except Exception as e:
                             print(ctx.author, e)
                             try:
@@ -1189,7 +1198,7 @@ class Schedule(commands.Cog):
                         except asyncio.TimeoutError:
                             await ctx.author.send(embed=TIMEOUT_EMBED)
                             return False
-                        log.warning(LOG_TEMPLATE_DELETED.format(ctx.author.display_name, ctx.author.name, ctx.author.discriminator, workshopTemplateName))
+                        log.warning(LOG_TEMPLATE_DELETED.format(ctx.author.display_name, ctx.author.name, ctx.author.discriminator, workshopTemplate["name"]))
                         with open(WORKSHOP_TEMPLATES_DELETED_FILE) as f:
                             workshopTempaltesDeleted = json.load(f)
                         workshopTempaltesDeleted.append(workshopTemplates[int(templateAction.split(" ")[-1]) - 1])
@@ -1200,12 +1209,21 @@ class Schedule(commands.Cog):
                         with open(WORKSHOP_TEMPLATES_FILE, "w") as f:
                             json.dump(workshopTemplates, f, indent=4)
                         await dmChannel.send(embed=Embed(title=SCHEDULE_EVENT_DELETED.format("Template"), color=Colour.green()))
+
                     elif templateAction.startswith("edit"):
-                        workshopTemplate = workshopTemplates[int(templateAction.split(" ")[-1]) - 1]
-                        log.info(LOG_TEMPLATE_EDITING.format(ctx.author.display_name, ctx.author.name, ctx.author.discriminator, workshopTemplate["name"]))
-                        reorderEvents = await self.editEvent(ctx.author, workshopTemplate, True)
+                        templateNumber = templateAction.split(" ")[-1]
+                        if templateNumber.isdigit() and int(templateNumber) <= len(workshopTemplates) and int(templateNumber) > 0:
+                            workshopTemplate = workshopTemplates[int(templateNumber) - 1]
+                            log.info(LOG_TEMPLATE_EDITING.format(ctx.author.display_name, ctx.author.name, ctx.author.discriminator, workshopTemplate["name"]))
+                            reorderEvents = await self.editEvent(ctx.author, workshopTemplate, True)
+                        else:
+                            templateOk = False
+
                     else: # Select template
-                        template = workshopTemplates[int(templateAction) - 1]
+                        if templateAction.isdigit() and int(templateAction) <= len(workshopTemplates) and int(templateAction) > 0:
+                            workshopTemplate = workshopTemplates[int(templateAction) - 1]
+                        else:
+                            templateOk = False
                         templateActionRepeat = False
 
                 else:
@@ -1222,12 +1240,66 @@ class Schedule(commands.Cog):
                 response = await self.bot.wait_for("message", timeout=600, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
                 templateAction = response.content.strip()
                 templateOk = True
-                if templateAction.isdigit() and int(templateAction) <= len(workshopTemplates) and int(templateAction) > 0:
-                    template = workshopTemplates[int(templateAction) - 1]
-                elif templateAction.strip().lower() == "none":
+
+                if templateAction.strip().lower() == "none":
                     template = None
+                    templateActionRepeat = False
+                elif re.search(SCHEDULE_EVENT_TEMPLATE_ACTION_REGEX, templateAction):
+                    if templateAction.startswith("delete"):
+                        templateNumber = templateAction.split(" ")[-1]
+                        if templateNumber.isdigit() and int(templateNumber) <= len(workshopTemplates) and int(templateNumber) > 0:
+                            workshopTemplate = workshopTemplates[int(templateNumber) - 1]
+                        else:
+                            templateOk = False
+
+                        try:
+                            msg = await dmChannel.send(SCHEDULE_EVENT_CONFIRM_DELETE.format(f"template: `{workshopTemplate['name']}`"))
+                        except Exception as e:
+                            print(ctx.author, e)
+                            try:
+                                print(LOG_FRIEND_REQ)
+                                await ctx.author.send_friend_request()
+                            except Exception as e:
+                                print(e)
+                            return False
+                        await msg.add_reaction("🗑")
+                        try:
+                            _ = await self.bot.wait_for("reaction_add", timeout=60, check=lambda reaction, user, author=ctx.author: reaction.emoji == "🗑" and user == author)
+                        except asyncio.TimeoutError:
+                            await ctx.author.send(embed=TIMEOUT_EMBED)
+                            return False
+                        log.warning(LOG_TEMPLATE_DELETED.format(ctx.author.display_name, ctx.author.name, ctx.author.discriminator, workshopTemplate["name"]))
+                        with open(WORKSHOP_TEMPLATES_DELETED_FILE) as f:
+                            workshopTempaltesDeleted = json.load(f)
+                        workshopTempaltesDeleted.append(workshopTemplates[int(templateAction.split(" ")[-1]) - 1])
+                        with open(WORKSHOP_TEMPLATES_DELETED_FILE, "w") as f:
+                            json.dump(workshopTempaltesDeleted, f, indent=4)
+
+                        workshopTemplates.pop(int(templateAction.split(" ")[-1]) - 1)
+                        with open(WORKSHOP_TEMPLATES_FILE, "w") as f:
+                            json.dump(workshopTemplates, f, indent=4)
+                        await dmChannel.send(embed=Embed(title=SCHEDULE_EVENT_DELETED.format("Template"), color=Colour.green()))
+
+                    elif templateAction.startswith("edit"):
+                        templateNumber = templateAction.split(" ")[-1]
+                        if templateNumber.isdigit() and int(templateNumber) <= len(workshopTemplates) and int(templateNumber) > 0:
+                            workshopTemplate = workshopTemplates[int(templateNumber) - 1]
+                            log.info(LOG_TEMPLATE_EDITING.format(ctx.author.display_name, ctx.author.name, ctx.author.discriminator, workshopTemplate["name"]))
+                            reorderEvents = await self.editEvent(ctx.author, workshopTemplate, True)
+                        else:
+                            templateOk = False
+
+                    else: # Select template
+                        if templateAction.isdigit() and int(templateAction) <= len(workshopTemplates) and int(templateAction) > 0:
+                            workshopTemplate = workshopTemplates[int(templateAction) - 1]
+                        else:
+                            templateOk = False
+                        templateActionRepeat = False
+
                 else:
                     templateOk = False
+                    templateActionRepeat = False
+
             except asyncio.TimeoutError:
                 await dmChannel.send(embed=TIMEOUT_EMBED)
                 return

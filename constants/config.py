@@ -62,10 +62,10 @@ SCHEDULE_REMINDER_INGAME = " If you are in-game, please hit accept ✅ on the <#
 
 ## Responses
 SCHEDULE_EVENT_CREATED = "✅ {0} created!"
-SCHEDULE_EVENT_EDITED = "✅ {0} edited!"
+CHECK_EDITED = "✅ {0} edited!"
 SCHEDULE_EVENT_DELETED = "✅ {0} deleted!"
-SCHEDULE_RESERVABLE_COMPLETED = "✅ Role reservation completed!"
-SCHEDULE_RESERVABLE_CANCELLED = "❌ Role reservation canceled!"
+ACTION_COMPLETED = "✅ {0} completed!"
+ACTION_CANCELLED = "❌ {0} canceled!"
 SCHEDULE_EVENT_MESSAGE_PROGRESS = "Scheduling... Standby for {0}..."
 SCHEDULE_EVENT_MESSAGE_DONE = "{0} on [schedule](<https://discord.com/channels/{1}/{2}/{3}>)!"
 SCHEDULE_TEMPLATE_SAVED = "✅ Template saved as `{0}`!"
@@ -135,7 +135,7 @@ SCHEDULE_EVENT_DELETED_DESCRIPTION = "The {0} was scheduled to run:\n<t:{1}:F>"
 SCHEDULE_NUMBER_FROM_TO = "Enter a number from **{0}** - **{1}**."
 SCHEDULE_NUMBER_FROM_TO_OR_NONE = "Enter `none` or a number from **{0}** - **{1}**."
 SCHEDULE_NUMBER_NON_NEGATIVE_OR_NONE = "Enter `none` or a non-negative number."
-SCHEDULE_CANCEL = "Enter `cancel` to keep your current preference."
+SCHEDULE_CANCEL = "Enter `cancel` to abort this command."
 
 ## Time zone
 SCHEDULE_TIME_ZONE_QUESTION = ":clock1: What is your preferred time zone?"

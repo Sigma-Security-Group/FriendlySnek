@@ -457,7 +457,7 @@ class Schedule(commands.Cog):
             elif reservedRole.strip().lower() == "none":
                 reservedRole = None
             else:
-                embed = Embed(title=SCHEDULE_RESERVABLE_CANCELLED, color=Colour.red())
+                embed = Embed(title=ACTION_CANCELLED.format("Role reservation"), color=Colour.red())
                 await dmChannel.send(embed=embed)
                 return
         except asyncio.TimeoutError:
@@ -477,7 +477,7 @@ class Schedule(commands.Cog):
                         event["reservableRoles"][roleName] = None
 
         if reservationTime > self.lastUpdate:
-            embed = Embed(title=SCHEDULE_RESERVABLE_COMPLETED, color=Colour.green())
+            embed = Embed(title=ACTION_COMPLETED.format("Role reservation"), color=Colour.green())
             await dmChannel.send(embed=embed)
         else:
             embed = Embed(title=SCHEDULE_RESERVABLE_SCHEDULE_ERROR, color=Colour.red())
@@ -528,23 +528,158 @@ class Schedule(commands.Cog):
 
         reorderEvents = False
 
-        match choice:
-            case "0":
-                eventTypeNum = None
-                while eventTypeNum not in ("1", "2", "3"):
-                    embed = Embed(title=SCHEDULE_EVENT_TYPE, description=SCHEDULE_NUMBER_FROM_TO.format(1, 3), color=Colour.gold())
-                    embed.add_field(name="Type", value="**1** 🟩 Operation\n**2** 🟦 Workshop\n**3** 🟨 Event")
+        async def editEventType():
+            eventTypeNum = None
+            while eventTypeNum not in ("1", "2", "3"):
+                embed = Embed(title=SCHEDULE_EVENT_TYPE, description=SCHEDULE_NUMBER_FROM_TO.format(1, 3), color=Colour.gold())
+                embed.add_field(name="Type", value="**1** 🟩 Operation\n**2** 🟦 Workshop\n**3** 🟨 Event")
+                await dmChannel.send(embed=embed)
+                try:
+                    response = await self.bot.wait_for("message", timeout=TIME_ONE_MIN, check=lambda msg, author=author, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
+                    eventTypeNum = response.content.strip()
+                except asyncio.TimeoutError:
+                    await dmChannel.send(embed=TIMEOUT_EMBED)
+                    return False
+            event["type"] = {"1": "Operation", "2": "Workshop", "3": "Event"}.get(eventTypeNum, "Operation")
+
+        async def editEventTime():
+            with open(MEMBER_TIME_ZONES_FILE) as f:
+                memberTimeZones = json.load(f)
+
+            if str(author.id) in memberTimeZones:
+                try:
+                    timeZone = pytz.timezone(memberTimeZones[str(author.id)])
+                except pytz.exceptions.UnknownTimeZoneError:
+                    timeZone = UTC
+            else:
+                embed = Embed(title=SCHEDULE_EVENT_TIME_ZONE_QUESTION, description=SCHEDULE_EVENT_TIME_ZONE_PROMPT, color=Colour.gold())
+                embed.add_field(name=SCHEDULE_TIME_ZONE_POPULAR, value="\n".join(f"**{idx}**   {tz}" for idx, tz in enumerate(TIME_ZONES, 1)))
+                await dmChannel.send(embed=embed)
+                try:
+                    response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, author=author, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
+                    timeZone = response.content.strip()
+                    saveTimeZonepreference = True
+                    if timeZone.isdigit() and int(timeZone) <= len(TIME_ZONES) and int(timeZone) > 0:
+                        timeZone = pytz.timezone(list(TIME_ZONES.values())[int(timeZone) - 1])
+                    else:
+                        try:
+                            timeZone = pytz.timezone(timeZone)
+                        except pytz.exceptions.UnknownTimeZoneError:
+                            timeZone = UTC
+                            saveTimeZonepreference = False
+                    if saveTimeZonepreference:
+                        memberTimeZones[str(author.id)] = timeZone.zone
+                        with open(MEMBER_TIME_ZONES_FILE, "w") as f:
+                            json.dump(memberTimeZones, f, indent=4)
+                except asyncio.TimeoutError:
+                    await dmChannel.send(embed=TIMEOUT_EMBED)
+                    return False
+
+            startTimeOk = False
+            while not startTimeOk:
+                embed = Embed(title=SCHEDULE_EVENT_TIME.format("event"), description=SCHEDULE_EVENT_SELECTED_TIME_ZONE.format(timeZone.zone), color=Colour.gold())
+                embed.add_field(name="Current Value", value=UTC.localize(datetime.strptime(event["time"], EVENT_TIME_FORMAT)).astimezone(timeZone).strftime(EVENT_TIME_FORMAT))
+                await dmChannel.send(embed=embed)
+                try:
+                    response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, author=author, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
+                    startTime = response.content.strip()
+                except asyncio.TimeoutError:
+                    await dmChannel.send(embed=TIMEOUT_EMBED)
+                    return False
+                try:
+                    startTime = datetimeParse(startTime)
+                    isFormatCorrect = True
+                except ValueError:
+                    isFormatCorrect = False
+                while not isFormatCorrect:
+                    embed = Embed(title=SCHEDULE_INPUT_ERROR, description=SCHEDULE_EVENT_TIME_FORMAT, colour=Colour.red())
                     await dmChannel.send(embed=embed)
                     try:
-                        response = await self.bot.wait_for("message", timeout=TIME_ONE_MIN, check=lambda msg, author=author, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
-                        eventTypeNum = response.content.strip()
+                        response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, author=author, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
+                        startTime = response.content.strip()
                     except asyncio.TimeoutError:
                         await dmChannel.send(embed=TIMEOUT_EMBED)
                         return False
-                event["type"] = {"1": "Operation", "2": "Workshop", "3": "Event"}.get(eventTypeNum, "Operation")
+                    try:
+                        startTime = datetimeParse(startTime)
+                        isFormatCorrect = True
+                    except ValueError:
+                        isFormatCorrect = False
+                startTime = timeZone.localize(startTime).astimezone(UTC)
+                utcNow = editingTime
+                if startTime < UTC.localize(utcNow):
+                    if (delta := UTC.localize(utcNow) - startTime) > timedelta(hours=1) and delta < timedelta(days=1):
+                        newStartTime = startTime + timedelta(days=1)
+                        embed = Embed(title=SCHEDULE_EVENT_TIME_TOMORROW, description=SCHEDULE_EVENT_TIME_TOMORROW_PREVIEW.format(round(startTime.timestamp()), round(newStartTime.timestamp())), color=Colour.orange())
+                        await dmChannel.send(embed=embed)
+                        startTime = newStartTime
+                        startTimeOk = True
+                    else:
+                        embed = Embed(title=SCHEDULE_EVENT_TIME_PAST_QUESTION, description=SCHEDULE_EVENT_TIME_PAST_PROMPT)
+                        await dmChannel.send(embed=embed)
+                        try:
+                            response = await self.bot.wait_for("message", timeout=TIME_ONE_MIN, check=lambda msg, author=author, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
+                            keepStartTime = response.content.strip()
+                        except asyncio.TimeoutError:
+                            await dmChannel.send(embed=TIMEOUT_EMBED)
+                            return False
+                        if keepStartTime.lower() in ("yes", "y"):
+                            startTimeOk = True
+                else:
+                    startTimeOk = True
+
+            duration = event["duration"]
+            hours = int(duration.split("h")[0].strip()) if "h" in duration else 0
+            minutes = int(duration.split("h")[-1].replace("m", "").strip()) if duration.strip()[-1] != "h" else 0
+            delta = timedelta(hours=hours, minutes=minutes)
+            endTime = startTime + delta
+            oldStartTime = event["time"]
+            event["time"] = startTime.strftime(EVENT_TIME_FORMAT)
+            event["endTime"] = endTime.strftime(EVENT_TIME_FORMAT)
+            reorderEvents = True
+            guild = self.bot.get_guild(SERVER)
+            embed = Embed(title=SCHEDULE_EVENT_START_TIME_CHANGE_TITLE.format(event["title"]), description=SCHEDULE_EVENT_START_TIME_CHANGE_DESCRIPTION.format(round(UTC.localize(datetime.strptime(oldStartTime, EVENT_TIME_FORMAT)).timestamp()), round(UTC.localize(datetime.strptime(event["time"], EVENT_TIME_FORMAT)).timestamp())))
+            for memberId in event["accepted"] + event.get("declinedForTiming", []) + event["tentative"]:
+                member = guild.get_member(memberId)
+                if member is not None:
+                    try:
+                        await member.send(embed=embed)
+                    except Exception as e:
+                        print(member, e)
+
+        async def editEventDuration():
+            embed = Embed(title=SCHEDULE_EVENT_DURATION_QUESTION.format("event"), description=SCHEDULE_EVENT_DURATION_PROMPT, color=Colour.gold())
+            await dmChannel.send(embed=embed)
+            try:
+                response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, author=author, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
+                duration = response.content.strip()
+            except asyncio.TimeoutError:
+                await dmChannel.send(embed=TIMEOUT_EMBED)
+                return False
+            while not re.match(SCHEDULE_EVENT_DURATION_REGEX, duration):
+                embed = Embed(title=SCHEDULE_INPUT_ERROR, description=SCHEDULE_EVENT_DURATION_PROMPT, colour=Colour.red())
+                await dmChannel.send(embed=embed)
+                try:
+                    response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, author=author, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
+                    duration = response.content.strip()
+                except asyncio.TimeoutError:
+                    await dmChannel.send(embed=TIMEOUT_EMBED)
+                    return False
+            startTime = UTC.localize(datetime.strptime(event["time"], EVENT_TIME_FORMAT))
+            hours = int(duration.split("h")[0].strip()) if "h" in duration else 0
+            minutes = int(duration.split("h")[-1].replace("m", "").strip()) if duration.strip()[-1] != "h" else 0
+            delta = timedelta(hours=hours, minutes=minutes)
+            endTime = startTime + delta
+            event["duration"] = f"{(str(hours) + 'h')*(hours != 0)}{' '*(hours != 0 and minutes !=0)}{(str(minutes) + 'm')*(minutes != 0)}"
+            event["endTime"] = endTime.strftime(EVENT_TIME_FORMAT)
+
+        match choice:
+            case "0":
+                if not isTemplateEdit:
+                    await editEventType()
 
             case "1":
-                embed = Embed(title=SCHEDULE_EVENT_TITLE.format(event.get("type", "Operation").lower()), color=Colour.gold())
+                embed = Embed(title=SCHEDULE_EVENT_TITLE.format(event.get("type", "operation").lower()), color=Colour.gold())
                 await dmChannel.send(embed=embed)
                 try:
                     response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, author=author, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
@@ -641,146 +776,26 @@ class Schedule(commands.Cog):
                 event["maxPlayers"] = maxPlayers
 
             case "7":
-                with open(MEMBER_TIME_ZONES_FILE) as f:
-                    memberTimeZones = json.load(f)
-
-                if str(author.id) in memberTimeZones:
-                    try:
-                        timeZone = pytz.timezone(memberTimeZones[str(author.id)])
-                    except pytz.exceptions.UnknownTimeZoneError:
-                        timeZone = UTC
+                if not isTemplateEdit:
+                    await editEventTime()
                 else:
-                    embed = Embed(title=SCHEDULE_EVENT_TIME_ZONE_QUESTION, description=SCHEDULE_EVENT_TIME_ZONE_PROMPT, color=Colour.gold())
-                    embed.add_field(name=SCHEDULE_TIME_ZONE_POPULAR, value="\n".join(f"**{idx}**   {tz}" for idx, tz in enumerate(TIME_ZONES, 1)))
-                    await dmChannel.send(embed=embed)
-                    try:
-                        response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, author=author, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
-                        timeZone = response.content.strip()
-                        saveTimeZonepreference = True
-                        if timeZone.isdigit() and int(timeZone) <= len(TIME_ZONES) and int(timeZone) > 0:
-                            timeZone = pytz.timezone(list(TIME_ZONES.values())[int(timeZone) - 1])
-                        else:
-                            try:
-                                timeZone = pytz.timezone(timeZone)
-                            except pytz.exceptions.UnknownTimeZoneError:
-                                timeZone = UTC
-                                saveTimeZonepreference = False
-                        if saveTimeZonepreference:
-                            memberTimeZones[str(author.id)] = timeZone.zone
-                            with open(MEMBER_TIME_ZONES_FILE, "w") as f:
-                                json.dump(memberTimeZones, f, indent=4)
-                    except asyncio.TimeoutError:
-                        await dmChannel.send(embed=TIMEOUT_EMBED)
-                        return False
-
-                startTimeOk = False
-                while not startTimeOk:
-                    embed = Embed(title=SCHEDULE_EVENT_TIME.format("event"), description=SCHEDULE_EVENT_SELECTED_TIME_ZONE.format(timeZone.zone), color=Colour.gold())
-                    embed.add_field(name="Current Value", value=UTC.localize(datetime.strptime(event["time"], EVENT_TIME_FORMAT)).astimezone(timeZone).strftime(EVENT_TIME_FORMAT))
-                    await dmChannel.send(embed=embed)
-                    try:
-                        response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, author=author, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
-                        startTime = response.content.strip()
-                    except asyncio.TimeoutError:
-                        await dmChannel.send(embed=TIMEOUT_EMBED)
-                        return False
-                    try:
-                        startTime = datetimeParse(startTime)
-                        isFormatCorrect = True
-                    except ValueError:
-                        isFormatCorrect = False
-                    while not isFormatCorrect:
-                        embed = Embed(title=SCHEDULE_INPUT_ERROR, description=SCHEDULE_EVENT_TIME_FORMAT, colour=Colour.red())
-                        await dmChannel.send(embed=embed)
-                        try:
-                            response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, author=author, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
-                            startTime = response.content.strip()
-                        except asyncio.TimeoutError:
-                            await dmChannel.send(embed=TIMEOUT_EMBED)
-                            return False
-                        try:
-                            startTime = datetimeParse(startTime)
-                            isFormatCorrect = True
-                        except ValueError:
-                            isFormatCorrect = False
-                    startTime = timeZone.localize(startTime).astimezone(UTC)
-                    utcNow = editingTime
-                    if startTime < UTC.localize(utcNow):
-                        if (delta := UTC.localize(utcNow) - startTime) > timedelta(hours=1) and delta < timedelta(days=1):
-                            newStartTime = startTime + timedelta(days=1)
-                            embed = Embed(title=SCHEDULE_EVENT_TIME_TOMORROW, description=SCHEDULE_EVENT_TIME_TOMORROW_PREVIEW.format(round(startTime.timestamp()), round(newStartTime.timestamp())), color=Colour.orange())
-                            await dmChannel.send(embed=embed)
-                            startTime = newStartTime
-                            startTimeOk = True
-                        else:
-                            embed = Embed(title=SCHEDULE_EVENT_TIME_PAST_QUESTION, description=SCHEDULE_EVENT_TIME_PAST_PROMPT)
-                            await dmChannel.send(embed=embed)
-                            try:
-                                response = await self.bot.wait_for("message", timeout=TIME_ONE_MIN, check=lambda msg, author=author, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
-                                keepStartTime = response.content.strip()
-                            except asyncio.TimeoutError:
-                                await dmChannel.send(embed=TIMEOUT_EMBED)
-                                return False
-                            if keepStartTime.lower() in ("yes", "y"):
-                                startTimeOk = True
-                    else:
-                        startTimeOk = True
-
-                duration = event["duration"]
-                hours = int(duration.split("h")[0].strip()) if "h" in duration else 0
-                minutes = int(duration.split("h")[-1].replace("m", "").strip()) if duration.strip()[-1] != "h" else 0
-                delta = timedelta(hours=hours, minutes=minutes)
-                endTime = startTime + delta
-                oldStartTime = event["time"]
-                event["time"] = startTime.strftime(EVENT_TIME_FORMAT)
-                event["endTime"] = endTime.strftime(EVENT_TIME_FORMAT)
-                reorderEvents = True
-                guild = self.bot.get_guild(SERVER)
-                embed = Embed(title=SCHEDULE_EVENT_START_TIME_CHANGE_TITLE.format(event["title"]), description=SCHEDULE_EVENT_START_TIME_CHANGE_DESCRIPTION.format(round(UTC.localize(datetime.strptime(oldStartTime, EVENT_TIME_FORMAT)).timestamp()), round(UTC.localize(datetime.strptime(event["time"], EVENT_TIME_FORMAT)).timestamp())))
-                for memberId in event["accepted"] + event.get("declinedForTiming", []) + event["tentative"]:
-                    member = guild.get_member(memberId)
-                    if member is not None:
-                        try:
-                            await member.send(embed=embed)
-                        except Exception as e:
-                            print(member, e)
+                    await editEventDuration()
 
             case "8":
-                embed = Embed(title=SCHEDULE_EVENT_DURATION_QUESTION.format("event"), description=SCHEDULE_EVENT_DURATION_PROMPT, color=Colour.gold())
-                await dmChannel.send(embed=embed)
-                try:
-                    response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, author=author, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
-                    duration = response.content.strip()
-                except asyncio.TimeoutError:
-                    await dmChannel.send(embed=TIMEOUT_EMBED)
-                    return False
-                while not re.match(SCHEDULE_EVENT_DURATION_REGEX, duration):
-                    embed = Embed(title=SCHEDULE_INPUT_ERROR, description=SCHEDULE_EVENT_DURATION_PROMPT, colour=Colour.red())
-                    await dmChannel.send(embed=embed)
-                    try:
-                        response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, author=author, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
-                        duration = response.content.strip()
-                    except asyncio.TimeoutError:
-                        await dmChannel.send(embed=TIMEOUT_EMBED)
-                        return False
-                startTime = UTC.localize(datetime.strptime(event["time"], EVENT_TIME_FORMAT))
-                hours = int(duration.split("h")[0].strip()) if "h" in duration else 0
-                minutes = int(duration.split("h")[-1].replace("m", "").strip()) if duration.strip()[-1] != "h" else 0
-                delta = timedelta(hours=hours, minutes=minutes)
-                endTime = startTime + delta
-                event["duration"] = f"{(str(hours) + 'h')*(hours != 0)}{' '*(hours != 0 and minutes !=0)}{(str(minutes) + 'm')*(minutes != 0)}"
-                event["endTime"] = endTime.strftime(EVENT_TIME_FORMAT)
+                if not isTemplateEdit:
+                    await editEventDuration()
 
-        if editingTime > self.lastUpdate:
-            embed = Embed(title=SCHEDULE_EVENT_EDITED.format(event["type"]), color=Colour.green())
-            await dmChannel.send(embed=embed)
-            log.info(LOG_EDITED_EVENT.format(author.display_name, author.name, author.discriminator, "an event"))
-            return reorderEvents
-        else:
-            embed = Embed(title=SCHEDULE_EVENT_EDIT_ERROR, color=Colour.red())
-            await dmChannel.send(embed=embed)
-            log.info(LOG_SCHEDULE_UPDATE_ERROR.format(author.display_name, author.name, author.discriminator, "editing an event"))
-            return False
+        if not isTemplateEdit:
+            if editingTime > self.lastUpdate:
+                embed = Embed(title=CHECK_EDITED.format(event["type"]), color=Colour.green())
+                await dmChannel.send(embed=embed)
+                log.info(LOG_EDITED_EVENT.format(author.display_name, author.name, author.discriminator, "an event"))
+                return reorderEvents
+            else:
+                embed = Embed(title=SCHEDULE_EVENT_EDIT_ERROR, color=Colour.red())
+                await dmChannel.send(embed=embed)
+                log.info(LOG_SCHEDULE_UPDATE_ERROR.format(author.display_name, author.name, author.discriminator, "editing an event"))
+                return False
 
     async def deleteEvent(self, author, message, event):
         try:
@@ -1124,6 +1139,7 @@ class Schedule(commands.Cog):
                 embed.title = SCHEDULE_INPUT_ERROR
                 embed.color = Colour.red()
             embed.add_field(name=SCHEDULE_EVENT_TEMPLATE_LIST_TITLE, value="\n".join(f"**{idx}** {template['name']}" for idx, template in enumerate(workshopTemplates, 1)) if len(workshopTemplates) > 0 else "-")
+            embed.set_footer(text=SCHEDULE_CANCEL)
             try:
                 msg = await ctx.author.send(embed=embed)
             except Exception as e:
@@ -1167,6 +1183,7 @@ class Schedule(commands.Cog):
                             with open(WORKSHOP_TEMPLATES_FILE, "w") as f:
                                 json.dump(workshopTemplates, f, indent=4)
                             await dmChannel.send(embed=Embed(title=SCHEDULE_EVENT_DELETED.format("Template"), color=Colour.green()))
+                            return
                         else:
                             invalidInput = True
 
@@ -1176,7 +1193,13 @@ class Schedule(commands.Cog):
                             workshopTemplate = workshopTemplates[int(templateNumber) - 1]
                             log.info(LOG_TEMPLATE_EDITING.format(ctx.author.display_name, ctx.author.name, ctx.author.discriminator, workshopTemplate["name"]))
                             invalidInput = False
-                            # reorderEvents = await self.editEvent(ctx.author, workshopTemplate, isTemplateEdit=True)
+                            await self.editEvent(ctx.author, workshopTemplate, isTemplateEdit=True)
+
+                            workshopTemplates[int(templateNumber) - 1] = workshopTemplate
+                            with open(WORKSHOP_TEMPLATES_FILE, "w") as f:
+                                json.dump(workshopTemplates, f, indent=4)
+                            await dmChannel.send(embed=Embed(title=CHECK_EDITED.format("Template"), color=Colour.green()))
+                            return
                         else:
                             invalidInput = True
 
@@ -1187,24 +1210,16 @@ class Schedule(commands.Cog):
                         else:
                             invalidInput = True
 
+                elif templateAction.lower() == "cancel":
+                    await dmChannel.send(embed=Embed(title=ACTION_CANCELLED.format("Workshop scheduling"), color=Colour.red()))
+                    return
+
                 else:
                     invalidInput = True
 
             except asyncio.TimeoutError:
                 await dmChannel.send(embed=TIMEOUT_EMBED)
                 return
-
-
-
-
-
-
-
-
-
-
-
-
 
         if template is None:
             embed = Embed(title=SCHEDULE_EVENT_TITLE.format("workshop"), color=Colour.gold())

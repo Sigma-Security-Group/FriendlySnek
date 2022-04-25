@@ -213,4 +213,10 @@ LOG_COG_READY = "{0} cog is ready!"
 LOG_BOT_READY = "Bot Ready!"
 LOG_BOT_STOPPED = "Bot stopped!"
 LOG_ERROR = "An error occured!"
-LOG_FRIEND_REQ = "Sending friend request..."
+
+## Time in seconds
+TIME_ONE_MIN = 60
+TIME_TWO_MIN = 120
+TIME_FIVE_MIN = 300
+TIME_TEN_MIN = 600
+TIME_THIRTY_MIN = 1800

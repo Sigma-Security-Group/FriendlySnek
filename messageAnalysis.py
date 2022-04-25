@@ -47,9 +47,4 @@ async def analyzeChannel(message, channelID:int, attachmentContentType:str):
         await message.author.send(ANALYSIS_ILLEGAL_MESSAGE.format(channelID, attachmentContentType, attachmentContentType, message.guild.get_member(ADRIAN).display_name, message.guild.get_member(FROGGI).display_name))
     except Exception as e:
         print(message.author, e)
-        try:
-            print(LOG_FRIEND_REQ)
-            await message.author.send_friend_request()
-        except Exception as e:
-            print(e)
     return

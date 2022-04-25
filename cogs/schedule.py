@@ -1147,13 +1147,13 @@ class Schedule(commands.Cog):
 
         utcNow = UTC.localize(datetime.utcnow())
         authorId = ctx.author.id
-        with open(WORKSHOP_TEMPLATES_FILE) as f:
-            workshopTemplates = json.load(f)
 
         templateActionRepeat = True
         while templateActionRepeat:
+            with open(WORKSHOP_TEMPLATES_FILE) as f:
+                workshopTemplates = json.load(f)
             embed = Embed(title=SCHEDULE_EVENT_TEMPLATE_TITLE, description=SCHEDULE_EVENT_TEMPLATE_DESCRIPTION, color=Colour.gold())
-            embed.add_field(name=SCHEDULE_EVENT_TEMPLATE_LIST_TITLE, value="\n".join(f"**{idx}**   {template['name']}" for idx, template in enumerate(workshopTemplates, 1)) if len(workshopTemplates) > 0 else "-")
+            embed.add_field(name=SCHEDULE_EVENT_TEMPLATE_LIST_TITLE, value="\n".join(f"**{idx}** {template['name']}" for idx, template in enumerate(workshopTemplates, 1)) if len(workshopTemplates) > 0 else "-")
             try:
                 msg = await ctx.author.send(embed=embed)
             except Exception as e:
@@ -1171,7 +1171,7 @@ class Schedule(commands.Cog):
                 templateAction = response.content.strip()
                 templateOk = True
 
-                if templateAction.strip().lower() == "none":
+                if templateAction.lower() == "none":
                     template = None
                     templateActionRepeat = False
                 elif re.search(SCHEDULE_EVENT_TEMPLATE_ACTION_REGEX, templateAction):
@@ -1181,34 +1181,36 @@ class Schedule(commands.Cog):
                             workshopTemplate = workshopTemplates[int(templateNumber) - 1]
                         else:
                             templateOk = False
+                            templateActionRepeat = False
 
-                        try:
-                            msg = await dmChannel.send(SCHEDULE_EVENT_CONFIRM_DELETE.format(f"template: `{workshopTemplate['name']}`"))
-                        except Exception as e:
-                            print(ctx.author, e)
+                        if templateOk:
                             try:
-                                print(LOG_FRIEND_REQ)
-                                await ctx.author.send_friend_request()
+                                msg = await dmChannel.send(SCHEDULE_EVENT_CONFIRM_DELETE.format(f"template: `{workshopTemplate['name']}`"))
                             except Exception as e:
-                                print(e)
-                            return False
-                        await msg.add_reaction("🗑")
-                        try:
-                            _ = await self.bot.wait_for("reaction_add", timeout=60, check=lambda reaction, user, author=ctx.author: reaction.emoji == "🗑" and user == author)
-                        except asyncio.TimeoutError:
-                            await ctx.author.send(embed=TIMEOUT_EMBED)
-                            return False
-                        log.warning(LOG_TEMPLATE_DELETED.format(ctx.author.display_name, ctx.author.name, ctx.author.discriminator, workshopTemplate["name"]))
-                        with open(WORKSHOP_TEMPLATES_DELETED_FILE) as f:
-                            workshopTempaltesDeleted = json.load(f)
-                        workshopTempaltesDeleted.append(workshopTemplates[int(templateAction.split(" ")[-1]) - 1])
-                        with open(WORKSHOP_TEMPLATES_DELETED_FILE, "w") as f:
-                            json.dump(workshopTempaltesDeleted, f, indent=4)
+                                print(ctx.author, e)
+                                try:
+                                    print(LOG_FRIEND_REQ)
+                                    await ctx.author.send_friend_request()
+                                except Exception as e:
+                                    print(e)
+                                return False
+                            await msg.add_reaction("🗑")
+                            try:
+                                _ = await self.bot.wait_for("reaction_add", timeout=60, check=lambda reaction, user, author=ctx.author: reaction.emoji == "🗑" and user == author)
+                            except asyncio.TimeoutError:
+                                await ctx.author.send(embed=TIMEOUT_EMBED)
+                                return False
+                            log.warning(LOG_TEMPLATE_DELETED.format(ctx.author.display_name, ctx.author.name, ctx.author.discriminator, workshopTemplate["name"]))
+                            with open(WORKSHOP_TEMPLATES_DELETED_FILE) as f:
+                                workshopTempaltesDeleted = json.load(f)
+                            workshopTempaltesDeleted.append(workshopTemplates[int(templateAction.split(" ")[-1]) - 1])
+                            with open(WORKSHOP_TEMPLATES_DELETED_FILE, "w") as f:
+                                json.dump(workshopTempaltesDeleted, f, indent=4)
 
-                        workshopTemplates.pop(int(templateAction.split(" ")[-1]) - 1)
-                        with open(WORKSHOP_TEMPLATES_FILE, "w") as f:
-                            json.dump(workshopTemplates, f, indent=4)
-                        await dmChannel.send(embed=Embed(title=SCHEDULE_EVENT_DELETED.format("Template"), color=Colour.green()))
+                            workshopTemplates.pop(int(templateAction.split(" ")[-1]) - 1)
+                            with open(WORKSHOP_TEMPLATES_FILE, "w") as f:
+                                json.dump(workshopTemplates, f, indent=4)
+                            await dmChannel.send(embed=Embed(title=SCHEDULE_EVENT_DELETED.format("Template"), color=Colour.green()))
 
                     elif templateAction.startswith("edit"):
                         templateNumber = templateAction.split(" ")[-1]
@@ -1251,34 +1253,36 @@ class Schedule(commands.Cog):
                             workshopTemplate = workshopTemplates[int(templateNumber) - 1]
                         else:
                             templateOk = False
+                            templateActionRepeat = False
 
-                        try:
-                            msg = await dmChannel.send(SCHEDULE_EVENT_CONFIRM_DELETE.format(f"template: `{workshopTemplate['name']}`"))
-                        except Exception as e:
-                            print(ctx.author, e)
+                        if templateOk:
                             try:
-                                print(LOG_FRIEND_REQ)
-                                await ctx.author.send_friend_request()
+                                msg = await dmChannel.send(SCHEDULE_EVENT_CONFIRM_DELETE.format(f"template: `{workshopTemplate['name']}`"))
                             except Exception as e:
-                                print(e)
-                            return False
-                        await msg.add_reaction("🗑")
-                        try:
-                            _ = await self.bot.wait_for("reaction_add", timeout=60, check=lambda reaction, user, author=ctx.author: reaction.emoji == "🗑" and user == author)
-                        except asyncio.TimeoutError:
-                            await ctx.author.send(embed=TIMEOUT_EMBED)
-                            return False
-                        log.warning(LOG_TEMPLATE_DELETED.format(ctx.author.display_name, ctx.author.name, ctx.author.discriminator, workshopTemplate["name"]))
-                        with open(WORKSHOP_TEMPLATES_DELETED_FILE) as f:
-                            workshopTempaltesDeleted = json.load(f)
-                        workshopTempaltesDeleted.append(workshopTemplates[int(templateAction.split(" ")[-1]) - 1])
-                        with open(WORKSHOP_TEMPLATES_DELETED_FILE, "w") as f:
-                            json.dump(workshopTempaltesDeleted, f, indent=4)
+                                print(ctx.author, e)
+                                try:
+                                    print(LOG_FRIEND_REQ)
+                                    await ctx.author.send_friend_request()
+                                except Exception as e:
+                                    print(e)
+                                return False
+                            await msg.add_reaction("🗑")
+                            try:
+                                _ = await self.bot.wait_for("reaction_add", timeout=60, check=lambda reaction, user, author=ctx.author: reaction.emoji == "🗑" and user == author)
+                            except asyncio.TimeoutError:
+                                await ctx.author.send(embed=TIMEOUT_EMBED)
+                                return False
+                            log.warning(LOG_TEMPLATE_DELETED.format(ctx.author.display_name, ctx.author.name, ctx.author.discriminator, workshopTemplate["name"]))
+                            with open(WORKSHOP_TEMPLATES_DELETED_FILE) as f:
+                                workshopTempaltesDeleted = json.load(f)
+                            workshopTempaltesDeleted.append(workshopTemplates[int(templateAction.split(" ")[-1]) - 1])
+                            with open(WORKSHOP_TEMPLATES_DELETED_FILE, "w") as f:
+                                json.dump(workshopTempaltesDeleted, f, indent=4)
 
-                        workshopTemplates.pop(int(templateAction.split(" ")[-1]) - 1)
-                        with open(WORKSHOP_TEMPLATES_FILE, "w") as f:
-                            json.dump(workshopTemplates, f, indent=4)
-                        await dmChannel.send(embed=Embed(title=SCHEDULE_EVENT_DELETED.format("Template"), color=Colour.green()))
+                            workshopTemplates.pop(int(templateAction.split(" ")[-1]) - 1)
+                            with open(WORKSHOP_TEMPLATES_FILE, "w") as f:
+                                json.dump(workshopTemplates, f, indent=4)
+                            await dmChannel.send(embed=Embed(title=SCHEDULE_EVENT_DELETED.format("Template"), color=Colour.green()))
 
                     elif templateAction.startswith("edit"):
                         templateNumber = templateAction.split(" ")[-1]

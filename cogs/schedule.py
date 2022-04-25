@@ -383,7 +383,7 @@ class Schedule(commands.Cog):
                     await self.reserveRole(payload.member, event)
                 elif payload.emoji.name == "✏️":
                     if payload.member.id == event["authorId"] or any(role.id == UNIT_STAFF for role in payload.member.roles):
-                        reorderEvents = await self.editEvent(payload.member, event, False)
+                        reorderEvents = await self.editEvent(payload.member, event, isTemplateEdit=False)
                         if reorderEvents:
                             with open(EVENTS_FILE, "w") as f:
                                 json.dump(events, f, indent=4)
@@ -494,7 +494,7 @@ class Schedule(commands.Cog):
             await dmChannel.send(embed=embed)
             log.debug(LOG_SCHEDULE_UPDATE_ERROR.format(member.display_name, member.name, member.discriminator, "reserving a role"))
 
-    async def editEvent(self, author, event, isTemplateEdit:bool):
+    async def editEvent(self, author, event, isTemplateEdit: bool = False):
         editingTime = datetime.utcnow()
         embed = Embed(title=SCHEDULE_EVENT_EDIT, color=Colour.gold())
         embed.add_field(name="**1** Title", value=f"```txt\n{event['title']}\n```", inline=False)
@@ -1217,7 +1217,7 @@ class Schedule(commands.Cog):
                         if templateNumber.isdigit() and int(templateNumber) <= len(workshopTemplates) and int(templateNumber) > 0:
                             workshopTemplate = workshopTemplates[int(templateNumber) - 1]
                             log.info(LOG_TEMPLATE_EDITING.format(ctx.author.display_name, ctx.author.name, ctx.author.discriminator, workshopTemplate["name"]))
-                            reorderEvents = await self.editEvent(ctx.author, workshopTemplate, True)
+                            reorderEvents = await self.editEvent(ctx.author, workshopTemplate, isTemplateEdit=True)
                         else:
                             templateOk = False
 
@@ -1287,7 +1287,7 @@ class Schedule(commands.Cog):
                         if templateNumber.isdigit() and int(templateNumber) <= len(workshopTemplates) and int(templateNumber) > 0:
                             workshopTemplate = workshopTemplates[int(templateNumber) - 1]
                             log.info(LOG_TEMPLATE_EDITING.format(ctx.author.display_name, ctx.author.name, ctx.author.discriminator, workshopTemplate["name"]))
-                            reorderEvents = await self.editEvent(ctx.author, workshopTemplate, True)
+                            reorderEvents = await self.editEvent(ctx.author, workshopTemplate, isTemplateEdit=True)
                         else:
                             templateOk = False
 

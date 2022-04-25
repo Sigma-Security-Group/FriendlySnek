@@ -1236,7 +1236,7 @@ class Schedule(commands.Cog):
                 return
         while not templateOk:
             embed = Embed(title=SCHEDULE_INPUT_ERROR, description=SCHEDULE_EVENT_TEMPLATE_DESCRIPTION, color=Colour.red())
-            embed.add_field(name=SCHEDULE_EVENT_TEMPLATE_LIST_TITLE, value="\n".join(f"**{idx}**   {template['name']}" for idx, template in enumerate(workshopTemplates, 1)) if len(workshopTemplates) > 0 else "-")
+            embed.add_field(name=SCHEDULE_EVENT_TEMPLATE_LIST_TITLE, value="\n".join(f"**{idx}** {template['name']}" for idx, template in enumerate(workshopTemplates, 1)) if len(workshopTemplates) > 0 else "-")
             await dmChannel.send(embed=embed)
             try:
                 response = await self.bot.wait_for("message", timeout=600, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
@@ -1245,7 +1245,6 @@ class Schedule(commands.Cog):
 
                 if templateAction.strip().lower() == "none":
                     template = None
-                    templateActionRepeat = False
                 elif re.search(SCHEDULE_EVENT_TEMPLATE_ACTION_REGEX, templateAction):
                     if templateAction.startswith("delete"):
                         templateNumber = templateAction.split(" ")[-1]
@@ -1253,7 +1252,6 @@ class Schedule(commands.Cog):
                             workshopTemplate = workshopTemplates[int(templateNumber) - 1]
                         else:
                             templateOk = False
-                            templateActionRepeat = False
 
                         if templateOk:
                             try:
@@ -1298,11 +1296,9 @@ class Schedule(commands.Cog):
                             workshopTemplate = workshopTemplates[int(templateAction) - 1]
                         else:
                             templateOk = False
-                        templateActionRepeat = False
 
                 else:
                     templateOk = False
-                    templateActionRepeat = False
 
             except asyncio.TimeoutError:
                 await dmChannel.send(embed=TIMEOUT_EMBED)

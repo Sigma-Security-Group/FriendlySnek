@@ -129,7 +129,7 @@ SCHEDULE_RESERVABLE_PROMPT = "Enter a number from the list, or `none` to free up
 SCHEDULE_EVENT_START_TIME_CHANGE_TITLE = ":clock3: The starting time has changed for: {0}!"
 SCHEDULE_EVENT_START_TIME_CHANGE_DESCRIPTION = "From: <t:{0}:F>\n\u2000\u2000To: <t:{1}:F>"
 SCHEDULE_EVENT_DELETED_TITLE = "🗑 {0} deleted: {1}!"
-SCHEDULE_EVENT_DELETED_DESCRIPTION = "The {0} was scheduled to run:\n<t:{0}:F>"
+SCHEDULE_EVENT_DELETED_DESCRIPTION = "The {0} was scheduled to run:\n<t:{1}:F>"
 
 ## "Enter" prompts
 SCHEDULE_NUMBER_FROM_TO = "Enter a number from **{0}** - **{1}**."

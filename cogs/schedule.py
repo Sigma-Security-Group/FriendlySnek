@@ -501,8 +501,9 @@ class Schedule(commands.Cog):
             embed.add_field(name="**8** Duration", value=f"```txt\n{event['duration']}\n```", inline=False)
             choiceNumbers:list = [str(x) for x in range(9)]
         else:
+            embed.insert_field_at(0, name="**0** Template Name", value=f"```txt\n{event['name']}\n```", inline=False)
             embed.add_field(name="**7** Duration", value=f"```txt\n{event['duration']}\n```", inline=False)
-            choiceNumbers:list = [str(x) for x in range(1, 8)]
+            choiceNumbers:list = [str(x) for x in range(8)]
 
         try:
             msg = await author.send(embed=embed)
@@ -541,6 +542,17 @@ class Schedule(commands.Cog):
                     await dmChannel.send(embed=TIMEOUT_EMBED)
                     return False
             event["type"] = {"1": "Operation", "2": "Workshop", "3": "Event"}.get(eventTypeNum, "Operation")
+
+        async def editEventTemplateName():
+            embed = Embed(title=SCHEDULE_EVENT_TEMPLATE_SAVE_NAME_QUESTION, color=Colour.gold())
+            await dmChannel.send(embed=embed)
+            try:
+                response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, author=author, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
+                res = response.content.strip()
+            except asyncio.TimeoutError:
+                await dmChannel.send(embed=TIMEOUT_EMBED)
+                return False
+            event["name"] = res
 
         async def editEventTime():
             with open(MEMBER_TIME_ZONES_FILE) as f:
@@ -677,6 +689,8 @@ class Schedule(commands.Cog):
             case "0":
                 if not isTemplateEdit:
                     await editEventType()
+                else:
+                    await editEventTemplateName()
 
             case "1":
                 embed = Embed(title=SCHEDULE_EVENT_TITLE.format(event.get("type", "operation").lower()), color=Colour.gold())
@@ -1148,14 +1162,14 @@ class Schedule(commands.Cog):
             dmChannel = msg.channel
 
             try:
-                response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
+                response = await self.bot.wait_for("message", timeout=TIME_ONE_MIN, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
                 templateAction = response.content.strip()
 
                 if templateAction.lower() == "none":
                     templateActionRepeat = False
                     template = None
-                elif re.search(SCHEDULE_EVENT_TEMPLATE_ACTION_REGEX, templateAction):
-                    if templateAction.startswith("delete"):
+                elif re.search(SCHEDULE_EVENT_TEMPLATE_ACTION_REGEX, templateAction, re.IGNORECASE):
+                    if templateAction.lower().startswith("delete"):
                         templateNumber = templateAction.split(" ")[-1]
                         if templateNumber.isdigit() and int(templateNumber) <= len(workshopTemplates) and int(templateNumber) > 0:
                             workshopTemplate = workshopTemplates[int(templateNumber) - 1]
@@ -1187,7 +1201,7 @@ class Schedule(commands.Cog):
                         else:
                             invalidInput = True
 
-                    elif templateAction.startswith("edit"):
+                    elif templateAction.lower().startswith("edit"):
                         templateNumber = templateAction.split(" ")[-1]
                         if templateNumber.isdigit() and int(templateNumber) <= len(workshopTemplates) and int(templateNumber) > 0:
                             workshopTemplate = workshopTemplates[int(templateNumber) - 1]

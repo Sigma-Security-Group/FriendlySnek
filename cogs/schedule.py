@@ -833,7 +833,7 @@ class Schedule(commands.Cog):
                 for memberId in event["accepted"] + event.get("declinedForTiming", []) + event["tentative"]:
                     member = guild.get_member(memberId)
                     if member is not None:
-                        embed = Embed(title=SCHEDULE_EVENT_DELETED_TITLE.format(event.get("type", "Operation"), event["title"]), description=SCHEDULE_EVENT_DELETED_DESCRIPTION.format(event.get("type", "Operation").lower(), event["title"], round(UTC.localize(datetime.strptime(event["time"], EVENT_TIME_FORMAT)).timestamp())))
+                        embed = Embed(title=SCHEDULE_EVENT_DELETED_TITLE.format(event.get("type", "Operation"), event["title"]), description=SCHEDULE_EVENT_DELETED_DESCRIPTION.format(event.get("type", "Operation").lower(), round(UTC.localize(datetime.strptime(event["time"], EVENT_TIME_FORMAT)).timestamp())))
                         try:
                             await member.send(embed=embed)
                         except Exception as e:

@@ -27,6 +27,9 @@ if DEBUG:
 from messageAnalysis import runMessageAnalysis
 import secret
 
+if not os.path.exists("./data"):
+    os.mkdir("data")
+
 COGS = [os.path.basename(path)[:-3] for path in glob("cogs/*.py")]
 cogsReady = {cog: False for cog in COGS}
 
@@ -97,7 +100,7 @@ async def on_member_join(member):
             log.debug(f"Sending ping reminder to {updatedMember.display_name} ({updatedMember.name}#{updatedMember.discriminator})")
             await bot.get_channel(WELCOME).send(f"{updatedMember.mention} Don't forget to ping {unitStaffRole.name} when you are ready.")
         else:
-            log.debug(f"Newcomer is no longer in need of an interview {updatedMember.display_name}({updatedMember.name}#{updatedMember.discriminator})")
+            log.debug(f"Newcomer is no longer in need of an interview {updatedMember.display_name} ({updatedMember.name}#{updatedMember.discriminator})")
     else:
         log.debug(f"Newcomer is no longer in the server {member.display_name}({member.name}#{member.discriminator})")
     if member.id in newcomers:

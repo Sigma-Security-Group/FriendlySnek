@@ -379,7 +379,7 @@ class Schedule(commands.Cog):
                     await self.reserveRole(payload.member, event)
                 elif payload.emoji.name == "✏️":
                     if payload.member.id == event["authorId"] or any(role.id == UNIT_STAFF for role in payload.member.roles):
-                        reorderEvents = await self.editEvent(payload.member, event)
+                        reorderEvents = await self.editEvent(payload.member, event, False)
                         if reorderEvents:
                             with open(EVENTS_FILE, "w") as f:
                                 json.dump(events, f, indent=4)
@@ -490,19 +490,26 @@ class Schedule(commands.Cog):
             await dmChannel.send(embed=embed)
             log.debug(LOG_SCHEDULE_UPDATE_ERROR.format(member.display_name, member.name, member.discriminator, "reserving a role"))
 
-    async def editEvent(self, author, event):
+    async def editEvent(self, author, event, isTemplateEdit:bool):
         editingTime = datetime.utcnow()
-        log.info(LOG_EDITING_EVENT.format(author.display_name, author.name, author.discriminator, "an event"))
         embed = Embed(title=SCHEDULE_EVENT_EDIT, color=Colour.gold())
-        embed.add_field(name="**0** Type", value=f"```txt\n{event['type']}\n```", inline=False)
         embed.add_field(name="**1** Title", value=f"```txt\n{event['title']}\n```", inline=False)
         embed.add_field(name="**2** Description", value=f"```txt\n{event['description'] if len(event['description']) < 500 else event['description'][:500] + ' [...]'}\n```", inline=False)
         embed.add_field(name="**3** External URL", value=f"```txt\n{event['externalURL']}\n```", inline=False)
         embed.add_field(name="**4** Reservable Roles", value="```txt\n" + "\n".join(event["reservableRoles"].keys()) + "\n```" if event["reservableRoles"] is not None else "None", inline=False)
         embed.add_field(name="**5** Map", value=f"```txt\n{event['map']}\n```", inline=False)
         embed.add_field(name="**6** Max Players", value=f"```txt\n{event['maxPlayers']}\n```", inline=False)
-        embed.add_field(name="**7** Time", value=f"<t:{round(UTC.localize(datetime.strptime(event['time'], EVENT_TIME_FORMAT)).timestamp())}:F>", inline=False)
-        embed.add_field(name="**8** Duration", value=f"```txt\n{event['duration']}\n```", inline=False)
+
+        if not isTemplateEdit:
+            log.info(LOG_EDITING_EVENT.format(author.display_name, author.name, author.discriminator, "an event"))
+            embed.insert_field_at(0, name="**0** Type", value=f"```txt\n{event['type']}\n```", inline=False)
+            embed.add_field(name="**7** Time", value=f"<t:{round(UTC.localize(datetime.strptime(event['time'], EVENT_TIME_FORMAT)).timestamp())}:F>", inline=False)
+            embed.add_field(name="**8** Duration", value=f"```txt\n{event['duration']}\n```", inline=False)
+            choiceNumbers:list = [str(x) for x in range(9)]
+        else:
+            embed.add_field(name="**7** Duration", value=f"```txt\n{event['duration']}\n```", inline=False)
+            choiceNumbers:list = [str(x) for x in range(1, 8)]
+
         try:
             msg = await author.send(embed=embed)
         except Exception as e:
@@ -520,8 +527,8 @@ class Schedule(commands.Cog):
         except asyncio.TimeoutError:
             await dmChannel.send(embed=TIMEOUT_EMBED)
             return False
-        while choice not in ("0", "1", "2", "3", "4", "5", "6", "7", "8"):
-            embed = Embed(title=SCHEDULE_INPUT_ERROR, description=SCHEDULE_NUMBER_FROM_TO.format(0, 8), colour=Colour.red())
+        while choice not in choiceNumbers:
+            embed = Embed(title=SCHEDULE_INPUT_ERROR, description=SCHEDULE_NUMBER_FROM_TO.format(int(choiceNumbers[0]), int(choiceNumbers[-1])), colour=Colour.red())
             await dmChannel.send(embed=embed)
             try:
                 response = await self.bot.wait_for("message", timeout=120, check=lambda msg, author=author, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
@@ -1194,7 +1201,9 @@ class Schedule(commands.Cog):
                             json.dump(workshopTemplates, f, indent=4)
                         await dmChannel.send(embed=Embed(title=SCHEDULE_EVENT_DELETED.format("Template"), color=Colour.green()))
                     elif templateAction.startswith("edit"):
-                        log.info(LOG_TEMPLATE_EDITING.format(ctx.author.display_name, ctx.author.name, ctx.author.discriminator, workshopTemplateName))
+                        workshopTemplate = workshopTemplates[int(templateAction.split(" ")[-1]) - 1]
+                        log.info(LOG_TEMPLATE_EDITING.format(ctx.author.display_name, ctx.author.name, ctx.author.discriminator, workshopTemplate["name"]))
+                        reorderEvents = await self.editEvent(ctx.author, workshopTemplate, True)
                     else: # Select template
                         template = workshopTemplates[int(templateAction) - 1]
                         templateActionRepeat = False

@@ -43,6 +43,13 @@ MISSION_UPLOAD_UPLOADED = "Mission file uploaded!"
 
 
 ####################
+# Poll.py
+####################
+
+POLL_COMMAND_DESCRIPTION = "Create a poll."
+
+
+####################
 # Schedule.py
 ####################
 

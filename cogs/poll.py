@@ -98,15 +98,15 @@ class Poll(commands.Cog):
             )
         ]
     )
-    async def poll(self, ctx: SlashContext, title: str, option1: str, option2: str, description: str = "", option3: str = None, option4: str = None, option5: str = None, option6: str = None, option7: str = None, option8: str = None, option9: str = None, option10: str = None):
+    async def poll(self, ctx: SlashContext, title: str, option1: str, option2: str = None, description: str = "", option3: str = None, option4: str = None, option5: str = None, option6: str = None, option7: str = None, option8: str = None, option9: str = None, option10: str = None):
         embed = Embed(title=title, description=f"{description}\n\n", color=Colour.gold())
         embed.set_footer(text=f"Poll by {ctx.author}")
         embed.timestamp = datetime.utcnow()
 
         emojiNumbers: tuple = ("1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣", "🔟")
+        options = [option1, option2, option3, option4, option5, option6, option7, option8, option9, option10]
         optionCount: int = 0
-        for num in range(len(emojiNumbers)):
-            optionInp = eval(f"option{num + 1}")
+        for optionInp in options:
             if optionInp is not None:
                 embed.description += f"{emojiNumbers[optionCount]} {optionInp}\n"
                 optionCount += 1

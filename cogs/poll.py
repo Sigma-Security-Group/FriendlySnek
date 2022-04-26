@@ -37,14 +37,14 @@ class Poll(commands.Cog):
                 required=True
             ),
             create_option(
-                name="option2",
-                description="Option 2",
-                option_type=3,
-                required=True
-            ),
-            create_option(
                 name="description",
                 description="Description",
+                option_type=3,
+                required=False
+            ),
+            create_option(
+                name="option2",
+                description="Option 2",
                 option_type=3,
                 required=False
             ),

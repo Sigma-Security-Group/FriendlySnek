@@ -65,35 +65,53 @@ class Poll(commands.Cog):
                 description="Option 6",
                 option_type=3,
                 required=False
+            ),
+            create_option(
+                name="option7",
+                description="Option 7",
+                option_type=3,
+                required=False
+            ),
+            create_option(
+                name="option8",
+                description="Option 8",
+                option_type=3,
+                required=False
+            ),
+            create_option(
+                name="option9",
+                description="Option 9",
+                option_type=3,
+                required=False
+            ),
+            create_option(
+                name="option10",
+                description="Option 10",
+                option_type=3,
+                required=False
             )
         ]
     )
-    async def poll(self, ctx: SlashContext, title: str, option1: str, option2: str, option3: str = None, option4: str = None, option5: str = None, option6: str = None):
-        embed = Embed(title=title, color=Colour.gold(), description=f"1. {option1}\n 2. {option2}\n")
+    async def poll(self, ctx: SlashContext, title: str, option1: str, option2: str, option3: str = None, option4: str = None, option5: str = None, option6: str = None, option7: str = None, option8: str = None, option9: str = None, option10: str = None):
+        embed = Embed(title=title, description="", color=Colour.gold())
         embed.set_footer(text=f"Poll by {ctx.author}")
         embed.timestamp = datetime.utcnow()
 
-        emojiNumbers: tuple = ("1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣")
+        emojiNumbers: tuple = ("1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣", "🔟")
+        optionCount: int = 0
+        for num in range(len(emojiNumbers)):
+            optionInp = eval(f"option{num + 1}")
+            if optionInp is not None:
+                embed.description += f"{emojiNumbers[optionCount]} {optionInp}\n"
+                optionCount += 1
 
-        if (option3 != None):
-            embed.description += f"3. {option3}\n"
-        if (option4 != None):
-            embed.description += f"3. {option4}\n"
-        if (option5 != None):
-            embed.description += f"3. {option5}\n"
-        if (option6 != None):
-            embed.description += f"3. {option6}\n"
-        poll = await ctx.send(embed=embed)
-        await poll.add_reaction(emoji='1️⃣')
-        await poll.add_reaction(emoji='2️⃣')
-        if (option3 != None):
-            await poll.add_reaction(emoji='3️⃣')
-        if (option4 != None):
-            await poll.add_reaction(emoji='4️⃣')
-        if (option5 != None):
-            await poll.add_reaction(emoji='5️⃣')
-        if (option6 != None):
-            await poll.add_reaction(emoji='6️⃣')
+        try:
+            poll = await ctx.send(embed=embed)
+
+            for x in range(optionCount):
+                await poll.add_reaction(emoji=emojiNumbers[x])
+        except Exception as e:
+            print(ctx.author, e)
 
 def setup(bot):
     bot.add_cog(Poll(bot))

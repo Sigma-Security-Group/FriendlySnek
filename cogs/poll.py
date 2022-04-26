@@ -26,7 +26,7 @@ class Poll(commands.Cog):
         options=[
             create_option(
                 name="title",
-                description="Poll title",
+                description="Title",
                 option_type=3,
                 required=True
             ),
@@ -41,6 +41,12 @@ class Poll(commands.Cog):
                 description="Option 2",
                 option_type=3,
                 required=True
+            ),
+            create_option(
+                name="description",
+                description="Description",
+                option_type=3,
+                required=False
             ),
             create_option(
                 name="option3",
@@ -92,8 +98,8 @@ class Poll(commands.Cog):
             )
         ]
     )
-    async def poll(self, ctx: SlashContext, title: str, option1: str, option2: str, option3: str = None, option4: str = None, option5: str = None, option6: str = None, option7: str = None, option8: str = None, option9: str = None, option10: str = None):
-        embed = Embed(title=title, description="", color=Colour.gold())
+    async def poll(self, ctx: SlashContext, title: str, option1: str, option2: str, description: str = "", option3: str = None, option4: str = None, option5: str = None, option6: str = None, option7: str = None, option8: str = None, option9: str = None, option10: str = None):
+        embed = Embed(title=title, description=f"{description}\n\n", color=Colour.gold())
         embed.set_footer(text=f"Poll by {ctx.author}")
         embed.timestamp = datetime.utcnow()
 
@@ -112,6 +118,24 @@ class Poll(commands.Cog):
                 await poll.add_reaction(emoji=emojiNumbers[x])
         except Exception as e:
             print(ctx.author, e)
+
+    @commands.Cog.listener()
+    async def on_raw_reaction_add(self, payload):
+        if payload.channel_id == SCHEDULE or payload.channel_id == WORKSHOP_INTEREST:
+            return
+        """
+        try:
+            channel = self.bot.get_channel(payload.channel_id)
+            msg = await channel.fetch_message(payload.message_id)
+            print("="*25)
+            print("="*25)
+            # print(payload)
+            print(msg.reactions)
+            print("="*25)
+        except Exception as e:
+            print(e)
+        """
+
 
 def setup(bot):
     bot.add_cog(Poll(bot))

@@ -819,7 +819,7 @@ class Schedule(commands.Cog):
             return False
         await msg.add_reaction("🗑")
         try:
-            _ = await self.bot.wait_for("reaction_add", timeout=TIME_ONE_MIN, check=lambda reaction, user, author=author: reaction.emoji == "🗑" and user == author)
+            await self.bot.wait_for("reaction_add", timeout=TIME_ONE_MIN, check=lambda reaction, user, author=author: reaction.emoji == "🗑" and user == author)
         except asyncio.TimeoutError:
             await author.send(embed=TIMEOUT_EMBED)
             return False

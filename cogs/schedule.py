@@ -195,7 +195,7 @@ class Schedule(commands.Cog):
                     continue
                 startTime = UTC.localize(datetime.strptime(event["time"], EVENT_TIME_FORMAT))
                 if utcNow > startTime + timedelta(minutes=30):
-                    acceptedMembers = [guild.get_member(memberId) for memberId in event["accepted"]]
+                    acceptedMembers = [member for memberId in event["accepted"] if (member := guild.get_member(memberId)) is not None]
                     onlineMembers = self.bot.get_channel(COMMAND).members + self.bot.get_channel(DEPLOYED).members
                     acceptedMembersNotOnline = []
                     onlineMembersNotAccepted = []

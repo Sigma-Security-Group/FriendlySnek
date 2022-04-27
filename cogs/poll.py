@@ -140,7 +140,7 @@ class Poll(commands.Cog):
             for rowNum in range(len(optionRows)):
                 # percent = f'{((reactionCount[rowNum] - 1) / reactionSum) * 100:.1f}'.strip('0').strip('.') or 0  # Floats
                 percent = round(((reactionCount[rowNum] - 1) / reactionSum) * 100)
-                optionRows[rowNum] = re.sub("\(\d+(\.\d+)?%\)", f"**({percent}%)**", optionRows[rowNum])
+                optionRows[rowNum] = re.sub("\(\d+(\.\d+)?%\)", f"({percent}%)", optionRows[rowNum])
 
             embed.description = "\n".join(msgDesc[:2] + optionRows)
             await msg.edit(embed=embed)

@@ -10,6 +10,8 @@ from __main__ import log, cogsReady, DEBUG
 if DEBUG:
     from constants.debug import *
 
+emojiNumbers: tuple = ("1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣", "🔟")
+
 class Poll(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
@@ -119,23 +121,146 @@ class Poll(commands.Cog):
         except Exception as e:
             print(ctx.author, e)
 
+    async def reactionShit(self, payload):
+        channel = self.bot.get_channel(payload.channel_id)
+        msg = await channel.fetch_message(payload.message_id)
+
+        #print("="*25)
+        #print(payload)
+        #print("="*25)
+        #print(payload.member)
+        #print("="*25)
+        #print(payload.member.bot)
+        #print("="*25)
+
+        if hasattr(payload.member, "bot") and payload.member.bot:
+            return
+
+        if  payload.channel_id != SCHEDULE and payload.channel_id != WORKSHOP_INTEREST and payload.emoji.name in emojiNumbers:
+
+            reactionCount: list = []
+            for reaction in msg.reactions:
+                reactionCount.append(reaction.count)
+
+            #print("="*25)
+            #print(reactionCount)
+            #print("="*25)
+            #print(msg.embeds[0].description)
+            #print("="*25)
+            #print()
+            #print("="*25)
+
+            #descRows = msg.embeds[0].description.split("\n").pop(0).pop(0)
+
+            #return
+
+            """
+            <
+            RawReactionActionEvent
+                message_id=968633347985272874
+                user_id=229212817448894464
+                channel_id=864487446611623986
+                guild_id=864441968776052747
+                emoji=
+                    PartialEmoji
+                    animated=False
+                    name='1️⃣'
+                    id=None
+                >
+                event_type='REACTION_ADD'
+                member=<
+                    Member
+                    id=229212817448894464
+                    name='Froggi22'
+                    discriminator='3436'
+                    bot=False
+                    nick=None
+                    guild=<
+                        Guild
+                        id=864441968776052747
+                        name='Bot Testing Range'
+                        shard_id=None
+                        chunked=True
+                        member_count=8
+                    >
+                >
+            >
+            """
+
+
+            """
+            <
+            RawReactionActionEvent
+                message_id=968571513504665671
+                user_id=942214717945036820
+                channel_id=864487446611623986
+                guild_id=864441968776052747
+                emoji=<
+                    PartialEmoji
+                    animated=False
+                    name='2️⃣'
+                    id=None
+                >
+                event_type='REACTION_ADD'
+                member=<
+                    Member
+                    id=942214717945036820
+                    name='Froggi Friendly Snek'
+                    discriminator='1563'
+                    bot=True
+                    nick=None
+                    guild=<
+                        Guild
+                        id=864441968776052747
+                        name='Bot Testing Range'
+                        shard_id=None
+                        chunked=True
+                        member_count=8
+                    >
+                >
+            >
+            <
+            Message
+                id=968599937317220382
+                channel=<TextChannel
+                id=864487446611623986
+                name='arma-discussion'
+                position=5
+                nsfw=False
+                news=False
+                category_id=864441969286578176
+            >
+            type=<MessageType.default: 0>
+            author=<Member id=942214717945036820
+                name='Froggi Friendly Snek' discriminator='1563' bot=True nick=None guild=<Guild id=864441968776052747 name='Bot Testing Range' shard_id=None chunked=True member_count=8>> flags=<MessageFlags value=0>>
+            """
+
+            """
+            try:
+
+                channel = self.bot.get_channel(payload.channel_id)
+                msg = await channel.fetch_message(payload.message_id)
+                print("="*25)
+                print("="*25)
+                print(payload)
+                print("="*25)
+                print(msg.content)
+                print("="*25)
+                print(msg.embeds)
+                print("="*25)
+                print(msg.reactions)
+                print("="*25)
+            except Exception as e:
+                print(e)
+            """
+
     @commands.Cog.listener()
     async def on_raw_reaction_add(self, payload):
-        if payload.channel_id == SCHEDULE or payload.channel_id == WORKSHOP_INTEREST:
-            return
-        """
-        try:
-            channel = self.bot.get_channel(payload.channel_id)
-            msg = await channel.fetch_message(payload.message_id)
-            print("="*25)
-            print("="*25)
-            # print(payload)
-            print(msg.reactions)
-            print("="*25)
-        except Exception as e:
-            print(e)
-        """
+        await self.reactionShit(payload)
 
+    @commands.Cog.listener()
+    async def on_raw_reaction_remove(self, payload):
+        await self.reactionShit(payload)
 
 def setup(bot):
     bot.add_cog(Poll(bot))

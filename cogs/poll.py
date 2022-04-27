@@ -111,7 +111,7 @@ class Poll(commands.Cog):
         optionCount: int = 0
         for optionInp in options:
             if optionInp is not None:
-                embed.description += f"{emojiNumbers[optionCount]} (0%) {optionInp}\n"
+                embed.description += f"{emojiNumbers[optionCount]} **(0%)** {optionInp}\n"
                 optionCount += 1
 
         try:

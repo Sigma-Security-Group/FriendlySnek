@@ -3,6 +3,7 @@ from discord.ext import commands, tasks
 from discord_slash import cog_ext, SlashContext
 from discord_slash.utils.manage_commands import create_option
 from datetime import datetime
+import re
 
 from constants import *
 
@@ -110,7 +111,7 @@ class Poll(commands.Cog):
         optionCount: int = 0
         for optionInp in options:
             if optionInp is not None:
-                embed.description += f"{emojiNumbers[optionCount]} {optionInp}\n"
+                embed.description += f"{emojiNumbers[optionCount]} (0%) {optionInp}\n"
                 optionCount += 1
 
         try:
@@ -125,134 +126,24 @@ class Poll(commands.Cog):
         channel = self.bot.get_channel(payload.channel_id)
         msg = await channel.fetch_message(payload.message_id)
 
-        #print("="*25)
-        #print(payload)
-        #print("="*25)
-        #print(payload.member)
-        #print("="*25)
-        #print(payload.member.bot)
-        #print("="*25)
-
         if hasattr(payload.member, "bot") and payload.member.bot:
             return
 
         if  payload.channel_id != SCHEDULE and payload.channel_id != WORKSHOP_INTEREST and payload.emoji.name in emojiNumbers:
+            reactionCount: list = [reaction.count for reaction in msg.reactions if reaction.emoji in emojiNumbers]
+            reactionSum = (sum(reactionCount) - len(reactionCount)) or 1  # Sums all reactions on msg, excl. the bot, but if 0, change to 1 (not divide by 0)
 
-            reactionCount: list = []
-            for reaction in msg.reactions:
-                reactionCount.append(reaction.count)
+            embed = msg.embeds[0]
+            msgDesc = embed.description.split("\n")
+            optionRows = msgDesc[2:]
 
-            #print("="*25)
-            #print(reactionCount)
-            #print("="*25)
-            #print(msg.embeds[0].description)
-            #print("="*25)
-            #print()
-            #print("="*25)
+            for rowNum in range(len(optionRows)):
+                # percent = f'{((reactionCount[rowNum] - 1) / reactionSum) * 100:.1f}'.strip('0').strip('.') or 0  # Floats
+                percent = round(((reactionCount[rowNum] - 1) / reactionSum) * 100)
+                optionRows[rowNum] = re.sub("\(\d+(\.\d+)?%\)", f"**({percent}%)**", optionRows[rowNum])
 
-            #descRows = msg.embeds[0].description.split("\n").pop(0).pop(0)
-
-            #return
-
-            """
-            <
-            RawReactionActionEvent
-                message_id=968633347985272874
-                user_id=229212817448894464
-                channel_id=864487446611623986
-                guild_id=864441968776052747
-                emoji=
-                    PartialEmoji
-                    animated=False
-                    name='1️⃣'
-                    id=None
-                >
-                event_type='REACTION_ADD'
-                member=<
-                    Member
-                    id=229212817448894464
-                    name='Froggi22'
-                    discriminator='3436'
-                    bot=False
-                    nick=None
-                    guild=<
-                        Guild
-                        id=864441968776052747
-                        name='Bot Testing Range'
-                        shard_id=None
-                        chunked=True
-                        member_count=8
-                    >
-                >
-            >
-            """
-
-
-            """
-            <
-            RawReactionActionEvent
-                message_id=968571513504665671
-                user_id=942214717945036820
-                channel_id=864487446611623986
-                guild_id=864441968776052747
-                emoji=<
-                    PartialEmoji
-                    animated=False
-                    name='2️⃣'
-                    id=None
-                >
-                event_type='REACTION_ADD'
-                member=<
-                    Member
-                    id=942214717945036820
-                    name='Froggi Friendly Snek'
-                    discriminator='1563'
-                    bot=True
-                    nick=None
-                    guild=<
-                        Guild
-                        id=864441968776052747
-                        name='Bot Testing Range'
-                        shard_id=None
-                        chunked=True
-                        member_count=8
-                    >
-                >
-            >
-            <
-            Message
-                id=968599937317220382
-                channel=<TextChannel
-                id=864487446611623986
-                name='arma-discussion'
-                position=5
-                nsfw=False
-                news=False
-                category_id=864441969286578176
-            >
-            type=<MessageType.default: 0>
-            author=<Member id=942214717945036820
-                name='Froggi Friendly Snek' discriminator='1563' bot=True nick=None guild=<Guild id=864441968776052747 name='Bot Testing Range' shard_id=None chunked=True member_count=8>> flags=<MessageFlags value=0>>
-            """
-
-            """
-            try:
-
-                channel = self.bot.get_channel(payload.channel_id)
-                msg = await channel.fetch_message(payload.message_id)
-                print("="*25)
-                print("="*25)
-                print(payload)
-                print("="*25)
-                print(msg.content)
-                print("="*25)
-                print(msg.embeds)
-                print("="*25)
-                print(msg.reactions)
-                print("="*25)
-            except Exception as e:
-                print(e)
-            """
+            embed.description = "\n".join(msgDesc[:2] + optionRows)
+            await msg.edit(embed=embed)
 
     @commands.Cog.listener()
     async def on_raw_reaction_add(self, payload):

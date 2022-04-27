@@ -10,11 +10,11 @@ if DEBUG:
     from constants.debug import *
 
 class Staff(commands.Cog):
-    def __init__(self, bot):
+    def __init__(self, bot) -> None:
         self.bot = bot
 
     @commands.Cog.listener()
-    async def on_ready(self):
+    async def on_ready(self) -> None:
         log.debug(LOG_COG_READY.format("Staff"), flush=True)
         cogsReady["staff"] = True
 
@@ -38,7 +38,7 @@ class Staff(commands.Cog):
 
     @commands.command(help="Get a member")
     @commands.has_any_role(UNIT_STAFF)
-    async def getMember(self, ctx, *, searchTerm):
+    async def getMember(self, ctx, *, searchTerm) -> None:
         """
         Get a member
         """
@@ -50,7 +50,7 @@ class Staff(commands.Cog):
 
     @commands.command(help="Purge all messages from a member")
     @commands.has_any_role(UNIT_STAFF)
-    async def purgeMessagesFromMember(self, ctx, *, searchTerm):
+    async def purgeMessagesFromMember(self, ctx, *, searchTerm) -> None:
         """
         Purge all messages from a member
         """
@@ -73,7 +73,7 @@ class Staff(commands.Cog):
 
     @commands.command(help="Get last activity for all members")
     @commands.has_any_role(UNIT_STAFF)
-    async def lastActivity(self, ctx, pingStaff="yes"):
+    async def lastActivity(self, ctx, pingStaff="yes") -> None:
         """
         Get last activity for all members
         """
@@ -112,7 +112,7 @@ class Staff(commands.Cog):
 
     @commands.command(help="Get last activity for member")
     @commands.has_any_role(UNIT_STAFF)
-    async def lastActivityForMember(self, ctx, *, searchTerm):
+    async def lastActivityForMember(self, ctx, *, searchTerm) -> None:
         """
         Get last activity for member
         """
@@ -141,7 +141,7 @@ class Staff(commands.Cog):
 
     @commands.command(help="Promote a member to the next rank")
     @commands.has_any_role(UNIT_STAFF)
-    async def promote(self, ctx, *, searchTerm):
+    async def promote(self, ctx, *, searchTerm) -> None:
         """
         Promote a member to the next rank
         """
@@ -172,7 +172,7 @@ class Staff(commands.Cog):
 
     @commands.command(help="Demote a member to the previous rank")
     @commands.has_any_role(UNIT_STAFF)
-    async def demote(self, ctx, *, searchTerm):
+    async def demote(self, ctx, *, searchTerm) -> None:
         """
         Demote a member to the previous rank
         """
@@ -194,7 +194,7 @@ class Staff(commands.Cog):
 
     @commands.command(help="Search through the moderation logs")
     @commands.has_any_role(UNIT_STAFF)
-    async def searchModLogs(self, ctx, *, searchTerm):
+    async def searchModLogs(self, ctx, *, searchTerm) -> None:
         """
         Demote a member to the previous rank
         """
@@ -248,5 +248,5 @@ class Staff(commands.Cog):
             else:
                 await self.bot.get_channel(STAFF_CHAT).send(f"No Moderation Logs related to {member.display_name}({member.name}#{member.discriminator})")
 
-def setup(bot):
+def setup(bot) -> None:
     bot.add_cog(Staff(bot))

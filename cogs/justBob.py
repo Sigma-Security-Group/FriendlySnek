@@ -108,15 +108,8 @@ class JustBob(commands.Cog):
         log.debug(LOG_COG_READY.format("JustBob"), flush=True)
         cogsReady["justBob"] = True
 
-    # @commands.command(name="justBob", aliases=["jb"], hidden=True)
-    # @commands.check(lambda ctx: ctx.author.id == ADRIAN)
-    # async def justBobDevShortcut(self, ctx):
-    #     await self.letsPlayJustBob(ctx)
-
-    # @commands.command(name="Le75P14yJu5780b", hidden=True)
     @cog_ext.cog_slash(name="justbob", description=JUSTBOB_COMMAND_DESCRIPTION, guild_ids=[SERVER])
     async def justBob(self, ctx) -> None:
-        # await ctx.message.delete()
         if ctx.channel.id != GENERAL or ctx.channel.id != BOT_SPAM:
             await ctx.send(JUSTBOB_CHANNEL_RESTRAIN.format(GENERAL, BOT_SPAM))
             return
@@ -187,7 +180,6 @@ class JustBob(commands.Cog):
 
     def getGameEmbed(self, game) -> Embed:
         guild = self.bot.get_guild(SERVER)
-
         embed = Embed(title=f"Just Bob (Lvl {game['levelNum'] + 1})", description=game["description"], color=Colour.blue())
 
         playerLayer, playerRow, playerCol = game["playerPos"]
@@ -279,7 +271,6 @@ class JustBob(commands.Cog):
             del self.games[game["playerId"]]
             levelComplete = True
         return levelComplete
-
 
 def setup(bot) -> None:
     bot.add_cog(JustBob(bot))

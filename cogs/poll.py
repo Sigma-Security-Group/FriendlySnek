@@ -1,5 +1,5 @@
 from discord import Embed, Colour
-from discord.ext import commands, tasks
+from discord.ext import commands
 from discord_slash import cog_ext, SlashContext
 from discord_slash.utils.manage_commands import create_option
 from datetime import datetime
@@ -14,11 +14,11 @@ if DEBUG:
 emojiNumbers: tuple = ("1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣", "🔟")
 
 class Poll(commands.Cog):
-    def __init__(self, bot):
+    def __init__(self, bot) -> None:
         self.bot = bot
 
     @commands.Cog.listener()
-    async def on_ready(self):
+    async def on_ready(self) -> None:
         log.debug(LOG_COG_READY.format("Poll"), flush=True)
         cogsReady["poll"] = True
 
@@ -101,7 +101,7 @@ class Poll(commands.Cog):
             )
         ]
     )
-    async def poll(self, ctx: SlashContext, title: str, option1: str, option2: str = None, description: str = "", option3: str = None, option4: str = None, option5: str = None, option6: str = None, option7: str = None, option8: str = None, option9: str = None, option10: str = None):
+    async def poll(self, ctx: SlashContext, title: str, option1: str, option2: str = None, description: str = "", option3: str = None, option4: str = None, option5: str = None, option6: str = None, option7: str = None, option8: str = None, option9: str = None, option10: str = None) -> None:
         embed = Embed(title=title, description=f"{description}\n\n", color=Colour.gold())
         embed.set_footer(text=f"Poll by {ctx.author}")
         embed.timestamp = datetime.utcnow()
@@ -122,7 +122,7 @@ class Poll(commands.Cog):
         except Exception as e:
             print(ctx.author, e)
 
-    async def reactionShit(self, payload):
+    async def reactionShit(self, payload) -> None:
         channel = self.bot.get_channel(payload.channel_id)
         msg = await channel.fetch_message(payload.message_id)
 
@@ -146,12 +146,12 @@ class Poll(commands.Cog):
             await msg.edit(embed=embed)
 
     @commands.Cog.listener()
-    async def on_raw_reaction_add(self, payload):
+    async def on_raw_reaction_add(self, payload) -> None:
         await self.reactionShit(payload)
 
     @commands.Cog.listener()
-    async def on_raw_reaction_remove(self, payload):
+    async def on_raw_reaction_remove(self, payload) -> None:
         await self.reactionShit(payload)
 
-def setup(bot):
+def setup(bot) -> None:
     bot.add_cog(Poll(bot))

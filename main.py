@@ -63,7 +63,6 @@ async def on_message(message):
 
     # Ignore messages that were not sent on the correct server
     if message.guild is None or message.guild.id != SERVER:
-        # log.warning("Wrong server")
         return
 
     # Execute commands

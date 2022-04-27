@@ -82,11 +82,11 @@ DEFAULT_WORKSHOP_INTEREST_LISTS = (
 )
 
 class WorkshopInterest(commands.Cog):
-    def __init__(self, bot):
+    def __init__(self, bot) -> None:
         self.bot = bot
 
     @commands.Cog.listener()
-    async def on_ready(self):
+    async def on_ready(self) -> None:
         log.debug(LOG_COG_READY.format("WorkshopInterest"), flush=True)
         cogsReady["workshopInterest"] = True
 
@@ -113,7 +113,7 @@ class WorkshopInterest(commands.Cog):
                 json.dump(workshopInterest, f, indent=4)
         await self.updateChannel()
 
-    def getWorkshopEmbed(self, workshop):
+    def getWorkshopEmbed(self, workshop) -> Embed:
         guild = self.bot.get_guild(SERVER)
         embed = Embed(title=workshop["title"], description=workshop["description"])
         idsToMembers = lambda ids : [member.display_name for memberId in ids if (member := guild.get_member(memberId)) is not None]
@@ -128,7 +128,7 @@ class WorkshopInterest(commands.Cog):
             embed.set_footer(text=f"SME{'s'*(len(smes) > 1)}: {', '.join(smes)}")
         return embed
 
-    async def updateChannel(self):
+    async def updateChannel(self) -> None:
         channel = self.bot.get_channel(WORKSHOP_INTEREST)
         await channel.purge(limit=None, check=lambda message: message.author.id in FRIENDLY_SNEKS)
         await channel.send(WORKSHOPINTEREST_INTRO)
@@ -145,7 +145,7 @@ class WorkshopInterest(commands.Cog):
             json.dump(workshopInterest, f, indent=4)
 
     @commands.Cog.listener()
-    async def on_raw_reaction_add(self, payload):
+    async def on_raw_reaction_add(self, payload) -> None:
         if payload.channel_id != WORKSHOP_INTEREST:
             return
         try:
@@ -182,5 +182,5 @@ class WorkshopInterest(commands.Cog):
         except Exception as e:
             print(e)
 
-def setup(bot):
+def setup(bot) -> None:
     bot.add_cog(WorkshopInterest(bot))

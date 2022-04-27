@@ -25,11 +25,11 @@ FTP_MISSIONS_DIR = "/euc-ogs7.armahosts.com_2482/mpmissions"  # Dwarf's server
 UTC = pytz.utc
 
 class MissionUploader(commands.Cog):
-    def __init__(self, bot):
+    def __init__(self, bot) -> None:
         self.bot = bot
 
     @commands.Cog.listener()
-    async def on_ready(self):
+    async def on_ready(self) -> None:
         log.debug(LOG_COG_READY.format("MissionUploader"), flush=True)
         cogsReady["missionUploader"] = True
 
@@ -70,7 +70,7 @@ class MissionUploader(commands.Cog):
                                create_permission(CURATOR, SlashCommandPermissionType.ROLE, True)
                            ]
                        })
-    async def uploadMission(self, ctx: SlashContext):
+    async def uploadMission(self, ctx: SlashContext) -> None:
         await ctx.send(MISSION_UPLOAD_RESPONSE)
         log.info(MISSION_UPLOAD_LOG_UPLOADING.format(ctx.author.display_name, ctx.author.name, ctx.author.discriminator))
 
@@ -128,5 +128,5 @@ class MissionUploader(commands.Cog):
         embed = Embed(title=MISSION_UPLOAD_UPLOADED, color=Colour.green())
         await dmChannel.send(embed=embed)
 
-def setup(bot):
+def setup(bot) -> None:
     bot.add_cog(MissionUploader(bot))

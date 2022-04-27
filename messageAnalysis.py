@@ -44,7 +44,7 @@ async def analyzeChannel(message, channelID:int, attachmentContentType:str):
     except Exception:
         pass
     try:
-        await message.author.send(ANALYSIS_ILLEGAL_MESSAGE.format(channelID, attachmentContentType, attachmentContentType, message.guild.get_member(ADRIAN).display_name, message.guild.get_member(FROGGI).display_name))
+        await message.author.send(ANALYSIS_ILLEGAL_MESSAGE.format(channelID, attachmentContentType, attachmentContentType, " and/or ".join([f"**{message.guild.get_member(name).display_name}**" for name in DEVELOPERS if message.guild.get_member(name) is not None])))
     except Exception as e:
         print(message.author, e)
     return

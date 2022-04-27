@@ -2,12 +2,12 @@ from logger import Logger
 log = Logger()
 
 import os
-# Define whether to use Sigma server or APS (debug) server
+
+# Define whether to use the Sigma or BTR (debug) server
 DEBUG = os.path.exists("DEBUG")
 # DEBUG = True  # always use debug server during development
 
 import asyncio
-
 # Set appropriate event loop policy to avoid runtime errors on windows
 import platform
 if platform.system() == "Windows":
@@ -120,9 +120,9 @@ async def on_error(event, *args, **kwargs):
 async def on_command_error(ctx, error):
     log.error(error)
 
-@bot.command(hidden=True, help="Reload bot (Dev only)")
+@bot.command(hidden=True, help="Reload cogs (Dev only)")
 async def reload(ctx):
-    if ctx.author.id != ADRIAN and ctx.author.id != FROGGI:
+    if ctx.author.id not in DEVELOPERS:
         return
     for cog in COGS:
         bot.reload_extension(f"cogs.{cog}")

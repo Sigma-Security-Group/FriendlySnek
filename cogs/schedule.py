@@ -230,7 +230,7 @@ class Schedule(commands.Cog):
                             ]
                         })
     async def refreshSchedule(self, ctx: SlashContext):
-        await ctx.send(SCHEDULE_REFRESHING.format(SCHEDULE))
+        await ctx.send(RESPONSE_REFRESHING.format(SCHEDULE))
         log.info(LOG_REFRESHING_SCHEDULE.format(ctx.author.display_name, ctx.author.name, ctx.author.discriminator))
         await self.updateSchedule()
 
@@ -239,7 +239,7 @@ class Schedule(commands.Cog):
         channel = self.bot.get_channel(SCHEDULE)
         await channel.purge(limit=None, check=lambda m: m.author.id in FRIENDLY_SNEKS)
 
-        await channel.send(SCHEDULE_INTRO_MESSAGE.format(channel.guild.get_member(ADRIAN).display_name, channel.guild.get_member(FROGGI).display_name))
+        await channel.send(SCHEDULE_INTRO_MESSAGE.format(" and/or ".join([f"**{channel.guild.get_member(name).display_name}**" for name in DEVELOPERS if channel.guild.get_member(name) is not None])))
 
         if os.path.exists(EVENTS_FILE):
             try:
@@ -457,7 +457,7 @@ class Schedule(commands.Cog):
             elif reservedRole.strip().lower() == "none":
                 reservedRole = None
             else:
-                embed = Embed(title=ACTION_CANCELLED.format("Role reservation"), color=Colour.red())
+                embed = Embed(title=ABORT_CANCELED.format("Role reservation"), color=Colour.red())
                 await dmChannel.send(embed=embed)
                 return
         except asyncio.TimeoutError:
@@ -477,7 +477,7 @@ class Schedule(commands.Cog):
                         event["reservableRoles"][roleName] = None
 
         if reservationTime > self.lastUpdate:
-            embed = Embed(title=ACTION_COMPLETED.format("Role reservation"), color=Colour.green())
+            embed = Embed(title=CHECK_COMPLETED.format("Role reservation"), color=Colour.green())
             await dmChannel.send(embed=embed)
         else:
             embed = Embed(title=SCHEDULE_RESERVABLE_SCHEDULE_ERROR, color=Colour.red())
@@ -825,7 +825,7 @@ class Schedule(commands.Cog):
             return False
         await message.delete()
         try:
-            embed = Embed(title=SCHEDULE_EVENT_DELETED.format(event["type"]), color=Colour.green())
+            embed = Embed(title=CHECK_DELETED.format(event["type"]), color=Colour.green())
             await author.send(embed=embed)
 
             utcNow = UTC.localize(datetime.utcnow())
@@ -855,7 +855,7 @@ class Schedule(commands.Cog):
         await self.scheduleOperation(ctx)
 
     async def scheduleOperation(self, ctx):
-        await ctx.send(SCHEDULE_EVENT_MESSAGE_PROGRESS.format(":b:op."))
+        await ctx.send(RESPONSE_EVENT_PROGRESS.format(":b:op."))
         log.info(LOG_CREATING_EVENT.format(ctx.author.display_name, ctx.author.name, ctx.author.discriminator, "an operation"))
 
         utcNow = UTC.localize(datetime.utcnow())
@@ -1116,7 +1116,7 @@ class Schedule(commands.Cog):
             print(e)
             newEvent = None
 
-        embed = Embed(title=SCHEDULE_EVENT_CREATED.format("Operation"), color=Colour.green())
+        embed = Embed(title=CHECK_CREATED.format("Operation"), color=Colour.green())
         await dmChannel.send(embed=embed)
         log.info(LOG_CREATED_EVENT.format(ctx.author.display_name, ctx.author.name, ctx.author.discriminator, "an operation"))
 
@@ -1125,7 +1125,7 @@ class Schedule(commands.Cog):
         if newEvent is not None:
             with open(EVENTS_FILE) as f:
                 events = json.load(f)
-            await ctx.send(SCHEDULE_EVENT_MESSAGE_DONE.format(":b:op", SERVER, SCHEDULE, events[-1]["messageId"]))
+            await ctx.send(RESPONSE_EVENT_DONE.format(":b:op", SERVER, SCHEDULE, events[-1]["messageId"]))
 
     @cog_ext.cog_slash(name="ws", description=SCHEDULE_COMMAND_DESCRIPTION.format("a workshop"), guild_ids=[SERVER])
     async def ws(self, ctx: SlashContext):
@@ -1136,7 +1136,7 @@ class Schedule(commands.Cog):
         await self.scheduleWorkshop(ctx)
 
     async def scheduleWorkshop(self, ctx):
-        await ctx.send(SCHEDULE_EVENT_MESSAGE_PROGRESS.format("workshop"))
+        await ctx.send(RESPONSE_EVENT_PROGRESS.format("workshop"))
         log.info(LOG_CREATING_EVENT.format(ctx.author.display_name, ctx.author.name, ctx.author.discriminator, "a workshop"))
 
         utcNow = UTC.localize(datetime.utcnow())
@@ -1196,7 +1196,7 @@ class Schedule(commands.Cog):
                             workshopTemplates.pop(int(templateAction.split(" ")[-1]) - 1)
                             with open(WORKSHOP_TEMPLATES_FILE, "w") as f:
                                 json.dump(workshopTemplates, f, indent=4)
-                            await dmChannel.send(embed=Embed(title=SCHEDULE_EVENT_DELETED.format("Template"), color=Colour.green()))
+                            await dmChannel.send(embed=Embed(title=CHECK_DELETED.format("Template"), color=Colour.green()))
                             return
                         else:
                             invalidInput = True
@@ -1225,7 +1225,7 @@ class Schedule(commands.Cog):
                             invalidInput = True
 
                 elif templateAction.lower() == "cancel":
-                    await dmChannel.send(embed=Embed(title=ACTION_CANCELLED.format("Workshop scheduling"), color=Colour.red()))
+                    await dmChannel.send(embed=Embed(title=ABORT_CANCELED.format("Workshop scheduling"), color=Colour.red()))
                     return
 
                 else:
@@ -1603,7 +1603,7 @@ class Schedule(commands.Cog):
             print(e)
             newEvent = None
 
-        embed = Embed(title=SCHEDULE_EVENT_CREATED.format("Workshop"), color=Colour.green())
+        embed = Embed(title=CHECK_CREATED.format("Workshop"), color=Colour.green())
         await dmChannel.send(embed=embed)
         log.info(LOG_CREATED_EVENT.format(ctx.author.display_name, ctx.author.name, ctx.author.discriminator, "a workshop"))
 
@@ -1612,7 +1612,7 @@ class Schedule(commands.Cog):
         if newEvent is not None:
             with open(EVENTS_FILE) as f:
                 events = json.load(f)
-            await ctx.send(SCHEDULE_EVENT_MESSAGE_DONE.format("Workshop", SERVER, SCHEDULE, events[-1]["messageId"]))
+            await ctx.send(RESPONSE_EVENT_DONE.format("Workshop", SERVER, SCHEDULE, events[-1]["messageId"]))
 
             if workshopInterest is not None:
                 with open(WORKSHOP_INTEREST_FILE) as f:
@@ -1629,7 +1629,7 @@ class Schedule(commands.Cog):
         await self.scheduleEvent(ctx)
 
     async def scheduleEvent(self, ctx):
-        await ctx.send(SCHEDULE_EVENT_MESSAGE_PROGRESS.format("generic event"))
+        await ctx.send(RESPONSE_EVENT_PROGRESS.format("generic event"))
         log.info(LOG_CREATING_EVENT.format(ctx.author.display_name, ctx.author.name, ctx.author.discriminator, "an event"))
         authorId = ctx.author.id
         embed = Embed(title=SCHEDULE_EVENT_TITLE.format("event"), color=Colour.gold())
@@ -1859,7 +1859,7 @@ class Schedule(commands.Cog):
             print(e)
             newEvent = None
 
-        embed = Embed(title=SCHEDULE_EVENT_CREATED.format("Event"), color=Colour.green())
+        embed = Embed(title=CHECK_CREATED.format("Event"), color=Colour.green())
         await dmChannel.send(embed=embed)
         log.info(LOG_CREATED_EVENT.format(ctx.author.display_name, ctx.author.name, ctx.author.discriminator, "an event"))
 
@@ -1868,11 +1868,11 @@ class Schedule(commands.Cog):
         if newEvent is not None:
             with open(EVENTS_FILE) as f:
                 events = json.load(f)
-            await ctx.send(SCHEDULE_EVENT_MESSAGE_DONE.format("Event", SERVER, SCHEDULE, events[-1]["messageId"]))
+            await ctx.send(RESPONSE_EVENT_DONE.format("Event", SERVER, SCHEDULE, events[-1]["messageId"]))
 
     @cog_ext.cog_slash(name="changetimezone", description=CHANGE_TIME_ZONE_COMMAND_DESCRIPTION, guild_ids=[SERVER])
     async def changeTimeZone(self, ctx: SlashContext):
-        await ctx.send(SCHEDULE_TIME_ZONE_CHANGING)
+        await ctx.send(RESPONSE_TIME_ZONE)
 
         with open(MEMBER_TIME_ZONES_FILE) as f:
             memberTimeZones = json.load(f)
@@ -1905,7 +1905,7 @@ class Schedule(commands.Cog):
                         del memberTimeZones[str(ctx.author.id)]
             with open(MEMBER_TIME_ZONES_FILE, "w") as f:
                 json.dump(memberTimeZones, f, indent=4)
-            embed = Embed(title=SCHEDULE_TIME_ZONE_DONE, color=Colour.green())
+            embed = Embed(title=CHECK_CHANGED.format("Time zone preferences"), color=Colour.green())
             await dmChannel.send(embed=embed)
         except asyncio.TimeoutError:
             await dmChannel.send(embed=TIMEOUT_EMBED)

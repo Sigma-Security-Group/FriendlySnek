@@ -650,7 +650,7 @@ class Schedule(commands.Cog):
             event["endTime"] = endTime.strftime(EVENT_TIME_FORMAT)
             reorderEvents = True
             guild = self.bot.get_guild(SERVER)
-            embed = Embed(title=SCHEDULE_EVENT_START_TIME_CHANGE_TITLE.format(event["title"]), description=SCHEDULE_EVENT_START_TIME_CHANGE_DESCRIPTION.format(round(UTC.localize(datetime.strptime(oldStartTime, EVENT_TIME_FORMAT)).timestamp()), round(UTC.localize(datetime.strptime(event["time"], EVENT_TIME_FORMAT)).timestamp())))
+            embed = Embed(title=SCHEDULE_EVENT_START_TIME_CHANGE_TITLE.format(event["title"]), description=SCHEDULE_EVENT_START_TIME_CHANGE_DESCRIPTION.format(round(UTC.localize(datetime.strptime(oldStartTime, EVENT_TIME_FORMAT)).timestamp()), round(UTC.localize(datetime.strptime(event["time"], EVENT_TIME_FORMAT)).timestamp())), color=Colour.orange())
             for memberId in event["accepted"] + event.get("declinedForTiming", []) + event["tentative"]:
                 member = guild.get_member(memberId)
                 if member is not None:
@@ -837,7 +837,7 @@ class Schedule(commands.Cog):
                 for memberId in event["accepted"] + event.get("declinedForTiming", []) + event["tentative"]:
                     member = guild.get_member(memberId)
                     if member is not None:
-                        embed = Embed(title=SCHEDULE_EVENT_DELETED_TITLE.format(event.get("type", "Operation"), event["title"]), description=SCHEDULE_EVENT_DELETED_DESCRIPTION.format(event.get("type", "Operation").lower(), round(UTC.localize(datetime.strptime(event["time"], EVENT_TIME_FORMAT)).timestamp())))
+                        embed = Embed(title=SCHEDULE_EVENT_DELETED_TITLE.format(event.get("type", "Operation"), event["title"]), description=SCHEDULE_EVENT_DELETED_DESCRIPTION.format(event.get("type", "Operation").lower(), round(UTC.localize(datetime.strptime(event["time"], EVENT_TIME_FORMAT)).timestamp())), color=Colour.red())
                         try:
                             await member.send(embed=embed)
                         except Exception as e:

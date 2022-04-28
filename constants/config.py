@@ -115,11 +115,10 @@ SCHEDULE_EVENT_URL_TITLE = ":notebook_with_decorative_cover: Enter `none` or a U
 SCHEDULE_EVENT_URL_DESCRIPTION = "E.g. Signup sheet, Briefing, OPORD, etc."
 
 ### Reservable Roles
-SCHEDULE_EVENT_RESERVABLE_QUESTION = "Are there any reservable roles?"
-SCHEDULE_EVENT_RESERVABLE_PROMPT = "Enter `yes` or `y` if there are reservable roles or enter anything else if there are not."
-SCHEDULE_EVENT_RESERVABLE_LIST_TITLE = "Type each reservable role in its own line (in a single message)"
-SCHEDULE_EVENT_RESERVABLE_LIST_DESCRIPTION = "Press Shift + Enter to insert a newline. Editing the name of a role will make it vacant, but roles which keep their exact names will keep their reservations)."
-SCHEDULE_EVENT_RESERVABLE_LIST_CURRENT = "Current reservable roles."
+SCHEDULE_EVENT_RESERVABLE = "Reservable Roles"
+SCHEDULE_EVENT_RESERVABLE_DIALOG = "Enter `none`, `no`, or `n` if there are none.\n\nOtherwise, type each reservable role in a new line (Shift + Enter)."
+SCHEDULE_EVENT_RESERVABLE_DIALOG_EDIT = "\n(Editing the name of a role will make it vacant, but roles which keep their exact names will keep their reservations)."
+SCHEDULE_EVENT_RESERVABLE_LIST_CURRENT = "Current reservable roles"
 
 SCHEDULE_RESERVABLE_QUESTION = "Which role would you like to reserve?"
 SCHEDULE_RESERVABLE_PROMPT = "Enter a number from the list, or `none` to free up the role you currently have reserved. If you enter anything invalid it will cancel the role reservation."

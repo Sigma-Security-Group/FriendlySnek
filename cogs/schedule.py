@@ -728,20 +728,17 @@ class Schedule(commands.Cog):
                 event["externalURL"] = externalURL
 
             case "4":
-                embed = Embed(title=SCHEDULE_EVENT_RESERVABLE_QUESTION, description=SCHEDULE_EVENT_RESERVABLE_PROMPT, color=Colour.gold())
+                embed = Embed(title=SCHEDULE_EVENT_RESERVABLE, description=SCHEDULE_EVENT_RESERVABLE_DIALOG + SCHEDULE_EVENT_RESERVABLE_DIALOG_EDIT, color=Colour.gold())
+                embed.add_field(name=SCHEDULE_EVENT_RESERVABLE_LIST_CURRENT, value=("```txt\n" + "\n".join(event["reservableRoles"].keys()) + "```") if event["reservableRoles"] is not None else "None")
                 await dmChannel.send(embed=embed)
                 try:
                     response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, author=author, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
-                    reservableRolesPresent = response.content.strip().lower() in ("yes", "y")
+                    reservableRolesNo = response.content.strip().lower() in ("none", "no", "n")
                 except asyncio.TimeoutError:
                     await dmChannel.send(embed=TIMEOUT_EMBED)
                     return False
-                if reservableRolesPresent:
-                    embed = Embed(title=SCHEDULE_EVENT_RESERVABLE_LIST_TITLE, description=SCHEDULE_EVENT_RESERVABLE_LIST_DESCRIPTION, color=Colour.gold())
-                    embed.add_field(name=SCHEDULE_EVENT_RESERVABLE_LIST_CURRENT, value=("```txt\n" + "\n".join(event["reservableRoles"].keys()) + "```") if event["reservableRoles"] is not None else "None")
-                    await dmChannel.send(embed=embed)
+                if not reservableRolesNo:
                     try:
-                        response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, author=author, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
                         reservableRoles = {role.strip(): event["reservableRoles"][role.strip()] if event["reservableRoles"] is not None and role.strip() in event["reservableRoles"] else None for role in response.content.split("\n") if len(role.strip()) > 0}
                     except asyncio.TimeoutError:
                         await dmChannel.send(embed=TIMEOUT_EMBED)
@@ -895,19 +892,16 @@ class Schedule(commands.Cog):
             await dmChannel.send(embed=TIMEOUT_EMBED)
             return
 
-        embed = Embed(title=SCHEDULE_EVENT_RESERVABLE_QUESTION, description=SCHEDULE_EVENT_RESERVABLE_PROMPT, color=Colour.gold())
+        embed = Embed(title=SCHEDULE_EVENT_RESERVABLE, description=SCHEDULE_EVENT_RESERVABLE_DIALOG, color=Colour.gold())
         await dmChannel.send(embed=embed)
         try:
             response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
-            reservableRolesPresent = response.content.strip().lower() in ("yes", "y")
+            reservableRolesNo = response.content.strip().lower() in ("none", "no", "n")
         except asyncio.TimeoutError:
             await dmChannel.send(embed=TIMEOUT_EMBED)
             return
-        if reservableRolesPresent:
-            embed = Embed(title=SCHEDULE_EVENT_RESERVABLE_LIST_TITLE, description=SCHEDULE_EVENT_RESERVABLE_LIST_DESCRIPTION, color=Colour.gold())
-            await dmChannel.send(embed=embed)
+        if not reservableRolesNo:
             try:
-                response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
                 reservableRoles = {role.strip(): None for role in response.content.split("\n") if len(role.strip()) > 0}
             except asyncio.TimeoutError:
                 await dmChannel.send(embed=TIMEOUT_EMBED)
@@ -1274,20 +1268,17 @@ class Schedule(commands.Cog):
             externalURL = template["externalURL"]
 
         if template is None:
-            embed = Embed(title=SCHEDULE_EVENT_RESERVABLE_QUESTION, description=SCHEDULE_EVENT_RESERVABLE_PROMPT, color=Colour.gold())
+            embed = Embed(title=SCHEDULE_EVENT_RESERVABLE, description=SCHEDULE_EVENT_RESERVABLE_DIALOG, color=Colour.gold())
             await dmChannel.send(embed=embed)
             try:
                 response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
-                reservableRolesPresent = response.content.strip().lower() in ("yes", "y")
+                reservableRolesNo = response.content.strip().lower() in ("none", "no", "n")
             except asyncio.TimeoutError:
                 await dmChannel.send(embed=TIMEOUT_EMBED)
                 return
-            if reservableRolesPresent:
-                embed = Embed(title=SCHEDULE_EVENT_RESERVABLE_LIST_TITLE, description=SCHEDULE_EVENT_RESERVABLE_LIST_DESCRIPTION, color=Colour.gold())
-                await dmChannel.send(embed=embed)
+            if not reservableRolesNo:
                 try:
-                    response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
-                    reservableRoles = {role.strip(): None for role in response.content.strip().split("\n") if len(role.strip()) > 0}
+                    reservableRoles = {role.strip(): None for role in response.content.split("\n") if len(role.strip()) > 0}
                 except asyncio.TimeoutError:
                     await dmChannel.send(embed=TIMEOUT_EMBED)
                     return
@@ -1569,7 +1560,7 @@ class Schedule(commands.Cog):
                 embed = Embed(title=SCHEDULE_TEMPLATE_SAVED.format(templateName), color=Colour.green())
                 await dmChannel.send(embed=embed)
             else:
-                embed = Embed(title=SCHEDULE_TEMPLATE_DISCARD, color=Colour.gold())
+                embed = Embed(title=SCHEDULE_TEMPLATE_DISCARD, color=Colour.red())
                 await dmChannel.send(embed=embed)
 
         try:
@@ -1666,19 +1657,16 @@ class Schedule(commands.Cog):
             await dmChannel.send(embed=TIMEOUT_EMBED)
             return
 
-        embed = Embed(title=SCHEDULE_EVENT_RESERVABLE_QUESTION, description=SCHEDULE_EVENT_RESERVABLE_PROMPT, color=Colour.gold())
+        embed = Embed(title=SCHEDULE_EVENT_RESERVABLE, description=SCHEDULE_EVENT_RESERVABLE_DIALOG, color=Colour.gold())
         await dmChannel.send(embed=embed)
         try:
             response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
-            reservableRolesPresent = response.content.strip().lower() in ("yes", "y")
+            reservableRolesNo = response.content.strip().lower() in ("none", "no", "n")
         except asyncio.TimeoutError:
             await dmChannel.send(embed=TIMEOUT_EMBED)
             return
-        if reservableRolesPresent:
-            embed = Embed(title=SCHEDULE_EVENT_RESERVABLE_LIST_TITLE, description=SCHEDULE_EVENT_RESERVABLE_LIST_DESCRIPTION, color=Colour.gold())
-            await dmChannel.send(embed=embed)
+        if not reservableRolesNo:
             try:
-                response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
                 reservableRoles = {role.strip(): None for role in response.content.split("\n") if len(role.strip()) > 0}
             except asyncio.TimeoutError:
                 await dmChannel.send(embed=TIMEOUT_EMBED)

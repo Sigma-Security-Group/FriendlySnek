@@ -219,8 +219,8 @@ TL_DESC = "Learn how to effectively plan out and assault targets with a whole te
 # MessageAnalysis.py
 ####################
 
-VIDEO_URLS = ("://youtube.com", "://www.youtube.com", "://youtu.be", "://clips.twitch.tv", "://www.twitch.tv", "://streamable.com")
-ANALYSIS_ILLEGAL_MESSAGE = "The message you just posted in <#{0}> was deleted because no {1} was detected in it. If this is an error, then please ask staff to post the {2} for you and inform {3} about the issue!"
+VIDEO_URLS_REGEX = r"https?:\/\/((www)?(clips)?\.)?(youtu(be)?|twitch|streamable)\.(com|be|tv)"
+ANALYSIS_ILLEGAL_MESSAGE = "The message you just posted in <#{0}> was deleted because no {1} was detected in it.\nIf this is an error, then please ask **staff** to post the {2} for you and inform {3} about the issue!"
 
 
 ####################

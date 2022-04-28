@@ -1,5 +1,5 @@
+import re
 from constants import *
-
 from __main__ import log, DEBUG
 
 if DEBUG:
@@ -37,7 +37,7 @@ async def analyzeChannel(message, channelID:int, attachmentContentType:str):
         return
     elif any(attachment.content_type.startswith(f"{attachmentContentType}/") for attachment in message.attachments):
         return
-    elif attachmentContentType == "video" and any(videoUrl in message.content for videoUrl in VIDEO_URLS):
+    elif attachmentContentType == "video" and re.search(VIDEO_URLS_REGEX, message.content):
         return
     try:
         await message.delete()

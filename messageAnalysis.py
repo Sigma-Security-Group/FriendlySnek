@@ -1,4 +1,5 @@
 import re
+from discord import Embed, Colour
 from constants import *
 from __main__ import log, DEBUG
 
@@ -9,8 +10,8 @@ staffPings = {}
 
 async def runMessageAnalysis(bot, message):
     # await staffPingAnalysis(bot, message)
-    await analyzeChannel(message, COMBAT_FOOTAGE, "video")
-    await analyzeChannel(message, PROPAGANDA, "image")
+    await analyzeChannel(bot, message, COMBAT_FOOTAGE, "video")
+    await analyzeChannel(bot, message, PROPAGANDA, "image")
 
 async def staffPingAnalysis(bot, message):
     staffRoles = STAFF_ROLES
@@ -30,7 +31,7 @@ async def staffPingAnalysis(bot, message):
         botMessage = await bot.get_channel(STAFF_CHAT).send(f"{' '.join(role.mention for role in message.role_mentions if role.id in staffRoles)}: {message.jump_url}")
         staffPings[message.id] = (message, botMessage)
 
-async def analyzeChannel(message, channelID:int, attachmentContentType:str):
+async def analyzeChannel(bot, message, channelID:int, attachmentContentType:str):
     if message.channel.id != channelID:
         return
     elif any(role.id == UNIT_STAFF for role in message.author.roles):
@@ -44,7 +45,9 @@ async def analyzeChannel(message, channelID:int, attachmentContentType:str):
     except Exception:
         pass
     try:
-        await message.author.send(ANALYSIS_ILLEGAL_MESSAGE.format(channelID, attachmentContentType, attachmentContentType, " and/or ".join([f"**{message.guild.get_member(name).display_name}**" for name in DEVELOPERS if message.guild.get_member(name) is not None])))
+        log.warning(f"Removing message in {bot.get_channel(channelID)} from {message.author}")
+        devs = " and/or ".join([f"**{message.guild.get_member(name)}**" for name in DEVELOPERS if message.guild.get_member(name) is not None])
+        await message.author.send(embed=Embed(title=ERROR_INVALID_MESSAGE, description=ANALYSIS_ILLEGAL_MESSAGE.format(channelID, attachmentContentType, devs), color=Colour.red()))
     except Exception as e:
         print(message.author, e)
     return

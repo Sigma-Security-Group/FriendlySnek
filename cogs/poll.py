@@ -123,14 +123,20 @@ class Poll(commands.Cog):
             print(ctx.author, e)
 
     async def reactionShit(self, payload) -> None:
-        if payload.member.id not in FRIENDLY_SNEKS:
+        if payload.user_id in FRIENDLY_SNEKS:
             return
 
         channel = self.bot.get_channel(payload.channel_id)
         msg = await channel.fetch_message(payload.message_id)
 
-        if hasattr(payload.member, "bot") and payload.member.bot:
+        if msg.author.id not in FRIENDLY_SNEKS:
             return
+
+        if hasattr(payload, "member") and hasattr(payload.member, "bot") and payload.member.bot:
+            return
+
+        print(msg.reference)
+        print(dir(msg))
 
         if payload.channel_id != SCHEDULE and payload.channel_id != WORKSHOP_INTEREST and payload.emoji.name in emojiNumbers:
             embed = msg.embeds[0]

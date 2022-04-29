@@ -126,6 +126,9 @@ class Poll(commands.Cog):
         channel = self.bot.get_channel(payload.channel_id)
         msg = await channel.fetch_message(payload.message_id)
 
+        if msg.author.id not in FRIENDLY_SNEKS:
+            return
+
         if hasattr(payload.member, "bot") and payload.member.bot:
             return
 

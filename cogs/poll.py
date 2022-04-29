@@ -101,17 +101,18 @@ class Poll(commands.Cog):
             )
         ]
     )
-    async def poll(self, ctx: SlashContext, title: str, option1: str, option2: str = None, description: str = "", option3: str = None, option4: str = None, option5: str = None, option6: str = None, option7: str = None, option8: str = None, option9: str = None, option10: str = None) -> None:
+    async def poll(self, ctx: SlashContext, title: str, option1: str, description: str = "", option2: str = None, option3: str = None, option4: str = None, option5: str = None, option6: str = None, option7: str = None, option8: str = None, option9: str = None, option10: str = None) -> None:
         embed = Embed(title=title, description=f"{description}\n\n", color=Colour.gold())
         embed.set_footer(text=f"Poll by {ctx.author}")
         embed.timestamp = datetime.utcnow()
 
         emojiNumbers: tuple = ("1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣", "🔟")
         options = [option1, option2, option3, option4, option5, option6, option7, option8, option9, option10]
+        isOneOption = any(options[1:])
         optionCount: int = 0
         for optionInp in options:
             if optionInp is not None:
-                embed.description += f"{emojiNumbers[optionCount]} **(0%)** {optionInp}\n"
+                embed.description += f"{emojiNumbers[optionCount]}{' **(0%)**' * isOneOption} {optionInp}\n"
                 optionCount += 1
 
         try:
@@ -130,12 +131,14 @@ class Poll(commands.Cog):
             return
 
         if  payload.channel_id != SCHEDULE and payload.channel_id != WORKSHOP_INTEREST and payload.emoji.name in emojiNumbers:
-            reactionCount: list = [reaction.count for reaction in msg.reactions if reaction.emoji in emojiNumbers]  # Get all reactions from msg that is in emojiNumbers
-            reactionSum = (sum(reactionCount) - len(reactionCount)) or 1  # Sums all reactions on msg, excl. the bot, but if 0, change to 1 (not divide by 0)
-
             embed = msg.embeds[0]
             msgDesc = embed.description.split("\n")
-            optionRows = msgDesc[2:]  # Poll description
+            optionRows = (emojiNumbers[0] + embed.description.split(emojiNumbers[0])[1]).split("\n")
+            if len(optionRows) == 1:
+                return  # Do not continue editing the message if there's 1 option
+
+            reactionCount: list = [reaction.count for reaction in msg.reactions if reaction.emoji in emojiNumbers]  # Get all reactions from msg that is in emojiNumbers
+            reactionSum = (sum(reactionCount) - len(reactionCount)) or 1  # Sums all reactions on msg, excl. the bot, but if 0, change to 1 (not divide by 0)
 
             for rowNum in range(len(optionRows)):
                 # percent = f'{((reactionCount[rowNum] - 1) / reactionSum) * 100:.1f}'.strip('0').strip('.') or 0  # Floats

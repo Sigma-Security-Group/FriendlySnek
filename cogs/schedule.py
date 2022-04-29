@@ -1611,7 +1611,7 @@ class Schedule(commands.Cog):
                 guild = self.bot.get_guild(SERVER)
                 message = ""
                 for memberId in workshopInterestItem["wsInterest"]["members"]:
-                    message += f"{guild.get_member(memberId).mention} "
+                    message += f"{member.mention} " if (member := guild.get_member(memberId)) is not None else ""
                 if message != "":
                     await ctx.send(f"{message}Check <#{SCHEDULE}> for workshop")
 

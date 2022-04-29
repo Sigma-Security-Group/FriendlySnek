@@ -140,10 +140,16 @@ class Poll(commands.Cog):
             reactionCount: list = [reaction.count for reaction in msg.reactions if reaction.emoji in emojiNumbers]  # Get all reactions from msg that is in emojiNumbers
             reactionSum = (sum(reactionCount) - len(reactionCount)) or 1  # Sums all reactions on msg, excl. the bot, but if 0, change to 1 (not divide by 0)
 
+            newPercentText: list
             for rowNum in range(len(optionRows)):
                 # percent = f'{((reactionCount[rowNum] - 1) / reactionSum) * 100:.1f}'.strip('0').strip('.') or 0  # Floats
                 percent = round(((reactionCount[rowNum] - 1) / reactionSum) * 100)  # Ints
-                optionRows[rowNum] = re.sub(POLL_PERCENT_REGEX, f"({percent}%)", optionRows[rowNum])  # Replace old percent with new percent
+                newPercentText.append(re.sub(POLL_PERCENT_REGEX, f"({percent}%)", optionRows[rowNum]))
+
+            percentTextMaxLen = max([len(percentText) for percentText in re.findall(r"\(\d+\.?\d+?%\)", "\n".join(newPercentText))])
+
+            for rowNum in range(len(optionRows)):
+                optionRows[rowNum] =
 
             embed.description = "\n".join(msgDesc[:2] + optionRows)  # Concat "description" with options
             await msg.edit(embed=embed)

@@ -117,7 +117,6 @@ class Poll(commands.Cog):
 
         try:
             poll = await ctx.send(embed=embed)
-
             for x in range(optionCount):
                 await poll.add_reaction(emoji=emojiNumbers[x])
         except Exception as e:
@@ -130,9 +129,8 @@ class Poll(commands.Cog):
         if hasattr(payload.member, "bot") and payload.member.bot:
             return
 
-        if  payload.channel_id != SCHEDULE and payload.channel_id != WORKSHOP_INTEREST and payload.emoji.name in emojiNumbers:
+        if payload.channel_id != SCHEDULE and payload.channel_id != WORKSHOP_INTEREST and payload.emoji.name in emojiNumbers:
             embed = msg.embeds[0]
-            msgDesc = embed.description.split("\n")
             optionRows = (emojiNumbers[0] + embed.description.split(emojiNumbers[0])[1]).split("\n")
             if len(optionRows) == 1:
                 return  # Do not continue editing the message if there's 1 option
@@ -140,18 +138,19 @@ class Poll(commands.Cog):
             reactionCount: list = [reaction.count for reaction in msg.reactions if reaction.emoji in emojiNumbers]  # Get all reactions from msg that is in emojiNumbers
             reactionSum = (sum(reactionCount) - len(reactionCount)) or 1  # Sums all reactions on msg, excl. the bot, but if 0, change to 1 (not divide by 0)
 
-            newPercentText: list
+            newPercentText: list = []
             for rowNum in range(len(optionRows)):
                 # percent = f'{((reactionCount[rowNum] - 1) / reactionSum) * 100:.1f}'.strip('0').strip('.') or 0  # Floats
                 percent = round(((reactionCount[rowNum] - 1) / reactionSum) * 100)  # Ints
                 newPercentText.append(re.sub(POLL_PERCENT_REGEX, f"({percent}%)", optionRows[rowNum]))
 
-            percentTextMaxLen = max([len(percentText) for percentText in re.findall(r"\(\d+\.?\d+?%\)", "\n".join(newPercentText))])
-
+            percentTextMaxLen = max([len(percentText) for percentText in re.findall(POLL_PERCENT_REGEX, "".join(newPercentText))])
             for rowNum in range(len(optionRows)):
-                optionRows[rowNum] =
+                padding = "\u2000" * (percentTextMaxLen - len(re.findall(POLL_PERCENT_REGEX, newPercentText[rowNum])[0]))
+                splitter = re.search(POLL_PERCENT_REGEX, newPercentText[rowNum]).span(0)[1]  # Find the character pos where the percentText ends
+                optionRows[rowNum] = newPercentText[rowNum][:splitter] + padding + newPercentText[rowNum][splitter:]  # Add padding after percentText
 
-            embed.description = "\n".join(msgDesc[:2] + optionRows)  # Concat "description" with options
+            embed.description = embed.description.split(emojiNumbers[0])[0] + "\n".join(optionRows)  # Concat "description" with options
             await msg.edit(embed=embed)
 
     @commands.Cog.listener()

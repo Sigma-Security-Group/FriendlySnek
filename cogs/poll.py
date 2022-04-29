@@ -123,11 +123,11 @@ class Poll(commands.Cog):
             print(ctx.author, e)
 
     async def reactionShit(self, payload) -> None:
+        if payload.member.id not in FRIENDLY_SNEKS:
+            return
+
         channel = self.bot.get_channel(payload.channel_id)
         msg = await channel.fetch_message(payload.message_id)
-
-        if msg.author.id not in FRIENDLY_SNEKS:
-            return
 
         if hasattr(payload.member, "bot") and payload.member.bot:
             return

@@ -51,8 +51,7 @@ MISSION_UPLOAD_UPLOADED = "Mission file uploaded!"
 POLL_COMMAND_DESCRIPTION = "Create a poll."
 
 ## Misc
-POLL_PERCENT_REGEX = r"\(\d+(\.\d+)?%\)"
-
+POLL_PERCENT_REGEX = r"\(\d+\.?\d*%\)\s*"
 
 ####################
 # Schedule.py

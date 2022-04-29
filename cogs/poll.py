@@ -135,9 +135,6 @@ class Poll(commands.Cog):
         if hasattr(payload, "member") and hasattr(payload.member, "bot") and payload.member.bot:
             return
 
-        print(msg.reference)
-        print(dir(msg))
-
         if payload.channel_id != SCHEDULE and payload.channel_id != WORKSHOP_INTEREST and payload.emoji.name in emojiNumbers:
             embed = msg.embeds[0]
             optionRows = (emojiNumbers[0] + embed.description.split(emojiNumbers[0])[1]).split("\n")

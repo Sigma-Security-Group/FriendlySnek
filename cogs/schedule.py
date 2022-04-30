@@ -239,7 +239,7 @@ class Schedule(commands.Cog):
         channel = self.bot.get_channel(SCHEDULE)
         await channel.purge(limit=None, check=lambda m: m.author.id in FRIENDLY_SNEKS)
 
-        await channel.send(SCHEDULE_INTRO_MESSAGE.format(" and/or ".join([f"**{channel.guild.get_member(name).display_name}**" for name in DEVELOPERS if channel.guild.get_member(name) is not None])))
+        await channel.send(SCHEDULE_INTRO_MESSAGE.format(", ".join([f"**{channel.guild.get_member(name).display_name}**" for name in DEVELOPERS if channel.guild.get_member(name) is not None])))
 
         if os.path.exists(EVENTS_FILE):
             try:

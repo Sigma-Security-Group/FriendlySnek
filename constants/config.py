@@ -63,7 +63,7 @@ CHANGE_TIME_ZONE_COMMAND_DESCRIPTION = "Change your time zone preferences for yo
 REFRESH_SCHEDULE_COMMAND_DESCRIPTION = "Refreshes the schedule. Use this command if an event was deleted without using the reactions."
 
 ## Schedule messages
-SCHEDULE_INTRO_MESSAGE = "Welcome to the schedule channel!\nTo schedule an operation you can use the `/operation` command (or `/bop`) and follow the instructions in your DMs.\nFor a workshop use `/workshop` or `/ws`.\nLastly, for generic events use `/event`.\n\nIf you haven't set a preferred time zone yet you will be prompted to do so when you schedule any kind of event. If you want to set, change or delete your time zone preference you may do so with the `/changetimezone` command.\n\nThe times you see on the schedule are based on your __local time zone__.\n\nThe event colors can be used to quickly identify what type of event it is:\n🟩 Operation `/operation` or `/bop`\n🟦 Workshop `/workshop` or `/ws`\n🟨 Event `/event`\n\nIf you have any suggestions for new features or encounter any bugs, please contact {0}."
+SCHEDULE_INTRO_MESSAGE = "Welcome to the schedule channel!\nTo schedule an operation you can use the `/operation` command (or `/bop`) and follow the instructions in your DMs.\nFor a workshop use `/workshop` or `/ws`.\nLastly, for generic events use `/event`.\n\nIf you haven't set a preferred time zone yet you will be prompted to do so when you schedule any kind of event. If you want to set, change or delete your time zone preference you may do so with the `/changetimezone` command.\n\nThe times you see on the schedule are based on your __local time zone__.\n\nThe event colors can be used to quickly identify what type of event it is:\n🟩 Operation `/operation` or `/bop`\n🟦 Workshop `/workshop` or `/ws`\n🟨 Event `/event`\n\nIf you have any suggestions for new features or encounter any bugs, please contact: {0}."
 SCHEDULE_EMPTY_1 = "...\nNo bop?\n...\nSnek is sad"
 SCHEDULE_EMPTY_2 = ":cry:"
 
@@ -219,7 +219,7 @@ TL_DESC = "Learn how to effectively plan out and assault targets with a whole te
 
 ERROR_INVALID_MESSAGE = "❌ Invalid message!"
 VIDEO_URLS_REGEX = r"https?:\/\/((www)?(clips)?\.)?(youtu(be)?|twitch|streamable)\.(com|be|tv).+"
-ANALYSIS_ILLEGAL_MESSAGE = "The message you just posted in <#{0}> was deleted because no {1} was detected in it.\n\nIf this is an error, then please ask **staff** to post the {1} for you and inform {2} about the issue!"
+ANALYSIS_ILLEGAL_MESSAGE = "The message you just posted in <#{0}> was deleted because no {1} was detected in it.\n\nIf this is an error, then please ask **staff** to post the {1} for you and inform: {2}!"
 
 
 ####################

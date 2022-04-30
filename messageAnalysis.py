@@ -46,7 +46,7 @@ async def analyzeChannel(bot, message, channelID:int, attachmentContentType:str)
         pass
     try:
         log.warning(f"Removing message in {bot.get_channel(channelID)} from {message.author}")
-        devs = ", and/or ".join([f"**{message.guild.get_member(name)}**" for name in DEVELOPERS if message.guild.get_member(name) is not None])
+        devs = ", ".join([f"**{message.guild.get_member(name)}**" for name in DEVELOPERS if message.guild.get_member(name) is not None])
         await message.author.send(embed=Embed(title=ERROR_INVALID_MESSAGE, description=ANALYSIS_ILLEGAL_MESSAGE.format(channelID, attachmentContentType, devs), color=Colour.red()))
     except Exception as e:
         print(message.author, e)

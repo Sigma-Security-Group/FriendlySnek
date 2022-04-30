@@ -1619,7 +1619,7 @@ class Schedule(commands.Cog):
                 for memberId in workshopInterestItem["wsInterest"]["members"]:
                     message += f"{member.mention} " if (member := guild.get_member(memberId)) is not None else ""
                 if message != "":
-                    await ctx.send(f"{message}Check <#{SCHEDULE}> for workshop")
+                    await ctx.send(WORKSHOPINTEREST_PING.format(message, workshopInterestItem['wsInterest']['title'], SCHEDULE, WORKSHOP_INTEREST))
 
     @cog_ext.cog_slash(name="event", description=SCHEDULE_COMMAND_DESCRIPTION.format("a generic event"), guild_ids=[SERVER])
     async def event(self, ctx: SlashContext):

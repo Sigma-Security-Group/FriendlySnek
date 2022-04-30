@@ -198,6 +198,7 @@ LOG_TEMPLATE_DELETED = "{0} ({1}#{2}) deleted the workshop template: {3}!"
 
 WORKSHOPINTEREST_INTRO = "Welcome to the Workshop Interest Channel! Here you can show interest for different workshops!"
 WORKSHOPINTEREST_INTERESTED_PEOPLE = "Interested People ({0})"
+WORKSHOPINTEREST_PING = "{0}\nA {1} workshop is up on <#{2}> - which you are interested in.\nIf you're no longer interested, please remove yourself from the list in <#{3}>!"
 
 ## Descriptions
 NEWCOMER_DESC = "Learn the basics of Arma and Sigma Security Group."  # Unverifed description.

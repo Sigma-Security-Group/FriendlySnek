@@ -16,67 +16,67 @@ DEFAULT_WORKSHOP_INTEREST_LISTS = (
     (
         "Newcomer",
         "Newcomer 🐣",
-        [],
+        None,
         NEWCOMER_DESC
     ),
     (
         "Rotary Wing",
         "Rotary Wing 🚁",
-        [ADRIAN, POLICE, EISEN],
+        SME_RW_PILOT,
         RW_DESC
     ),
     (
         "Fixed Wing",
         "Fixed Wing ✈️",
-        [GILAND, POLICE],
+        SME_FW_PILOT,
         FW_DESC
     ),
     (
         "JTAC",
         "JTAC 📡",
-        [],
+        SME_JTAC,
         JTAC_DESC
     ),
     (
         "Medic",
         "Medic 💉",
-        [SD, MONTY, SILENT],
+        SME_MEDIC,
         MEDIC_DESC
     ),
     (
         "Heavy Weapons",
         "Heavy Weapons 💣",
-        [SOAPY, TUNDRA],
+        SME_HEAVY_WEAPONS,
         HW_DESC
     ),
     (
         "Marksman",
         "Marksman 🎯",
-        [XYRAGE, ASPIRE, BANSHEE],
+        SME_MARKSMAN,
         MARKSMAN_DESC
     ),
     (
         "Breacher",
         "Breacher 🚪",
-        [],
+        SME_BREACHER,
         BREACHER_DESC
     ),
     (
         "Mechanised",
         "Mechanised 🛡️​",
-        [SYSTEM],
+        SME_MECHANISED,
         MECHANISED_DESC
     ),
     (
         "RPV-SO",
         "RPV-SO 🛩️​",
-        [WAFFLE, TUNDRA],
+        SME_RPV_SO,
         RPVSO_DESC
     ),
     (
         "Team Leading",
         "Team Leading 👨‍🏫",
-        [],
+        None,
         TL_DESC
     )
 )
@@ -123,9 +123,10 @@ class WorkshopInterest(commands.Cog):
         if interestedStr == "":
             interestedStr = "-"
         embed.add_field(name=WORKSHOPINTEREST_INTERESTED_PEOPLE.format(len(interestedList)), value=interestedStr)
-        smes = idsToMembers(workshop["sme"])
-        if smes:
-            embed.set_footer(text=f"SME{'s'*(len(smes) > 1)}: {', '.join(smes)}")
+        if workshop["sme"]:
+            smes = [sme.display_name for sme in guild.get_role(workshop["sme"]).members]
+            if smes:
+                embed.set_footer(text=f"SME{'s' * (len(smes) > 1)}: {', '.join(smes)}")
         return embed
 
     async def updateChannel(self) -> None:

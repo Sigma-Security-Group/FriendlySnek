@@ -127,6 +127,7 @@ SCHEDULE_EVENT_MAP_PROMPT = ":globe_with_meridians: Choose a map"
 
 ### Attendees
 SCHEDULE_EVENT_MAX_PLAYERS = ":family_man_boy_boy: What is the maximum number of attendees?"
+SCHEDULE_EVENT_MAX_PLAYERS_DESCRIPTION = "Enter a positive number to set a limit.\nEnter `none` to set no limit.\nEnter `0` to count attendance anonymously.\nEnter `hidden` to not count attendance."
 
 ### Time Zone
 SCHEDULE_EVENT_TIME_ZONE_QUESTION = ":clock1: It appears that you haven't set your preferred time zone yet. What is your preferred time zone?"
@@ -172,7 +173,6 @@ SCHEDULE_EVENT_DELETED_DESCRIPTION = "The {0} was scheduled to run:\n<t:{1}:F>"
 ## "Enter" prompts
 SCHEDULE_NUMBER_FROM_TO = "Enter a number from **{0}** - **{1}**."
 SCHEDULE_NUMBER_FROM_TO_OR_NONE = "Enter `none` or a number from **{0}** - **{1}**."
-SCHEDULE_NUMBER_NON_NEGATIVE_OR_NONE = "Enter `none` or a non-negative number."
 SCHEDULE_CANCEL = "Enter `cancel` to abort this command."
 
 ## Logging

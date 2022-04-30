@@ -772,7 +772,7 @@ class Schedule(commands.Cog):
                 event["map"] = eventMap
 
             case "6":
-                embed = Embed(title=SCHEDULE_EVENT_MAX_PLAYERS, description=SCHEDULE_NUMBER_NON_NEGATIVE_OR_NONE, color=Colour.gold())
+                embed = Embed(title=SCHEDULE_EVENT_MAX_PLAYERS, description=SCHEDULE_EVENT_MAX_PLAYERS_DESCRIPTION, color=Colour.gold())
                 await dmChannel.send(embed=embed)
                 try:
                     response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, author=author, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
@@ -932,7 +932,7 @@ class Schedule(commands.Cog):
                 await dmChannel.send(embed=TIMEOUT_EMBED)
                 return
 
-        embed = Embed(title=SCHEDULE_EVENT_MAX_PLAYERS, description=SCHEDULE_NUMBER_NON_NEGATIVE_OR_NONE, color=Colour.gold())
+        embed = Embed(title=SCHEDULE_EVENT_MAX_PLAYERS, description=SCHEDULE_EVENT_MAX_PLAYERS_DESCRIPTION, color=Colour.gold())
         await dmChannel.send(embed=embed)
         try:
             response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
@@ -1331,7 +1331,7 @@ class Schedule(commands.Cog):
             eventMap = template["map"]
 
         if template is None:
-            embed = Embed(title=SCHEDULE_EVENT_MAX_PLAYERS, description=SCHEDULE_NUMBER_NON_NEGATIVE_OR_NONE, color=Colour.gold())
+            embed = Embed(title=SCHEDULE_EVENT_MAX_PLAYERS, description=SCHEDULE_EVENT_MAX_PLAYERS_DESCRIPTION, color=Colour.gold())
             await dmChannel.send(embed=embed)
             try:
                 response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
@@ -1701,7 +1701,7 @@ class Schedule(commands.Cog):
                 await dmChannel.send(embed=TIMEOUT_EMBED)
                 return
 
-        embed = Embed(title=SCHEDULE_EVENT_MAX_PLAYERS, description=SCHEDULE_NUMBER_NON_NEGATIVE_OR_NONE, color=Colour.gold())
+        embed = Embed(title=SCHEDULE_EVENT_MAX_PLAYERS, description=SCHEDULE_EVENT_MAX_PLAYERS_DESCRIPTION, color=Colour.gold())
         await dmChannel.send(embed=embed)
         try:
             response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)

@@ -110,7 +110,7 @@ class JustBob(commands.Cog):
 
     @cog_ext.cog_slash(name="justbob", description=JUSTBOB_COMMAND_DESCRIPTION, guild_ids=[SERVER])
     async def justBob(self, ctx) -> None:
-        if ctx.channel.id != GENERAL or ctx.channel.id != BOT_SPAM:
+        if ctx.channel.id != GENERAL and ctx.channel.id != BOT_SPAM:
             await ctx.send(JUSTBOB_CHANNEL_RESTRAIN.format(GENERAL, BOT_SPAM))
             return
         await ctx.send(JUSTBOB_PLAYING)

@@ -201,10 +201,10 @@ WORKSHOPINTEREST_INTERESTED_PEOPLE = "Interested People ({0})"
 WORKSHOPINTEREST_PING = "{0}\nA {1} workshop is up on <#{2}> - which you are interested in.\nIf you're no longer interested, please remove yourself from the list in <#{3}>!"
 
 ## Descriptions
-NEWCOMER_DESC = "Learn the basics of Arma and Sigma Security Group."  # Unverifed description.
-RW_DESC = "Learn to fly helicopters and provide with transport and close air support."
+NEWCOMER_DESC = "Learn what you need to know before attending an operation in Sigma Security Group."
+RW_DESC = "Learn to fly helicopters and provide transport and close air support."
 FW_DESC = "Learn the dynamics of using fixed wing and fighter jet aircraft."
-JTAC_DESC = "Learn how to direct close-air support."  # Unverifed description.
+JTAC_DESC = "Learn how to direct close air support."  # Unverifed description.
 MEDIC_DESC = "Learn how to administer combat aid to wounded personnel in a timely and effective manner. "  # Unverifed description.
 HW_DESC = "Learn how to efficiently operate as a machine gun crew, use grenade launchers, and shoot cretins out of shitboxes (AT & AA)."
 MARKSMAN_DESC = "Learn how to shoot big bullet far."

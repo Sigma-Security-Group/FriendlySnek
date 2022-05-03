@@ -127,7 +127,7 @@ SCHEDULE_EVENT_MAP_PROMPT = ":globe_with_meridians: Choose a map"
 
 ### Attendees
 SCHEDULE_EVENT_MAX_PLAYERS = ":family_man_boy_boy: What is the maximum number of attendees?"
-SCHEDULE_EVENT_MAX_PLAYERS_DESCRIPTION = "Enter a positive number to set a limit.\nEnter `none` to set no limit.\nEnter `0` to count attendance anonymously.\nEnter `hidden` to not count attendance."
+SCHEDULE_EVENT_MAX_PLAYERS_DESCRIPTION = "Enter a positive number to set a limit.\nEnter `none` to set no limit.\nEnter `anonymous` to count attendance anonymously.\nEnter `hidden` to not count attendance."
 
 ### Time Zone
 SCHEDULE_EVENT_TIME_ZONE_QUESTION = ":clock1: It appears that you haven't set your preferred time zone yet. What is your preferred time zone?"

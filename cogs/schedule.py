@@ -492,7 +492,13 @@ class Schedule(commands.Cog):
         embed.add_field(name="**3** External URL", value=f"```txt\n{event['externalURL']}\n```", inline=False)
         embed.add_field(name="**4** Reservable Roles", value="```txt\n" + "\n".join(event["reservableRoles"].keys()) + "\n```" if event["reservableRoles"] is not None else "None", inline=False)
         embed.add_field(name="**5** Map", value=f"```txt\n{event['map']}\n```", inline=False)
-        embed.add_field(name="**6** Max Players", value=f"```txt\n{event['maxPlayers']}\n```", inline=False)
+        # Switch from back end value to filthy user friendly words
+        maxPlayersUser = event['maxPlayers']
+        if maxPlayersUser == 0:
+            maxPlayersUser = "Anonymous"
+        elif maxPlayersUser == -1:
+            maxPlayersUser = "Hidden"
+        embed.add_field(name="**6** Max Players", value=f"```txt\n{maxPlayersUser}\n```", inline=False)
 
         if not isTemplateEdit:
             log.info(LOG_EDITING_EVENT.format(author.display_name, author.name, author.discriminator, "an event"))
@@ -779,6 +785,8 @@ class Schedule(commands.Cog):
                     maxPlayers = response.content.strip()
                     if maxPlayers.isdigit() and int(maxPlayers) <= MAX_SERVER_ATTENDANCE:
                         maxPlayers = int(maxPlayers)
+                    elif maxPlayers.lower() == "anonymous":
+                        maxPlayers = 0
                     elif maxPlayers.lower() == "hidden":
                         maxPlayers = -1
                     else:
@@ -939,6 +947,8 @@ class Schedule(commands.Cog):
             maxPlayers = response.content.strip()
             if maxPlayers.isdigit() and int(maxPlayers) <= MAX_SERVER_ATTENDANCE:
                 maxPlayers = int(maxPlayers)
+            elif maxPlayers.lower() == "anonymous":
+                maxPlayers = 0
             elif maxPlayers.lower() == "hidden":
                 maxPlayers = -1
             else:
@@ -1338,6 +1348,8 @@ class Schedule(commands.Cog):
                 maxPlayers = response.content.strip()
                 if maxPlayers.isdigit() and int(maxPlayers) <= MAX_SERVER_ATTENDANCE:
                     maxPlayers = int(maxPlayers)
+                elif maxPlayers.lower() == "anonymous":
+                    maxPlayers = 0
                 elif maxPlayers.lower() == "hidden":
                     maxPlayers = -1
                 else:
@@ -1708,6 +1720,8 @@ class Schedule(commands.Cog):
             maxPlayers = response.content.strip()
             if maxPlayers.isdigit() and int(maxPlayers) <= MAX_SERVER_ATTENDANCE:
                 maxPlayers = int(maxPlayers)
+            elif maxPlayers.lower() == "anonymous":
+                maxPlayers = 0
             elif maxPlayers.lower() == "hidden":
                 maxPlayers = -1
             else:

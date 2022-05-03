@@ -555,6 +555,7 @@ class Schedule(commands.Cog):
             event["name"] = res
 
         async def editEventTime():
+            nonlocal reorderEvents
             with open(MEMBER_TIME_ZONES_FILE) as f:
                 memberTimeZones = json.load(f)
 

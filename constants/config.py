@@ -211,7 +211,7 @@ MARKSMAN_DESC = "Learn how to shoot big bullet far."
 BREACHER_DESC = "Become an expert in close-quarters battle (CQB)."  # Unverifed description.
 MECHANISED_DESC = "A short course on driving, gunning, and commanding a 6.21 million dollar reason the heavy weapons guy is useless."
 RPVSO_DESC = "Learn how to employ recon and attack Remote Piloted Vehicles (Drones)."  # Unverifed description.
-TL_DESC = "Learn how to effectively plan out and assault targets with a whole team and assets."  # Unverifed description.
+TL_DESC = "Learn how to effectively plan and assault targets with a whole team and assets."  # Unverifed description.
 
 
 ####################

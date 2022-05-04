@@ -441,7 +441,7 @@ class Schedule(commands.Cog):
 
         embed = Embed(title=SCHEDULE_RESERVABLE_QUESTION, description=SCHEDULE_RESERVABLE_PROMPT, color=Colour.gold())
         embed.add_field(name="Your current role", value=currentRole if currentRole is not None else "None", inline=False)
-        embed.add_field(name="Vacant roles", value="\n".join(f"**{idx}**   {roleName}" for idx, roleName in enumerate(vacantRoles, 1)) if len(vacantRoles) > 0 else "None", inline=False)
+        embed.add_field(name="Vacant roles", value="\n".join(f"**{idx}** {roleName}" for idx, roleName in enumerate(vacantRoles, 1)) if len(vacantRoles) > 0 else "None", inline=False)
 
         try:
             msg = await member.send(embed=embed)
@@ -572,7 +572,7 @@ class Schedule(commands.Cog):
                     timeZone = UTC
             else:
                 embed = Embed(title=SCHEDULE_EVENT_TIME_ZONE_QUESTION, description=SCHEDULE_EVENT_TIME_ZONE_PROMPT, color=Colour.gold())
-                embed.add_field(name=SCHEDULE_TIME_ZONE_POPULAR, value="\n".join(f"**{idx}**   {tz}" for idx, tz in enumerate(TIME_ZONES, 1)))
+                embed.add_field(name=SCHEDULE_TIME_ZONE_POPULAR, value="\n".join(f"**{idx}** {tz}" for idx, tz in enumerate(TIME_ZONES, 1)))
                 await dmChannel.send(embed=embed)
                 try:
                     response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, author=author, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
@@ -761,7 +761,7 @@ class Schedule(commands.Cog):
                 while not mapOK:
                     embed = Embed(title=SCHEDULE_EVENT_MAP_PROMPT, description=SCHEDULE_NUMBER_FROM_TO_OR_NONE.format(1, len(MAPS)), color=color)
                     color = Colour.red()
-                    embed.add_field(name="Map", value="\n".join(f"**{idx}**   {mapName}" for idx, mapName in enumerate(MAPS, 1)))
+                    embed.add_field(name="Map", value="\n".join(f"**{idx}** {mapName}" for idx, mapName in enumerate(MAPS, 1)))
                     await dmChannel.send(embed=embed)
                     try:
                         response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, author=author, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
@@ -925,7 +925,7 @@ class Schedule(commands.Cog):
         while not mapOK:
             embed = Embed(title=SCHEDULE_EVENT_MAP_PROMPT, description=SCHEDULE_NUMBER_FROM_TO_OR_NONE.format(1, len(MAPS)), color=color)
             color = Colour.red()
-            embed.add_field(name="Map", value="\n".join(f"**{idx}**   {mapName}" for idx, mapName in enumerate(MAPS, 1)))
+            embed.add_field(name="Map", value="\n".join(f"**{idx}** {mapName}" for idx, mapName in enumerate(MAPS, 1)))
             await dmChannel.send(embed=embed)
             try:
                 response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
@@ -989,7 +989,7 @@ class Schedule(commands.Cog):
                 timeZone = UTC
         else:
             embed = Embed(title=SCHEDULE_EVENT_TIME_ZONE_QUESTION, description=SCHEDULE_EVENT_TIME_ZONE_PROMPT, color=Colour.gold())
-            embed.add_field(name=SCHEDULE_TIME_ZONE_POPULAR, value="\n".join(f"**{idx}**   {tz}" for idx, tz in enumerate(TIME_ZONES, 1)))
+            embed.add_field(name=SCHEDULE_TIME_ZONE_POPULAR, value="\n".join(f"**{idx}** {tz}" for idx, tz in enumerate(TIME_ZONES, 1)))
             await dmChannel.send(embed=embed)
             try:
                 response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
@@ -1306,7 +1306,7 @@ class Schedule(commands.Cog):
         if template is None:
             embed = Embed(title=SCHEDULE_EVENT_MAP_PROMPT, description=SCHEDULE_NUMBER_FROM_TO_OR_NONE.format(1, len(MAPS)), color=color)
             color=Colour.red()
-            embed.add_field(name="Map", value="\n".join(f"**{idx}**   {mapName}" for idx, mapName in enumerate(MAPS, 1)))
+            embed.add_field(name="Map", value="\n".join(f"**{idx}** {mapName}" for idx, mapName in enumerate(MAPS, 1)))
             await dmChannel.send(embed=embed)
             try:
                 response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
@@ -1323,7 +1323,7 @@ class Schedule(commands.Cog):
                 return
             while not mapOK:
                 embed = Embed(title=SCHEDULE_INPUT_ERROR, description=SCHEDULE_NUMBER_FROM_TO_OR_NONE.format(1, len(MAPS)), color=Colour.red())
-                embed.add_field(name="Map", value="\n".join(f"**{idx}**   {mapName}" for idx, mapName in enumerate(MAPS, 1)))
+                embed.add_field(name="Map", value="\n".join(f"**{idx}** {mapName}" for idx, mapName in enumerate(MAPS, 1)))
                 await dmChannel.send(embed=embed)
                 try:
                     response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
@@ -1390,7 +1390,7 @@ class Schedule(commands.Cog):
             with open(WORKSHOP_INTEREST_FILE) as f:
                 workshopInterestOptions = [{"name": name, "title": wsInterest["title"]} for name, wsInterest in json.load(f).items()]
             embed = Embed(title=SCHEDULE_EVENT_WAITING_LIST, description=SCHEDULE_NUMBER_FROM_TO_OR_NONE.format(1, len(workshopInterestOptions)), color=Colour.gold())
-            embed.add_field(name="Workshop Lists", value="\n".join(f"**{idx}**   {wsInterest['title']}" for idx, wsInterest in enumerate(workshopInterestOptions, 1)))
+            embed.add_field(name="Workshop Lists", value="\n".join(f"**{idx}** {wsInterest['title']}" for idx, wsInterest in enumerate(workshopInterestOptions, 1)))
             await dmChannel.send(embed=embed)
             try:
                 response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
@@ -1407,7 +1407,7 @@ class Schedule(commands.Cog):
                 return
             while not workshopInterestOk:
                 embed = Embed(title=SCHEDULE_INPUT_ERROR, description=SCHEDULE_NUMBER_FROM_TO_OR_NONE.format(1, len(workshopInterestOptions)), color=Colour.red())
-                embed.add_field(name="Workshop Lists", value="\n".join(f"**{idx}**   {wsInterest['title']}" for idx, wsInterest in enumerate(workshopInterestOptions, 1)))
+                embed.add_field(name="Workshop Lists", value="\n".join(f"**{idx}** {wsInterest['title']}" for idx, wsInterest in enumerate(workshopInterestOptions, 1)))
                 await dmChannel.send(embed=embed)
                 try:
                     response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
@@ -1435,7 +1435,7 @@ class Schedule(commands.Cog):
                 timeZone = UTC
         else:
             embed = Embed(title=SCHEDULE_EVENT_TIME_ZONE_QUESTION, description=SCHEDULE_EVENT_TIME_ZONE_PROMPT, color=Colour.gold())
-            embed.add_field(name=SCHEDULE_TIME_ZONE_POPULAR, value="\n".join(f"**{idx}**   {tz}" for idx, tz in enumerate(TIME_ZONES, 1)))
+            embed.add_field(name=SCHEDULE_TIME_ZONE_POPULAR, value="\n".join(f"**{idx}** {tz}" for idx, tz in enumerate(TIME_ZONES, 1)))
             await dmChannel.send(embed=embed)
             try:
                 response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
@@ -1698,7 +1698,7 @@ class Schedule(commands.Cog):
         while not mapOK:
             embed = Embed(title=SCHEDULE_EVENT_MAP_PROMPT, description=SCHEDULE_NUMBER_FROM_TO_OR_NONE.format(1, len(MAPS)), color=color)
             color=Colour.red()
-            embed.add_field(name="Map", value="\n".join(f"**{idx}**   {mapName}" for idx, mapName in enumerate(MAPS, 1)))
+            embed.add_field(name="Map", value="\n".join(f"**{idx}** {mapName}" for idx, mapName in enumerate(MAPS, 1)))
             await dmChannel.send(embed=embed)
             try:
                 response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
@@ -1763,7 +1763,7 @@ class Schedule(commands.Cog):
                 timeZone = UTC
         else:
             embed = Embed(title=SCHEDULE_EVENT_TIME_ZONE_QUESTION, description=SCHEDULE_EVENT_TIME_ZONE_PROMPT, color=Colour.gold())
-            embed.add_field(name=SCHEDULE_TIME_ZONE_POPULAR, value="\n".join(f"**{idx}**   {tz}" for idx, tz in enumerate(TIME_ZONES, 1)))
+            embed.add_field(name=SCHEDULE_TIME_ZONE_POPULAR, value="\n".join(f"**{idx}** {tz}" for idx, tz in enumerate(TIME_ZONES, 1)))
             await dmChannel.send(embed=embed)
             try:
                 response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
@@ -1889,7 +1889,7 @@ class Schedule(commands.Cog):
             memberTimeZones = json.load(f)
 
         embed = Embed(title=SCHEDULE_TIME_ZONE_QUESTION, description=(SCHEDULE_EVENT_SELECTED_TIME_ZONE.format(memberTimeZones[str(ctx.author.id)]) if str(ctx.author.id) in memberTimeZones else SCHEDULE_TIME_ZONE_UNSET) + SCHEDULE_TIME_ZONE_INFORMATION, color=Colour.gold())
-        embed.add_field(name=SCHEDULE_TIME_ZONE_POPULAR, value="\n".join(f"**{idx}**   {tz}" for idx, tz in enumerate(TIME_ZONES, 1)))
+        embed.add_field(name=SCHEDULE_TIME_ZONE_POPULAR, value="\n".join(f"**{idx}** {tz}" for idx, tz in enumerate(TIME_ZONES, 1)))
         embed.set_footer(text=SCHEDULE_CANCEL)
         try:
             msg = await ctx.author.send(embed=embed)

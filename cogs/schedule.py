@@ -905,12 +905,12 @@ class Schedule(commands.Cog):
         await dmChannel.send(embed=embed)
         try:
             response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author).content.strip()
+            if response.lower() == "cancel":
+                self.cancelCommand("Operation scheduling")
+                return
             externalURL = response
             if externalURL.lower() == "none" or (len(externalURL) == 4 and "n" in externalURL.lower()):
                 externalURL = None
-            if externalURL.lower() == "cancel":
-                self.cancelCommand("Operation scheduling")
-                return
         except asyncio.TimeoutError:
             await dmChannel.send(embed=TIMEOUT_EMBED)
             return
@@ -922,13 +922,13 @@ class Schedule(commands.Cog):
             if response.lower() == "cancel":
                 self.cancelCommand("Operation scheduling")
                 return
-            reservableRolesNo = response.content.lower() in ("none", "no", "n")
+            reservableRolesNo = response.lower() in ("none", "no", "n")
         except asyncio.TimeoutError:
             await dmChannel.send(embed=TIMEOUT_EMBED)
             return
         if not reservableRolesNo:
             try:
-                reservableRoles = {role.strip(): None for role in response.content.split("\n") if len(role.strip()) > 0}
+                reservableRoles = {role.strip(): None for role in response.split("\n") if len(role.strip()) > 0}
             except asyncio.TimeoutError:
                 await dmChannel.send(embed=TIMEOUT_EMBED)
                 return
@@ -943,8 +943,11 @@ class Schedule(commands.Cog):
             embed.add_field(name="Map", value="\n".join(f"**{idx}** {mapName}" for idx, mapName in enumerate(MAPS, 1)))
             await dmChannel.send(embed=embed)
             try:
-                response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
-                eventMap = response.content.strip()
+                response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author).content.strip()
+                if response.lower() == "cancel":
+                    self.cancelCommand("Operation scheduling")
+                    return
+                eventMap = response
                 mapOK = True
                 if eventMap.isdigit() and int(eventMap) <= len(MAPS) and int(eventMap) > 0:
                     eventMap = MAPS[int(eventMap) - 1]
@@ -959,8 +962,11 @@ class Schedule(commands.Cog):
         embed = Embed(title=SCHEDULE_EVENT_MAX_PLAYERS, description=SCHEDULE_EVENT_MAX_PLAYERS_DESCRIPTION, color=Colour.gold())
         await dmChannel.send(embed=embed)
         try:
-            response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
-            maxPlayers = response.content.strip()
+            response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author).content.strip()
+            if response.lower() == "cancel":
+                self.cancelCommand("Operation scheduling")
+                return
+            maxPlayers = response
             if maxPlayers.isdigit() and int(maxPlayers) <= MAX_SERVER_ATTENDANCE:
                 maxPlayers = int(maxPlayers)
             elif maxPlayers.lower() == "anonymous":
@@ -976,8 +982,11 @@ class Schedule(commands.Cog):
         embed = Embed(title=SCHEDULE_EVENT_DURATION_QUESTION.format("operation"), description=SCHEDULE_EVENT_DURATION_PROMPT, color=Colour.gold())
         await dmChannel.send(embed=embed)
         try:
-            response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
-            duration = response.content.strip().lower()
+            response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author).content.strip()
+            if response.lower() == "cancel":
+                self.cancelCommand("Operation scheduling")
+                return
+            duration = response.lower()
         except asyncio.TimeoutError:
             await dmChannel.send(embed=TIMEOUT_EMBED)
             return
@@ -985,8 +994,11 @@ class Schedule(commands.Cog):
             embed = Embed(title=SCHEDULE_INPUT_ERROR, description=SCHEDULE_EVENT_DURATION_PROMPT, colour=Colour.red())
             await dmChannel.send(embed=embed)
             try:
-                response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
-                duration = response.content.strip().lower()
+                response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author).content.strip()
+                if response.lower() == "cancel":
+                    self.cancelCommand("Operation scheduling")
+                    return
+                duration = response.lower()
             except asyncio.TimeoutError:
                 await dmChannel.send(embed=TIMEOUT_EMBED)
                 return
@@ -1007,8 +1019,11 @@ class Schedule(commands.Cog):
             embed.add_field(name=SCHEDULE_TIME_ZONE_POPULAR, value="\n".join(f"**{idx}** {tz}" for idx, tz in enumerate(TIME_ZONES, 1)))
             await dmChannel.send(embed=embed)
             try:
-                response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
-                timeZone = response.content.strip()
+                response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author).content.strip()
+                if response.lower() == "cancel":
+                    self.cancelCommand("Operation scheduling")
+                    return
+                timeZone = response
                 saveTimeZonepreference = True
                 if timeZone.isdigit() and int(timeZone) <= len(TIME_ZONES) and int(timeZone) > 0:
                     timeZone = pytz.timezone(list(TIME_ZONES.values())[int(timeZone) - 1])
@@ -1027,10 +1042,8 @@ class Schedule(commands.Cog):
                 return
 
         eventCollision = True
-
         while eventCollision:
             eventCollision = False
-
             startTimeOk = False
             while not startTimeOk:
                 embed = Embed(title=SCHEDULE_EVENT_TIME.format("operation"), description=SCHEDULE_EVENT_SELECTED_TIME_ZONE.format(timeZone.zone), color=Colour.gold())
@@ -1039,8 +1052,11 @@ class Schedule(commands.Cog):
                 embed.add_field(name="Example", value=UTC.localize(nextHalfHour).astimezone(timeZone).strftime(EVENT_TIME_FORMAT))
                 await dmChannel.send(embed=embed)
                 try:
-                    response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
-                    startTime = response.content.strip()
+                    response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author).content.strip()
+                    if response.lower() == "cancel":
+                        self.cancelCommand("Operation scheduling")
+                        return
+                    startTime = response
                 except asyncio.TimeoutError:
                     await dmChannel.send(embed=TIMEOUT_EMBED)
                     return
@@ -1053,8 +1069,11 @@ class Schedule(commands.Cog):
                     embed = Embed(title=SCHEDULE_INPUT_ERROR, description=SCHEDULE_EVENT_TIME_FORMAT, colour=Colour.red())
                     await dmChannel.send(embed=embed)
                     try:
-                        response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
-                        startTime = response.content.strip()
+                        response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author).content.strip()
+                        if response.lower() == "cancel":
+                            self.cancelCommand("Operation scheduling")
+                            return
+                        startTime = response
                     except asyncio.TimeoutError:
                         await dmChannel.send(embed=TIMEOUT_EMBED)
                         return
@@ -1075,8 +1094,11 @@ class Schedule(commands.Cog):
                         embed = Embed(title=SCHEDULE_EVENT_TIME_PAST_QUESTION, description=SCHEDULE_EVENT_TIME_PAST_PROMPT, color=Colour.orange())
                         await dmChannel.send(embed=embed)
                         try:
-                            response = await self.bot.wait_for("message", timeout=TIME_ONE_MIN, check=lambda msg, author=ctx.author, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
-                            keepStartTime = response.content.strip()
+                            response = await self.bot.wait_for("message", timeout=TIME_ONE_MIN, check=lambda msg, author=ctx.author, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author).content.strip()
+                            if response.lower() == "cancel":
+                                self.cancelCommand("Operation scheduling")
+                                return
+                            keepStartTime = response
                         except asyncio.TimeoutError:
                             await dmChannel.send(embed=TIMEOUT_EMBED)
                             return False

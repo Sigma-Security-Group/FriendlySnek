@@ -513,6 +513,7 @@ class Schedule(commands.Cog):
             embed.insert_field_at(0, name="**0** Template Name", value=f"```txt\n{event['name']}\n```", inline=False)
             embed.add_field(name="**7** Duration", value=f"```txt\n{event['duration']}\n```", inline=False)
             choiceNumbers:list = [str(x) for x in range(8)]
+        embed.set_footer(text=SCHEDULE_CANCEL)
 
         try:
             msg = await author.send(embed=embed)
@@ -523,6 +524,9 @@ class Schedule(commands.Cog):
         try:
             response = await self.bot.wait_for("message", timeout=TIME_TWO_MIN, check=lambda msg, author=author, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
             choice = response.content.strip()
+            if choice.lower() == "cancel":
+                await self.cancelCommand(dmChannel, "Event editing")
+                return
         except asyncio.TimeoutError:
             await dmChannel.send(embed=TIMEOUT_EMBED)
             return False
@@ -532,6 +536,9 @@ class Schedule(commands.Cog):
             try:
                 response = await self.bot.wait_for("message", timeout=TIME_TWO_MIN, check=lambda msg, author=author, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
                 choice = response.content.strip()
+                if choice.lower() == "cancel":
+                    await self.cancelCommand(dmChannel, "Event editing")
+                    return
             except asyncio.TimeoutError:
                 await dmChannel.send(embed=TIMEOUT_EMBED)
                 return False
@@ -547,6 +554,9 @@ class Schedule(commands.Cog):
                 try:
                     response = await self.bot.wait_for("message", timeout=TIME_ONE_MIN, check=lambda msg, author=author, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
                     eventTypeNum = response.content.strip()
+                    if eventTypeNum.lower() == "cancel":
+                        await self.cancelCommand(dmChannel, "Event editing")
+                        return
                 except asyncio.TimeoutError:
                     await dmChannel.send(embed=TIMEOUT_EMBED)
                     return False
@@ -557,11 +567,14 @@ class Schedule(commands.Cog):
             await dmChannel.send(embed=embed)
             try:
                 response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, author=author, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
-                res = response.content.strip()
+                templateName = response.content.strip()
+                if templateName.lower() == "cancel":
+                    await self.cancelCommand(dmChannel, "Event editing")
+                    return
             except asyncio.TimeoutError:
                 await dmChannel.send(embed=TIMEOUT_EMBED)
                 return False
-            event["name"] = res
+            event["name"] = templateName
 
         async def editEventTime():
             nonlocal reorderEvents
@@ -580,6 +593,9 @@ class Schedule(commands.Cog):
                 try:
                     response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, author=author, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
                     timeZone = response.content.strip()
+                    if timeZone.lower() == "cancel":
+                        await self.cancelCommand(dmChannel, "Event editing")
+                        return
                     saveTimeZonepreference = True
                     if timeZone.isdigit() and int(timeZone) <= len(TIME_ZONES) and int(timeZone) > 0:
                         timeZone = pytz.timezone(list(TIME_ZONES.values())[int(timeZone) - 1])
@@ -605,6 +621,9 @@ class Schedule(commands.Cog):
                 try:
                     response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, author=author, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
                     startTime = response.content.strip()
+                    if startTime.lower() == "cancel":
+                        await self.cancelCommand(dmChannel, "Event editing")
+                        return
                 except asyncio.TimeoutError:
                     await dmChannel.send(embed=TIMEOUT_EMBED)
                     return False
@@ -619,6 +638,9 @@ class Schedule(commands.Cog):
                     try:
                         response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, author=author, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
                         startTime = response.content.strip()
+                        if startTime.lower() == "cancel":
+                            await self.cancelCommand(dmChannel, "Event editing")
+                            return
                     except asyncio.TimeoutError:
                         await dmChannel.send(embed=TIMEOUT_EMBED)
                         return False
@@ -642,6 +664,9 @@ class Schedule(commands.Cog):
                         try:
                             response = await self.bot.wait_for("message", timeout=TIME_ONE_MIN, check=lambda msg, author=author, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
                             keepStartTime = response.content.strip()
+                            if keepStartTime.lower() == "cancel":
+                                await self.cancelCommand(dmChannel, "Event editing")
+                                return
                         except asyncio.TimeoutError:
                             await dmChannel.send(embed=TIMEOUT_EMBED)
                             return False
@@ -675,6 +700,9 @@ class Schedule(commands.Cog):
             try:
                 response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, author=author, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
                 duration = response.content.strip().lower()
+                if duration == "cancel":
+                    await self.cancelCommand(dmChannel, "Event editing")
+                    return
             except asyncio.TimeoutError:
                 await dmChannel.send(embed=TIMEOUT_EMBED)
                 return False
@@ -684,6 +712,9 @@ class Schedule(commands.Cog):
                 try:
                     response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, author=author, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
                     duration = response.content.strip().lower()
+                    if duration == "cancel":
+                        await self.cancelCommand(dmChannel, "Event editing")
+                        return
                 except asyncio.TimeoutError:
                     await dmChannel.send(embed=TIMEOUT_EMBED)
                     return False
@@ -708,6 +739,9 @@ class Schedule(commands.Cog):
                 try:
                     response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, author=author, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
                     title = response.content.strip()
+                    if title.lower() == "cancel":
+                        await self.cancelCommand(dmChannel, "Event editing")
+                        return
                 except asyncio.TimeoutError:
                     await dmChannel.send(embed=TIMEOUT_EMBED)
                     return False
@@ -719,6 +753,9 @@ class Schedule(commands.Cog):
                 try:
                     response = await self.bot.wait_for("message", timeout=TIME_THIRTY_MIN, check=lambda msg, author=author, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
                     description = response.content.strip()
+                    if description.lower() == "cancel":
+                        await self.cancelCommand(dmChannel, "Event editing")
+                        return
                 except asyncio.TimeoutError:
                     await dmChannel.send(embed=TIMEOUT_EMBED)
                     return False
@@ -730,7 +767,10 @@ class Schedule(commands.Cog):
                 try:
                     response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, author=author, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
                     externalURL = response.content.strip()
-                    if externalURL.lower() == "none" or (len(externalURL) == 4 and "n" in externalURL.lower()):
+                    if externalURL.lower() == "cancel":
+                        await self.cancelCommand(dmChannel, "Event editing")
+                        return
+                    elif externalURL.lower() == "none" or (len(externalURL) == 4 and "n" in externalURL.lower()):
                         externalURL = None
                 except asyncio.TimeoutError:
                     await dmChannel.send(embed=TIMEOUT_EMBED)
@@ -743,13 +783,17 @@ class Schedule(commands.Cog):
                 await dmChannel.send(embed=embed)
                 try:
                     response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, author=author, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
-                    reservableRolesNo = response.content.strip().lower() in ("none", "no", "n")
+                    reservables = response.content.strip()
+                    if reservables.lower() == "cancel":
+                        await self.cancelCommand(dmChannel, "Event editing")
+                        return
+                    reservableRolesNo = reservables.lower() in ("none", "no", "n")
                 except asyncio.TimeoutError:
                     await dmChannel.send(embed=TIMEOUT_EMBED)
                     return False
                 if not reservableRolesNo:
                     try:
-                        reservableRoles = {role.strip(): event["reservableRoles"][role.strip()] if event["reservableRoles"] is not None and role.strip() in event["reservableRoles"] else None for role in response.content.split("\n") if len(role.strip()) > 0}
+                        reservableRoles = {role.strip(): event["reservableRoles"][role.strip()] if event["reservableRoles"] is not None and role.strip() in event["reservableRoles"] else None for role in reservables.split("\n") if len(role.strip()) > 0}
                     except asyncio.TimeoutError:
                         await dmChannel.send(embed=TIMEOUT_EMBED)
                         return False
@@ -769,10 +813,13 @@ class Schedule(commands.Cog):
                     try:
                         response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, author=author, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
                         eventMap = response.content.strip()
+                        if eventMap.lower() == "cancel":
+                            await self.cancelCommand(dmChannel, "Event editing")
+                            return
                         mapOK = True
                         if eventMap.isdigit() and int(eventMap) <= len(MAPS) and int(eventMap) > 0:
                             eventMap = MAPS[int(eventMap) - 1]
-                        elif eventMap.strip().lower() == "none":
+                        elif eventMap.lower() == "none":
                             eventMap = None
                         else:
                             mapOK = False
@@ -787,6 +834,9 @@ class Schedule(commands.Cog):
                 try:
                     response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, author=author, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
                     maxPlayers = response.content.strip()
+                    if maxPlayers.lower() == "cancel":
+                        await self.cancelCommand(dmChannel, "Event editing")
+                        return
                     if maxPlayers.isdigit() and int(maxPlayers) <= MAX_SERVER_ATTENDANCE:
                         maxPlayers = int(maxPlayers)
                     elif maxPlayers.lower() == "anonymous":

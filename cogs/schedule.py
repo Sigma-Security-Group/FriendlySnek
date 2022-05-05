@@ -2139,7 +2139,8 @@ class Schedule(commands.Cog):
             timeZone = response.content.strip()
             with open(MEMBER_TIME_ZONES_FILE) as f:
                 memberTimeZones = json.load(f)
-            if timeZone.strip().lower() == "cancel":
+            if timeZone.lower() == "cancel":
+                await self.cancelCommand(dmChannel, "Time zone preferences")
                 return
             if timeZone.isdigit() and int(timeZone) <= len(TIME_ZONES) and int(timeZone) > 0:
                 timeZone = pytz.timezone(list(TIME_ZONES.values())[int(timeZone) - 1])

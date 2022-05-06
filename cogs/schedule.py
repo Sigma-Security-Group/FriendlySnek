@@ -1259,7 +1259,7 @@ class Schedule(commands.Cog):
     async def workshop(self, ctx: SlashContext):
         await self.scheduleWorkshop(ctx)
 
-    async def scheduleWorkshop(self, ctx):
+    async def scheduleWorkshop(self, ctx) -> None:
         await ctx.send(RESPONSE_EVENT_PROGRESS.format("workshop"))
         log.info(LOG_CREATING_EVENT.format(ctx.author.display_name, ctx.author.name, ctx.author.discriminator, "a workshop"))
 
@@ -1301,16 +1301,16 @@ class Schedule(commands.Cog):
                         if templateNumber.isdigit() and int(templateNumber) <= len(workshopTemplates) and int(templateNumber) > 0:
                             workshopTemplate = workshopTemplates[int(templateNumber) - 1]
                             try:
-                                msg = await dmChannel.send(SCHEDULE_EVENT_CONFIRM_DELETE.format(f"template: `{workshopTemplate['name']}`"))
+                                msg = await dmChannel.send(embed=Embed(title=SCHEDULE_EVENT_CONFIRM_DELETE.format(f"template: `{workshopTemplate['name']}`"), color=Colour.orange()))
                             except Exception as e:
                                 print(ctx.author, e)
-                                return False
+                                return
                             await msg.add_reaction("🗑")
                             try:
                                 await self.bot.wait_for("reaction_add", timeout=TIME_ONE_MIN, check=lambda reaction, user, author=ctx.author: reaction.emoji == "🗑" and user == author)
                             except asyncio.TimeoutError:
                                 await ctx.author.send(embed=TIMEOUT_EMBED)
-                                return False
+                                return
                             log.warning(LOG_TEMPLATE_DELETED.format(ctx.author.display_name, ctx.author.name, ctx.author.discriminator, workshopTemplate["name"]))
                             invalidInput = False
 
@@ -1335,15 +1335,10 @@ class Schedule(commands.Cog):
                             log.info(LOG_TEMPLATE_EDITING.format(ctx.author.display_name, ctx.author.name, ctx.author.discriminator, workshopTemplate["name"]))
                             invalidInput = False
                             await self.editEvent(ctx.author, workshopTemplate, isTemplateEdit=True)
-                            # editEventOutput = await self.editEvent(ctx.author, workshopTemplate, isTemplateEdit=True)
-                            # print(editEventOutput)
-                            # if not editEventOutput:
-                            #     return
 
                             workshopTemplates[int(templateNumber) - 1] = workshopTemplate
                             with open(WORKSHOP_TEMPLATES_FILE, "w") as f:
                                 json.dump(workshopTemplates, f, indent=4)
-                            #await dmChannel.send(embed=Embed(title=CHECK_EDITED.format("Template"), color=Colour.green()))
                             return
                         else:
                             invalidInput = True
@@ -1688,7 +1683,7 @@ class Schedule(commands.Cog):
                                 return
                         except asyncio.TimeoutError:
                             await dmChannel.send(embed=TIMEOUT_EMBED)
-                            return False
+                            return
                         if keepStartTime in ("yes", "y"):
                             startTimeOk = True
                 else:
@@ -2139,10 +2134,11 @@ class Schedule(commands.Cog):
             timeZone = response.content.strip()
             with open(MEMBER_TIME_ZONES_FILE) as f:
                 memberTimeZones = json.load(f)
+            isInvalidTimeZone = False
             if timeZone.lower() == "cancel":
                 await self.cancelCommand(dmChannel, "Time zone preferences")
                 return
-            if timeZone.isdigit() and int(timeZone) <= len(TIME_ZONES) and int(timeZone) > 0:
+            elif timeZone.isdigit() and int(timeZone) <= len(TIME_ZONES) and int(timeZone) > 0:
                 timeZone = pytz.timezone(list(TIME_ZONES.values())[int(timeZone) - 1])
                 memberTimeZones[str(ctx.author.id)] = timeZone.zone
             else:
@@ -2150,12 +2146,17 @@ class Schedule(commands.Cog):
                     timeZone = pytz.timezone(timeZone)
                     memberTimeZones[str(ctx.author.id)] = timeZone.zone
                 except pytz.exceptions.UnknownTimeZoneError:
+                    isInvalidTimeZone = True
                     if str(ctx.author.id) in memberTimeZones:
                         del memberTimeZones[str(ctx.author.id)]
             with open(MEMBER_TIME_ZONES_FILE, "w") as f:
                 json.dump(memberTimeZones, f, indent=4)
-            embed = Embed(title=CHECK_CHANGED.format("Time zone preferences"), color=Colour.green())
-            await dmChannel.send(embed=embed)
+            if isInvalidTimeZone:
+                await self.cancelCommand(dmChannel, "Invalid time zone - Time zone preferences")
+                return
+            else:
+                embed = Embed(title=CHECK_CHANGED.format("Time zone preferences"), color=Colour.green())
+                await dmChannel.send(embed=embed)
         except asyncio.TimeoutError:
             await dmChannel.send(embed=TIMEOUT_EMBED)
             return

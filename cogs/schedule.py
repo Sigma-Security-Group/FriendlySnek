@@ -457,11 +457,10 @@ class Schedule(commands.Cog):
             reservedRole = response.content.strip()
             if reservedRole.isdigit() and int(reservedRole) <= len(vacantRoles) and int(reservedRole) > 0:
                 reservedRole = vacantRoles[int(reservedRole) - 1]
-            elif reservedRole.strip().lower() == "none":
+            elif reservedRole.lower() == "none":
                 reservedRole = None
             else:
-                embed = Embed(title=ABORT_CANCELED.format("Role reservation"), color=Colour.red())
-                await dmChannel.send(embed=embed)
+                self.cancelCommand("Role reservation")
                 return
         except asyncio.TimeoutError:
             await dmChannel.send(embed=TIMEOUT_EMBED)
@@ -573,7 +572,7 @@ class Schedule(commands.Cog):
                     await dmChannel.send(embed=TIMEOUT_EMBED)
                     return False
             hours = int(duration.split("h")[0].strip()) if "h" in duration else 0
-            minutes = int(duration.split("h")[-1].replace("m", "").strip()) if duration.strip()[-1] != "h" else 0
+            minutes = int(duration.split("h")[-1].replace("m", "").strip()) if duration[-1] != "h" else 0
             event["duration"] = f"{(str(hours) + 'h')*(hours != 0)}{' '*(hours != 0 and minutes !=0)}{(str(minutes) + 'm')*(minutes != 0)}"
             if not isTemplateEdit:
                 startTime = UTC.localize(datetime.strptime(event["time"], EVENT_TIME_FORMAT))
@@ -726,7 +725,7 @@ class Schedule(commands.Cog):
                     if maxPlayers.lower() == "cancel":
                         await self.cancelCommand(dmChannel, "Event editing")
                         return False
-                    if maxPlayers.isdigit() and int(maxPlayers) <= MAX_SERVER_ATTENDANCE:
+                    elif maxPlayers.isdigit() and int(maxPlayers) <= MAX_SERVER_ATTENDANCE:
                         maxPlayers = int(maxPlayers)
                     elif maxPlayers.lower() == "anonymous":
                         maxPlayers = 0
@@ -2114,52 +2113,57 @@ class Schedule(commands.Cog):
             await ctx.send(RESPONSE_EVENT_DONE.format("Event", SERVER, SCHEDULE, events[-1]["messageId"]))
 
     @cog_ext.cog_slash(name="changetimezone", description=CHANGE_TIME_ZONE_COMMAND_DESCRIPTION, guild_ids=[SERVER])
-    async def changeTimeZone(self, ctx: SlashContext):
+    async def changeTimeZone(self, ctx: SlashContext) -> None:
         await ctx.send(RESPONSE_TIME_ZONE)
+        log.info(LOG_UPDATING.format(ctx.author.display_name, ctx.author.name, ctx.author.discriminator, "its time zone preferences"))
 
         with open(MEMBER_TIME_ZONES_FILE) as f:
             memberTimeZones = json.load(f)
 
-        embed = Embed(title=SCHEDULE_TIME_ZONE_QUESTION, description=(SCHEDULE_EVENT_SELECTED_TIME_ZONE.format(memberTimeZones[str(ctx.author.id)]) if str(ctx.author.id) in memberTimeZones else SCHEDULE_TIME_ZONE_UNSET) + SCHEDULE_TIME_ZONE_INFORMATION, color=Colour.gold())
-        embed.add_field(name=SCHEDULE_TIME_ZONE_POPULAR, value="\n".join(f"**{idx}** {tz}" for idx, tz in enumerate(TIME_ZONES, 1)))
-        embed.set_footer(text=SCHEDULE_CANCEL)
-        try:
-            msg = await ctx.author.send(embed=embed)
-        except Exception as e:
-            print(ctx.author, e)
-            return
-        dmChannel = msg.channel
-        try:
-            response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
-            timeZone = response.content.strip()
-            with open(MEMBER_TIME_ZONES_FILE) as f:
-                memberTimeZones = json.load(f)
-            isInvalidTimeZone = False
-            if timeZone.lower() == "cancel":
-                await self.cancelCommand(dmChannel, "Time zone preferences")
+        timezoneOk = False
+        color = Colour.gold()
+        while not timezoneOk:
+            embed = Embed(title=SCHEDULE_TIME_ZONE_QUESTION, description=(SCHEDULE_EVENT_SELECTED_TIME_ZONE.format(memberTimeZones[str(ctx.author.id)]) if str(ctx.author.id) in memberTimeZones else SCHEDULE_TIME_ZONE_UNSET) + SCHEDULE_TIME_ZONE_INFORMATION, color=color)
+            embed.add_field(name=SCHEDULE_TIME_ZONE_POPULAR, value="\n".join(f"**{idx}** {tz}" for idx, tz in enumerate(TIME_ZONES, 1)))
+            embed.set_footer(text=SCHEDULE_CANCEL)
+            color = Colour.red()
+            try:
+                msg = await ctx.author.send(embed=embed)
+            except Exception as e:
+                print(ctx.author, e)
                 return
-            elif timeZone.isdigit() and int(timeZone) <= len(TIME_ZONES) and int(timeZone) > 0:
-                timeZone = pytz.timezone(list(TIME_ZONES.values())[int(timeZone) - 1])
-                memberTimeZones[str(ctx.author.id)] = timeZone.zone
-            else:
-                try:
-                    timeZone = pytz.timezone(timeZone)
+            dmChannel = msg.channel
+            try:
+                response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
+                timeZone = response.content.strip()
+                with open(MEMBER_TIME_ZONES_FILE) as f:
+                    memberTimeZones = json.load(f)
+                if timeZone.lower() == "cancel":
+                    await self.cancelCommand(dmChannel, "Time zone preferences")
+                    return
+                elif timeZone.isdigit() and int(timeZone) <= len(TIME_ZONES) and int(timeZone) > 0:
+                    timeZone = pytz.timezone(list(TIME_ZONES.values())[int(timeZone) - 1])
                     memberTimeZones[str(ctx.author.id)] = timeZone.zone
-                except pytz.exceptions.UnknownTimeZoneError:
-                    isInvalidTimeZone = True
-                    if str(ctx.author.id) in memberTimeZones:
-                        del memberTimeZones[str(ctx.author.id)]
-            with open(MEMBER_TIME_ZONES_FILE, "w") as f:
-                json.dump(memberTimeZones, f, indent=4)
-            if isInvalidTimeZone:
-                await self.cancelCommand(dmChannel, "Invalid time zone - Time zone preferences")
+                    timezoneOk = True
+                else:
+                    try:
+                        timeZone = pytz.timezone(timeZone)
+                        memberTimeZones[str(ctx.author.id)] = timeZone.zone
+                        timezoneOk = True
+                    except pytz.exceptions.UnknownTimeZoneError:
+                        if str(ctx.author.id) in memberTimeZones:
+                            del memberTimeZones[str(ctx.author.id)]
+
+                if timezoneOk:
+                    with open(MEMBER_TIME_ZONES_FILE, "w") as f:
+                        json.dump(memberTimeZones, f, indent=4)
+                    embed = Embed(title=CHECK_CHANGED.format("Time zone preferences"), color=Colour.green())
+                    await dmChannel.send(embed=embed)
+                    return
+
+            except asyncio.TimeoutError:
+                await dmChannel.send(embed=TIMEOUT_EMBED)
                 return
-            else:
-                embed = Embed(title=CHECK_CHANGED.format("Time zone preferences"), color=Colour.green())
-                await dmChannel.send(embed=embed)
-        except asyncio.TimeoutError:
-            await dmChannel.send(embed=TIMEOUT_EMBED)
-            return
 
 def setup(bot):
     bot.add_cog(Schedule(bot))

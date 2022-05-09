@@ -120,7 +120,7 @@ SCHEDULE_EVENT_RESERVABLE_DIALOG_EDIT = "\n(Editing the name of a role will make
 SCHEDULE_EVENT_RESERVABLE_LIST_CURRENT = "Current reservable roles"
 
 SCHEDULE_RESERVABLE_QUESTION = "Which role would you like to reserve?"
-SCHEDULE_RESERVABLE_PROMPT = "Enter a number from the list, or `none` to free up the role you currently have reserved. If you enter anything invalid it will cancel the role reservation."
+SCHEDULE_RESERVABLE_PROMPT = "Enter a number from the list\nEnter `none` un-reserve any role you have occupied.\nIf you enter anything invalid it will cancel the role reservation."
 
 ### Map
 SCHEDULE_EVENT_MAP_PROMPT = ":globe_with_meridians: Choose a map"
@@ -181,6 +181,7 @@ LOG_EDITING_EVENT = "{0} ({1}#{2}) is editing {3}."
 LOG_EDITED_EVENT = "{0} ({1}#{2}) edited {3}."
 LOG_CREATING_EVENT = "{0} ({1}#{2}) is creating {3}."
 LOG_CREATED_EVENT = "{0} ({1}#{2}) created {3}."
+LOG_UPDATING = "{0} ({1}#{2}) updating {3}."
 LOG_CHECKING = "Checking {0}..."
 LOG_DELETE_EVENT_ACTION = "Auto deleting: {0}."
 LOG_DELETE_EVENT_NONE = "No events were auto deleted!"

@@ -673,7 +673,7 @@ class Schedule(commands.Cog):
                     if reservables.lower() == "cancel":
                         await self.cancelCommand(dmChannel, "Event editing")
                         return False
-                    reservableRolesNo = reservables.lower() in ("none", "no", "n")
+                    reservableRolesNo = reservables.lower() in ("none", "n")
                 except asyncio.TimeoutError:
                     await dmChannel.send(embed=TIMEOUT_EMBED)
                     return False
@@ -991,7 +991,7 @@ class Schedule(commands.Cog):
             if reservables.lower() == "cancel":
                 await self.cancelCommand(dmChannel, "Operation scheduling")
                 return
-            reservableRolesNo = reservables.lower() in ("none", "no", "n")
+            reservableRolesNo = reservables.lower() in ("none", "n")
         except asyncio.TimeoutError:
             await dmChannel.send(embed=TIMEOUT_EMBED)
             return
@@ -1416,7 +1416,7 @@ class Schedule(commands.Cog):
                 if reservables.lower() == "cancel":
                     await self.cancelCommand(dmChannel, "Workshop scheduling")
                     return
-                reservableRolesNo = reservables.lower() in ("none", "no", "n")
+                reservableRolesNo = reservables.lower() in ("none", "n")
             except asyncio.TimeoutError:
                 await dmChannel.send(embed=TIMEOUT_EMBED)
                 return
@@ -1879,7 +1879,7 @@ class Schedule(commands.Cog):
             if reservables.lower() == "cancel":
                 await self.cancelCommand(dmChannel, "Event scheduling")
                 return
-            reservableRolesNo = reservables.lower() in ("none", "no", "n")
+            reservableRolesNo = reservables.lower() in ("none", "n")
         except asyncio.TimeoutError:
             await dmChannel.send(embed=TIMEOUT_EMBED)
             return

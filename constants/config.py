@@ -115,7 +115,7 @@ SCHEDULE_EVENT_URL_DESCRIPTION = "E.g. Signup sheet, Briefing, OPORD, etc."
 
 ### Reservable Roles
 SCHEDULE_EVENT_RESERVABLE = "Reservable Roles"
-SCHEDULE_EVENT_RESERVABLE_DIALOG = "Enter `none`, `no`, or `n` if there are none.\n\nOtherwise, type each reservable role in a new line (Shift + Enter)."
+SCHEDULE_EVENT_RESERVABLE_DIALOG = "Enter `none`, or `n` if there are none.\n\nOtherwise, type each reservable role in a new line (Shift + Enter)."
 SCHEDULE_EVENT_RESERVABLE_DIALOG_EDIT = "\n(Editing the name of a role will make it vacant, but roles which keep their exact names will keep their reservations)."
 SCHEDULE_EVENT_RESERVABLE_LIST_CURRENT = "Current reservable roles"
 

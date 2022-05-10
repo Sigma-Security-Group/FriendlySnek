@@ -74,7 +74,6 @@ SCHEDULE_REMINDER_INGAME = " If you are in-game, please hit accept ✅ on the <#
 ## Responses
 CHECK_CREATED = "✅ {0} created!"
 CHECK_EDITED = "✅ {0} edited!"
-CHECK_CHANGED = "✅ {0} changed!"
 CHECK_DELETED = "✅ {0} deleted!"
 CHECK_COMPLETED = "✅ {0} completed!"
 ABORT_CANCELED = "❌ {0} canceled!"
@@ -134,10 +133,10 @@ SCHEDULE_EVENT_TIME_ZONE_QUESTION = ":clock1: It appears that you haven't set yo
 SCHEDULE_EVENT_TIME_ZONE_PROMPT = "Enter `none`, a number from the list or any time zone name from the column \"**TZ DATABASE NAME**\" in this [Wikipedia article](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones).\nIf you enter `none` or something invalid, UTC will be assumed and you will be asked again the next time you schedule an event. You can change or delete your preferred time zone with `/changetimezone`."
 SCHEDULE_EVENT_SELECTED_TIME_ZONE = "Your current time zone preference is `{0}`."
 
-SCHEDULE_TIME_ZONE_QUESTION = ":clock1: What is your preferred time zone?"
+SCHEDULE_TIME_ZONE_QUESTION = ":clock1: What's your preferred time zone?"
 SCHEDULE_TIME_ZONE_UNSET = "You don't have a preferred time zone set."
 SCHEDULE_TIME_ZONE_POPULAR = "Popular Time Zones"
-SCHEDULE_TIME_ZONE_INFORMATION = "\nEnter `none`, a number from the list, or any time zone name from the column \"**TZ DATABASE NAME**\" in this [Wikipedia article](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones).\nIf you enter `none` or something invalid, your current preference will be deleted, and you will be asked again the next time you schedule an event. You can change or delete your preferred time zone with `/changetimezone`."
+SCHEDULE_TIME_ZONE_INFORMATION = "\n\nEnter a number from the list below.\nEnter any time zone name from the column \"**TZ DATABASE NAME**\" in this [Wikipedia article](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones).\nEnter `none` to erase current preferences."
 
 ### Time
 SCHEDULE_EVENT_TIME = "What is the time of the {0}?"

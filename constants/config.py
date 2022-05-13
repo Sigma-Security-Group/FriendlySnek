@@ -136,7 +136,8 @@ SCHEDULE_EVENT_SELECTED_TIME_ZONE = "Your current time zone preference is `{0}`.
 SCHEDULE_TIME_ZONE_QUESTION = ":clock1: What's your preferred time zone?"
 SCHEDULE_TIME_ZONE_UNSET = "You don't have a preferred time zone set."
 SCHEDULE_TIME_ZONE_POPULAR = "Popular Time Zones"
-SCHEDULE_TIME_ZONE_INFORMATION = "\n\nEnter a number from the list below.\nEnter any time zone name from the column \"**TZ DATABASE NAME**\" in this [Wikipedia article](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones).\nEnter `none` to erase current preferences."
+SCHEDULE_TIME_ZONE_INFORMATION = "\n\nEnter a number from the list below.\nEnter any time zone name from the column \"**TZ DATABASE NAME**\" in this [Wikipedia article](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones)."
+SCHEDULE_TIME_ZONE_OPTION_ERASE = "\nEnter `none` to erase current preferences."
 
 ### Time
 SCHEDULE_EVENT_TIME = "What is the time of the {0}?"

@@ -750,7 +750,7 @@ class Schedule(commands.Cog):
                         except pytz.exceptions.UnknownTimeZoneError:
                             timeZone = UTC
                     else:
-                        timeZoneOutput = await self.changeTimeZone(author)
+                        timeZoneOutput = await self.changeTimeZone(author, isCommand=False)
                         if not timeZoneOutput:
                             await self.cancelCommand(dmChannel, "Event editing")
                             return False
@@ -758,7 +758,6 @@ class Schedule(commands.Cog):
                             memberTimeZones = json.load(f)
 
                     timeZone = pytz.timezone(memberTimeZones[str(author.id)])
-                    print(timeZone)
                     startTimeOk = False
                     while not startTimeOk:
                         embed = Embed(title=SCHEDULE_EVENT_TIME.format("event"), description=SCHEDULE_EVENT_SELECTED_TIME_ZONE.format(timeZone.zone), color=Colour.gold())
@@ -2098,11 +2097,11 @@ class Schedule(commands.Cog):
     @cog_ext.cog_slash(name="changetimezone", description=CHANGE_TIME_ZONE_COMMAND_DESCRIPTION, guild_ids=[SERVER])
     async def timeZone(self, ctx: SlashContext) -> None:
         await ctx.send(RESPONSE_TIME_ZONE)
-        timeZoneOutput = await self.changeTimeZone(ctx.author)
+        timeZoneOutput = await self.changeTimeZone(ctx.author, isCommand=True)
         if not timeZoneOutput:
             await self.cancelCommand(ctx.author.dm_channel, "Time zone preferences")
 
-    async def changeTimeZone(self, author) -> bool:
+    async def changeTimeZone(self, author, isCommand:bool) -> bool:
         """
             Changing a personal time zone.
 
@@ -2120,7 +2119,7 @@ class Schedule(commands.Cog):
         timezoneOk = False
         color = Colour.gold()
         while not timezoneOk:
-            embed = Embed(title=SCHEDULE_TIME_ZONE_QUESTION, description=(SCHEDULE_EVENT_SELECTED_TIME_ZONE.format(memberTimeZones[str(author.id)]) if str(author.id) in memberTimeZones else SCHEDULE_TIME_ZONE_UNSET) + SCHEDULE_TIME_ZONE_INFORMATION, color=color)
+            embed = Embed(title=SCHEDULE_TIME_ZONE_QUESTION, description=(SCHEDULE_EVENT_SELECTED_TIME_ZONE.format(memberTimeZones[str(author.id)]) if str(author.id) in memberTimeZones else SCHEDULE_TIME_ZONE_UNSET) + SCHEDULE_TIME_ZONE_INFORMATION + SCHEDULE_TIME_ZONE_OPTION_ERASE * isCommand, color=color)
             embed.add_field(name=SCHEDULE_TIME_ZONE_POPULAR, value="\n".join(f"**{idx}** {tz}" for idx, tz in enumerate(TIME_ZONES, 1)))
             embed.set_footer(text=SCHEDULE_CANCEL)
             color = Colour.red()
@@ -2150,7 +2149,7 @@ class Schedule(commands.Cog):
                     except pytz.exceptions.UnknownTimeZoneError:
                         if str(author.id) in memberTimeZones:
                             del memberTimeZones[str(author.id)]
-                        if timeZone.lower() == "none":
+                        if timeZone.lower() == "none" and isCommand:
                             isInputNotNone = False
                             timezoneOk = True
 

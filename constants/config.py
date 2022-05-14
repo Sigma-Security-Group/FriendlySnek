@@ -89,10 +89,10 @@ SCHEDULE_INPUT_ERROR = "❌ Invalid input!"
 SCHEDULE_BOP_NO_SPACE = "❌ Sorry, seems like there's no space left in the :b:op!"
 SCHEDULE_RESERVABLE_SCHEDULE_ERROR = "❌ Schedule was updated while you were reserving a role. Try again!"
 SCHEDULE_EVENT_EDIT_ERROR = "❌ Schedule was updated while you were editing your operation. Try again!"
-SCHEDULE_EVENT_ERROR_COLLISION = "❌ There is a collision with another event!"
-SCHEDULE_EVENT_ERROR_PADDING_EARLY = "❌ Your operation would start less than an hour after the previous event ends!"
-SCHEDULE_EVENT_ERROR_PADDING_LATE = "❌ There is another event starting less than an hour after this one ends!"
-SCHEDULE_EVENT_ERROR_DESCRIPTION = "Check the schedule and try inputting a another time!"
+SCHEDULE_EVENT_ERROR_COLLISION = "❌ This time collides with the event: `{0}`!"
+SCHEDULE_EVENT_ERROR_PADDING_EARLY = "❌ Your operation would start less than an hour after `{0}` ends!"
+SCHEDULE_EVENT_ERROR_PADDING_LATE = "❌ `{0}` starts less than an hour after your event ends!"
+SCHEDULE_EVENT_ERROR_DESCRIPTION = "Enter `edit` to input a new time.\nEnter `override` to override this warning."
 
 ## Event
 SCHEDULE_EVENT_EDIT = ":pencil2: What would you like to edit?"
@@ -119,7 +119,7 @@ SCHEDULE_EVENT_RESERVABLE_DIALOG_EDIT = "\n(Editing the name of a role will make
 SCHEDULE_EVENT_RESERVABLE_LIST_CURRENT = "Current reservable roles"
 
 SCHEDULE_RESERVABLE_QUESTION = "Which role would you like to reserve?"
-SCHEDULE_RESERVABLE_PROMPT = "Enter a number from the list\nEnter `none` un-reserve any role you have occupied.\nIf you enter anything invalid it will cancel the role reservation."
+SCHEDULE_RESERVABLE_PROMPT = "Enter a number from the list.\nEnter `none` un-reserve any role you have occupied."
 
 ### Map
 SCHEDULE_EVENT_MAP_PROMPT = ":globe_with_meridians: Choose a map"
@@ -145,7 +145,7 @@ SCHEDULE_EVENT_TIME_FORMAT = "E.g. `2022-04-18 11:36 AM`."
 SCHEDULE_EVENT_TIME_TOMORROW = "Time was detected to be in the past 24h and was set to tomorrow."
 SCHEDULE_EVENT_TIME_TOMORROW_PREVIEW = "Input time: <t:{0}:F>\nSelected time: <t:{1}:F>."
 SCHEDULE_EVENT_TIME_PAST_QUESTION = "It appears that the selected time is in the past. Are you sure you want to set it to this?"
-SCHEDULE_EVENT_TIME_PAST_PROMPT = "Enter `yes` or `y` to keep this time. Enter anything else to change it to another time."
+SCHEDULE_EVENT_TIME_PAST_PROMPT = "Enter `yes` or `y` to keep this time.\nEnter anything else to change it to another time."
 
 ### Duration
 SCHEDULE_EVENT_DURATION_QUESTION = "What is the duration of the {0}?"
@@ -154,7 +154,7 @@ SCHEDULE_EVENT_DURATION_REGEX = r"^\s*((([1-9]\d*)?\d\s*h(\s*([0-5])?\d\s*m?)?)|
 
 ### Templates
 SCHEDULE_EVENT_TEMPLATE_TITLE = ":clipboard: Templates"
-SCHEDULE_EVENT_TEMPLATE_DESCRIPTION = "Enter a template number or `none` to make a workshop from scratch.\n\nEdit template: `edit` + template number. E.g. `edit 2`.\nDelete template: `delete` + template number. E.g. `delete 4`. **IRREVERSIBLE!**"
+SCHEDULE_EVENT_TEMPLATE_DESCRIPTION = "Enter a template number.\nEnter `none` to make a workshop from scratch.\n\nEdit template: `edit` + template number. E.g. `edit 2`.\nDelete template: `delete` + template number. E.g. `delete 4`. **IRREVERSIBLE!**"
 SCHEDULE_EVENT_TEMPLATE_LIST_TITLE = "Templates"
 SCHEDULE_EVENT_TEMPLATE_ACTION_REGEX = r"(edit |delete )?\d+"
 SCHEDULE_EVENT_TEMPLATE_SAVE_QUESTION = "Do you wish to save this workshop as a template?"

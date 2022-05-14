@@ -80,7 +80,7 @@ ABORT_CANCELED = "❌ {0} canceled!"
 SCHEDULE_TEMPLATE_SAVED = "✅ Template saved as `{0}`!"
 SCHEDULE_TEMPLATE_DISCARD = "❌ Template not saved!"
 RESPONSE_EVENT_PROGRESS = "Scheduling... Standby for {0}..."
-RESPONSE_EVENT_DONE = "{0} on [schedule](<https://discord.com/channels/{1}/{2}/{3}>)!"
+RESPONSE_EVENT_DONE = "The {0} `{1}` is now on [schedule](<https://discord.com/channels/{2}/{3}/{4}>)!"
 RESPONSE_REFRESHING = "Refreshing <#{0}>..."
 RESPONSE_TIME_ZONE = "Changing time zone preferences..."
 
@@ -177,20 +177,11 @@ SCHEDULE_CANCEL = "Enter `cancel` to abort this command."
 
 ## Logging
 LOG_COULDNT_START = "Couldn't start {0}!"
-LOG_EDITING_EVENT = "{0} ({1}#{2}) is editing {3}."
 LOG_EDITED_EVENT = "{0} ({1}#{2}) edited {3}."
-LOG_CREATING_EVENT = "{0} ({1}#{2}) is creating {3}."
-LOG_CREATED_EVENT = "{0} ({1}#{2}) created {3}."
-LOG_UPDATING = "{0} ({1}#{2}) updating {3}."
+LOG_CREATING_EVENT = "{0} ({1}#{2}) is creating {3}..."
+LOG_CREATED_EVENT = "{0} ({1}#{2}) created {3}!"
 LOG_CHECKING = "Checking {0}..."
-LOG_DELETE_EVENT_ACTION = "Auto deleting: {0}."
-LOG_DELETE_EVENT_NONE = "No events were auto deleted!"
-LOG_NOTIFICATION_ACCEPTED = "Pinging members in accepted not in VC: {0}..."
-LOG_NOTIFICATION_VC = "Pinging members in VC not in accepted: {0}..."
 LOG_SCHEDULE_UPDATE_ERROR = "{0} ({1}#{2}) was {3} but schedule was updated!"
-LOG_REFRESHING_SCHEDULE = "{0} ({1}#{2}) is refreshing the schedule..."
-LOG_TEMPLATE_EDITING = "{0} ({1}#{2}) is editing the workshop template: {3}..."
-LOG_TEMPLATE_DELETED = "{0} ({1}#{2}) deleted the workshop template: {3}!"
 
 
 ####################

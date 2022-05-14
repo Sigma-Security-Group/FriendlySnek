@@ -160,7 +160,7 @@ class Schedule(commands.Cog):
             for event in events:
                 endTime = UTC.localize(datetime.strptime(event["endTime"], EVENT_TIME_FORMAT))
                 if utcNow > endTime + timedelta(minutes=69):
-                    log.debug(LOG_DELETE_EVENT_ACTION.format(event["title"]))
+                    log.debug(f"Auto deleting: {event['title']}.")
                     deletedEvents.append(event)
                     eventMessage = await self.bot.get_channel(SCHEDULE).fetch_message(event["messageId"])
                     await eventMessage.delete()
@@ -169,7 +169,7 @@ class Schedule(commands.Cog):
                     if event["maxPlayers"] != 0:
                         await self.saveEventToHistory(event, autoDeleted=True)
             if len(deletedEvents) == 0:
-                log.debug(LOG_DELETE_EVENT_NONE)
+                log.debug("No events were auto deleted!")
             for event in deletedEvents:
                 events.remove(event)
             with open(EVENTS_FILE, "w") as f:
@@ -210,10 +210,10 @@ class Schedule(commands.Cog):
                     with open(EVENTS_FILE, "w") as f:
                         json.dump(events, f, indent=4)
                     if len(acceptedMembersNotOnline) > 0:
-                        log.debug(LOG_NOTIFICATION_ACCEPTED.format([member.display_name for member in acceptedMembersNotOnline]))
+                        log.debug(f"Pinging members in accepted not in VC: {[member.display_name for member in acceptedMembersNotOnline]}...")
                         await channel.send(" ".join(member.mention for member in acceptedMembersNotOnline) + SCHEDULE_REMINDER_VOICE.format(COMMAND, DEPLOYED, event["type"].lower(), SCHEDULE))
                     if len(onlineMembersNotAccepted) > 0:
-                        log.debug(LOG_NOTIFICATION_VC.format([member.display_name for member in onlineMembersNotAccepted]))
+                        log.debug(f"Pinging members in VC not in accepted: {[member.display_name for member in onlineMembersNotAccepted]}...")
                         await channel.send(" ".join(member.mention for member in onlineMembersNotAccepted) + SCHEDULE_REMINDER_INGAME.format(SCHEDULE))
         except Exception as e:
             print(e)
@@ -231,7 +231,7 @@ class Schedule(commands.Cog):
                         })
     async def refreshSchedule(self, ctx: SlashContext):
         await ctx.send(RESPONSE_REFRESHING.format(SCHEDULE))
-        log.info(LOG_REFRESHING_SCHEDULE.format(ctx.author.display_name, ctx.author.name, ctx.author.discriminator))
+        log.info(f"{ctx.author.display_name} ({ctx.author.name}#{ctx.author.discriminator}) is refreshing the schedule...")
         await self.updateSchedule()
 
     async def updateSchedule(self):
@@ -418,7 +418,16 @@ class Schedule(commands.Cog):
     async def cancelCommand(self, channel, abortText:str) -> None:
         await channel.send(embed=Embed(title=ABORT_CANCELED.format(abortText), color=Colour.red()))
 
-    async def reserveRole(self, member, event):
+    async def reserveRole(self, member, event) -> None:
+        """
+            Reserving a single role on an event.
+
+            Parameters:
+            isTemplateEdit (bool): If the event is a template.
+
+            Returns:
+            None
+        """
         reservationTime = datetime.utcnow()
         guild = self.bot.get_guild(SERVER)
 
@@ -503,7 +512,7 @@ class Schedule(commands.Cog):
         embed.add_field(name="**6** Max Players", value=f"```txt\n{maxPlayersUser}\n```", inline=False)
 
         if not isTemplateEdit:
-            log.info(LOG_EDITING_EVENT.format(author.display_name, author.name, author.discriminator, "an event"))
+            log.info(f"{author.display_name} ({author.name}#{author.discriminator}) is editing the event: {event['title']}")
             embed.insert_field_at(0, name="**0** Type", value=f"```txt\n{event['type']}\n```", inline=False)
             embed.add_field(name="**7** Time", value=f"<t:{round(UTC.localize(datetime.strptime(event['time'], EVENT_TIME_FORMAT)).timestamp())}:F>", inline=False)
             embed.add_field(name="**8** Duration", value=f"```txt\n{event['duration']}\n```", inline=False)
@@ -856,7 +865,7 @@ class Schedule(commands.Cog):
             if editingTime > self.lastUpdate:
                 embed = Embed(title=CHECK_EDITED.format(event["type"]), color=Colour.green())
                 await dmChannel.send(embed=embed)
-                log.info(LOG_EDITED_EVENT.format(author.display_name, author.name, author.discriminator, "an event"))
+                log.info(f"{author.display_name} ({author.name}#{author.discriminator}) edited the event: {event['title']}.")
                 return reorderEvents
             else:
                 embed = Embed(title=SCHEDULE_EVENT_EDIT_ERROR, color=Colour.red())
@@ -866,11 +875,11 @@ class Schedule(commands.Cog):
         else:  # Template
             embed = Embed(title=CHECK_EDITED.format("Template"), color=Colour.green())
             await dmChannel.send(embed=embed)
-            log.warning(LOG_EDITED_EVENT.format(author.display_name, author.name, author.discriminator, f"the template: {event['name']}"))
+            log.warning(f"{author.display_name} ({author.name}#{author.discriminator}) edited the template: {event['name']}!")
 
-    async def deleteEvent(self, author, message, event):
+    async def deleteEvent(self, author, message, event) -> bool:
         try:
-            msg = await author.send(embed=Embed(title=SCHEDULE_EVENT_CONFIRM_DELETE.format("event"), color=Colour.orange()))
+            msg = await author.send(embed=Embed(title=SCHEDULE_EVENT_CONFIRM_DELETE.format(f"{event['type'].lower()}: `{event['title']}`"), color=Colour.orange()))
         except Exception as e:
             print(author, e)
             return False
@@ -1223,14 +1232,14 @@ class Schedule(commands.Cog):
 
         embed = Embed(title=CHECK_CREATED.format("Operation"), color=Colour.green())
         await dmChannel.send(embed=embed)
-        log.info(LOG_CREATED_EVENT.format(ctx.author.display_name, ctx.author.name, ctx.author.discriminator, "an operation"))
+        log.info(LOG_CREATED_EVENT.format(ctx.author.display_name, ctx.author.name, ctx.author.discriminator, f"the operation: {title}"))
 
         await self.updateSchedule()
 
         if newEvent is not None:
             with open(EVENTS_FILE) as f:
                 events = json.load(f)
-            await ctx.send(RESPONSE_EVENT_DONE.format(":b:op", SERVER, SCHEDULE, events[-1]["messageId"]))
+            await ctx.send(RESPONSE_EVENT_DONE.format(":b:op", newEvent["title"], SERVER, SCHEDULE, events[-1]["messageId"]))
 
     @cog_ext.cog_slash(name="ws", description=SCHEDULE_COMMAND_DESCRIPTION.format("a workshop"), guild_ids=[SERVER])
     async def ws(self, ctx: SlashContext):
@@ -1292,7 +1301,7 @@ class Schedule(commands.Cog):
                             except asyncio.TimeoutError:
                                 await ctx.author.send(embed=TIMEOUT_EMBED)
                                 return
-                            log.warning(LOG_TEMPLATE_DELETED.format(ctx.author.display_name, ctx.author.name, ctx.author.discriminator, workshopTemplate["name"]))
+                            log.warning(f"{ctx.author.display_name} ({ctx.author.name}#{ctx.author.discriminator}) deleted the workshop template: {workshopTemplate['name']}!")
                             invalidInput = False
 
                             with open(WORKSHOP_TEMPLATES_DELETED_FILE) as f:
@@ -1313,7 +1322,7 @@ class Schedule(commands.Cog):
                         templateNumber = templateAction.split(" ")[-1]
                         if templateNumber.isdigit() and int(templateNumber) <= len(workshopTemplates) and int(templateNumber) > 0:
                             workshopTemplate = workshopTemplates[int(templateNumber) - 1]
-                            log.info(LOG_TEMPLATE_EDITING.format(ctx.author.display_name, ctx.author.name, ctx.author.discriminator, workshopTemplate["name"]))
+                            log.info(f"{ctx.author.display_name} ({ctx.author.name}#{ctx.author.discriminator}) is editing the workshop template: {workshopTemplate['name']}...")
                             invalidInput = False
                             await self.editEvent(ctx.author, workshopTemplate, isTemplateEdit=True)
 
@@ -1779,14 +1788,14 @@ class Schedule(commands.Cog):
 
         embed = Embed(title=CHECK_CREATED.format("Workshop"), color=Colour.green())
         await dmChannel.send(embed=embed)
-        log.info(LOG_CREATED_EVENT.format(ctx.author.display_name, ctx.author.name, ctx.author.discriminator, "a workshop"))
+        log.info(LOG_CREATED_EVENT.format(ctx.author.display_name, ctx.author.name, ctx.author.discriminator, f"the workshop: {title}"))
 
         await self.updateSchedule()
 
         if newEvent is not None:
             with open(EVENTS_FILE) as f:
                 events = json.load(f)
-            await ctx.send(RESPONSE_EVENT_DONE.format("Workshop", SERVER, SCHEDULE, events[-1]["messageId"]))
+            await ctx.send(RESPONSE_EVENT_DONE.format("workshop", newEvent["title"], SERVER, SCHEDULE, events[-1]["messageId"]))
 
             if workshopInterest is not None:
                 with open(WORKSHOP_INTEREST_FILE) as f:
@@ -1798,12 +1807,12 @@ class Schedule(commands.Cog):
                 if message != "":
                     await guild.get_channel(ARMA_DISCUSSION).send(WORKSHOPINTEREST_PING.format(message, workshopInterestItem['wsInterest']['title'], SCHEDULE, WORKSHOP_INTEREST))
 
-    @cog_ext.cog_slash(name="event", description=SCHEDULE_COMMAND_DESCRIPTION.format("a generic event"), guild_ids=[SERVER])
+    @cog_ext.cog_slash(name="event", description=SCHEDULE_COMMAND_DESCRIPTION.format("an event"), guild_ids=[SERVER])
     async def event(self, ctx: SlashContext):
         await self.scheduleEvent(ctx)
 
     async def scheduleEvent(self, ctx):
-        await ctx.send(RESPONSE_EVENT_PROGRESS.format("generic event"))
+        await ctx.send(RESPONSE_EVENT_PROGRESS.format("event"))
         log.info(LOG_CREATING_EVENT.format(ctx.author.display_name, ctx.author.name, ctx.author.discriminator, "an event"))
         authorId = ctx.author.id
         embed = Embed(title=SCHEDULE_EVENT_TITLE.format("event"), color=Colour.gold())
@@ -2085,14 +2094,14 @@ class Schedule(commands.Cog):
 
         embed = Embed(title=CHECK_CREATED.format("Event"), color=Colour.green())
         await dmChannel.send(embed=embed)
-        log.info(LOG_CREATED_EVENT.format(ctx.author.display_name, ctx.author.name, ctx.author.discriminator, "an event"))
+        log.info(LOG_CREATED_EVENT.format(ctx.author.display_name, ctx.author.name, ctx.author.discriminator, f"the event: {title}"))
 
         await self.updateSchedule()
 
         if newEvent is not None:
             with open(EVENTS_FILE) as f:
                 events = json.load(f)
-            await ctx.send(RESPONSE_EVENT_DONE.format("Event", SERVER, SCHEDULE, events[-1]["messageId"]))
+            await ctx.send(RESPONSE_EVENT_DONE.format("event", newEvent["title"], SERVER, SCHEDULE, events[-1]["messageId"]))
 
     @cog_ext.cog_slash(name="changetimezone", description=CHANGE_TIME_ZONE_COMMAND_DESCRIPTION, guild_ids=[SERVER])
     async def timeZone(self, ctx: SlashContext) -> None:
@@ -2111,7 +2120,7 @@ class Schedule(commands.Cog):
             Returns:
             bool: If function executed successfully.
         """
-        log.info(LOG_UPDATING.format(author.display_name, author.name, author.discriminator, "its time zone preferences"))
+        log.info(f"{author.display_name} ({author.name}#{author.discriminator}) is updating their time zone preferences...")
 
         with open(MEMBER_TIME_ZONES_FILE) as f:
             memberTimeZones = json.load(f)

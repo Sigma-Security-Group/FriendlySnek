@@ -469,7 +469,7 @@ class Schedule(commands.Cog):
             elif reservedRole.lower() == "none":
                 reservedRole = None
             else:
-                await self.cancelCommand("Role reservation")
+                await self.cancelCommand(dmChannel, "Role reservation")
                 return
         except asyncio.TimeoutError:
             await dmChannel.send(embed=TIMEOUT_EMBED)

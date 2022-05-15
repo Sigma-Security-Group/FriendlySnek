@@ -20,7 +20,7 @@ class Jokes(commands.Cog):
         log.debug(LOG_COG_READY.format("Jokes"), flush=True)
         cogsReady["jokes"] = True
 
-    @cog_ext.cog_slash(name="dadjoke", guild_ids=[SERVER], description=DADJOKE_COMMAND_DESCRIPTION)
+    @cog_ext.cog_slash(name="dadjoke", guild_ids=[SERVER], description="Telling you a good joke using the icanhazdadjoke.com API.")
     async def dadjoke(self, ctx: SlashContext) -> None:
         r = requests.get(url=URL, headers=headers)
         data = r.json()

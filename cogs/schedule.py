@@ -389,6 +389,8 @@ class Schedule(commands.Cog):
                                 json.dump(events, f, indent=4)
                             await self.updateSchedule()
                             return
+                    else:
+                        scheduleNeedsUpdate = False
                 elif payload.emoji.name == "🗑":
                     if payload.member.id == event["authorId"] or any(role.id == UNIT_STAFF for role in payload.member.roles):
                         eventDeleted = await self.deleteEvent(payload.member, eventMessage, event)
@@ -477,7 +479,7 @@ class Schedule(commands.Cog):
                 return
             dmChannel = msg.channel
             try:
-                response = await self.bot.wait_for("message", timeout=TIME_FIVE_MIN, check=lambda msg, author=member, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
+                response = await self.bot.wait_for("message", timeout=TIME_ONE_MIN, check=lambda msg, author=member, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
                 reservedRole = response.content.strip().lower()
                 if reservedRole.isdigit() and int(reservedRole) <= len(vacantRoles) and int(reservedRole) > 0:
                     reservedRole = vacantRoles[int(reservedRole) - 1]
@@ -555,7 +557,7 @@ class Schedule(commands.Cog):
                 return False
             dmChannel = msg.channel
             try:
-                response = await self.bot.wait_for("message", timeout=TIME_TWO_MIN, check=lambda msg, author=author, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
+                response = await self.bot.wait_for("message", timeout=TIME_ONE_MIN, check=lambda msg, author=author, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
                 choice = response.content.strip()
                 if choice.lower() == "cancel":
                     await self.cancelCommand(dmChannel, "Event editing")
@@ -740,26 +742,35 @@ class Schedule(commands.Cog):
                 event["map"] = eventMap
 
             case "6":
-                embed = Embed(title=SCHEDULE_EVENT_MAX_PLAYERS, description=SCHEDULE_EVENT_MAX_PLAYERS_DESCRIPTION, color=Colour.gold())
-                embed.set_footer(text=SCHEDULE_CANCEL)
-                await dmChannel.send(embed=embed)
-                try:
-                    response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, author=author, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
-                    maxPlayers = response.content.strip()
-                    if maxPlayers.lower() == "cancel":
-                        await self.cancelCommand(dmChannel, "Event editing")
-                        return False
-                    elif maxPlayers.isdigit() and int(maxPlayers) <= MAX_SERVER_ATTENDANCE:
-                        maxPlayers = int(maxPlayers)
-                    elif maxPlayers.lower() == "anonymous":
-                        maxPlayers = 0
-                    elif maxPlayers.lower() == "hidden":
-                        maxPlayers = -1
-                    else:
-                        maxPlayers = None
-                except asyncio.TimeoutError:
-                    await dmChannel.send(embed=TIMEOUT_EMBED)
-                    return False
+                attendanceOk = False
+                color = Colour.gold()
+                while not attendanceOk:
+                    embed = Embed(title=SCHEDULE_EVENT_MAX_PLAYERS, description=SCHEDULE_EVENT_MAX_PLAYERS_DESCRIPTION, color=color)
+                    embed.set_footer(text=SCHEDULE_CANCEL)
+                    color = Colour.red()
+                    await dmChannel.send(embed=embed)
+                    try:
+                        response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
+                        maxPlayers = response.content.strip().lower()
+                        attendanceOk = True
+                        if maxPlayers == "cancel":
+                            await self.cancelCommand(dmChannel, "Operation scheduling")
+                            return
+                        elif maxPlayers == "none" or maxPlayers.isdigit() and int(maxPlayers) == 0:
+                            maxPlayers = None
+                        elif maxPlayers == "anonymous":
+                            maxPlayers = 0
+                        elif maxPlayers == "hidden":
+                            maxPlayers = -1
+                        elif maxPlayers.isdigit() and int(maxPlayers) <= MAX_SERVER_ATTENDANCE:
+                            maxPlayers = int(maxPlayers)
+                        elif maxPlayers.isdigit() and int(maxPlayers) > MAX_SERVER_ATTENDANCE:
+                            maxPlayers = None
+                        else:
+                            attendanceOk = False
+                    except asyncio.TimeoutError:
+                        await dmChannel.send(embed=TIMEOUT_EMBED)
+                        return
                 event["maxPlayers"] = maxPlayers
 
             case "7":
@@ -1030,26 +1041,35 @@ class Schedule(commands.Cog):
                 await dmChannel.send(embed=TIMEOUT_EMBED)
                 return
 
-        embed = Embed(title=SCHEDULE_EVENT_MAX_PLAYERS, description=SCHEDULE_EVENT_MAX_PLAYERS_DESCRIPTION, color=Colour.gold())
-        embed.set_footer(text=SCHEDULE_CANCEL)
-        await dmChannel.send(embed=embed)
-        try:
-            response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
-            maxPlayers = response.content.strip()
-            if maxPlayers.lower() == "cancel":
-                await self.cancelCommand(dmChannel, "Operation scheduling")
+        attendanceOk = False
+        color = Colour.gold()
+        while not attendanceOk:
+            embed = Embed(title=SCHEDULE_EVENT_MAX_PLAYERS, description=SCHEDULE_EVENT_MAX_PLAYERS_DESCRIPTION, color=color)
+            embed.set_footer(text=SCHEDULE_CANCEL)
+            color = Colour.red()
+            await dmChannel.send(embed=embed)
+            try:
+                response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
+                maxPlayers = response.content.strip().lower()
+                attendanceOk = True
+                if maxPlayers == "cancel":
+                    await self.cancelCommand(dmChannel, "Operation scheduling")
+                    return
+                elif maxPlayers == "none" or maxPlayers.isdigit() and int(maxPlayers) == 0:
+                    maxPlayers = None
+                elif maxPlayers == "anonymous":
+                    maxPlayers = 0
+                elif maxPlayers == "hidden":
+                    maxPlayers = -1
+                elif maxPlayers.isdigit() and int(maxPlayers) <= MAX_SERVER_ATTENDANCE:
+                    maxPlayers = int(maxPlayers)
+                elif maxPlayers.isdigit() and int(maxPlayers) > MAX_SERVER_ATTENDANCE:
+                    maxPlayers = None
+                else:
+                    attendanceOk = False
+            except asyncio.TimeoutError:
+                await dmChannel.send(embed=TIMEOUT_EMBED)
                 return
-            if maxPlayers.isdigit() and int(maxPlayers) <= MAX_SERVER_ATTENDANCE:
-                maxPlayers = int(maxPlayers)
-            elif maxPlayers.lower() == "anonymous":
-                maxPlayers = 0
-            elif maxPlayers.lower() == "hidden":
-                maxPlayers = -1
-            else:
-                maxPlayers = None
-        except asyncio.TimeoutError:
-            await dmChannel.send(embed=TIMEOUT_EMBED)
-            return
 
         color = Colour.gold()
         duration = "INVALID INPUT"
@@ -1174,7 +1194,7 @@ class Schedule(commands.Cog):
 
                     if eventCollision:
                         try:
-                            response = await self.bot.wait_for("message", timeout=TIME_FIVE_MIN, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
+                            response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
                             collisionResponse = response.content.strip().lower()
                             if collisionResponse == "cancel":
                                 await self.cancelCommand(dmChannel, "Operation scheduling")
@@ -1439,26 +1459,35 @@ class Schedule(commands.Cog):
             eventMap = template["map"]
 
         if template is None:
-            embed = Embed(title=SCHEDULE_EVENT_MAX_PLAYERS, description=SCHEDULE_EVENT_MAX_PLAYERS_DESCRIPTION, color=Colour.gold())
-            embed.set_footer(text=SCHEDULE_CANCEL)
-            await dmChannel.send(embed=embed)
-            try:
-                response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
-                maxPlayers = response.content.strip()
-                if maxPlayers.lower() == "cancel":
-                    await self.cancelCommand(dmChannel, "Workshop scheduling")
+            attendanceOk = False
+            color = Colour.gold()
+            while not attendanceOk:
+                embed = Embed(title=SCHEDULE_EVENT_MAX_PLAYERS, description=SCHEDULE_EVENT_MAX_PLAYERS_DESCRIPTION, color=color)
+                embed.set_footer(text=SCHEDULE_CANCEL)
+                color = Colour.red()
+                await dmChannel.send(embed=embed)
+                try:
+                    response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
+                    maxPlayers = response.content.strip().lower()
+                    attendanceOk = True
+                    if maxPlayers == "cancel":
+                        await self.cancelCommand(dmChannel, "Operation scheduling")
+                        return
+                    elif maxPlayers == "none" or maxPlayers.isdigit() and int(maxPlayers) == 0:
+                        maxPlayers = None
+                    elif maxPlayers == "anonymous":
+                        maxPlayers = 0
+                    elif maxPlayers == "hidden":
+                        maxPlayers = -1
+                    elif maxPlayers.isdigit() and int(maxPlayers) <= MAX_SERVER_ATTENDANCE:
+                        maxPlayers = int(maxPlayers)
+                    elif maxPlayers.isdigit() and int(maxPlayers) > MAX_SERVER_ATTENDANCE:
+                        maxPlayers = None
+                    else:
+                        attendanceOk = False
+                except asyncio.TimeoutError:
+                    await dmChannel.send(embed=TIMEOUT_EMBED)
                     return
-                if maxPlayers.isdigit() and int(maxPlayers) <= MAX_SERVER_ATTENDANCE:
-                    maxPlayers = int(maxPlayers)
-                elif maxPlayers.lower() == "anonymous":
-                    maxPlayers = 0
-                elif maxPlayers.lower() == "hidden":
-                    maxPlayers = -1
-                else:
-                    maxPlayers = None
-            except asyncio.TimeoutError:
-                await dmChannel.send(embed=TIMEOUT_EMBED)
-                return
         else:
             maxPlayers = template["maxPlayers"]
 
@@ -1819,26 +1848,35 @@ class Schedule(commands.Cog):
                 await dmChannel.send(embed=TIMEOUT_EMBED)
                 return
 
-        embed = Embed(title=SCHEDULE_EVENT_MAX_PLAYERS, description=SCHEDULE_EVENT_MAX_PLAYERS_DESCRIPTION, color=Colour.gold())
-        embed.set_footer(text=SCHEDULE_CANCEL)
-        await dmChannel.send(embed=embed)
-        try:
-            response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
-            maxPlayers = response.content.strip()
-            if maxPlayers.lower() == "cancel":
-                await self.cancelCommand(dmChannel, "Event scheduling")
+        attendanceOk = False
+        color = Colour.gold()
+        while not attendanceOk:
+            embed = Embed(title=SCHEDULE_EVENT_MAX_PLAYERS, description=SCHEDULE_EVENT_MAX_PLAYERS_DESCRIPTION, color=color)
+            embed.set_footer(text=SCHEDULE_CANCEL)
+            color = Colour.red()
+            await dmChannel.send(embed=embed)
+            try:
+                response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
+                maxPlayers = response.content.strip().lower()
+                attendanceOk = True
+                if maxPlayers == "cancel":
+                    await self.cancelCommand(dmChannel, "Operation scheduling")
+                    return
+                elif maxPlayers == "none" or maxPlayers.isdigit() and int(maxPlayers) == 0:
+                    maxPlayers = None
+                elif maxPlayers == "anonymous":
+                    maxPlayers = 0
+                elif maxPlayers == "hidden":
+                    maxPlayers = -1
+                elif maxPlayers.isdigit() and int(maxPlayers) <= MAX_SERVER_ATTENDANCE:
+                    maxPlayers = int(maxPlayers)
+                elif maxPlayers.isdigit() and int(maxPlayers) > MAX_SERVER_ATTENDANCE:
+                    maxPlayers = None
+                else:
+                    attendanceOk = False
+            except asyncio.TimeoutError:
+                await dmChannel.send(embed=TIMEOUT_EMBED)
                 return
-            if maxPlayers.isdigit() and int(maxPlayers) <= MAX_SERVER_ATTENDANCE:
-                maxPlayers = int(maxPlayers)
-            elif maxPlayers.lower() == "anonymous":
-                maxPlayers = 0
-            elif maxPlayers.lower() == "hidden":
-                maxPlayers = -1
-            else:
-                maxPlayers = None
-        except asyncio.TimeoutError:
-            await dmChannel.send(embed=TIMEOUT_EMBED)
-            return
 
         color = Colour.gold()
         duration = "INVALID INPUT"

@@ -1,12 +1,4 @@
 ####################
-# Jokes.py
-####################
-
-## Command descriptions
-DADJOKE_COMMAND_DESCRIPTION = "Telling you a good joke using the icanhazdadjoke.com API."
-
-
-####################
 # JustBob.py
 ####################
 
@@ -110,7 +102,7 @@ SCHEDULE_EVENT_MAP_PROMPT = ":globe_with_meridians: Choose a map"
 
 ### Attendees
 SCHEDULE_EVENT_MAX_PLAYERS = ":family_man_boy_boy: What is the maximum number of attendees?"
-SCHEDULE_EVENT_MAX_PLAYERS_DESCRIPTION = "Enter a positive number to set a limit.\nEnter `none` to set no limit.\nEnter `anonymous` to count attendance anonymously.\nEnter `hidden` to not count attendance."
+SCHEDULE_EVENT_MAX_PLAYERS_DESCRIPTION = "Enter a number to set a limit.\nEnter `none` to set no limit.\nEnter `anonymous` to count attendance anonymously.\nEnter `hidden` to not count attendance."
 
 ### Time Zone
 SCHEDULE_EVENT_SELECTED_TIME_ZONE = "Your current time zone preference is `{0}`."
@@ -184,13 +176,6 @@ ANALYSIS_ILLEGAL_MESSAGE = "The message you just posted in <#{0}> was deleted be
 
 
 ####################
-# Main.py
-####################
-
-MAIN_RELOAD_RESPONSE = "Cogs reloaded!"
-
-
-####################
 # Generic
 ####################
 
@@ -207,8 +192,6 @@ LOG_BOT_STOPPED = "Bot stopped!"
 LOG_ERROR = "An error occured!"
 
 ## Time in seconds
-TIME_ONE_MIN = 60
-TIME_TWO_MIN = 120
-TIME_FIVE_MIN = 300
-TIME_TEN_MIN = 600
-TIME_THIRTY_MIN = 1800
+TIME_ONE_MIN = 60  # Short
+TIME_TEN_MIN = 600  # Normal
+TIME_THIRTY_MIN = 1800  # Long

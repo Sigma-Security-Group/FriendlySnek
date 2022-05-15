@@ -125,7 +125,7 @@ async def reload(ctx):
         return
     for cog in COGS:
         bot.reload_extension(f"cogs.{cog}")
-    await ctx.send(MAIN_RELOAD_RESPONSE)
+    await ctx.send("Cogs reloaded!")
 
 if __name__ == "__main__":
     try:

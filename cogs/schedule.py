@@ -1116,19 +1116,13 @@ class Schedule(commands.Cog):
         # Operation time
         timeZone = pytz.timezone(memberTimeZones[str(ctx.author.id)])
         eventCollision = True
-        print("Before EVENT-COLLISION while loop")
         while eventCollision:
-            print("In EVENT-COLLISION while loop")
             eventCollision = False
             startTimeOk = False
-            print("Before START-TIME-OK while loop")
             while not startTimeOk:
-                print("In START-TIME-OK while loop")
                 isFormatCorrect = False
                 color = Colour.gold()
-                print("Before IS-FORMAT-CORRECT while loop")
                 while not isFormatCorrect:
-                    print("In IS-FORMAT-CORRECT while loop")
                     embed = Embed(title=SCHEDULE_EVENT_TIME.format("operation"), description=SCHEDULE_EVENT_SELECTED_TIME_ZONE.format(timeZone.zone), color=color)
                     utcNow = datetime.utcnow()
                     nextHalfHour = utcNow + (datetime.min - utcNow) % timedelta(minutes=30)
@@ -1137,10 +1131,8 @@ class Schedule(commands.Cog):
                     color = Colour.red()
                     await dmChannel.send(embed=embed)
                     try:
-                        print(f"STARTTIME WAITING FOR MESSAGE")
                         response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
                         startTime = response.content.strip()
-                        print(f"startTime > {startTime}")
                         if startTime.lower() == "cancel":
                             await self.cancelCommand(dmChannel, "Operation scheduling")
                             return
@@ -1152,28 +1144,21 @@ class Schedule(commands.Cog):
                         isFormatCorrect = True
                     except ValueError:
                         isFormatCorrect = False
-                    print(f"isFormatCorrect > {isFormatCorrect}")
-                print("After IS-FORMAT-CORRECT while loop")
                 startTime = timeZone.localize(startTime).astimezone(UTC)
                 if startTime < UTC.localize(utcNow):  # Set time is in the past
-                    print("Set time in past")
                     if (delta := UTC.localize(utcNow) - startTime) > timedelta(hours=1) and delta < timedelta(days=1):  # Set time in the past 24 hours
-                        print("Set time in past 24 hours")
                         newStartTime = startTime + timedelta(days=1)
                         embed = Embed(title=SCHEDULE_EVENT_TIME_TOMORROW, description=SCHEDULE_EVENT_TIME_TOMORROW_PREVIEW.format(round(startTime.timestamp()), round(newStartTime.timestamp())), color=Colour.orange())
                         await dmChannel.send(embed=embed)
                         startTime = newStartTime
                         startTimeOk = True
                     else:  # Set time older than 24 hours
-                        print("Set time older than 24 hours")
                         embed = Embed(title=SCHEDULE_EVENT_TIME_PAST_QUESTION, description=SCHEDULE_EVENT_TIME_PAST_PROMPT, color=Colour.orange())
                         embed.set_footer(text=SCHEDULE_CANCEL)
                         await dmChannel.send(embed=embed)
                         try:
-                            print(f"SCHEDULE_EVENT_TIME_PAST_QUESTION WAITING FOR MESSAGE")
                             response = await self.bot.wait_for("message", timeout=TIME_ONE_MIN, check=lambda msg, author=ctx.author, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
                             keepStartTime = response.content.strip().lower()
-                            print(f"keepStartTime > {keepStartTime}")
                             if keepStartTime == "cancel":
                                 await self.cancelCommand(dmChannel, "Operation scheduling")
                                 return
@@ -1184,55 +1169,42 @@ class Schedule(commands.Cog):
                             startTimeOk = True
                 else:
                     startTimeOk = True
-            print("After START-TIME-OK while loop")
             endTime = startTime + delta
 
             with open(EVENTS_FILE) as f:
                 events = json.load(f)
 
-            print("Before EVENTS for loop")
             exitForLoop = False
             for event in events:
-                print("In EVENTS for loop")
-                print(f"exitForLoop > {exitForLoop}")
                 if exitForLoop:
                     break
-                print("Before VALID-COLLISION-RESPONSE while loop")
                 validCollisionReponse = False
                 while not validCollisionReponse:
-                    print("In VALID-COLLISION-RESPONSE while loop")
                     if event.get("type", "Operation") == "Event":
-                        print("Skipping event collision checking - its an event")
                         validCollisionReponse = True
                         break
                     eventStartTime = UTC.localize(datetime.strptime(event["time"], EVENT_TIME_FORMAT))  # Target event start time
                     eventEndTime = UTC.localize(datetime.strptime(event["endTime"], EVENT_TIME_FORMAT))  # Target event end time
                     if (eventStartTime <= startTime < eventEndTime) or (eventStartTime <= endTime < eventEndTime) or (startTime <= eventStartTime < endTime):  # If scheduled event and target event overlap
-                        print("Event Collision!!")
                         eventCollision = True
                         embed = Embed(title=SCHEDULE_EVENT_ERROR_COLLISION.format(event["title"]), description=SCHEDULE_EVENT_ERROR_DESCRIPTION, color=Colour.red())
                         embed.set_footer(text=SCHEDULE_CANCEL)
                         await dmChannel.send(embed=embed)
                     elif eventEndTime < startTime and eventEndTime + timedelta(hours=1) > startTime:
-                        print("Event Collision PADDING_EARLY!!")
                         eventCollision = True
                         embed = Embed(title=SCHEDULE_EVENT_ERROR_PADDING_EARLY.format(event["title"]), description=SCHEDULE_EVENT_ERROR_DESCRIPTION, color=Colour.red())
                         embed.set_footer(text=SCHEDULE_CANCEL)
                         await dmChannel.send(embed=embed)
                     elif endTime < eventStartTime and endTime + timedelta(hours=1) > eventStartTime:
-                        print("Event Collision PADDING_LATE!!")
                         eventCollision = True
                         embed = Embed(title=SCHEDULE_EVENT_ERROR_PADDING_LATE.format(event["title"]), description=SCHEDULE_EVENT_ERROR_DESCRIPTION, color=Colour.red())
                         embed.set_footer(text=SCHEDULE_CANCEL)
                         await dmChannel.send(embed=embed)
 
-                    print(f"eventCollision:bool > {eventCollision}")
                     if eventCollision:
                         try:
-                            print(f"EVENT COLLISION WAITING FOR MESSAGE")
                             response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
                             collisionResponse = response.content.strip().lower()
-                            print(f"collisionResponse > {collisionResponse}")
                             if collisionResponse == "cancel":
                                 await self.cancelCommand(dmChannel, "Operation scheduling")
                                 return
@@ -1250,8 +1222,6 @@ class Schedule(commands.Cog):
                             return
                     else:
                         validCollisionReponse = True
-                print("After VALID-COLLISION-RESPONSE while loop")
-        print("After EVENT-COLLISION while loop")
 
         # Operation finalizing
         try:

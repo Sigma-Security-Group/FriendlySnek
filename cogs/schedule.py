@@ -1203,7 +1203,8 @@ class Schedule(commands.Cog):
                     print("In VALID-COLLISION-RESPONSE while loop")
                     if event.get("type", "Operation") == "Event":
                         print("Skipping event collision checking - its an event")
-                        continue
+                        validCollisionReponse = True
+                        break
                     eventStartTime = UTC.localize(datetime.strptime(event["time"], EVENT_TIME_FORMAT))  # Target event start time
                     eventEndTime = UTC.localize(datetime.strptime(event["endTime"], EVENT_TIME_FORMAT))  # Target event end time
                     if (eventStartTime <= startTime < eventEndTime) or (eventStartTime <= endTime < eventEndTime) or (startTime <= eventStartTime < endTime):  # If scheduled event and target event overlap

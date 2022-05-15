@@ -1172,7 +1172,7 @@ class Schedule(commands.Cog):
                         embed.set_footer(text=SCHEDULE_CANCEL)
                         await dmChannel.send(embed=embed)
 
-                    if eventCollision == True:
+                    if eventCollision:
                         try:
                             response = await self.bot.wait_for("message", timeout=TIME_FIVE_MIN, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
                             collisionResponse = response.content.strip().lower()

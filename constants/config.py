@@ -85,24 +85,13 @@ RESPONSE_REFRESHING = "Refreshing <#{0}>..."
 RESPONSE_TIME_ZONE = "Changing time zone preferences..."
 
 ## Errors
-SCHEDULE_INPUT_ERROR = "❌ Invalid input!"
-SCHEDULE_BOP_NO_SPACE = "❌ Sorry, seems like there's no space left in the :b:op!"
-SCHEDULE_RESERVABLE_SCHEDULE_ERROR = "❌ Schedule was updated while you were reserving a role. Try again!"
-SCHEDULE_EVENT_EDIT_ERROR = "❌ Schedule was updated while you were editing your operation. Try again!"
 SCHEDULE_EVENT_ERROR_COLLISION = "❌ This time collides with the event: `{0}`!"
 SCHEDULE_EVENT_ERROR_PADDING_EARLY = "❌ Your operation would start less than an hour after `{0}` ends!"
 SCHEDULE_EVENT_ERROR_PADDING_LATE = "❌ `{0}` starts less than an hour after your event ends!"
 SCHEDULE_EVENT_ERROR_DESCRIPTION = "Enter `edit` to input a new time.\nEnter `override` to override this warning."
 
-## Event
-SCHEDULE_EVENT_EDIT = ":pencil2: What would you like to edit?"
-
-### Type
-SCHEDULE_EVENT_TYPE = ":pencil2: What is the type of your event?"
-
 ### Title
 SCHEDULE_EVENT_TITLE = ":pencil2: What is the title of your {0}?"
-SCHEDULE_EVENT_TITLE_OPERATION_REMINDER = "Remeber, operation names should start with the word `Operation`\nE.g. Operation Red Tide."
 
 ### Description
 SCHEDULE_EVENT_DESCRIPTION_QUESTION = ":notepad_spiral: What is the description?"
@@ -115,11 +104,6 @@ SCHEDULE_EVENT_URL_DESCRIPTION = "E.g. Signup sheet, Briefing, OPORD, etc."
 ### Reservable Roles
 SCHEDULE_EVENT_RESERVABLE = "Reservable Roles"
 SCHEDULE_EVENT_RESERVABLE_DIALOG = "Enter `none`, or `n` if there are none.\n\nOtherwise, type each reservable role in a new line (Shift + Enter)."
-SCHEDULE_EVENT_RESERVABLE_DIALOG_EDIT = "\n(Editing the name of a role will make it vacant, but roles which keep their exact names will keep their reservations)."
-SCHEDULE_EVENT_RESERVABLE_LIST_CURRENT = "Current reservable roles"
-
-SCHEDULE_RESERVABLE_QUESTION = "Which role would you like to reserve?"
-SCHEDULE_RESERVABLE_PROMPT = "Enter a number from the list.\nEnter `none` un-reserve any role you have occupied."
 
 ### Map
 SCHEDULE_EVENT_MAP_PROMPT = ":globe_with_meridians: Choose a map"
@@ -129,19 +113,10 @@ SCHEDULE_EVENT_MAX_PLAYERS = ":family_man_boy_boy: What is the maximum number of
 SCHEDULE_EVENT_MAX_PLAYERS_DESCRIPTION = "Enter a positive number to set a limit.\nEnter `none` to set no limit.\nEnter `anonymous` to count attendance anonymously.\nEnter `hidden` to not count attendance."
 
 ### Time Zone
-SCHEDULE_EVENT_TIME_ZONE_QUESTION = ":clock1: It appears that you haven't set your preferred time zone yet. What is your preferred time zone?"
-SCHEDULE_EVENT_TIME_ZONE_PROMPT = "Enter `none`, a number from the list or any time zone name from the column \"**TZ DATABASE NAME**\" in this [Wikipedia article](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones).\nIf you enter `none` or something invalid, UTC will be assumed and you will be asked again the next time you schedule an event. You can change or delete your preferred time zone with `/changetimezone`."
 SCHEDULE_EVENT_SELECTED_TIME_ZONE = "Your current time zone preference is `{0}`."
-
-SCHEDULE_TIME_ZONE_QUESTION = ":clock1: What's your preferred time zone?"
-SCHEDULE_TIME_ZONE_UNSET = "You don't have a preferred time zone set."
-SCHEDULE_TIME_ZONE_POPULAR = "Popular Time Zones"
-SCHEDULE_TIME_ZONE_INFORMATION = "\n\nEnter a number from the list below.\nEnter any time zone name from the column \"**TZ DATABASE NAME**\" in this [Wikipedia article](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones)."
-SCHEDULE_TIME_ZONE_OPTION_ERASE = "\nEnter `none` to erase current preferences."
 
 ### Time
 SCHEDULE_EVENT_TIME = "What is the time of the {0}?"
-SCHEDULE_EVENT_TIME_FORMAT = "E.g. `2022-04-18 11:36 AM`."
 SCHEDULE_EVENT_TIME_TOMORROW = "Time was detected to be in the past 24h and was set to tomorrow."
 SCHEDULE_EVENT_TIME_TOMORROW_PREVIEW = "Input time: <t:{0}:F>\nSelected time: <t:{1}:F>."
 SCHEDULE_EVENT_TIME_PAST_QUESTION = "It appears that the selected time is in the past. Are you sure you want to set it to this?"
@@ -153,15 +128,8 @@ SCHEDULE_EVENT_DURATION_PROMPT = "E.g.\n`30m`\n`2h`\n`4h 30m`\n`2h30`"
 SCHEDULE_EVENT_DURATION_REGEX = r"^\s*((([1-9]\d*)?\d\s*h(\s*([0-5])?\d\s*m?)?)|(([0-5])?\d\s*m))\s*$"
 
 ### Templates
-SCHEDULE_EVENT_TEMPLATE_TITLE = ":clipboard: Templates"
-SCHEDULE_EVENT_TEMPLATE_DESCRIPTION = "Enter a template number.\nEnter `none` to make a workshop from scratch.\n\nEdit template: `edit` + template number. E.g. `edit 2`.\nDelete template: `delete` + template number. E.g. `delete 4`. **IRREVERSIBLE!**"
-SCHEDULE_EVENT_TEMPLATE_LIST_TITLE = "Templates"
 SCHEDULE_EVENT_TEMPLATE_ACTION_REGEX = r"(edit |delete )?\d+"
-SCHEDULE_EVENT_TEMPLATE_SAVE_QUESTION = "Do you wish to save this workshop as a template?"
-SCHEDULE_EVENT_TEMPLATE_SAVE_PROMPT = "Enter `yes` or `y` if you want to save it or enter anything else otherwise."
 SCHEDULE_EVENT_TEMPLATE_SAVE_NAME_QUESTION = "Which name would you like to save the template as?"
-SCHEDULE_EVENT_TEMPLATE_SAVE_NAME_PROMPT = "Enter `none` to make it the same as the title."
-SCHEDULE_EVENT_WAITING_LIST = ":link: Which workshop waiting list is your workshop linked to?"
 SCHEDULE_EVENT_CONFIRM_DELETE = "Are you sure you want to delete this {0}?"
 
 ## DM Notifications

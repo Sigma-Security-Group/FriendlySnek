@@ -416,6 +416,16 @@ class Schedule(commands.Cog):
             print(e)
 
     async def cancelCommand(self, channel, abortText:str) -> None:
+        """
+            Sends an abort response to the user.
+
+            Parameters:
+            channel: The users DM channel where the message is sent.
+            abortText (str): The embed title - what is aborted.
+
+            Returns:
+            None
+        """
         await channel.send(embed=Embed(title=ABORT_CANCELED.format(abortText), color=Colour.red()))
 
     async def reserveRole(self, member, event) -> None:
@@ -441,7 +451,7 @@ class Schedule(commands.Cog):
             event["accepted"].append(member.id)
 
         if event["maxPlayers"] is not None and event["accepted"].index(member.id) >= event["maxPlayers"]:
-            embed = Embed(title=SCHEDULE_BOP_NO_SPACE, color=Colour.red())
+            embed = Embed(title="❌ Sorry, seems like there's no space left in the :b:op!", color=Colour.red())
             try:
                 await member.send(embed=embed)
             except Exception as e:
@@ -454,7 +464,7 @@ class Schedule(commands.Cog):
         reserveOk = False
         color = Colour.gold()
         while not reserveOk:
-            embed = Embed(title=SCHEDULE_RESERVABLE_QUESTION, description=SCHEDULE_RESERVABLE_PROMPT, color=color)
+            embed = Embed(title="Which role would you like to reserve?", description="Enter a number from the list.\nEnter `none` un-reserve any role you have occupied.", color=color)
             embed.add_field(name="Your current role", value=currentRole if currentRole is not None else "None", inline=False)
             embed.add_field(name="Vacant roles", value="\n".join(f"**{idx}** {roleName}" for idx, roleName in enumerate(vacantRoles, 1)) if len(vacantRoles) > 0 else "None", inline=False)
             embed.set_footer(text=SCHEDULE_CANCEL)
@@ -502,7 +512,7 @@ class Schedule(commands.Cog):
                     embed = Embed(title=CHECK_COMPLETED.format("Role reservation"), color=Colour.green())
                     await dmChannel.send(embed=embed)
                 else:
-                    embed = Embed(title=SCHEDULE_RESERVABLE_SCHEDULE_ERROR, color=Colour.red())
+                    embed = Embed(title="❌ Schedule was updated while you were reserving a role. Try again!", color=Colour.red())
                     await dmChannel.send(embed=embed)
                     log.debug(LOG_SCHEDULE_UPDATE_ERROR.format(member.display_name, member.name, member.discriminator, "reserving a role"))
 
@@ -511,7 +521,7 @@ class Schedule(commands.Cog):
         editOk = False
         color = Colour.gold()
         while not editOk:
-            embed = Embed(title=SCHEDULE_EVENT_EDIT, color=color)
+            embed = Embed(title=":pencil2: What would you like to edit?", color=color)
             embed.add_field(name="**1** Title", value=f"```txt\n{event['title']}\n```", inline=False)
             embed.add_field(name="**2** Description", value=f"```txt\n{event['description'] if len(event['description']) < 500 else event['description'][:500] + ' [...]'}\n```", inline=False)
             embed.add_field(name="**3** External URL", value=f"```txt\n{event['externalURL']}\n```", inline=False)
@@ -599,7 +609,7 @@ class Schedule(commands.Cog):
                     eventTypeNum = None
                     color = Colour.gold()
                     while eventTypeNum not in ("1", "2", "3"):
-                        embed = Embed(title=SCHEDULE_EVENT_TYPE, description=SCHEDULE_NUMBER_FROM_TO.format(1, 3), color=color)
+                        embed = Embed(title=":pencil2: What is the type of your event?", description=SCHEDULE_NUMBER_FROM_TO.format(1, 3), color=color)
                         embed.add_field(name="Type", value="**1** 🟩 Operation\n**2** 🟦 Workshop\n**3** 🟨 Event")
                         embed.set_footer(text=SCHEDULE_CANCEL)
                         color = Colour.red()
@@ -677,8 +687,8 @@ class Schedule(commands.Cog):
                 event["externalURL"] = externalURL
 
             case "4":
-                embed = Embed(title=SCHEDULE_EVENT_RESERVABLE, description=SCHEDULE_EVENT_RESERVABLE_DIALOG + SCHEDULE_EVENT_RESERVABLE_DIALOG_EDIT, color=Colour.gold())
-                embed.add_field(name=SCHEDULE_EVENT_RESERVABLE_LIST_CURRENT, value=("```txt\n" + "\n".join(event["reservableRoles"].keys()) + "```") if event["reservableRoles"] is not None else "None")
+                embed = Embed(title=SCHEDULE_EVENT_RESERVABLE, description=SCHEDULE_EVENT_RESERVABLE_DIALOG + "\n(Editing the name of a role will make it vacant, but roles which keep their exact names will keep their reservations).", color=Colour.gold())
+                embed.add_field(name="Current reservable roles", value=("```txt\n" + "\n".join(event["reservableRoles"].keys()) + "```") if event["reservableRoles"] is not None else "None")
                 embed.set_footer(text=SCHEDULE_CANCEL)
                 await dmChannel.send(embed=embed)
                 try:
@@ -859,7 +869,7 @@ class Schedule(commands.Cog):
                 log.info(f"{author.display_name} ({author.name}#{author.discriminator}) edited the event: {event['title']}.")
                 return reorderEvents
             else:
-                embed = Embed(title=SCHEDULE_EVENT_EDIT_ERROR, color=Colour.red())
+                embed = Embed(title="❌ Schedule was updated while you were editing your operation. Try again!", color=Colour.red())
                 await dmChannel.send(embed=embed)
                 log.info(LOG_SCHEDULE_UPDATE_ERROR.format(author.display_name, author.name, author.discriminator, "editing an event"))
                 return False
@@ -927,7 +937,7 @@ class Schedule(commands.Cog):
         utcNow = UTC.localize(datetime.utcnow())
         authorId = ctx.author.id
 
-        embed = Embed(title=SCHEDULE_EVENT_TITLE.format("operation"), description=SCHEDULE_EVENT_TITLE_OPERATION_REMINDER, color=Colour.gold())
+        embed = Embed(title=SCHEDULE_EVENT_TITLE.format("operation"), description="Remeber, operation names should start with the word `Operation`\nE.g. Operation Red Tide.", color=Colour.gold())
         embed.set_footer(text=SCHEDULE_CANCEL)
         try:
             msg = await ctx.author.send(embed=embed)
@@ -1041,20 +1051,10 @@ class Schedule(commands.Cog):
             await dmChannel.send(embed=TIMEOUT_EMBED)
             return
 
-        embed = Embed(title=SCHEDULE_EVENT_DURATION_QUESTION.format("operation"), description=SCHEDULE_EVENT_DURATION_PROMPT, color=Colour.gold())
-        embed.set_footer(text=SCHEDULE_CANCEL)
-        await dmChannel.send(embed=embed)
-        try:
-            response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
-            duration = response.content.strip().lower()
-            if duration == "cancel":
-                await self.cancelCommand(dmChannel, "Operation scheduling")
-                return
-        except asyncio.TimeoutError:
-            await dmChannel.send(embed=TIMEOUT_EMBED)
-            return
+        color = Colour.gold()
+        duration = "INVALID INPUT"
         while not re.match(SCHEDULE_EVENT_DURATION_REGEX, duration):
-            embed = Embed(title=SCHEDULE_INPUT_ERROR, description=SCHEDULE_EVENT_DURATION_PROMPT, colour=Colour.red())
+            embed = Embed(title=SCHEDULE_EVENT_DURATION_QUESTION.format("operation"), description=SCHEDULE_EVENT_DURATION_PROMPT, color=color)
             embed.set_footer(text=SCHEDULE_CANCEL)
             await dmChannel.send(embed=embed)
             try:
@@ -1079,61 +1079,28 @@ class Schedule(commands.Cog):
             except pytz.exceptions.UnknownTimeZoneError:
                 timeZone = UTC
         else:
-            embed = Embed(title=SCHEDULE_EVENT_TIME_ZONE_QUESTION, description=SCHEDULE_EVENT_TIME_ZONE_PROMPT, color=Colour.gold())
-            embed.add_field(name=SCHEDULE_TIME_ZONE_POPULAR, value="\n".join(f"**{idx}** {tz}" for idx, tz in enumerate(TIME_ZONES, 1)))
-            embed.set_footer(text=SCHEDULE_CANCEL)
-            await dmChannel.send(embed=embed)
-            try:
-                response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
-                timeZone = response.content.strip()
-                if timeZone.lower() == "cancel":
-                    await self.cancelCommand(dmChannel, "Operation scheduling")
-                    return
-                saveTimeZonepreference = True
-                if timeZone.isdigit() and int(timeZone) <= len(TIME_ZONES) and int(timeZone) > 0:
-                    timeZone = pytz.timezone(list(TIME_ZONES.values())[int(timeZone) - 1])
-                else:
-                    try:
-                        timeZone = pytz.timezone(timeZone)
-                    except pytz.exceptions.UnknownTimeZoneError:
-                        timeZone = UTC
-                        saveTimeZonepreference = False
-                if saveTimeZonepreference:
-                    memberTimeZones[str(ctx.author.id)] = timeZone.zone
-                    with open(MEMBER_TIME_ZONES_FILE, "w") as f:
-                        json.dump(memberTimeZones, f, indent=4)
-            except asyncio.TimeoutError:
-                await dmChannel.send(embed=TIMEOUT_EMBED)
-                return
+            timeZoneOutput = await self.changeTimeZone(ctx.author, isCommand=False)
+            if not timeZoneOutput:
+                await self.cancelCommand(dmChannel, "Event editing")
+                return False
+            with open(MEMBER_TIME_ZONES_FILE) as f:
+                memberTimeZones = json.load(f)
 
+        timeZone = pytz.timezone(memberTimeZones[str(ctx.author.id)])
         eventCollision = True
         while eventCollision:
             eventCollision = False
             startTimeOk = False
             while not startTimeOk:
-                embed = Embed(title=SCHEDULE_EVENT_TIME.format("operation"), description=SCHEDULE_EVENT_SELECTED_TIME_ZONE.format(timeZone.zone), color=Colour.gold())
-                embed.set_footer(text=SCHEDULE_CANCEL)
-                utcNow = datetime.utcnow()
-                nextHalfHour = utcNow + (datetime.min - utcNow) % timedelta(minutes=30)
-                embed.add_field(name="Example", value=UTC.localize(nextHalfHour).astimezone(timeZone).strftime(EVENT_TIME_FORMAT))
-                await dmChannel.send(embed=embed)
-                try:
-                    response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
-                    startTime = response.content.strip()
-                    if startTime.lower() == "cancel":
-                        await self.cancelCommand(dmChannel, "Operation scheduling")
-                        return
-                except asyncio.TimeoutError:
-                    await dmChannel.send(embed=TIMEOUT_EMBED)
-                    return
-                try:
-                    startTime = datetimeParse(startTime)
-                    isFormatCorrect = True
-                except ValueError:
-                    isFormatCorrect = False
+                isFormatCorrect = False
+                color = Colour.gold()
                 while not isFormatCorrect:
-                    embed = Embed(title=SCHEDULE_INPUT_ERROR, description=SCHEDULE_EVENT_TIME_FORMAT, colour=Colour.red())
+                    embed = Embed(title=SCHEDULE_EVENT_TIME.format("operation"), description=SCHEDULE_EVENT_SELECTED_TIME_ZONE.format(timeZone.zone), color=color)
+                    utcNow = datetime.utcnow()
+                    nextHalfHour = utcNow + (datetime.min - utcNow) % timedelta(minutes=30)
+                    embed.add_field(name="Example", value=UTC.localize(nextHalfHour).astimezone(timeZone).strftime(EVENT_TIME_FORMAT))
                     embed.set_footer(text=SCHEDULE_CANCEL)
+                    color = Colour.red()
                     await dmChannel.send(embed=embed)
                     try:
                         response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
@@ -1297,8 +1264,8 @@ class Schedule(commands.Cog):
         while templateActionRepeat:
             with open(WORKSHOP_TEMPLATES_FILE) as f:
                 workshopTemplates = json.load(f)
-            embed = Embed(title=SCHEDULE_EVENT_TEMPLATE_TITLE, description=SCHEDULE_EVENT_TEMPLATE_DESCRIPTION, color=color)
-            embed.add_field(name=SCHEDULE_EVENT_TEMPLATE_LIST_TITLE, value="\n".join(f"**{idx}** {template['name']}" for idx, template in enumerate(workshopTemplates, 1)) if len(workshopTemplates) > 0 else "-")
+            embed = Embed(title=":clipboard: Templates", description="Enter a template number.\nEnter `none` to make a workshop from scratch.\n\nEdit template: `edit` + template number. E.g. `edit 2`.\nDelete template: `delete` + template number. E.g. `delete 4`. **IRREVERSIBLE!**", color=color)
+            embed.add_field(name="Templates", value="\n".join(f"**{idx}** {template['name']}" for idx, template in enumerate(workshopTemplates, 1)) if len(workshopTemplates) > 0 else "-")
             embed.set_footer(text=SCHEDULE_CANCEL)
             color = Colour.red()
             try:
@@ -1501,6 +1468,7 @@ class Schedule(commands.Cog):
             while not re.match(SCHEDULE_EVENT_DURATION_REGEX, duration):
                 embed = Embed(title=SCHEDULE_EVENT_DURATION_QUESTION.format("workshop"), description=SCHEDULE_EVENT_DURATION_PROMPT, colour=color)
                 embed.set_footer(text=SCHEDULE_CANCEL)
+                color=Colour.red()
                 await dmChannel.send(embed=embed)
                 try:
                     response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
@@ -1524,7 +1492,7 @@ class Schedule(commands.Cog):
             while not workshopInterestOk:
                 with open(WORKSHOP_INTEREST_FILE) as f:
                     workshopInterestOptions = [{"name": name, "title": wsInterest["title"]} for name, wsInterest in json.load(f).items()]
-                embed = Embed(title=SCHEDULE_EVENT_WAITING_LIST, description=SCHEDULE_NUMBER_FROM_TO_OR_NONE.format(1, len(workshopInterestOptions)), color=color)
+                embed = Embed(title=":link: Which workshop waiting list is your workshop linked to?", description=SCHEDULE_NUMBER_FROM_TO_OR_NONE.format(1, len(workshopInterestOptions)), color=color)
                 embed.add_field(name="Workshop Lists", value="\n".join(f"**{idx}** {wsInterest['title']}" for idx, wsInterest in enumerate(workshopInterestOptions, 1)))
                 embed.set_footer(text=SCHEDULE_CANCEL)
                 color = Colour.red()
@@ -1557,62 +1525,29 @@ class Schedule(commands.Cog):
             except pytz.exceptions.UnknownTimeZoneError:
                 timeZone = UTC
         else:
-            embed = Embed(title=SCHEDULE_EVENT_TIME_ZONE_QUESTION, description=SCHEDULE_EVENT_TIME_ZONE_PROMPT, color=Colour.gold())
-            embed.add_field(name=SCHEDULE_TIME_ZONE_POPULAR, value="\n".join(f"**{idx}** {tz}" for idx, tz in enumerate(TIME_ZONES, 1)))
-            embed.set_footer(text=SCHEDULE_CANCEL)
-            await dmChannel.send(embed=embed)
-            try:
-                response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
-                timeZone = response.content.strip()
-                if timeZone.lower() == "cancel":
-                    await self.cancelCommand(dmChannel, "Workshop scheduling")
-                    return
-                saveTimeZonepreference = True
-                if timeZone.isdigit() and int(timeZone) <= len(TIME_ZONES) and int(timeZone) > 0:
-                    timeZone = pytz.timezone(list(TIME_ZONES.values())[int(timeZone) - 1])
-                else:
-                    try:
-                        timeZone = pytz.timezone(timeZone)
-                    except pytz.exceptions.UnknownTimeZoneError:
-                        timeZone = UTC
-                        saveTimeZonepreference = False
-                if saveTimeZonepreference:
-                    memberTimeZones[str(ctx.author.id)] = timeZone.zone
-                    with open(MEMBER_TIME_ZONES_FILE, "w") as f:
-                        json.dump(memberTimeZones, f, indent=4)
-            except asyncio.TimeoutError:
-                await dmChannel.send(embed=TIMEOUT_EMBED)
-                return
+            timeZoneOutput = await self.changeTimeZone(ctx.author, isCommand=False)
+            if not timeZoneOutput:
+                await self.cancelCommand(dmChannel, "Workshop scheduling")
+                return False
+        with open(MEMBER_TIME_ZONES_FILE) as f:
+            memberTimeZones = json.load(f)
 
+        timeZone = pytz.timezone(memberTimeZones[str(ctx.author.id)])
         eventCollision = True
         while eventCollision:
             eventCollision = False
 
             startTimeOk = False
             while not startTimeOk:
-                embed = Embed(title=SCHEDULE_EVENT_TIME.format("workshop"), description=SCHEDULE_EVENT_SELECTED_TIME_ZONE.format(timeZone.zone), color=Colour.gold())
-                utcNow = datetime.utcnow()
-                nextHalfHour = utcNow + (datetime.min - utcNow) % timedelta(minutes=30)
-                embed.add_field(name="Example", value=UTC.localize(nextHalfHour).astimezone(timeZone).strftime(EVENT_TIME_FORMAT))
-                embed.set_footer(text=SCHEDULE_CANCEL)
-                await dmChannel.send(embed=embed)
-                try:
-                    response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
-                    startTime = response.content.strip()
-                    if startTime.lower() == "cancel":
-                        await self.cancelCommand(dmChannel, "Workshop scheduling")
-                        return
-                except asyncio.TimeoutError:
-                    await dmChannel.send(embed=TIMEOUT_EMBED)
-                    return
-                try:
-                    startTime = datetimeParse(startTime)
-                    isFormatCorrect = True
-                except ValueError:
-                    isFormatCorrect = False
+                isFormatCorrect = False
+                color = Colour.gold()
                 while not isFormatCorrect:
-                    embed = Embed(title=SCHEDULE_INPUT_ERROR, description=SCHEDULE_EVENT_TIME_FORMAT, colour=Colour.red())
+                    embed = Embed(title=SCHEDULE_EVENT_TIME.format("workshop"), description=SCHEDULE_EVENT_SELECTED_TIME_ZONE.format(timeZone.zone), color=color)
+                    utcNow = datetime.utcnow()
+                    nextHalfHour = utcNow + (datetime.min - utcNow) % timedelta(minutes=30)
+                    embed.add_field(name="Example", value=UTC.localize(nextHalfHour).astimezone(timeZone).strftime(EVENT_TIME_FORMAT))
                     embed.set_footer(text=SCHEDULE_CANCEL)
+                    color = Colour.red()
                     await dmChannel.send(embed=embed)
                     try:
                         response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
@@ -1628,6 +1563,7 @@ class Schedule(commands.Cog):
                         isFormatCorrect = True
                     except ValueError:
                         isFormatCorrect = False
+
                 startTime = timeZone.localize(startTime).astimezone(UTC)
                 if startTime < UTC.localize(utcNow):
                     if (delta := UTC.localize(utcNow) - startTime) > timedelta(hours=1) and delta < timedelta(days=1):
@@ -1680,7 +1616,7 @@ class Schedule(commands.Cog):
                     break
 
         if template is None:
-            embed = Embed(title=SCHEDULE_EVENT_TEMPLATE_SAVE_QUESTION, description=SCHEDULE_EVENT_TEMPLATE_SAVE_PROMPT, color=Colour.gold())
+            embed = Embed(title="Do you wish to save this workshop as a template?", description="Enter `yes` or `y` if you want to save it.\nEnter anything else to not.", color=Colour.gold())
             embed.set_footer(text=SCHEDULE_CANCEL)
             await dmChannel.send(embed=embed)
             try:
@@ -1694,7 +1630,7 @@ class Schedule(commands.Cog):
                 await dmChannel.send(embed=TIMEOUT_EMBED)
                 return
             if saveTemplate:
-                embed = Embed(title=SCHEDULE_EVENT_TEMPLATE_SAVE_NAME_QUESTION, description=SCHEDULE_EVENT_TEMPLATE_SAVE_NAME_PROMPT, color=Colour.gold())
+                embed = Embed(title=SCHEDULE_EVENT_TEMPLATE_SAVE_NAME_QUESTION, description="Enter `none` to make it the same as the title.", color=Colour.gold())
                 embed.set_footer(text=SCHEDULE_CANCEL)
                 await dmChannel.send(embed=embed)
                 try:
@@ -1904,21 +1840,12 @@ class Schedule(commands.Cog):
             await dmChannel.send(embed=TIMEOUT_EMBED)
             return
 
-        embed = Embed(title=SCHEDULE_EVENT_DURATION_QUESTION.format("event"), description=SCHEDULE_EVENT_DURATION_PROMPT, color=Colour.gold())
-        embed.set_footer(text=SCHEDULE_CANCEL)
-        await dmChannel.send(embed=embed)
-        try:
-            response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
-            duration = response.content.strip().lower()
-            if duration == "cancel":
-                await self.cancelCommand(dmChannel, "Event scheduling")
-                return
-        except asyncio.TimeoutError:
-            await dmChannel.send(embed=TIMEOUT_EMBED)
-            return
+        color = Colour.gold()
+        duration = "INVALID INPUT"
         while not re.match(SCHEDULE_EVENT_DURATION_REGEX, duration):
-            embed = Embed(title=SCHEDULE_INPUT_ERROR, description=SCHEDULE_EVENT_DURATION_PROMPT, colour=Colour.red())
+            embed = Embed(title=SCHEDULE_EVENT_DURATION_QUESTION.format("event"), description=SCHEDULE_EVENT_DURATION_PROMPT, color=color)
             embed.set_footer(text=SCHEDULE_CANCEL)
+            color = Colour.red()
             await dmChannel.send(embed=embed)
             try:
                 response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
@@ -1943,58 +1870,25 @@ class Schedule(commands.Cog):
             except pytz.exceptions.UnknownTimeZoneError:
                 timeZone = UTC
         else:
-            embed = Embed(title=SCHEDULE_EVENT_TIME_ZONE_QUESTION, description=SCHEDULE_EVENT_TIME_ZONE_PROMPT, color=Colour.gold())
-            embed.add_field(name=SCHEDULE_TIME_ZONE_POPULAR, value="\n".join(f"**{idx}** {tz}" for idx, tz in enumerate(TIME_ZONES, 1)))
-            embed.set_footer(text=SCHEDULE_CANCEL)
-            await dmChannel.send(embed=embed)
-            try:
-                response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
-                timeZone = response.content.strip()
-                if timeZone.lower() == "cancel":
-                    await self.cancelCommand(dmChannel, "Event scheduling")
-                    return
-                saveTimeZonepreference = True
-                if timeZone.isdigit() and int(timeZone) <= len(TIME_ZONES) and int(timeZone) > 0:
-                    timeZone = pytz.timezone(list(TIME_ZONES.values())[int(timeZone) - 1])
-                else:
-                    try:
-                        timeZone = pytz.timezone(timeZone)
-                    except pytz.exceptions.UnknownTimeZoneError:
-                        timeZone = UTC
-                        saveTimeZonepreference = False
-                if saveTimeZonepreference:
-                    memberTimeZones[str(ctx.author.id)] = timeZone.zone
-                    with open(MEMBER_TIME_ZONES_FILE, "w") as f:
-                        json.dump(memberTimeZones, f, indent=4)
-            except asyncio.TimeoutError:
-                await dmChannel.send(embed=TIMEOUT_EMBED)
-                return
+            timeZoneOutput = await self.changeTimeZone(ctx.author, isCommand=False)
+            if not timeZoneOutput:
+                await self.cancelCommand(dmChannel, "Event editing")
+                return False
+            with open(MEMBER_TIME_ZONES_FILE) as f:
+                memberTimeZones = json.load(f)
 
+        timeZone = pytz.timezone(memberTimeZones[str(ctx.author.id)])
         startTimeOk = False
         while not startTimeOk:
-            embed = Embed(title=SCHEDULE_EVENT_TIME.format("event"), description=SCHEDULE_EVENT_SELECTED_TIME_ZONE.format(timeZone.zone), color=Colour.gold())
-            utcNow = datetime.utcnow()
-            nextHalfHour = utcNow + (datetime.min - utcNow) % timedelta(minutes=30)
-            embed.add_field(name="Example", value=UTC.localize(nextHalfHour).astimezone(timeZone).strftime(EVENT_TIME_FORMAT))
-            embed.set_footer(text=SCHEDULE_CANCEL)
-            await dmChannel.send(embed=embed)
-            try:
-                response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
-                startTime = response.content.strip()
-                if startTime.lower() == "cancel":
-                    await self.cancelCommand(dmChannel, "Event scheduling")
-                    return
-            except asyncio.TimeoutError:
-                await dmChannel.send(embed=TIMEOUT_EMBED)
-                return
-            try:
-                startTime = datetimeParse(startTime)
-                isFormatCorrect = True
-            except ValueError:
-                isFormatCorrect = False
+            isFormatCorrect = False
+            color = Colour.gold()
             while not isFormatCorrect:
-                embed = Embed(title=SCHEDULE_INPUT_ERROR, description=SCHEDULE_EVENT_TIME_FORMAT, colour=Colour.red())
+                embed = Embed(title=SCHEDULE_EVENT_TIME.format("event"), description=SCHEDULE_EVENT_SELECTED_TIME_ZONE.format(timeZone.zone), color=color)
+                utcNow = datetime.utcnow()
+                nextHalfHour = utcNow + (datetime.min - utcNow) % timedelta(minutes=30)
+                embed.add_field(name="Example", value=UTC.localize(nextHalfHour).astimezone(timeZone).strftime(EVENT_TIME_FORMAT))
                 embed.set_footer(text=SCHEDULE_CANCEL)
+                color = Colour.red()
                 await dmChannel.send(embed=embed)
                 try:
                     response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
@@ -2103,8 +1997,8 @@ class Schedule(commands.Cog):
         timezoneOk = False
         color = Colour.gold()
         while not timezoneOk:
-            embed = Embed(title=SCHEDULE_TIME_ZONE_QUESTION, description=(SCHEDULE_EVENT_SELECTED_TIME_ZONE.format(memberTimeZones[str(author.id)]) if str(author.id) in memberTimeZones else SCHEDULE_TIME_ZONE_UNSET) + SCHEDULE_TIME_ZONE_INFORMATION + SCHEDULE_TIME_ZONE_OPTION_ERASE * isCommand, color=color)
-            embed.add_field(name=SCHEDULE_TIME_ZONE_POPULAR, value="\n".join(f"**{idx}** {tz}" for idx, tz in enumerate(TIME_ZONES, 1)))
+            embed = Embed(title=":clock1: What's your preferred time zone?", description=(SCHEDULE_EVENT_SELECTED_TIME_ZONE.format(memberTimeZones[str(author.id)]) if str(author.id) in memberTimeZones else "You don't have a preferred time zone set.") + "\n\nEnter a number from the list below.\nEnter any time zone name from the column \"**TZ DATABASE NAME**\" in this [Wikipedia article](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones)." + "\nEnter `none` to erase current preferences." * isCommand, color=color)
+            embed.add_field(name="Popular Time Zones", value="\n".join(f"**{idx}** {tz}" for idx, tz in enumerate(TIME_ZONES, 1)))
             embed.set_footer(text=SCHEDULE_CANCEL)
             color = Colour.red()
             try:

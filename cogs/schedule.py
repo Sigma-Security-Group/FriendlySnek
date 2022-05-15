@@ -582,7 +582,7 @@ class Schedule(commands.Cog):
             color = Colour.gold()
             duration = "INVALID INPUT"
             while not re.match(SCHEDULE_EVENT_DURATION_REGEX, duration):
-                embed = Embed(title=SCHEDULE_EVENT_DURATION_QUESTION.format("event"), description=SCHEDULE_EVENT_DURATION_PROMPT, colour=color)
+                embed = Embed(title=SCHEDULE_EVENT_DURATION_QUESTION.format("event"), description=SCHEDULE_EVENT_DURATION_PROMPT, color=color)
                 embed.set_footer(text=SCHEDULE_CANCEL)
                 color = Colour.red()
                 await dmChannel.send(embed=embed)
@@ -948,6 +948,7 @@ class Schedule(commands.Cog):
         utcNow = UTC.localize(datetime.utcnow())
         authorId = ctx.author.id
 
+        # Operation title
         embed = Embed(title=SCHEDULE_EVENT_TITLE.format("operation"), description="Remeber, operation names should start with the word `Operation`\nE.g. Operation Red Tide.", color=Colour.gold())
         embed.set_footer(text=SCHEDULE_CANCEL)
         try:
@@ -966,6 +967,7 @@ class Schedule(commands.Cog):
             await dmChannel.send(embed=TIMEOUT_EMBED)
             return
 
+        # Operation description
         embed = Embed(title=SCHEDULE_EVENT_DESCRIPTION_QUESTION, color=Colour.gold())
         embed.set_footer(text=SCHEDULE_CANCEL)
         await dmChannel.send(embed=embed)
@@ -979,6 +981,7 @@ class Schedule(commands.Cog):
             await dmChannel.send(embed=TIMEOUT_EMBED)
             return
 
+        # Operation URL
         embed = Embed(title=SCHEDULE_EVENT_URL_TITLE, description=SCHEDULE_EVENT_URL_DESCRIPTION, color=Colour.gold())
         embed.set_footer(text=SCHEDULE_CANCEL)
         await dmChannel.send(embed=embed)
@@ -994,6 +997,7 @@ class Schedule(commands.Cog):
             await dmChannel.send(embed=TIMEOUT_EMBED)
             return
 
+        # Operation reservable roles
         embed = Embed(title=SCHEDULE_EVENT_RESERVABLE, description=SCHEDULE_EVENT_RESERVABLE_DIALOG, color=Colour.gold())
         embed.set_footer(text=SCHEDULE_CANCEL)
         await dmChannel.send(embed=embed)
@@ -1016,6 +1020,7 @@ class Schedule(commands.Cog):
         else:
             reservableRoles = None
 
+        # Operation map
         mapOK = False
         color = Colour.gold()
         while not mapOK:
@@ -1041,6 +1046,7 @@ class Schedule(commands.Cog):
                 await dmChannel.send(embed=TIMEOUT_EMBED)
                 return
 
+        # Operation attendance
         attendanceOk = False
         color = Colour.gold()
         while not attendanceOk:
@@ -1071,6 +1077,7 @@ class Schedule(commands.Cog):
                 await dmChannel.send(embed=TIMEOUT_EMBED)
                 return
 
+        # Operation duration
         color = Colour.gold()
         duration = "INVALID INPUT"
         while not re.match(SCHEDULE_EVENT_DURATION_REGEX, duration):
@@ -1106,15 +1113,22 @@ class Schedule(commands.Cog):
             with open(MEMBER_TIME_ZONES_FILE) as f:
                 memberTimeZones = json.load(f)
 
+        # Operation time
         timeZone = pytz.timezone(memberTimeZones[str(ctx.author.id)])
         eventCollision = True
+        print("Before EVENT-COLLISION while loop")
         while eventCollision:
+            print("In EVENT-COLLISION while loop")
             eventCollision = False
             startTimeOk = False
+            print("Before START-TIME-OK while loop")
             while not startTimeOk:
+                print("In START-TIME-OK while loop")
                 isFormatCorrect = False
                 color = Colour.gold()
+                print("Before IS-FORMAT-CORRECT while loop")
                 while not isFormatCorrect:
+                    print("In IS-FORMAT-CORRECT while loop")
                     embed = Embed(title=SCHEDULE_EVENT_TIME.format("operation"), description=SCHEDULE_EVENT_SELECTED_TIME_ZONE.format(timeZone.zone), color=color)
                     utcNow = datetime.utcnow()
                     nextHalfHour = utcNow + (datetime.min - utcNow) % timedelta(minutes=30)
@@ -1123,8 +1137,10 @@ class Schedule(commands.Cog):
                     color = Colour.red()
                     await dmChannel.send(embed=embed)
                     try:
+                        print(f"STARTTIME WAITING FOR MESSAGE")
                         response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
                         startTime = response.content.strip()
+                        print(f"startTime > {startTime}")
                         if startTime.lower() == "cancel":
                             await self.cancelCommand(dmChannel, "Operation scheduling")
                             return
@@ -1136,21 +1152,28 @@ class Schedule(commands.Cog):
                         isFormatCorrect = True
                     except ValueError:
                         isFormatCorrect = False
+                    print(f"isFormatCorrect > {isFormatCorrect}")
+                print("After IS-FORMAT-CORRECT while loop")
                 startTime = timeZone.localize(startTime).astimezone(UTC)
-                if startTime < UTC.localize(utcNow):
-                    if (delta := UTC.localize(utcNow) - startTime) > timedelta(hours=1) and delta < timedelta(days=1):
+                if startTime < UTC.localize(utcNow):  # Set time is in the past
+                    print("Set time in past")
+                    if (delta := UTC.localize(utcNow) - startTime) > timedelta(hours=1) and delta < timedelta(days=1):  # Set time in the past 24 hours
+                        print("Set time in past 24 hours")
                         newStartTime = startTime + timedelta(days=1)
                         embed = Embed(title=SCHEDULE_EVENT_TIME_TOMORROW, description=SCHEDULE_EVENT_TIME_TOMORROW_PREVIEW.format(round(startTime.timestamp()), round(newStartTime.timestamp())), color=Colour.orange())
                         await dmChannel.send(embed=embed)
                         startTime = newStartTime
                         startTimeOk = True
-                    else:
+                    else:  # Set time older than 24 hours
+                        print("Set time older than 24 hours")
                         embed = Embed(title=SCHEDULE_EVENT_TIME_PAST_QUESTION, description=SCHEDULE_EVENT_TIME_PAST_PROMPT, color=Colour.orange())
                         embed.set_footer(text=SCHEDULE_CANCEL)
                         await dmChannel.send(embed=embed)
                         try:
+                            print(f"SCHEDULE_EVENT_TIME_PAST_QUESTION WAITING FOR MESSAGE")
                             response = await self.bot.wait_for("message", timeout=TIME_ONE_MIN, check=lambda msg, author=ctx.author, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
                             keepStartTime = response.content.strip().lower()
+                            print(f"keepStartTime > {keepStartTime}")
                             if keepStartTime == "cancel":
                                 await self.cancelCommand(dmChannel, "Operation scheduling")
                                 return
@@ -1161,41 +1184,54 @@ class Schedule(commands.Cog):
                             startTimeOk = True
                 else:
                     startTimeOk = True
+            print("After START-TIME-OK while loop")
             endTime = startTime + delta
 
             with open(EVENTS_FILE) as f:
                 events = json.load(f)
 
+            print("Before EVENTS for loop")
             exitForLoop = False
             for event in events:
+                print("In EVENTS for loop")
+                print(f"exitForLoop > {exitForLoop}")
                 if exitForLoop:
                     break
+                print("Before VALID-COLLISION-RESPONSE while loop")
                 validCollisionReponse = False
                 while not validCollisionReponse:
+                    print("In VALID-COLLISION-RESPONSE while loop")
                     if event.get("type", "Operation") == "Event":
+                        print("Skipping event collision checking - its an event")
                         continue
-                    eventStartTime = UTC.localize(datetime.strptime(event["time"], EVENT_TIME_FORMAT))
-                    eventEndTime = UTC.localize(datetime.strptime(event["endTime"], EVENT_TIME_FORMAT))
-                    if (eventStartTime <= startTime < eventEndTime) or (eventStartTime <= endTime < eventEndTime) or (startTime <= eventStartTime < endTime):
+                    eventStartTime = UTC.localize(datetime.strptime(event["time"], EVENT_TIME_FORMAT))  # Target event start time
+                    eventEndTime = UTC.localize(datetime.strptime(event["endTime"], EVENT_TIME_FORMAT))  # Target event end time
+                    if (eventStartTime <= startTime < eventEndTime) or (eventStartTime <= endTime < eventEndTime) or (startTime <= eventStartTime < endTime):  # If scheduled event and target event overlap
+                        print("Event Collision!!")
                         eventCollision = True
-                        embed = Embed(title=SCHEDULE_EVENT_ERROR_COLLISION.format(event["title"]), description=SCHEDULE_EVENT_ERROR_DESCRIPTION, colour=Colour.red())
+                        embed = Embed(title=SCHEDULE_EVENT_ERROR_COLLISION.format(event["title"]), description=SCHEDULE_EVENT_ERROR_DESCRIPTION, color=Colour.red())
                         embed.set_footer(text=SCHEDULE_CANCEL)
                         await dmChannel.send(embed=embed)
                     elif eventEndTime < startTime and eventEndTime + timedelta(hours=1) > startTime:
+                        print("Event Collision PADDING_EARLY!!")
                         eventCollision = True
-                        embed = Embed(title=SCHEDULE_EVENT_ERROR_PADDING_EARLY.format(event["title"]), description=SCHEDULE_EVENT_ERROR_DESCRIPTION, colour=Colour.red())
+                        embed = Embed(title=SCHEDULE_EVENT_ERROR_PADDING_EARLY.format(event["title"]), description=SCHEDULE_EVENT_ERROR_DESCRIPTION, color=Colour.red())
                         embed.set_footer(text=SCHEDULE_CANCEL)
                         await dmChannel.send(embed=embed)
                     elif endTime < eventStartTime and endTime + timedelta(hours=1) > eventStartTime:
+                        print("Event Collision PADDING_LATE!!")
                         eventCollision = True
-                        embed = Embed(title=SCHEDULE_EVENT_ERROR_PADDING_LATE.format(event["title"]), description=SCHEDULE_EVENT_ERROR_DESCRIPTION, colour=Colour.red())
+                        embed = Embed(title=SCHEDULE_EVENT_ERROR_PADDING_LATE.format(event["title"]), description=SCHEDULE_EVENT_ERROR_DESCRIPTION, color=Colour.red())
                         embed.set_footer(text=SCHEDULE_CANCEL)
                         await dmChannel.send(embed=embed)
 
+                    print(f"eventCollision:bool > {eventCollision}")
                     if eventCollision:
                         try:
+                            print(f"EVENT COLLISION WAITING FOR MESSAGE")
                             response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, ctx=ctx, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == ctx.author)
                             collisionResponse = response.content.strip().lower()
+                            print(f"collisionResponse > {collisionResponse}")
                             if collisionResponse == "cancel":
                                 await self.cancelCommand(dmChannel, "Operation scheduling")
                                 return
@@ -1213,7 +1249,10 @@ class Schedule(commands.Cog):
                             return
                     else:
                         validCollisionReponse = True
+                print("After VALID-COLLISION-RESPONSE while loop")
+        print("After EVENT-COLLISION while loop")
 
+        # Operation finalizing
         try:
             if os.path.exists(EVENTS_FILE):
                 with open(EVENTS_FILE) as f:
@@ -1356,6 +1395,7 @@ class Schedule(commands.Cog):
                 await dmChannel.send(embed=TIMEOUT_EMBED)
                 return
 
+        # Workshop title
         if template is None:
             embed = Embed(title=SCHEDULE_EVENT_TITLE.format("workshop"), color=Colour.gold())
             embed.set_footer(text=SCHEDULE_CANCEL)
@@ -1372,6 +1412,7 @@ class Schedule(commands.Cog):
         else:
             title = template["title"]
 
+        # Workshop description
         if template is None:
             embed = Embed(title=SCHEDULE_EVENT_DESCRIPTION_QUESTION, color=Colour.gold())
             embed.set_footer(text=SCHEDULE_CANCEL)
@@ -1388,6 +1429,7 @@ class Schedule(commands.Cog):
         else:
             description = template["description"]
 
+        # Workshop URL
         if template is None:
             embed = Embed(title=SCHEDULE_EVENT_URL_TITLE, description=SCHEDULE_EVENT_URL_DESCRIPTION, color=Colour.gold())
             embed.set_footer(text=SCHEDULE_CANCEL)
@@ -1406,6 +1448,7 @@ class Schedule(commands.Cog):
         else:
             externalURL = template["externalURL"]
 
+        # Workshop reservable roles
         if template is None:
             embed = Embed(title=SCHEDULE_EVENT_RESERVABLE, description=SCHEDULE_EVENT_RESERVABLE_DIALOG, color=Colour.gold())
             embed.set_footer(text=SCHEDULE_CANCEL)
@@ -1431,6 +1474,7 @@ class Schedule(commands.Cog):
         else:
             reservableRoles = template["reservableRoles"]
 
+        # Workshop map
         if template is None:
             mapOk = False
             color=Colour.gold()
@@ -1458,6 +1502,7 @@ class Schedule(commands.Cog):
         else:
             eventMap = template["map"]
 
+        # Workshop attendance
         if template is None:
             attendanceOk = False
             color = Colour.gold()
@@ -1491,11 +1536,12 @@ class Schedule(commands.Cog):
         else:
             maxPlayers = template["maxPlayers"]
 
+        # Workshop duration
         if template is None:
             color = Colour.gold()
             duration = "INVALID INPUT"
             while not re.match(SCHEDULE_EVENT_DURATION_REGEX, duration):
-                embed = Embed(title=SCHEDULE_EVENT_DURATION_QUESTION.format("workshop"), description=SCHEDULE_EVENT_DURATION_PROMPT, colour=color)
+                embed = Embed(title=SCHEDULE_EVENT_DURATION_QUESTION.format("workshop"), description=SCHEDULE_EVENT_DURATION_PROMPT, color=color)
                 embed.set_footer(text=SCHEDULE_CANCEL)
                 color=Colour.red()
                 await dmChannel.send(embed=embed)
@@ -1515,6 +1561,7 @@ class Schedule(commands.Cog):
         minutes = int(duration.split("h")[-1].replace("m", "").strip()) if duration.strip()[-1] != "h" else 0
         delta = timedelta(hours=hours, minutes=minutes)
 
+        # Workshop linking
         if template is None:
             workshopInterestOk = False
             color = Colour.gold()
@@ -1561,11 +1608,11 @@ class Schedule(commands.Cog):
         with open(MEMBER_TIME_ZONES_FILE) as f:
             memberTimeZones = json.load(f)
 
+        # Workshop time
         timeZone = pytz.timezone(memberTimeZones[str(ctx.author.id)])
         eventCollision = True
         while eventCollision:
             eventCollision = False
-
             startTimeOk = False
             while not startTimeOk:
                 isFormatCorrect = False
@@ -1630,20 +1677,21 @@ class Schedule(commands.Cog):
                 eventEndTime = UTC.localize(datetime.strptime(event["endTime"], EVENT_TIME_FORMAT))
                 if (eventStartTime <= startTime < eventEndTime) or (eventStartTime <= endTime < eventEndTime) or (startTime <= eventStartTime < endTime):
                     eventCollision = True
-                    embed = Embed(title=SCHEDULE_EVENT_ERROR_COLLISION.format(event["title"]), description=SCHEDULE_EVENT_ERROR_DESCRIPTION, colour=Colour.red())
+                    embed = Embed(title=SCHEDULE_EVENT_ERROR_COLLISION.format(event["title"]), description=SCHEDULE_EVENT_ERROR_DESCRIPTION, color=Colour.red())
                     await dmChannel.send(embed=embed)
                     break
                 elif eventEndTime < startTime and eventEndTime + timedelta(hours=1) > startTime:
                     eventCollision = True
-                    embed = Embed(title=SCHEDULE_EVENT_ERROR_PADDING_EARLY.format(event["title"]), description=SCHEDULE_EVENT_ERROR_DESCRIPTION, colour=Colour.red())
+                    embed = Embed(title=SCHEDULE_EVENT_ERROR_PADDING_EARLY.format(event["title"]), description=SCHEDULE_EVENT_ERROR_DESCRIPTION, color=Colour.red())
                     await dmChannel.send(embed=embed)
                     break
                 elif endTime < eventStartTime and endTime + timedelta(hours=1) > eventStartTime:
                     eventCollision = True
-                    embed = Embed(title=SCHEDULE_EVENT_ERROR_PADDING_LATE.format(event["title"]), description=SCHEDULE_EVENT_ERROR_DESCRIPTION, colour=Colour.red())
+                    embed = Embed(title=SCHEDULE_EVENT_ERROR_PADDING_LATE.format(event["title"]), description=SCHEDULE_EVENT_ERROR_DESCRIPTION, color=Colour.red())
                     await dmChannel.send(embed=embed)
                     break
 
+        # Workshop save template
         if template is None:
             embed = Embed(title="Do you wish to save this workshop as a template?", description="Enter `yes` or `y` if you want to save it.\nEnter anything else to not.", color=Colour.gold())
             embed.set_footer(text=SCHEDULE_CANCEL)
@@ -1695,6 +1743,7 @@ class Schedule(commands.Cog):
                 embed = Embed(title=SCHEDULE_TEMPLATE_DISCARD, color=Colour.red())
                 await dmChannel.send(embed=embed)
 
+        # Workshop finalizing
         try:
             if os.path.exists(EVENTS_FILE):
                 with open(EVENTS_FILE) as f:
@@ -1754,7 +1803,10 @@ class Schedule(commands.Cog):
     async def scheduleEvent(self, ctx):
         await ctx.send(RESPONSE_EVENT_PROGRESS.format("event"))
         log.info(LOG_CREATING_EVENT.format(ctx.author.display_name, ctx.author.name, ctx.author.discriminator, "an event"))
+
         authorId = ctx.author.id
+
+        # Event title
         embed = Embed(title=SCHEDULE_EVENT_TITLE.format("event"), color=Colour.gold())
         embed.set_footer(text=SCHEDULE_CANCEL)
         try:
@@ -1773,6 +1825,7 @@ class Schedule(commands.Cog):
             await dmChannel.send(embed=TIMEOUT_EMBED)
             return
 
+        # Event description
         embed = Embed(title=SCHEDULE_EVENT_DESCRIPTION_QUESTION, color=Colour.gold())
         embed.set_footer(text=SCHEDULE_CANCEL)
         await dmChannel.send(embed=embed)
@@ -1786,6 +1839,7 @@ class Schedule(commands.Cog):
             await dmChannel.send(embed=TIMEOUT_EMBED)
             return
 
+        # Event URL
         embed = Embed(title=SCHEDULE_EVENT_URL_TITLE, description=SCHEDULE_EVENT_URL_DESCRIPTION, color=Colour.gold())
         embed.set_footer(text=SCHEDULE_CANCEL)
         await dmChannel.send(embed=embed)
@@ -1801,6 +1855,7 @@ class Schedule(commands.Cog):
             await dmChannel.send(embed=TIMEOUT_EMBED)
             return
 
+        # Event reservable roles
         embed = Embed(title=SCHEDULE_EVENT_RESERVABLE, description=SCHEDULE_EVENT_RESERVABLE_DIALOG, color=Colour.gold())
         embed.set_footer(text=SCHEDULE_CANCEL)
         await dmChannel.send(embed=embed)
@@ -1823,6 +1878,7 @@ class Schedule(commands.Cog):
         else:
             reservableRoles = None
 
+        # Event map
         mapOK = False
         color=Colour.gold()
         while not mapOK:
@@ -1848,6 +1904,7 @@ class Schedule(commands.Cog):
                 await dmChannel.send(embed=TIMEOUT_EMBED)
                 return
 
+        # Event attendance
         attendanceOk = False
         color = Colour.gold()
         while not attendanceOk:
@@ -1878,6 +1935,7 @@ class Schedule(commands.Cog):
                 await dmChannel.send(embed=TIMEOUT_EMBED)
                 return
 
+        # Event duration
         color = Colour.gold()
         duration = "INVALID INPUT"
         while not re.match(SCHEDULE_EVENT_DURATION_REGEX, duration):
@@ -1915,6 +1973,7 @@ class Schedule(commands.Cog):
             with open(MEMBER_TIME_ZONES_FILE) as f:
                 memberTimeZones = json.load(f)
 
+        # Event time
         timeZone = pytz.timezone(memberTimeZones[str(ctx.author.id)])
         startTimeOk = False
         while not startTimeOk:
@@ -1969,6 +2028,7 @@ class Schedule(commands.Cog):
                 startTimeOk = True
         endTime = startTime + delta
 
+        # Event finalizing
         try:
             if os.path.exists(EVENTS_FILE):
                 with open(EVENTS_FILE) as f:

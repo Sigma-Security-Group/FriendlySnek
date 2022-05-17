@@ -1263,7 +1263,7 @@ class Schedule(commands.Cog):
         if newEvent is not None:
             with open(EVENTS_FILE) as f:
                 events = json.load(f)
-            await ctx.send(RESPONSE_EVENT_DONE.format(":b:op", newEvent["title"], SERVER, SCHEDULE, events[-1]["messageId"]))
+            await ctx.send(RESPONSE_EVENT_DONE.format(newEvent["title"], SERVER, SCHEDULE, events[-1]["messageId"]))
 
     @cog_ext.cog_slash(name="ws", description=SCHEDULE_COMMAND_DESCRIPTION.format("a workshop"), guild_ids=[SERVER])
     async def ws(self, ctx: SlashContext):
@@ -1755,7 +1755,7 @@ class Schedule(commands.Cog):
         if newEvent is not None:
             with open(EVENTS_FILE) as f:
                 events = json.load(f)
-            await ctx.send(RESPONSE_EVENT_DONE.format("workshop", newEvent["title"], SERVER, SCHEDULE, events[-1]["messageId"]))
+            await ctx.send(RESPONSE_EVENT_DONE.format(newEvent["title"], SERVER, SCHEDULE, events[-1]["messageId"]))
 
             if workshopInterest is not None:
                 with open(WORKSHOP_INTEREST_FILE) as f:
@@ -2039,7 +2039,7 @@ class Schedule(commands.Cog):
         if newEvent is not None:
             with open(EVENTS_FILE) as f:
                 events = json.load(f)
-            await ctx.send(RESPONSE_EVENT_DONE.format("event", newEvent["title"], SERVER, SCHEDULE, events[-1]["messageId"]))
+            await ctx.send(RESPONSE_EVENT_DONE.format(newEvent["title"], SERVER, SCHEDULE, events[-1]["messageId"]))
 
     @cog_ext.cog_slash(name="changetimezone", description=CHANGE_TIME_ZONE_COMMAND_DESCRIPTION, guild_ids=[SERVER])
     async def timeZone(self, ctx: SlashContext) -> None:

@@ -72,7 +72,7 @@ ABORT_CANCELED = "❌ {0} canceled!"
 SCHEDULE_TEMPLATE_SAVED = "✅ Template saved as `{0}`!"
 SCHEDULE_TEMPLATE_DISCARD = "❌ Template not saved!"
 RESPONSE_EVENT_PROGRESS = "Scheduling... Standby for {0}..."
-RESPONSE_EVENT_DONE = "The {0} `{1}` is now on [schedule](<https://discord.com/channels/{2}/{3}/{4}>)!"
+RESPONSE_EVENT_DONE = "`{0}` is now on [schedule](<https://discord.com/channels/{1}/{2}/{3}>)!"
 RESPONSE_REFRESHING = "Refreshing <#{0}>..."
 RESPONSE_TIME_ZONE = "Changing time zone preferences..."
 

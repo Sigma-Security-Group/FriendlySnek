@@ -1,6 +1,0 @@
-discord.py[voice]
-discord-py-slash-command
-pytz
-dateutils
-tqdm
-anvil-uplink

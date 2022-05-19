@@ -3,19 +3,24 @@ import pytz
 import asyncio
 
 import discord
-from discord import app_commands
+from discord import app_commands, Embed, Color
 from discord.ext import commands
 
 from constants import *
-from __main__ import log, DEBUG
+from __main__ import log, cogsReady, DEBUG
 if DEBUG:
     from constants.debug import *
 
-TIMEOUT_EMBED = discord.Embed(title=ERROR_TIMEOUT, color=discord.Color.red())
+TIMEOUT_EMBED = Embed(title=ERROR_TIMEOUT, color=Color.red())
 
 class ChangeTimeZone(commands.Cog):
     def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
+
+    @commands.Cog.listener()
+    async def on_ready(self) -> None:
+        log.debug(LOG_COG_READY.format("ChangeTimeZone"), flush=True)
+        cogsReady["changeTimeZone"] = True
 
     async def cancelCommand(self, user, abortText:str) -> None:
         """
@@ -28,7 +33,7 @@ class ChangeTimeZone(commands.Cog):
             Returns:
             None
         """
-        await user.send(embed=discord.Embed(title=ABORT_CANCELED.format(abortText), color=discord.Color.red()))
+        await user.send(embed=Embed(title=ABORT_CANCELED.format(abortText), color=Color.red()))
 
     @app_commands.command(name="changetimezone")
     @app_commands.guilds(GUILD)
@@ -56,12 +61,12 @@ class ChangeTimeZone(commands.Cog):
             memberTimeZones = json.load(f)
 
         timezoneOk = False
-        color = discord.Color.gold()
+        color = Color.gold()
         while not timezoneOk:
-            embed = discord.Embed(title=":clock1: What's your preferred time zone?", description=(SCHEDULE_EVENT_SELECTED_TIME_ZONE.format(memberTimeZones[str(interaction.user.id)]) if str(interaction.user.id) in memberTimeZones else "You don't have a preferred time zone set.") + "\n\nEnter a number from the list below.\nEnter any time zone name from the column \"**TZ DATABASE NAME**\" in this [Wikipedia article](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones)." + "\nEnter `none` to erase current preferences." * isCommand, color=color)
+            embed = Embed(title=":clock1: What's your preferred time zone?", description=(SCHEDULE_EVENT_SELECTED_TIME_ZONE.format(memberTimeZones[str(interaction.user.id)]) if str(interaction.user.id) in memberTimeZones else "You don't have a preferred time zone set.") + "\n\nEnter a number from the list below.\nEnter any time zone name from the column \"**TZ DATABASE NAME**\" in this [Wikipedia article](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones)." + "\nEnter `none` to erase current preferences." * isCommand, color=color)
             embed.add_field(name="Popular Time Zones", value="\n".join(f"**{idx}** {tz}" for idx, tz in enumerate(TIME_ZONES, 1)))
             embed.set_footer(text="Enter `cancel` to abort this command.")
-            color = discord.Color.red()
+            color = Color.red()
             try:
                 msg = await interaction.user.send(embed=embed)
             except Exception as e:
@@ -95,7 +100,7 @@ class ChangeTimeZone(commands.Cog):
                 if timezoneOk:
                     with open(MEMBER_TIME_ZONES_FILE, "w") as f:
                         json.dump(memberTimeZones, f, indent=4)
-                    embed = discord.Embed(title=f"✅ Time zone preferences changed{f' to `{timeZone.zone}`' if isInputNotNone else ''}!", color=discord.Color.green())
+                    embed = Embed(title=f"✅ Time zone preferences changed!", description=f"Updated to `{timeZone.zone}`!" if isInputNotNone else "Preference removed!", color=Color.green())
                     await dmChannel.send(embed=embed)
                     return True
 

@@ -1,19 +1,16 @@
 from logger import Logger
 log = Logger()
 
+import secret
+import pytz
+import asyncio
 import os
-
-# Define whether to use the Sigma or BTR (debug) server
-DEBUG = os.path.exists("DEBUG")
+DEBUG = os.path.exists("DEBUG")  # Define whether to use the Sigma or BTR (debug) server
 # DEBUG = True  # always use debug server during development
 
-import asyncio
-# Set appropriate event loop policy to avoid runtime errors on windows
-import platform
+import platform  # Set appropriate event loop policy to avoid runtime errors on windows
 if platform.system() == "Windows":
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
-
-import pytz
 
 # from typing import Optional
 import discord
@@ -23,12 +20,13 @@ from discord.ext import commands
 from constants import *
 if DEBUG:
     from constants.debug import *
-import secret
 
 if not os.path.exists("./data"):
     os.mkdir("data")
 
-cogs = [cog[:-3] for cog in os.listdir("cogs/") if cog.endswith(".py")]
+COGS = [cog[:-3] for cog in os.listdir("cogs/") if cog.endswith(".py")]
+cogsReady = {cog: False for cog in COGS}
+
 INTENTS = discord.Intents.all()
 UTC = pytz.utc
 newcomers = set()
@@ -51,16 +49,20 @@ class FriendlySnek(commands.Bot):
     # By doing so, we don't have to wait up to an hour until they are shown to the end-user.
     async def setup_hook(self):
         self.tree.copy_global_to(guild=GUILD)  # This copies the global commands over to your guild.
-        for cog in cogs:
+        for cog in COGS:
             await client.load_extension(f"cogs.{cog}")
         await self.tree.sync(guild=GUILD)
 
 # In order to use a basic synchronization of the app commands in the setup_hook,
 # you have to replace the 0 with your bot's application_id that you find in the developer portal.
 client = FriendlySnek(intents=INTENTS, applicationID=FRIENDLY_SNEK_DEV_FROGGI)
+client.ready = False
 
 @client.event
 async def on_ready():
+    while not all(cogsReady.values()):
+        await asyncio.sleep(1)
+    client.ready = True
     log.info(f"Bot Ready! Logged in as {client.user}.")
 
 

@@ -4,6 +4,7 @@
 
 ## Misc
 COMMAND_PREFIX = "-"
+TIME_FORMAT = "%Y-%m-%d %I:%M %p"
 
 ## Error
 ERROR_TIMEOUT = ":clock3: You were too slow, try again!"
@@ -18,6 +19,14 @@ LOG_ERROR = "An error occured!"
 TIME_ONE_MIN = 60  # Short
 TIME_TEN_MIN = 600  # Normal
 TIME_THIRTY_MIN = 1800  # Long
+
+
+###################
+# Poll.py
+####################
+
+POLL_PERCENT_REGEX = r"\(\d+\.?\d*%\)\s*"
+
 
 ####################
 # Schedule.py

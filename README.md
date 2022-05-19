@@ -29,6 +29,6 @@ You can easily control whether the bot should use the debug server instead of th
 
 Make sure that you have all dependencies installed by running `python3 -m pip install -r requirements.txt`.
 
-To run the bot, just run `python3 -OO main.py`.
+To run the bot, execute `python3 -OO main.py`.
 
 To setup slash commands then you need to do something. GIYF & RTFM.

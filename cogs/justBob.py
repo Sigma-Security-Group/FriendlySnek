@@ -74,8 +74,8 @@ Levels structure. WIP levels use emojis for easier level design, but when a leve
 ]
 """
 
-LEVELS_FILE = "cogs/justBob/levels.json"
-PLAYERS_PROGRESS_FILE = "data/justBobPlayersProgress.json"
+LEVELS_FILE = "./cogs/justBob/levels.json"
+PLAYERS_PROGRESS_FILE = "./data/justBobPlayersProgress.json"
 LEVEL_NUMBERS = ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣", "🔟"]
 DIRECTIONS = {
     "👈": (0, 0, -1),

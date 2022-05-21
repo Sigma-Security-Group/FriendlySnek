@@ -21,7 +21,7 @@ TIMEOUT_EMBED = Embed(title=ERROR_TIMEOUT, color=Color.red())
 MISSIONS_UPLOADED_FILE = "data/missionsUploaded.log"
 # FTP_MISSIONS_DIR = "/144.48.106.194_2316/mpmissions"  # Host Havoc
 #FTP_MISSIONS_DIR = "/euc-ogs7.armahosts.com_2482/mpmissions"  # Dwarf's server
-FTP_MISSIONS_DIR_TEST = "/euc-ogs11.armahosts.com_8821/mpmissions"  # Dwarf's server TEST
+FTP_MISSIONS_DIR = "/euc-ogs11.armahosts.com_2492/mpmissions"  # Dwarf's server TEST
 
 UTC = pytz.utc
 
@@ -124,7 +124,7 @@ class MissionUploader(commands.Cog):
 
     @uploadMission.error
     async def onUploadMissionError(self, interaction: discord.Interaction, error: app_commands.AppCommandError) -> None:
-        await interaction.response.send_message("My brother in christ, you ugly")
+        #await interaction.response.send_message("My brother in christ, you ugly")
         print(error)
 
 async def setup(bot: commands.Bot) -> None:

@@ -24,6 +24,9 @@ if DEBUG:
 if not os.path.exists("./data"):
     os.mkdir("data")
 
+if not os.path.exists("./tmp"):  # Mission missionUploader stuff
+    os.mkdir("tmp")
+
 COGS = [cog[:-3] for cog in os.listdir("cogs/") if cog.endswith(".py")]
 cogsReady = {cog: False for cog in COGS}
 

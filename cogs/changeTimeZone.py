@@ -1,6 +1,7 @@
-import json
-import pytz
 import asyncio
+import json
+import os
+import pytz
 
 import discord
 from discord import app_commands, Embed, Color
@@ -56,6 +57,10 @@ class ChangeTimeZone(commands.Cog):
             bool: If function executed successfully.
         """
         log.info(f"{interaction.user.display_name} ({interaction.user.name}#{interaction.user.discriminator}) is updating their time zone preferences...")
+
+        if not os.path.exists(MEMBER_TIME_ZONES_FILE):
+            with open(MEMBER_TIME_ZONES_FILE, "w") as f:
+                json.dump({}, f, indent=4)
 
         with open(MEMBER_TIME_ZONES_FILE) as f:
             memberTimeZones = json.load(f)

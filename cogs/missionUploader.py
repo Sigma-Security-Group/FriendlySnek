@@ -1,8 +1,4 @@
-"""
-    This file does not work
-    i dont know how to fix
-"""
-
+from secret import DEBUG
 import asyncio
 import pytz
 import secret
@@ -13,9 +9,10 @@ from discord import app_commands, Embed, Color, utils
 from discord.ext import commands
 
 from constants import *
-from __main__ import log, cogsReady, DEBUG
+from __main__ import log, cogsReady
 if DEBUG:
     from constants.debug import *
+
 
 TIMEOUT_EMBED = Embed(title=ERROR_TIMEOUT, color=Color.red())
 MISSIONS_UPLOADED_FILE = "data/missionsUploaded.log"
@@ -35,9 +32,19 @@ class MissionUploader(commands.Cog):
         cogsReady["missionUploader"] = True
 
     async def checkAttachments(self, dmChannel, attachments):
+        """
+            X.
+
+            Parameters:
+            dmChannel: X.
+            attachments: X.
+
+            Returns:
+            None
+        """
         with FTP() as ftp:
-            ftp.connect(host=secret.ftpHost, port=secret.ftpPort)
-            ftp.login(user=secret.ftpUsername, passwd=secret.ftpPassword)
+            ftp.connect(host=secret.FTP_HOST, port=secret.FTP_PORT)
+            ftp.login(user=secret.FTP_USERNAME, passwd=secret.FTP_PASSWORD)
             ftp.cwd(FTP_MISSIONS_DIR)
             missionFilesOnServer = ftp.nlst()
         attachmentOk = False
@@ -64,7 +71,6 @@ class MissionUploader(commands.Cog):
     @app_commands.checks.has_any_role(UNIT_STAFF, SERVER_HAMSTER, MISSION_BUILDER, CURATOR)
     async def uploadMission(self, interaction: discord.Interaction) -> None:
         """ Upload a mission PBO file to the server. """
-        # await interaction.response.send_message("❌ You do not have the permissions to upload a mission file!")
         await interaction.response.send_message("Upload mission file in DMs...")
         log.info(f"{interaction.user.display_name} ({interaction.user.name}#{interaction.user.discriminator}) is uploading a mission file...")
 
@@ -95,16 +101,17 @@ class MissionUploader(commands.Cog):
             await attachment.save(f)
 
         with FTP() as ftp:
-            ftp.connect(host=secret.ftpHost, port=secret.ftpPort)
-            ftp.login(user=secret.ftpUsername, passwd=secret.ftpPassword)
+            ftp.connect(host=secret.FTP_HOST, port=secret.FTP_PORT)
+            ftp.login(user=secret.FTP_USERNAME, passwd=secret.FTP_PASSWORD)
             ftp.cwd(FTP_MISSIONS_DIR)
+            DEBUG = False
             if not DEBUG:
                 with open(f"tmp/{attachment.filename}", "rb") as f:
                     ftp.storbinary(f"STOR {attachment.filename}", f)
 
         filename = attachment.filename
         utcTime = UTC.localize(datetime.utcnow())
-        member = f"{interaction.user.display_name}({interaction.user.name}#{interaction.user.discriminator})"
+        member = f"{interaction.user.display_name} ({interaction.user.name}#{interaction.user.discriminator})"
         memberId = interaction.user.id
 
         with open(MISSIONS_UPLOADED_FILE, "a") as f:
@@ -124,8 +131,10 @@ class MissionUploader(commands.Cog):
 
     @uploadMission.error
     async def onUploadMissionError(self, interaction: discord.Interaction, error: app_commands.AppCommandError) -> None:
-        #await interaction.response.send_message("My brother in christ, you ugly")
-        print(error)
+        if type(error) == discord.app_commands.errors.MissingAnyRole:
+            guild = self.bot.get_guild(GUILD_ID)
+            embed = Embed(title="❌ Missing permissions", description=f"You do not have the permissions to upload a mission file!\nThe permitted roles are: {', '.join([guild.get_role(role).name for role in (UNIT_STAFF, SERVER_HAMSTER, MISSION_BUILDER, CURATOR)])}.", color=Color.red())
+            await interaction.response.send_message(embed=embed)
 
 async def setup(bot: commands.Bot) -> None:
     await bot.add_cog(MissionUploader(bot))

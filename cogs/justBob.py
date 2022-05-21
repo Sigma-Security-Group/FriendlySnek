@@ -1,3 +1,4 @@
+from secret import DEBUG
 import os
 import json
 import asyncio
@@ -6,9 +7,10 @@ from discord import app_commands, Embed, Color
 from discord.ext import commands
 
 from constants import *
-from __main__ import log, cogsReady, DEBUG
+from __main__ import log, cogsReady
 if DEBUG:
     from constants.debug import *
+
 
 """
 Levels structure. WIP levels use emojis for easier level design, but when a level gets added to the official levels.json file, all emojis are replaced with corresponding characters:
@@ -118,6 +120,16 @@ class JustBob(commands.Cog):
         await self.levelSelect(interaction.channel, interaction.user)
 
     async def levelSelect(self, channel, player) -> None:
+        """
+            X.
+
+            Parameters:
+            channel: X.
+            player: X.
+
+            Returns:
+            None
+        """
         with open(LEVELS_FILE) as f:
             levels = json.load(f)
         with open(PLAYERS_PROGRESS_FILE) as f:
@@ -134,6 +146,15 @@ class JustBob(commands.Cog):
 
     @commands.Cog.listener()
     async def on_raw_reaction_add(self, payload: discord.RawReactionActionEvent) -> None:
+        """
+            X.
+
+            Parameters:
+            payload (discord.RawReactionActionEvent): The raw reaction event.
+
+            Returns:
+            None
+        """
         if self.bot.ready and payload.member is not None and not payload.member.bot and ((payload.member is not None and payload.member.id in self.games and self.games[payload.member.id]["messageId"] == payload.message_id) or (any(role is not None and role.id == UNIT_STAFF for role in payload.member.roles) and payload.emoji.name == STOP)):
             channel = self.bot.get_channel(payload.channel_id)
             try:
@@ -180,6 +201,15 @@ class JustBob(commands.Cog):
                 pass
 
     def getGameEmbed(self, game) -> Embed:
+        """
+            X.
+
+            Parameters:
+            game: X.
+
+            Returns:
+            Embed
+        """
         guild = self.bot.get_guild(GUILD_ID)
         embed = Embed(title=f"Just Bob (Lvl {game['levelNum'] + 1})", description=game["description"], color=Color.blue())
 
@@ -228,6 +258,16 @@ class JustBob(commands.Cog):
         return embed
 
     def makeMove(self, game, direction) -> bool:
+        """
+            X.
+
+            Parameters:
+            game: X.
+            direction: X.
+
+            Returns:
+            None
+        """
         dl, dr, dc = direction
         levelComplete = False
         playerLayer, playerRow, playerCol = game["playerPos"]

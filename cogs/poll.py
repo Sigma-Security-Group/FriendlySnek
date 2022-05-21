@@ -1,13 +1,15 @@
-from datetime import datetime
+from secret import DEBUG
 import re
+from datetime import datetime
 
 from discord import app_commands, Embed, Color
 from discord.ext import commands
 
 from constants import *
-from __main__ import log, cogsReady, DEBUG
+from __main__ import log, cogsReady
 if DEBUG:
     from constants.debug import *
+
 
 emojiNumbers: tuple = ("1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣", "🔟")
 

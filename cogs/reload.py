@@ -1,10 +1,13 @@
+from secret import DEBUG
+
 from discord import app_commands
 from discord.ext import commands
 
 from constants import *
-from __main__ import log, cogsReady, DEBUG, client, COGS
+from __main__ import log, cogsReady, client, COGS
 if DEBUG:
     from constants.debug import *
+
 
 class Reload(commands.Cog):
     def __init__(self, bot: commands.Bot) -> None:

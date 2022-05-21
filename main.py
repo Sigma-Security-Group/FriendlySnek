@@ -1,30 +1,45 @@
-from logger import Logger
-log = Logger()
-
 import secret
 import pytz
 import asyncio
 import os
-DEBUG = os.path.exists("DEBUG")  # Define whether to use the Sigma or BTR (debug) server
-# DEBUG = True  # always use debug server during development
+
+from logger import Logger
+log = Logger()
 
 import platform  # Set appropriate event loop policy to avoid runtime errors on windows
 if platform.system() == "Windows":
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
 # from typing import Optional
-import discord
 # from discord import app_commands
+import discord
 from discord.ext import commands
 
 from constants import *
-if DEBUG:
+if secret.DEBUG:
     from constants.debug import *
 
+
+if not os.path.exists("./secret.py"):
+    log.info("Creating a secret.py file!")
+    with open("secret.py", "w") as f:
+        f.write(  # Write secret.py template
+            "TOKEN:str = \"\""
+            "\nTOKEN_DEV:str = \"\""
+            "\nFTP_HOST:str = \"\"  # E.g. euc-ogs11.armahosts.com"
+            "\nFTP_PORT:int = 0  # E.g. 8821"
+            "\nFTP_USERNAME:str = \"\"  # E.g. Froggi"
+            "\nFTP_PASSWORD:str = \"\""
+            "\nDEBUG:bool = True"
+            "\n"
+        )
+
 if not os.path.exists("./data"):
+    log.info("Creating a data directory!")
     os.mkdir("data")
 
 if not os.path.exists("./tmp"):  # Mission missionUploader stuff
+    log.info("Creating a tmp directory!")
     os.mkdir("tmp")
 
 COGS = [cog[:-3] for cog in os.listdir("cogs/") if cog.endswith(".py")]
@@ -223,7 +238,7 @@ async def on_command_error(ctx, error):
 
 if __name__ == "__main__":
     try:
-        client.run(secret.tokenDev if DEBUG else secret.token)
+        client.run(secret.TOKEN_DEV if secret.DEBUG else secret.TOKEN)
         log.info("Bot stopped!")
     except Exception:
         log.exception("An error occured!")

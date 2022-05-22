@@ -571,6 +571,135 @@ class Schedule(commands.Cog):
                     await dmChannel.send(embed=embed)
                     log.debug(f"{member.display_name} ({member}) was reserving a role but schedule was updated!")
 
+    async def eventTime(self, interaction: discord.Interaction, dmChannel, eventType: str, collidingEventTypes: tuple, delta) -> tuple:
+        """
+            X.
+
+            Parameters:
+            interaction (discord.Interaction): The Discord interaction.
+            dmChannel: X.
+            eventType (str): The type of event, e.g. Operation
+            collidingEventTypes (tuple): A tuple of eventtypes that you want to collide with.
+            delta: idk, it comes from duration in any case.
+
+            Returns:
+            startTime, endTime (tuple): A tuple which contains the event start time and end time.
+        """
+        with open(MEMBER_TIME_ZONES_FILE) as f:
+            memberTimeZones = json.load(f)
+
+        timeZone = pytz.timezone(memberTimeZones[str(interaction.user.id)])
+        eventCollision = True
+        while eventCollision:
+            eventCollision = False
+            startTimeOk = False
+            while not startTimeOk:
+                isFormatCorrect = False
+                color = Color.gold()
+                while not isFormatCorrect:
+                    embed = Embed(title=SCHEDULE_EVENT_TIME.format(eventType.lower()), description=SCHEDULE_EVENT_SELECTED_TIME_ZONE.format(timeZone.zone), color=color)
+                    utcNow = datetime.utcnow()
+                    nextHalfHour = utcNow + (datetime.min - utcNow) % timedelta(minutes=30)
+                    embed.add_field(name="Example", value=UTC.localize(nextHalfHour).astimezone(timeZone).strftime(TIME_FORMAT))
+                    embed.set_footer(text=SCHEDULE_CANCEL)
+                    color = Color.red()
+                    await dmChannel.send(embed=embed)
+                    try:
+                        response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, interaction=interaction, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == interaction.user)
+                        startTime = response.content.strip()
+                        if startTime.lower() == "cancel":
+                            await self.cancelCommand(dmChannel, f"{eventType} scheduling")
+                            return
+                    except asyncio.TimeoutError:
+                        await dmChannel.send(embed=TIMEOUT_EMBED)
+                        return
+                    try:
+                        startTime = datetimeParse(startTime)
+                        isFormatCorrect = True
+                    except ValueError:
+                        isFormatCorrect = False
+
+                startTime = timeZone.localize(startTime).astimezone(UTC)
+                if startTime < UTC.localize(utcNow):  # Set time is in the past
+                    if (delta := UTC.localize(utcNow) - startTime) > timedelta(hours=1) and delta < timedelta(days=1):  # Set time in the past 24 hours
+                        newStartTime = startTime + timedelta(days=1)
+                        embed = Embed(title=SCHEDULE_EVENT_TIME_TOMORROW, description=SCHEDULE_EVENT_TIME_TOMORROW_PREVIEW.format(round(startTime.timestamp()), round(newStartTime.timestamp())), color=Color.orange())
+                        await dmChannel.send(embed=embed)
+                        startTime = newStartTime
+                        startTimeOk = True
+                    else:  # Set time older than 24 hours
+                        embed = Embed(title=SCHEDULE_EVENT_TIME_PAST_QUESTION, description=SCHEDULE_EVENT_TIME_PAST_PROMPT, color=Color.orange())
+                        embed.set_footer(text=SCHEDULE_CANCEL)
+                        await dmChannel.send(embed=embed)
+                        try:
+                            response = await self.bot.wait_for("message", timeout=TIME_ONE_MIN, check=lambda msg, author=interaction.user, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
+                            keepStartTime = response.content.strip().lower()
+                            if keepStartTime == "cancel":
+                                await self.cancelCommand(dmChannel, f"{eventType} scheduling")
+                                return
+                        except asyncio.TimeoutError:
+                            await dmChannel.send(embed=TIMEOUT_EMBED)
+                            return False
+                        if keepStartTime in ("yes", "y"):
+                            startTimeOk = True
+                else:
+                    startTimeOk = True
+            endTime = startTime + delta
+
+            with open(EVENTS_FILE) as f:
+                events = json.load(f)
+
+            exitForLoop = False
+            for event in events:
+                if exitForLoop:
+                    break
+                validCollisionReponse = False
+                while not validCollisionReponse:
+                    if event.get("type", eventType) not in collidingEventTypes:
+                        validCollisionReponse = True
+                        break
+                    eventStartTime = UTC.localize(datetime.strptime(event["time"], TIME_FORMAT))  # Target event start time
+                    eventEndTime = UTC.localize(datetime.strptime(event["endTime"], TIME_FORMAT))  # Target event end time
+                    if (eventStartTime <= startTime < eventEndTime) or (eventStartTime <= endTime < eventEndTime) or (startTime <= eventStartTime < endTime):  # If scheduled event and target event overlap
+                        eventCollision = True
+                        embed = Embed(title=SCHEDULE_EVENT_ERROR_COLLISION.format(event["title"]), description=SCHEDULE_EVENT_ERROR_DESCRIPTION, color=Color.red())
+                        embed.set_footer(text=SCHEDULE_CANCEL)
+                        await dmChannel.send(embed=embed)
+                    elif eventEndTime < startTime and eventEndTime + timedelta(hours=1) > startTime:
+                        eventCollision = True
+                        embed = Embed(title=SCHEDULE_EVENT_ERROR_PADDING_EARLY.format(event["title"]), description=SCHEDULE_EVENT_ERROR_DESCRIPTION, color=Color.red())
+                        embed.set_footer(text=SCHEDULE_CANCEL)
+                        await dmChannel.send(embed=embed)
+                    elif endTime < eventStartTime and endTime + timedelta(hours=1) > eventStartTime:
+                        eventCollision = True
+                        embed = Embed(title=SCHEDULE_EVENT_ERROR_PADDING_LATE.format(event["title"]), description=SCHEDULE_EVENT_ERROR_DESCRIPTION, color=Color.red())
+                        embed.set_footer(text=SCHEDULE_CANCEL)
+                        await dmChannel.send(embed=embed)
+
+                    if eventCollision:
+                        try:
+                            response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, interaction=interaction, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == interaction.user)
+                            collisionResponse = response.content.strip().lower()
+                            if collisionResponse == "cancel":
+                                await self.cancelCommand(dmChannel, f"{eventType} scheduling")
+                                return
+                            elif collisionResponse == "edit":
+                                validCollisionReponse = True
+                                startTimeOk = False
+                                exitForLoop = True
+                            elif collisionResponse == "override":
+                                validCollisionReponse = True
+                                eventCollision = False
+                                exitForLoop = True
+
+                        except asyncio.TimeoutError:
+                            await dmChannel.send(embed=TIMEOUT_EMBED)
+                            return
+                    else:
+                        validCollisionReponse = True
+
+        return (startTime, endTime)
+
     async def editEvent(self, author, event, isTemplateEdit: bool = False) -> bool:
         """
             X.
@@ -1179,128 +1308,14 @@ class Schedule(commands.Cog):
         with open(MEMBER_TIME_ZONES_FILE) as f:
             memberTimeZones = json.load(f)
 
-        if str(interaction.user.id) in memberTimeZones:
-            try:
-                timeZone = pytz.timezone(memberTimeZones[str(interaction.user.id)])
-            except pytz.exceptions.UnknownTimeZoneError:
-                timeZone = UTC
-        else:
+        if not str(interaction.user.id) in memberTimeZones:
             timeZoneOutput = await self.changeTimeZone(interaction.user, isCommand=False)
             if not timeZoneOutput:
                 await self.cancelCommand(dmChannel, "Event editing")
                 return False
-            with open(MEMBER_TIME_ZONES_FILE) as f:
-                memberTimeZones = json.load(f)
 
         # Operation time
-        timeZone = pytz.timezone(memberTimeZones[str(interaction.user.id)])
-        eventCollision = True
-        while eventCollision:
-            eventCollision = False
-            startTimeOk = False
-            while not startTimeOk:
-                isFormatCorrect = False
-                color = Color.gold()
-                while not isFormatCorrect:
-                    embed = Embed(title=SCHEDULE_EVENT_TIME.format("operation"), description=SCHEDULE_EVENT_SELECTED_TIME_ZONE.format(timeZone.zone), color=color)
-                    utcNow = datetime.utcnow()
-                    nextHalfHour = utcNow + (datetime.min - utcNow) % timedelta(minutes=30)
-                    embed.add_field(name="Example", value=UTC.localize(nextHalfHour).astimezone(timeZone).strftime(TIME_FORMAT))
-                    embed.set_footer(text=SCHEDULE_CANCEL)
-                    color = Color.red()
-                    await dmChannel.send(embed=embed)
-                    try:
-                        response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, interaction=interaction, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == interaction.user)
-                        startTime = response.content.strip()
-                        if startTime.lower() == "cancel":
-                            await self.cancelCommand(dmChannel, "Operation scheduling")
-                            return
-                    except asyncio.TimeoutError:
-                        await dmChannel.send(embed=TIMEOUT_EMBED)
-                        return
-                    try:
-                        startTime = datetimeParse(startTime)
-                        isFormatCorrect = True
-                    except ValueError:
-                        isFormatCorrect = False
-                startTime = timeZone.localize(startTime).astimezone(UTC)
-                if startTime < UTC.localize(utcNow):  # Set time is in the past
-                    if (delta := UTC.localize(utcNow) - startTime) > timedelta(hours=1) and delta < timedelta(days=1):  # Set time in the past 24 hours
-                        newStartTime = startTime + timedelta(days=1)
-                        embed = Embed(title=SCHEDULE_EVENT_TIME_TOMORROW, description=SCHEDULE_EVENT_TIME_TOMORROW_PREVIEW.format(round(startTime.timestamp()), round(newStartTime.timestamp())), color=Color.orange())
-                        await dmChannel.send(embed=embed)
-                        startTime = newStartTime
-                        startTimeOk = True
-                    else:  # Set time older than 24 hours
-                        embed = Embed(title=SCHEDULE_EVENT_TIME_PAST_QUESTION, description=SCHEDULE_EVENT_TIME_PAST_PROMPT, color=Color.orange())
-                        embed.set_footer(text=SCHEDULE_CANCEL)
-                        await dmChannel.send(embed=embed)
-                        try:
-                            response = await self.bot.wait_for("message", timeout=TIME_ONE_MIN, check=lambda msg, author=interaction.user, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
-                            keepStartTime = response.content.strip().lower()
-                            if keepStartTime == "cancel":
-                                await self.cancelCommand(dmChannel, "Operation scheduling")
-                                return
-                        except asyncio.TimeoutError:
-                            await dmChannel.send(embed=TIMEOUT_EMBED)
-                            return False
-                        if keepStartTime in ("yes", "y"):
-                            startTimeOk = True
-                else:
-                    startTimeOk = True
-            endTime = startTime + delta
-
-            with open(EVENTS_FILE) as f:
-                events = json.load(f)
-
-            exitForLoop = False
-            for event in events:
-                if exitForLoop:
-                    break
-                validCollisionReponse = False
-                while not validCollisionReponse:
-                    if event.get("type", "Operation") == "Event":
-                        validCollisionReponse = True
-                        break
-                    eventStartTime = UTC.localize(datetime.strptime(event["time"], TIME_FORMAT))  # Target event start time
-                    eventEndTime = UTC.localize(datetime.strptime(event["endTime"], TIME_FORMAT))  # Target event end time
-                    if (eventStartTime <= startTime < eventEndTime) or (eventStartTime <= endTime < eventEndTime) or (startTime <= eventStartTime < endTime):  # If scheduled event and target event overlap
-                        eventCollision = True
-                        embed = Embed(title=SCHEDULE_EVENT_ERROR_COLLISION.format(event["title"]), description=SCHEDULE_EVENT_ERROR_DESCRIPTION, color=Color.red())
-                        embed.set_footer(text=SCHEDULE_CANCEL)
-                        await dmChannel.send(embed=embed)
-                    elif eventEndTime < startTime and eventEndTime + timedelta(hours=1) > startTime:
-                        eventCollision = True
-                        embed = Embed(title=SCHEDULE_EVENT_ERROR_PADDING_EARLY.format(event["title"]), description=SCHEDULE_EVENT_ERROR_DESCRIPTION, color=Color.red())
-                        embed.set_footer(text=SCHEDULE_CANCEL)
-                        await dmChannel.send(embed=embed)
-                    elif endTime < eventStartTime and endTime + timedelta(hours=1) > eventStartTime:
-                        eventCollision = True
-                        embed = Embed(title=SCHEDULE_EVENT_ERROR_PADDING_LATE.format(event["title"]), description=SCHEDULE_EVENT_ERROR_DESCRIPTION, color=Color.red())
-                        embed.set_footer(text=SCHEDULE_CANCEL)
-                        await dmChannel.send(embed=embed)
-
-                    if eventCollision:
-                        try:
-                            response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, interaction=interaction, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == interaction.user)
-                            collisionResponse = response.content.strip().lower()
-                            if collisionResponse == "cancel":
-                                await self.cancelCommand(dmChannel, "Operation scheduling")
-                                return
-                            elif collisionResponse == "edit":
-                                validCollisionReponse = True
-                                startTimeOk = False
-                                exitForLoop = True
-                            elif collisionResponse == "override":
-                                validCollisionReponse = True
-                                eventCollision = False
-                                exitForLoop = True
-
-                        except asyncio.TimeoutError:
-                            await dmChannel.send(embed=TIMEOUT_EMBED)
-                            return
-                    else:
-                        validCollisionReponse = True
+        eventTimes: tuple = await self.eventTime(interaction, dmChannel, "Operation", ("Operation", "Workshop"), delta)
 
         # Operation finalizing
         try:
@@ -1317,8 +1332,8 @@ class Schedule(commands.Cog):
                 "reservableRoles": reservableRoles,
                 "maxPlayers": maxPlayers,
                 "map": eventMap,
-                "time": startTime.strftime(TIME_FORMAT),
-                "endTime": endTime.strftime(TIME_FORMAT),
+                "time": eventTimes[0].strftime(TIME_FORMAT),
+                "endTime": eventTimes[1].strftime(TIME_FORMAT),
                 "duration": f"{(str(hours) + 'h')*(hours != 0)}{' '*(hours != 0 and minutes !=0)}{(str(minutes) + 'm')*(minutes != 0)}",
                 "messageId": None,
                 "accepted": [],
@@ -1649,101 +1664,15 @@ class Schedule(commands.Cog):
         with open(MEMBER_TIME_ZONES_FILE) as f:
             memberTimeZones = json.load(f)
 
-        if str(interaction.user.id) in memberTimeZones:
-            try:
-                timeZone = pytz.timezone(memberTimeZones[str(interaction.user.id)])
-            except pytz.exceptions.UnknownTimeZoneError:
-                timeZone = UTC
-        else:
+        if not str(interaction.user.id) in memberTimeZones:
             timeZoneOutput = await self.changeTimeZone(interaction.user, isCommand=False)
             if not timeZoneOutput:
                 await self.cancelCommand(dmChannel, "Workshop scheduling")
                 return False
-        with open(MEMBER_TIME_ZONES_FILE) as f:
-            memberTimeZones = json.load(f)
+
 
         # Workshop time
-        timeZone = pytz.timezone(memberTimeZones[str(interaction.user.id)])
-        eventCollision = True
-        while eventCollision:
-            eventCollision = False
-            startTimeOk = False
-            while not startTimeOk:
-                isFormatCorrect = False
-                color = Color.gold()
-                while not isFormatCorrect:
-                    embed = Embed(title=SCHEDULE_EVENT_TIME.format("workshop"), description=SCHEDULE_EVENT_SELECTED_TIME_ZONE.format(timeZone.zone), color=color)
-                    utcNow = datetime.utcnow()
-                    nextHalfHour = utcNow + (datetime.min - utcNow) % timedelta(minutes=30)
-                    embed.add_field(name="Example", value=UTC.localize(nextHalfHour).astimezone(timeZone).strftime(TIME_FORMAT))
-                    embed.set_footer(text=SCHEDULE_CANCEL)
-                    color = Color.red()
-                    await dmChannel.send(embed=embed)
-                    try:
-                        response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, interaction=interaction, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == interaction.user)
-                        startTime = response.content.strip()
-                        if startTime.lower() == "cancel":
-                            await self.cancelCommand(dmChannel, "Workshop scheduling")
-                            return
-                    except asyncio.TimeoutError:
-                        await dmChannel.send(embed=TIMEOUT_EMBED)
-                        return
-                    try:
-                        startTime = datetimeParse(startTime)
-                        isFormatCorrect = True
-                    except ValueError:
-                        isFormatCorrect = False
-
-                startTime = timeZone.localize(startTime).astimezone(UTC)
-                if startTime < UTC.localize(utcNow):
-                    if (delta := UTC.localize(utcNow) - startTime) > timedelta(hours=1) and delta < timedelta(days=1):
-                        newStartTime = startTime + timedelta(days=1)
-                        embed = Embed(title=SCHEDULE_EVENT_TIME_TOMORROW, description=SCHEDULE_EVENT_TIME_TOMORROW_PREVIEW.format(round(startTime.timestamp()), round(newStartTime.timestamp())), color=Color.orange())
-                        await dmChannel.send(embed=embed)
-                        startTime = newStartTime
-                        startTimeOk = True
-                    else:
-                        embed = Embed(title=SCHEDULE_EVENT_TIME_PAST_QUESTION, description=SCHEDULE_EVENT_TIME_PAST_PROMPT, color=Color.orange())
-                        embed.set_footer(text=SCHEDULE_CANCEL)
-                        await dmChannel.send(embed=embed)
-                        try:
-                            response = await self.bot.wait_for("message", timeout=TIME_ONE_MIN, check=lambda msg, author=interaction.user, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
-                            keepStartTime = response.content.strip().lower()
-                            if keepStartTime == "cancel":
-                                await self.cancelCommand(dmChannel, "Workshop scheduling")
-                                return
-                        except asyncio.TimeoutError:
-                            await dmChannel.send(embed=TIMEOUT_EMBED)
-                            return
-                        if keepStartTime in ("yes", "y"):
-                            startTimeOk = True
-                else:
-                    startTimeOk = True
-            endTime = startTime + delta
-
-            with open(EVENTS_FILE) as f:
-                events = json.load(f)
-
-            for event in events:
-                if event.get("type", "Operation") != "Operation":
-                    continue
-                eventStartTime = UTC.localize(datetime.strptime(event["time"], TIME_FORMAT))
-                eventEndTime = UTC.localize(datetime.strptime(event["endTime"], TIME_FORMAT))
-                if (eventStartTime <= startTime < eventEndTime) or (eventStartTime <= endTime < eventEndTime) or (startTime <= eventStartTime < endTime):
-                    eventCollision = True
-                    embed = Embed(title=SCHEDULE_EVENT_ERROR_COLLISION.format(event["title"]), description=SCHEDULE_EVENT_ERROR_DESCRIPTION, color=Color.red())
-                    await dmChannel.send(embed=embed)
-                    break
-                elif eventEndTime < startTime and eventEndTime + timedelta(hours=1) > startTime:
-                    eventCollision = True
-                    embed = Embed(title=SCHEDULE_EVENT_ERROR_PADDING_EARLY.format(event["title"]), description=SCHEDULE_EVENT_ERROR_DESCRIPTION, color=Color.red())
-                    await dmChannel.send(embed=embed)
-                    break
-                elif endTime < eventStartTime and endTime + timedelta(hours=1) > eventStartTime:
-                    eventCollision = True
-                    embed = Embed(title=SCHEDULE_EVENT_ERROR_PADDING_LATE.format(event["title"]), description=SCHEDULE_EVENT_ERROR_DESCRIPTION, color=Color.red())
-                    await dmChannel.send(embed=embed)
-                    break
+        eventTimes: tuple = await self.eventTime(interaction, dmChannel, "Workshop", ("Operation",), delta)
 
         # Workshop save template
         if template is None:
@@ -1812,8 +1741,8 @@ class Schedule(commands.Cog):
                 "reservableRoles": reservableRoles,
                 "maxPlayers": maxPlayers,
                 "map": eventMap,
-                "time": startTime.strftime(TIME_FORMAT),
-                "endTime": endTime.strftime(TIME_FORMAT),
+                "time": eventTimes[0].strftime(TIME_FORMAT),
+                "endTime": eventTimes[1].strftime(TIME_FORMAT),
                 "duration": f"{(str(hours) + 'h')*(hours != 0)}{' '*(hours != 0 and minutes !=0)}{(str(minutes) + 'm')*(minutes != 0)}",
                 "messageId": None,
                 "accepted": [],

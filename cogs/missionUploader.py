@@ -104,7 +104,6 @@ class MissionUploader(commands.Cog):
             ftp.connect(host=secret.FTP_HOST, port=secret.FTP_PORT)
             ftp.login(user=secret.FTP_USERNAME, passwd=secret.FTP_PASSWORD)
             ftp.cwd(FTP_MISSIONS_DIR)
-            DEBUG = False
             if not DEBUG:
                 with open(f"tmp/{attachment.filename}", "rb") as f:
                     ftp.storbinary(f"STOR {attachment.filename}", f)

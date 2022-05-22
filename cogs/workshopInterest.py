@@ -15,12 +15,6 @@ WORKSHOP_INTEREST_FILE = "data/workshopInterest.json"
 
 DEFAULT_WORKSHOP_INTEREST_LISTS = (
     (
-        "Newcomer",
-        "Newcomer 🐣",
-        (UNIT_STAFF, ADVISOR, SPECIALIST, TECHNICIAN),
-        "Learn what you need to know before attending an operation in Sigma Security Group."
-    ),
-    (
         "Rotary Wing",
         "Rotary Wing 🚁",
         SME_RW_PILOT,
@@ -79,6 +73,12 @@ DEFAULT_WORKSHOP_INTEREST_LISTS = (
         "Team Leading 👨‍🏫",
         SME_MENTOR,
         "Learn how to effectively plan and assault targets with a whole team and assets."  # Unverifed description.
+    ),
+    (
+        "Newcomer",
+        "Newcomer 🐣",
+        (UNIT_STAFF, ADVISOR, SPECIALIST, TECHNICIAN),
+        "Learn what you need to know before attending an operation in Sigma Security Group."
     )
 )
 
@@ -131,7 +131,7 @@ class WorkshopInterest(commands.Cog):
 
         elif workshop["sme"] and type(workshop["sme"]) == list:
             smeroles = [guild.get_role(role).name for role in workshop["sme"]]
-            embed.set_footer(text=f"SME role: {', '.join(smeroles)}")
+            embed.set_footer(text=f"SME roles: {', '.join(smeroles)}")
 
         return embed
 

@@ -51,7 +51,16 @@ newcomers = set()
 
 class FriendlySnek(commands.Bot):
     def __init__(self, *, intents: discord.Intents, applicationID: int):
-        super().__init__(command_prefix=COMMAND_PREFIX, intents=intents, application_id=applicationID, activity=discord.Activity(type=discord.ActivityType.watching, name="you"), status="online")  # 🐍
+        super().__init__(
+            command_prefix=COMMAND_PREFIX,
+            intents=intents,
+            application_id=applicationID,
+            activity=discord.Activity(  # 🐍
+                type=discord.ActivityType.watching,
+                name="you"
+            ),
+            status="online"
+        )
 
     async def setup_hook(self):
         self.tree.copy_global_to(guild=GUILD)  # This copies the global commands over to your guild.
@@ -80,9 +89,9 @@ async def on_message(message):
         return
 
     # Execute commands
-    # if message.content.startswith(COMMAND_PREFIX):
-    #     log.debug(f"{message.author.display_name} ({message.author.name}#{message.author.discriminator}) > {message.content}")
-    #     await client.process_commands(message)
+    if message.content.startswith(COMMAND_PREFIX):
+        log.debug(f"{message.author.display_name} ({message.author}) > {message.content}")
+        await client.process_commands(message)
 
     # Unmark newcomer pinging unit staff as needing a reminder to ping unit staff
     if message.author.id in newcomers:
@@ -158,12 +167,28 @@ async def on_member_leave(member):
         log.debug(f"Newcomer left {member.display_name}({member.name}#{member.discriminator})")
 
 @client.event
-async def on_error(event, *args, **kwargs):  # Do we need these parameters?
+async def on_error(event, *args, **kwargs):
     log.exception("An error occured!")
 
 @client.event
-async def on_command_error(ctx, error):
+async def on_command_error(interaction, error):
     log.error(error)
+
+def devCheck():
+    def predict(ctx):
+        return ctx.author.id in DEVELOPERS
+    return commands.check(predict)
+
+@client.command()
+@devCheck()
+async def reload(ctx):
+    """ Reload bot cogs - Dev only """
+    log.info(f"{ctx.author.display_name} ({ctx.author}) Reloading bot cogs...")
+    if ctx.author.id not in DEVELOPERS:
+        return
+    for cog in COGS:
+        await client.reload_extension(f"cogs.{cog}")
+    await ctx.send("Cogs reloaded!")
 
 if __name__ == "__main__":
     try:

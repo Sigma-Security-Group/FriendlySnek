@@ -78,7 +78,7 @@ DEPLOYED = 355512941816053770  # Voice
 # SSG RANKS
 ####################
 
-PROSPECT = 0  # Received on joining
+PROSPECT = 949865539684151338  # Received upon joining
 VERIFIED = 622935992281726976  # After interview
 ASSOCIATE = 527354143199854593  # Newcomer workshop
 CONTRACTOR = 465993518062501914  # Good rifleman

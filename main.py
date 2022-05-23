@@ -91,6 +91,7 @@ async def on_message(message):
     # Execute commands
     if message.content.startswith(COMMAND_PREFIX):
         log.debug(f"{message.author.display_name} ({message.author}) > {message.content}")
+        message.content = message.content.lower()
         await client.process_commands(message)
 
     # Unmark newcomer pinging unit staff as needing a reminder to ping unit staff

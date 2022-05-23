@@ -1,3 +1,4 @@
 discord
 urllib3
 pytz
+anvil-uplink

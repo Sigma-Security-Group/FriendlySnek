@@ -22,15 +22,14 @@ class Staff(commands.Cog):
         cogsReady["staff"] = True
 
     def _getMember(self, searchTerm: str) -> Optional[discord.Member]:
-        """Serach for a discord.Member with a wide support query.
+        """ Serach for a discord.Member with a wide support query.
 
         Parameters:
         searchTerm (str): Search query for a discord.Member.
 
         Returns:
-        member (None or discord.Member): If the provided serach term found a member, it will return one discord.Member otherwise returns None.
+        None | discord.Member: If the provided serach term found a member, it will return one discord.Member otherwise returns None.
         """
-        searchTerm = searchTerm.lower()
         member = None
         for member_ in self.bot.get_guild(GUILD_ID).members:
             if searchTerm.replace("<", "").replace("@", "").replace("!", "").replace(">", "").isdigit() and int(searchTerm.replace("<", "").replace("@", "").replace("!", "").replace(">", "")) == member_.id:
@@ -121,9 +120,9 @@ class Staff(commands.Cog):
         guild = self.bot.get_guild(GUILD_ID)
         lastMessagePerMember = {member: None for member in guild.members}
         embed = Embed(title="Channel checking", color=Color.orange())
-        embed.add_field(name="Channel", value="#", inline=True)
+        embed.add_field(name="Channel", value="#Loading...", inline=True)
         embed.add_field(name="Progress", value="0 / 0", inline=True)
-        embed.set_footer(text=f"Run by: {ctx.author.mention}")
+        embed.set_footer(text=f"Run by: {ctx.author}")
         msg = await ctx.send(embed=embed)
         textChannels = len(guild.text_channels)
         for i, channel in enumerate(guild.text_channels, 1):
@@ -146,7 +145,7 @@ class Staff(commands.Cog):
                     break
         log.debug("Message searching done!")
         embed = Embed(title="✅ Channel checking", description="Message searching done!", color=Color.green())
-        embed.set_footer(text=f"Run by: {ctx.author.mention}")
+        embed.set_footer(text=f"Run by: {ctx.author}")
         embed.timestamp = datetime.now()
         await msg.edit(embed=embed)
         # Somewhere after this comment raises the error. I can't figure it out cuz I have no idea what this does
@@ -158,7 +157,7 @@ class Staff(commands.Cog):
             for j in range(i, min(i + 25, len(lastActivityPerMember))):
                 embed.add_field(name=lastActivityPerMember[j][0], value=lastActivityPerMember[j][1], inline=False)
             await ctx.send(embed=embed)
-        if pingStaff.lower() in ("y", "yes", "ping"):
+        if pingStaff in ("y", "yes", "ping"):
             await ctx.send(f"{guild.get_role(UNIT_STAFF).mention} Last activity analysis has finished")
 
     @commands.command(name="lastactivitymember")
@@ -301,7 +300,7 @@ class Staff(commands.Cog):
             numMessages = 0
             async for message in self.bot.get_channel(MODERATION_LOG).history(limit=None):
                 numMessages += 1
-                if searchTerm.lower() in message.content.lower():
+                if searchTerm in message.content.lower():
                     messageLinksList.append(message.jump_url)
             log.debug(f"Checked {numMessages} message{'s' * (numMessages != 1)}")
             if len(messageLinksList) > 0:

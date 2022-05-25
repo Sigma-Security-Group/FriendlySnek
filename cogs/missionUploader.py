@@ -31,16 +31,15 @@ class MissionUploader(commands.Cog):
         log.debug(LOG_COG_READY.format("MissionUploader"), flush=True)
         cogsReady["missionUploader"] = True
 
-    async def checkAttachments(self, dmChannel, attachments):
-        """
-            X.
+    async def checkAttachments(self, dmChannel: discord.DMChannel, attachments: list[discord.Attachment]) -> bool:
+        """ Checks a users' message attachemnts if it complies with the set boundries.
 
-            Parameters:
-            dmChannel: X.
-            attachments: X.
+        Parameters:
+        dmChannel (discord.DMChannel): The DMChannel the user reponse is from.
+        attachments (list[discord.Attachment]): A list of attachments from the user response.
 
-            Returns:
-            None
+        Returns:
+        bool.
         """
         with FTP() as ftp:
             ftp.connect(host=secret.FTP_HOST, port=secret.FTP_PORT)
@@ -70,7 +69,14 @@ class MissionUploader(commands.Cog):
     @app_commands.guilds(GUILD)
     @app_commands.checks.has_any_role(UNIT_STAFF, SERVER_HAMSTER, MISSION_BUILDER, CURATOR)
     async def uploadMission(self, interaction: discord.Interaction) -> None:
-        """ Upload a mission PBO file to the server. """
+        """ Upload a mission PBO file to the server.
+
+        Parameters:
+        interaction (discord.Interaction): The Discor interaction.
+
+        Returns:
+        None.
+        """
         await interaction.response.send_message("Upload mission file in DMs...")
         log.info(f"{interaction.user.display_name} ({interaction.user.name}#{interaction.user.discriminator}) is uploading a mission file...")
 
@@ -130,6 +136,15 @@ class MissionUploader(commands.Cog):
 
     @uploadMission.error
     async def onUploadMissionError(self, interaction: discord.Interaction, error: app_commands.AppCommandError) -> None:
+        """ uploadMission errors - dedicated for the discord.app_commands.errors.MissingAnyRole error.
+
+        Parameters:
+        interaction (discord.Interaction): The Discor interaction.
+        error (app_commands.AppCommandError): The end user error.
+
+        Returns:
+        None.
+        """
         if type(error) == discord.app_commands.errors.MissingAnyRole:
             guild = self.bot.get_guild(GUILD_ID)
             embed = Embed(title="❌ Missing permissions", description=f"You do not have the permissions to upload a mission file!\nThe permitted roles are: {', '.join([guild.get_role(role).name for role in (UNIT_STAFF, SERVER_HAMSTER, MISSION_BUILDER, CURATOR)])}.", color=Color.red())

@@ -109,29 +109,27 @@ class Schedule(commands.Cog):
         except Exception:
             log.warning(LOG_COULDNT_START.format("checkAcceptedReminder scheduler"))
 
-    async def cancelCommand(self, channel, abortText:str) -> None:
-        """
-            Sends an abort response to the user.
+    async def cancelCommand(self, channel: discord.DMChannel, abortText:str) -> None:
+        """ Sends an abort response to the user.
 
-            Parameters:
-            channel: The users DM channel where the message is sent.
-            abortText (str): The embed title - what is aborted.
+        Parameters:
+        channel (discord.DMChannel): The users DM channel where the message is sent.
+        abortText (str): The embed title - what is aborted.
 
-            Returns:
-            None
+        Returns:
+        None.
         """
         await channel.send(embed=Embed(title=f"❌ {abortText} canceled!", color=Color.red()))
 
     async def saveEventToHistory(self, event, autoDeleted=False) -> None:
-        """
-            X.
+        """ X.
 
-            Parameters:
-            event: X.
-            autoDelete (bool): X.
+        Parameters:
+        event: X.
+        autoDeleted (bool): X.
 
-            Returns:
-            None
+        Returns:
+        None.
         """
         guild = self.bot.get_guild(GUILD_ID)
         if event.get("type", "Operation") == "Workshop":
@@ -170,14 +168,13 @@ class Schedule(commands.Cog):
 
     @tasks.loop(minutes=10)
     async def autoDeleteEvents(self) -> None:
-        """
-            X.
+        """ X.
 
-            Parameters:
-            None
+        Parameters:
+        None.
 
-            Returns:
-            None
+        Returns:
+        None.
         """
         while not self.bot.ready:
             await asyncio.sleep(1)
@@ -196,7 +193,7 @@ class Schedule(commands.Cog):
                     await eventMessage.delete()
                     # author = self.bot.get_guild(SERVER).get_member(event["authorId"])
                     # await self.bot.get_channel(ARMA_DISCUSSION).send(f"{author.mention} You silly goose, you forgot to delete your operation. I'm not your mother, but this time I will do it for you")
-                    if event["maxPlayers"] != 0:
+                    if event["maxPlayers"] != -1:  # Save events that does not have hidden attendance
                         await self.saveEventToHistory(event, autoDeleted=True)
             if len(deletedEvents) == 0:
                 log.debug("No events were auto deleted!")
@@ -209,14 +206,13 @@ class Schedule(commands.Cog):
 
     @tasks.loop(minutes=10)
     async def checkAcceptedReminder(self) -> None:
-        """
-            X.
+        """ X.
 
-            Parameters:
-            None
+        Parameters:
+        None.
 
-            Returns:
-            None
+        Returns:
+        None.
         """
         while not self.bot.ready:
             await asyncio.sleep(1)
@@ -268,20 +264,28 @@ class Schedule(commands.Cog):
 
     @refreshSchedule.error
     async def onRefreshScheduleError(self, interaction: discord.Interaction, error: app_commands.AppCommandError) -> None:
+        """ refreshSchedule errors - dedicated for the discord.app_commands.errors.MissingAnyRole error.
+
+        Parameters:
+        interaction (discord.Interaction): The Discord interaction.
+        error (app_commands.AppCommandError): The end user error.
+
+        Returns:
+        None.
+        """
         if type(error) == discord.app_commands.errors.MissingAnyRole:
             guild = self.bot.get_guild(GUILD_ID)
             embed = Embed(title="❌ Missing permissions", description=f"You do not have the permissions to refresh the schedule!\nThe permitted roles are: {', '.join([guild.get_role(role).name for role in (UNIT_STAFF, SERVER_HAMSTER, CURATOR)])}.", color=Color.red())
             await interaction.response.send_message(embed=embed)
 
     async def updateSchedule(self) -> None:
-        """
-            X.
+        """ Updates the schedule channel with all messages.
 
-            Parameters:
-            None
+        Parameters:
+        None.
 
-            Returns:
-            None
+        Returns:
+        None.
         """
         self.lastUpdate = datetime.utcnow()
         channel = self.bot.get_channel(SCHEDULE)
@@ -318,14 +322,13 @@ class Schedule(commands.Cog):
                 json.dump({}, f, indent=4)
 
     def getEventEmbed(self, event) -> Embed:
-        """
-            X.
+        """ Generates an embed from the given event.
 
-            Parameters:
-            event
+        Parameters:
+        event: X.
 
-            Returns:
-            Embed
+        Returns:
+        Embed.
         """
         guild = self.bot.get_guild(GUILD_ID)
 
@@ -342,7 +345,8 @@ class Schedule(commands.Cog):
         embed.add_field(name="\u200B", value="\u200B", inline=False)
         embed.add_field(name="Time", value=f"<t:{round(UTC.localize(datetime.strptime(event['time'], TIME_FORMAT)).timestamp())}:F> - <t:{round(UTC.localize(datetime.strptime(event['endTime'], TIME_FORMAT)).timestamp())}:t>", inline=False)
         embed.add_field(name="Duration", value=event["duration"], inline=False)
-        embed.add_field(name="Map", value="Unspecified" if event["map"] is None else event["map"], inline=False)
+        if event["map"] is not None:
+            embed.add_field(name="Map", value=event["map"], inline=False)
         if event["externalURL"] is not None:
             embed.add_field(name="\u200B", value="\u200B", inline=False)
             embed.add_field(name="External URL", value=event["externalURL"], inline=False)
@@ -375,14 +379,13 @@ class Schedule(commands.Cog):
 
     @commands.Cog.listener()
     async def on_raw_reaction_add(self, payload: discord.RawReactionActionEvent) -> None:
-        """
-            X.
+        """ Listens for actions.
 
-            Parameters:
-            payload (discord.RawReactionActionEvent): X.
+        Parameters:
+        payload (discord.RawReactionActionEvent): The raw reaction event.
 
-            Returns:
-            None
+        Returns:
+        None.
         """
         if payload.channel_id != SCHEDULE:
             return
@@ -483,15 +486,15 @@ class Schedule(commands.Cog):
         except Exception as e:
             print(e)
 
-    async def reserveRole(self, member, event) -> None:
-        """
-            Reserving a single role on an event.
+    async def reserveRole(self, member: discord.Member, event) -> None:
+        """ Reserving a single role on an event.
 
-            Parameters:
-            isTemplateEdit (bool): If the event is a template.
+        Parameters:
+        member (discord.Member): The Discord user.
+        event: X.
 
-            Returns:
-            None
+        Returns:
+        None.
         """
         reservationTime = datetime.utcnow()
         guild = self.bot.get_guild(GUILD_ID)
@@ -571,19 +574,18 @@ class Schedule(commands.Cog):
                     await dmChannel.send(embed=embed)
                     log.debug(f"{member.display_name} ({member}) was reserving a role but schedule was updated!")
 
-    async def eventTime(self, interaction: discord.Interaction, dmChannel, eventType: str, collidingEventTypes: tuple, delta) -> tuple:
-        """
-            X.
+    async def eventTime(self, interaction: discord.Interaction, dmChannel: discord.DMChannel, eventType: str, collidingEventTypes: tuple, delta) -> tuple:
+        """ X.
 
-            Parameters:
-            interaction (discord.Interaction): The Discord interaction.
-            dmChannel: X.
-            eventType (str): The type of event, e.g. Operation
-            collidingEventTypes (tuple): A tuple of eventtypes that you want to collide with.
-            delta: idk, it comes from duration in any case.
+        Parameters:
+        interaction (discord.Interaction): The Discord interaction.
+        dmChannel (discord.DMChannel): The DMChannel the user reponse is from.
+        eventType (str): The type of event, e.g. Operation
+        collidingEventTypes (tuple): A tuple of eventtypes that you want to collide with.
+        delta: idk, it comes from duration in any case.
 
-            Returns:
-            startTime, endTime (tuple): A tuple which contains the event start time and end time.
+        Returns:
+        startTime, endTime (tuple): A tuple which contains the event start time and end time.
         """
         with open(MEMBER_TIME_ZONES_FILE) as f:
             memberTimeZones = json.load(f)
@@ -700,17 +702,16 @@ class Schedule(commands.Cog):
 
         return (startTime, endTime)
 
-    async def editEvent(self, author, event, isTemplateEdit: bool = False) -> bool:
-        """
-            X.
+    async def editEvent(self, author: discord.Member, event, isTemplateEdit: bool = False) -> bool:
+        """ X.
 
-            Parameters:
-            author: X.
-            event: X.
-            isTemplateEdit (bool): X.
+        Parameters:
+        member (discord.Member): The Discord user.
+        event: X.
+        isTemplateEdit (bool): A boolean to check if the user is editing a template or not.
 
-            Returns:
-            bool
+        Returns:
+        bool.
         """
         editingTime = datetime.utcnow()
         editOk = False
@@ -1082,17 +1083,16 @@ class Schedule(commands.Cog):
             await dmChannel.send(embed=embed)
             log.warning(f"{author.display_name} ({author}) edited the template: {event['name']}!")
 
-    async def deleteEvent(self, author, message, event) -> bool:
-        """
-            X.
+    async def deleteEvent(self, author: discord.Member, message: discord.Message, event) -> bool:
+        """ X.
 
-            Parameters:
-            author: X.
-            message: X.
-            event: X.
+        Parameters:
+        member (discord.Member): The Discord user.
+        message (discord.Message): The event message.
+        event: X.
 
-            Returns:
-            bool
+        Returns:
+        bool.
         """
         try:
             msg = await author.send(embed=Embed(title=SCHEDULE_EVENT_CONFIRM_DELETE.format(f"{event['type'].lower()}: `{event['title']}`"), color=Color.orange()))
@@ -1141,14 +1141,13 @@ class Schedule(commands.Cog):
         await self.scheduleOperation(interaction)
 
     async def scheduleOperation(self, interaction: discord.Interaction) -> None:
-        """
-            Scheduling an operation.
+        """ Scheduling an operation.
 
-            Parameters:
-            interaction (discord.Interaction): The Discord interaction.
+        Parameters:
+        interaction (discord.Interaction): The Discord interaction.
 
-            Returns:
-            None
+        Returns:
+        None.
         """
         await interaction.response.send_message(RESPONSE_EVENT_PROGRESS.format(":b:op."))
         log.info(f"{interaction.user.display_name} ({interaction.user}) is creating an operation...")
@@ -1372,14 +1371,13 @@ class Schedule(commands.Cog):
         await self.scheduleWorkshop(interaction)
 
     async def scheduleWorkshop(self, interaction: discord.Interaction) -> None:
-        """
-            Scheduling a workshop.
+        """ Scheduling a workshop.
 
-            Parameters:
-            interaction (discord.Interaction): The Discord interaction.
+        Parameters:
+        interaction (discord.Interaction): The Discord interaction.
 
-            Returns:
-            None
+        Returns:
+        None.
         """
         await interaction.response.send_message(RESPONSE_EVENT_PROGRESS.format("workshop"))
         log.info(f"{interaction.user.display_name} ({interaction.user}) is creating a workshop...")
@@ -1637,7 +1635,7 @@ class Schedule(commands.Cog):
             while not workshopInterestOk:
                 with open(WORKSHOP_INTEREST_FILE) as f:
                     workshopInterestOptions = [{"name": name, "title": wsInterest["title"]} for name, wsInterest in json.load(f).items()]
-                embed = Embed(title=":link: Which workshop waiting list is your workshop linked to?", description=SCHEDULE_NUMBER_FROM_TO_OR_NONE.format(1, len(workshopInterestOptions)), color=color)
+                embed = Embed(title=":link: Which workshop waiting list is your workshop linked to?", description="When linking your workshop and finished scheduling it, it will automatically ping everyone interested in it.\nFurthermore, those that complete the workshop will be removed from the interest list!", color=color)
                 embed.add_field(name="Workshop Lists", value="\n".join(f"**{idx}** {wsInterest['title']}" for idx, wsInterest in enumerate(workshopInterestOptions, 1)))
                 embed.set_footer(text=SCHEDULE_CANCEL)
                 color = Color.red()
@@ -1782,7 +1780,14 @@ class Schedule(commands.Cog):
     @app_commands.command(name="event")
     @app_commands.guilds(GUILD)
     async def scheduleEvent(self, interaction: discord.Interaction) -> None:
-        """ Create an event to add to the schedule. """
+        """ Create an event to add to the schedule.
+
+        Parameters:
+        interaction (discord.Interaction): The Discord interaction.
+
+        Returns:
+        None.
+        """
         await interaction.response.send_message(RESPONSE_EVENT_PROGRESS.format("event"))
         log.info(f"{interaction.user.display_name} ({interaction.user}) is creating an event...")
 
@@ -2061,16 +2066,15 @@ class Schedule(commands.Cog):
         if not timeZoneOutput:
             await self.cancelCommand(interaction.user, "Time zone preferences")
 
-    async def changeTimeZone(self, author, isCommand: bool = True) -> bool:
-        """
-            Changing a personal time zone.
+    async def changeTimeZone(self, author: discord.Member, isCommand: bool = True) -> bool:
+        """ Changing a personal time zone.
 
-            Parameters:
-            author: The command author.
-            isCommand (bool): If the command calling comes from the actual slash command.
+        Parameters:
+        author (discord.Member): The command author.
+        isCommand (bool): If the command calling comes from the actual slash command.
 
-            Returns:
-            bool: If function executed successfully.
+        Returns:
+        bool: If function executed successfully.
         """
         log.info(f"{author.display_name} ({author}) is updating their time zone preferences...")
 

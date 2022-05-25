@@ -115,6 +115,14 @@ class WorkshopInterest(commands.Cog):
         await self.updateChannel()
 
     def getWorkshopEmbed(self, workshop) -> Embed:
+        """ Generates an embed from the given workshop.
+
+        Parameters:
+        workshop: The workshop event.
+
+        Returns:
+        Embed.
+        """
         guild = self.bot.get_guild(GUILD_ID)
         embed = Embed(title=workshop["title"], description=workshop["description"], color=Color.dark_blue())
         idsToMembers = lambda ids: [member.display_name for memberId in ids if (member := guild.get_member(memberId)) is not None]
@@ -136,6 +144,14 @@ class WorkshopInterest(commands.Cog):
         return embed
 
     async def updateChannel(self) -> None:
+        """ Updates the interest channel with all messages.
+
+        Parameters:
+        None.
+
+        Returns:
+        None.
+        """
         channel = self.bot.get_channel(WORKSHOP_INTEREST)
         await channel.purge(limit=None, check=lambda message: message.author.id in FRIENDLY_SNEKS)
         await channel.send("Welcome to the Workshop Interest Channel! Here you can show interest for different workshops!")
@@ -152,7 +168,15 @@ class WorkshopInterest(commands.Cog):
             json.dump(workshopInterest, f, indent=4)
 
     @commands.Cog.listener()
-    async def on_raw_reaction_add(self, payload) -> None:
+    async def on_raw_reaction_add(self, payload: discord.RawReactionActionEvent) -> None:
+        """ Listens for interests.
+
+        Parameters:
+        payload (discord.RawReactionActionEvent): The raw reaction event.
+
+        Returns:
+        None.
+        """
         if payload.channel_id != WORKSHOP_INTEREST:
             return
         try:

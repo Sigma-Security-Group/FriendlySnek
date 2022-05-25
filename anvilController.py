@@ -2,10 +2,10 @@ import os
 import json
 import anvil.server
 
-import secret
+from secret import ANVIL_UPLINK_KEY
 
 if __name__ == "__main__":
-    anvil.server.connect(secret.anvilUplinkKey)
+    anvil.server.connect(ANVIL_UPLINK_KEY)
 
 ANVIL_CONTROLLER_FILE = "anvilController.json"
 

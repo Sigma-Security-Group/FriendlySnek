@@ -39,7 +39,26 @@ class Poll(commands.Cog):
         option10="Option 10"
     )
     async def poll(self, interaction: discord.Interaction, title: str, option1: str, description: str = "", option2: str = None, option3: str = None, option4: str = None, option5: str = None, option6: str = None, option7: str = None, option8: str = None, option9: str = None, option10: str = None) -> None:
-        """ Create a poll with up to 10 options. """
+        """ Create a poll with up to 10 options.
+
+        Parameters:
+        interaction (discord.Interaction): The Discord interaction.
+        title (str): Poll title.
+        option1 (str): Poll option 1.
+        description (str): Poll description.
+        option2 (str): Poll option 2.
+        option3 (str): Poll option 3.
+        option4 (str): Poll option 4.
+        option5 (str): Poll option 5.
+        option6 (str): Poll option 6.
+        option7 (str): Poll option 7.
+        option8 (str): Poll option 8.
+        option9 (str): Poll option 9.
+        option10 (str): Poll option 10.
+
+        Returns:
+        None.
+        """
         embed = Embed(title=title, description=f"{description}\n\n", color=Color.gold())
         embed.set_footer(text=f"Poll by {interaction.user.display_name}")
         embed.timestamp = datetime.utcnow()
@@ -61,14 +80,13 @@ class Poll(commands.Cog):
             print(interaction.user, e)
 
     async def reactionShit(self, payload: discord.RawReactionActionEvent) -> None:
-        """
-            Handles all poll reactions.
+        """ Handles all poll reactions.
 
-            Parameters:
-            payload (discord.RawReactionActionEvent): The raw reaction event.
+        Parameters:
+        payload (discord.RawReactionActionEvent): The raw reaction event.
 
-            Returns:
-            None
+        Returns:
+        None.
         """
         if payload.user_id in FRIENDLY_SNEKS:
             return
@@ -105,27 +123,25 @@ class Poll(commands.Cog):
 
     @commands.Cog.listener()
     async def on_raw_reaction_add(self, payload: discord.RawReactionActionEvent) -> None:
-        """
-            Listens for reaction additions.
+        """ Listens for reaction additions.
 
-            Parameters:
-            payload (discord.RawReactionActionEvent): The raw reaction event.
+        Parameters:
+        payload (discord.RawReactionActionEvent): The raw reaction event.
 
-            Returns:
-            None
+        Returns:
+        None.
         """
         await self.reactionShit(payload)
 
     @commands.Cog.listener()
     async def on_raw_reaction_remove(self, payload: discord.RawReactionActionEvent) -> None:
-        """
-            Listens for reaction removals.
+        """ Listens for reaction removals.
 
-            Parameters:
-            payload (discord.RawReactionActionEvent): The raw reaction event.
+        Parameters:
+        payload (discord.RawReactionActionEvent): The raw reaction event.
 
-            Returns:
-            None
+        Returns:
+        None.
         """
         await self.reactionShit(payload)
 

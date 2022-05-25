@@ -97,7 +97,7 @@ DOOR = "🟧"
 LEVER = "🔶"
 
 class JustBob(commands.Cog):
-    def __init__(self, bot) -> None:
+    def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
         if not os.path.exists(PLAYERS_PROGRESS_FILE):
             with open(PLAYERS_PROGRESS_FILE, "w") as f:
@@ -112,23 +112,29 @@ class JustBob(commands.Cog):
     @app_commands.command(name="justbob")
     @app_commands.guilds(GUILD)
     async def justBob(self, interaction: discord.Interaction) -> None:
-        """ Play the minigame Just Bob. """
+        """ Play the minigame Just Bob.
+
+        Parameters:
+        interaction (discord.Interaction): The Discord interaction.
+
+        Returns:
+        None.
+        """
         if interaction.channel.id != GENERAL and interaction.channel.id != BOT_SPAM:
             await interaction.response.send_message(f"Sorry, but you can only play Just Bob in <#{GENERAL}> or in <#{BOT_SPAM}>!")
             return
         await interaction.response.send_message("Playing Just Bob...")
         await self.levelSelect(interaction.channel, interaction.user)
 
-    async def levelSelect(self, channel, player) -> None:
-        """
-            X.
+    async def levelSelect(self, channel: discord.abc.GuildChannel, player: discord.Member) -> None:
+        """ Showing the player the level select prompt.
 
-            Parameters:
-            channel: X.
-            player: X.
+        Parameters:
+        channel (discord.abc.GuildChannel): A disord guild channel.
+        player (discord.Member): The player.
 
-            Returns:
-            None
+        Returns:
+        None.
         """
         with open(LEVELS_FILE) as f:
             levels = json.load(f)
@@ -146,14 +152,13 @@ class JustBob(commands.Cog):
 
     @commands.Cog.listener()
     async def on_raw_reaction_add(self, payload: discord.RawReactionActionEvent) -> None:
-        """
-            X.
+        """ Listens for actions.
 
-            Parameters:
-            payload (discord.RawReactionActionEvent): The raw reaction event.
+        Parameters:
+        payload (discord.RawReactionActionEvent): The raw reaction event.
 
-            Returns:
-            None
+        Returns:
+        None.
         """
         if self.bot.ready and payload.member is not None and not payload.member.bot and ((payload.member is not None and payload.member.id in self.games and self.games[payload.member.id]["messageId"] == payload.message_id) or (any(role is not None and role.id == UNIT_STAFF for role in payload.member.roles) and payload.emoji.name == STOP)):
             channel = self.bot.get_channel(payload.channel_id)
@@ -201,14 +206,13 @@ class JustBob(commands.Cog):
                 pass
 
     def getGameEmbed(self, game) -> Embed:
-        """
-            X.
+        """ Generates the player game embed.
 
-            Parameters:
-            game: X.
+        Parameters:
+        game: The player game.
 
-            Returns:
-            Embed
+        Returns:
+        Embed.
         """
         guild = self.bot.get_guild(GUILD_ID)
         embed = Embed(title=f"Just Bob (Lvl {game['levelNum'] + 1})", description=game["description"], color=Color.blue())
@@ -257,16 +261,15 @@ class JustBob(commands.Cog):
 
         return embed
 
-    def makeMove(self, game, direction) -> bool:
-        """
-            X.
+    def makeMove(self, game, direction: tuple) -> bool:
+        """ Processes the player movement request.
 
-            Parameters:
-            game: X.
-            direction: X.
+        Parameters:
+        game: The player game.
+        direction (tuple): A tuple containing the movement specifications.
 
-            Returns:
-            None
+        Returns:
+        bool.
         """
         dl, dr, dc = direction
         levelComplete = False

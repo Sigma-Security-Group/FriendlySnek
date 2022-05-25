@@ -25,7 +25,14 @@ class Jokes(commands.Cog):
     @app_commands.command(name="dadjoke")
     @app_commands.guilds(GUILD)
     async def dadjoke(self, interaction: discord.Interaction) -> None:
-        """ Receive a hilarious dad joke. """
+        """ Receive a hilarious dad joke.
+
+        Parameters:
+        interaction (discord.Interaction): The Discord interaction.
+
+        Returns:
+        None.
+        """
         response = requests.get(url=URL, headers=HEADERS)
         data = response.json()
         await interaction.response.send_message(data["joke"])

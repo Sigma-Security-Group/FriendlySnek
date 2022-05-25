@@ -50,11 +50,10 @@ UTC = pytz.utc
 newcomers = set()
 
 class FriendlySnek(commands.Bot):
-    def __init__(self, *, intents: discord.Intents, applicationID: int):
+    def __init__(self, *, intents: discord.Intents) -> None:
         super().__init__(
             command_prefix=COMMAND_PREFIX,
             intents=intents,
-            application_id=applicationID,
             activity=discord.Activity(  # 🐍
                 type=discord.ActivityType.watching,
                 name="you"
@@ -62,24 +61,32 @@ class FriendlySnek(commands.Bot):
             status="online"
         )
 
-    async def setup_hook(self):
+    async def setup_hook(self) -> None:
         self.tree.copy_global_to(guild=GUILD)  # This copies the global commands over to your guild.
         for cog in COGS:
             await client.load_extension(f"cogs.{cog}")
         await self.tree.sync(guild=GUILD)
 
-client = FriendlySnek(intents=INTENTS, applicationID=FRIENDLY_SNEK_DEV_FROGGI)
+client = FriendlySnek(intents=INTENTS)
 client.ready = False
 
 @client.event
-async def on_ready():
+async def on_ready() -> None:
     while not all(cogsReady.values()):
         await asyncio.sleep(1)
     client.ready = True
     log.info(f"Bot Ready! Logged in as {client.user}.")
 
 @client.event
-async def on_message(message):
+async def on_message(message: discord.Message) -> None:
+    """ On message client event.
+
+        Parameters:
+        message (discord.Message): The Discord message.
+
+        Returns:
+        None.
+    """
     if message.author.id == FRIENDLY_SNEK:  # Ignore messages from itself
         return
     if secret.DEBUG and message.author.id in FRIENDLY_SNEKS:  # Ignore messages from other Friendly Sneks if DEBUG mode
@@ -104,17 +111,16 @@ async def on_message(message):
     await analyzeChannel(client, message, COMBAT_FOOTAGE, "video")
     await analyzeChannel(client, message, PROPAGANDA, "image")
 
-async def analyzeChannel(client, message, channelID:int, attachmentContentType:str) -> None:
-    """
-        X.
+async def analyzeChannel(client, message: discord.Message, channelID:int, attachmentContentType:str) -> None:
+    """ Will analyze the discord.Message contents and see if it meets the channel purpose.
 
         Parameters:
-        message: X.
-        channelID (int): X.
-        attachmentContentType (str): X.
+        message (discord.Message): The Discord message.
+        channelID (int): The target channel ID.
+        attachmentContentType (str): A string to determine the allowed discord.Message attachment, either "video" or "image".
 
         Returns:
-        None
+        None.
     """
     if message.channel.id != channelID:
         return
@@ -137,7 +143,15 @@ async def analyzeChannel(client, message, channelID:int, attachmentContentType:s
     return
 
 @client.event
-async def on_member_join(member):
+async def on_member_join(member: discord.Member) -> None:
+    """ On member join client event.
+
+        Parameters:
+        member (discord.Member): X.
+
+        Returns:
+        None.
+    """
     guild = member.guild
     if guild.id != GUILD_ID:
         return
@@ -162,28 +176,51 @@ async def on_member_join(member):
         newcomers.remove(member.id)
 
 @client.event
-async def on_member_leave(member):
+async def on_member_leave(member: discord.Member) -> None:
+    """ On member leave client event.
+
+        Parameters:
+        member (discord.Member): X.
+
+        Returns:
+        None.
+    """
     if member.id in newcomers:
         newcomers.remove(member.id)
-        log.debug(f"Newcomer left {member.display_name}({member.name}#{member.discriminator})")
+        log.debug(f"Newcomer left {member.display_name} ({member})")
 
 @client.event
-async def on_error(event, *args, **kwargs):
+async def on_error(event, *args, **kwargs) -> None:
     log.exception("An error occured!")
 
 @client.event
-async def on_command_error(interaction, error):
+async def on_command_error(interaction, error) -> None:
     log.error(error)
 
-def devCheck():
-    def predict(ctx):
+def devCheck() -> discord.ext.commands.check:
+    """ A permissions check for the reload command.
+
+        Parameters:
+        None.
+
+        Returns:
+        discord.ext.commands.check.
+    """
+    def predict(ctx: commands.context) -> bool:
         return ctx.author.id in DEVELOPERS
     return commands.check(predict)
 
 @client.command()
 @devCheck()
-async def reload(ctx):
-    """ Reload bot cogs - Dev only """
+async def reload(ctx: commands.context) -> None:
+    """ Reload bot cogs - Dev only.
+
+        Parameters:
+        ctx (commands.context): The Discord context.
+
+        Returns:
+        None.
+    """
     log.info(f"{ctx.author.display_name} ({ctx.author}) Reloading bot cogs...")
     if ctx.author.id not in DEVELOPERS:
         return

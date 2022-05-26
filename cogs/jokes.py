@@ -1,18 +1,20 @@
-from discord.ext import commands
-from discord_slash import cog_ext, SlashContext
+from secret import DEBUG
 import requests
 
-from constants import *
+from discord import app_commands
+from discord.ext import commands
 
-from __main__ import log, cogsReady, DEBUG
+from constants import *
+from __main__ import log, cogsReady
 if DEBUG:
     from constants.debug import *
 
+
 URL = "https://icanhazdadjoke.com/"
-headers = {"Accept": "application/json"}
+HEADERS = {"Accept": "application/json"}
 
 class Jokes(commands.Cog):
-    def __init__(self, bot) -> None:
+    def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
 
     @commands.Cog.listener()
@@ -20,11 +22,20 @@ class Jokes(commands.Cog):
         log.debug(LOG_COG_READY.format("Jokes"), flush=True)
         cogsReady["jokes"] = True
 
-    @cog_ext.cog_slash(name="dadjoke", guild_ids=[SERVER], description="Telling you a good joke using the icanhazdadjoke.com API.")
-    async def dadjoke(self, ctx: SlashContext) -> None:
-        r = requests.get(url=URL, headers=headers)
-        data = r.json()
-        await ctx.send(data["joke"])
+    @app_commands.command(name="dadjoke")
+    @app_commands.guilds(GUILD)
+    async def dadjoke(self, interaction: discord.Interaction) -> None:
+        """ Receive a hilarious dad joke.
 
-def setup(bot) -> None:
-    bot.add_cog(Jokes(bot))
+        Parameters:
+        interaction (discord.Interaction): The Discord interaction.
+
+        Returns:
+        None.
+        """
+        response = requests.get(url=URL, headers=HEADERS)
+        data = response.json()
+        await interaction.response.send_message(data["joke"])
+
+async def setup(bot: commands.Bot) -> None:
+    await bot.add_cog(Jokes(bot))

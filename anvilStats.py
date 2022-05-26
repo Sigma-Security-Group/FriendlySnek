@@ -10,7 +10,7 @@ EVENTS_HISTORY_FILE = "data/eventsHistory.json"
 FTP_A3DS_FOLDER = "/144.48.106.194_2316/A3DS"
 
 if __name__ == "__main__":
-    anvil.server.connect(secret.anvilStatsUplinkKey)
+    anvil.server.connect(secret.ANVIL_STATS_UPLINK_KEY)
 
 @anvil.server.callable
 def getStats():
@@ -49,8 +49,8 @@ def getSsgRep(numLogs=2):
     files = []
     reports = []
     with FTP() as ftp:
-        ftp.connect(host=secret.ftpHost, port=secret.ftpPort)
-        ftp.login(user=secret.ftpUsername, passwd=secret.ftpPassword)
+        ftp.connect(host=secret.FTP_HOST, port=secret.FTP_PORT)
+        ftp.login(user=secret.FTP_USERNAME, passwd=secret.FTP_PASSWORD)
         ftp.cwd(FTP_A3DS_FOLDER)
         for filename in sorted(ftp.nlst()):
             if filename.endswith(".rpt"):

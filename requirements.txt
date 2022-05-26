@@ -1,6 +1,4 @@
-discord.py[voice]
-discord-py-slash-command
+discord
+urllib3
 pytz
-dateutils
-tqdm
 anvil-uplink

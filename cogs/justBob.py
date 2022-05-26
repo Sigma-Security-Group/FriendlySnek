@@ -1,15 +1,16 @@
+from secret import DEBUG
 import os
 import json
 import asyncio
-from discord import Embed, Colour
+
+from discord import app_commands, Embed, Color
 from discord.ext import commands
-from discord_slash import cog_ext
 
 from constants import *
-
-from __main__ import log, cogsReady, DEBUG
+from __main__ import log, cogsReady
 if DEBUG:
     from constants.debug import *
+
 
 """
 Levels structure. WIP levels use emojis for easier level design, but when a level gets added to the official levels.json file, all emojis are replaced with corresponding characters:
@@ -75,8 +76,8 @@ Levels structure. WIP levels use emojis for easier level design, but when a leve
 ]
 """
 
-LEVELS_FILE = "cogs/justBob/levels.json"
-PLAYERS_PROGRESS_FILE = "data/justBobPlayersProgress.json"
+LEVELS_FILE = "./cogs/justBob/levels.json"
+PLAYERS_PROGRESS_FILE = "./data/justBobPlayersProgress.json"
 LEVEL_NUMBERS = ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣", "🔟"]
 DIRECTIONS = {
     "👈": (0, 0, -1),
@@ -96,7 +97,7 @@ DOOR = "🟧"
 LEVER = "🔶"
 
 class JustBob(commands.Cog):
-    def __init__(self, bot) -> None:
+    def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
         if not os.path.exists(PLAYERS_PROGRESS_FILE):
             with open(PLAYERS_PROGRESS_FILE, "w") as f:
@@ -108,22 +109,40 @@ class JustBob(commands.Cog):
         log.debug(LOG_COG_READY.format("JustBob"), flush=True)
         cogsReady["justBob"] = True
 
-    @cog_ext.cog_slash(name="justbob", description=JUSTBOB_COMMAND_DESCRIPTION, guild_ids=[SERVER])
-    async def justBob(self, ctx) -> None:
-        if ctx.channel.id != GENERAL and ctx.channel.id != BOT_SPAM:
-            await ctx.send(JUSTBOB_CHANNEL_RESTRAIN.format(GENERAL, BOT_SPAM))
-            return
-        await ctx.send(JUSTBOB_PLAYING)
-        await self.levelSelect(ctx.channel, ctx.author)
+    @app_commands.command(name="justbob")
+    @app_commands.guilds(GUILD)
+    async def justBob(self, interaction: discord.Interaction) -> None:
+        """ Play the minigame Just Bob.
 
-    async def levelSelect(self, channel, player) -> None:
+        Parameters:
+        interaction (discord.Interaction): The Discord interaction.
+
+        Returns:
+        None.
+        """
+        if interaction.channel.id != GENERAL and interaction.channel.id != BOT_SPAM:
+            await interaction.response.send_message(f"Sorry, but you can only play Just Bob in <#{GENERAL}> or in <#{BOT_SPAM}>!")
+            return
+        await interaction.response.send_message("Playing Just Bob...")
+        await self.levelSelect(interaction.channel, interaction.user)
+
+    async def levelSelect(self, channel: discord.abc.GuildChannel, player: discord.Member) -> None:
+        """ Showing the player the level select prompt.
+
+        Parameters:
+        channel (discord.abc.GuildChannel): A disord guild channel.
+        player (discord.Member): The player.
+
+        Returns:
+        None.
+        """
         with open(LEVELS_FILE) as f:
             levels = json.load(f)
         with open(PLAYERS_PROGRESS_FILE) as f:
             playersProgress = json.load(f)
         lastLevelUnlocked = playersProgress.get(str(player.id), 1)
         gameComplete = lastLevelUnlocked > len(levels)
-        embed = Embed(title="Just Bob", description=JUSTBOB_COMPLETION if gameComplete else f"Choose a level\n({(lastLevelUnlocked - 1) / len(levels) * 100:.2f}% complete)", color=Colour.green() if gameComplete else Colour.blue())
+        embed = Embed(title="Just Bob", description="Congratulations, you completed all levels! 🎉\nYou can replay them if you'd like.\nMore levels coming soon!" if gameComplete else f"Choose a level!\n({(lastLevelUnlocked - 1) / len(levels) * 100:.2f}% complete)", color=Color.green() if gameComplete else Color.blue())
         embed.set_footer(text=f"Player: {player.display_name}")
         msg = await channel.send(embed=embed)
         self.games[player.id] = {"levelNum": None, "level": None, "playerPos": None, "trophyPositions": None, "doorLevers": None, "openDoors": None, "description": None, "playerId": None, "messageId": msg.id}
@@ -132,7 +151,15 @@ class JustBob(commands.Cog):
         await msg.add_reaction(STOP)
 
     @commands.Cog.listener()
-    async def on_raw_reaction_add(self, payload) -> None:
+    async def on_raw_reaction_add(self, payload: discord.RawReactionActionEvent) -> None:
+        """ Listens for actions.
+
+        Parameters:
+        payload (discord.RawReactionActionEvent): The raw reaction event.
+
+        Returns:
+        None.
+        """
         if self.bot.ready and payload.member is not None and not payload.member.bot and ((payload.member is not None and payload.member.id in self.games and self.games[payload.member.id]["messageId"] == payload.message_id) or (any(role is not None and role.id == UNIT_STAFF for role in payload.member.roles) and payload.emoji.name == STOP)):
             channel = self.bot.get_channel(payload.channel_id)
             try:
@@ -179,8 +206,16 @@ class JustBob(commands.Cog):
                 pass
 
     def getGameEmbed(self, game) -> Embed:
-        guild = self.bot.get_guild(SERVER)
-        embed = Embed(title=f"Just Bob (Lvl {game['levelNum'] + 1})", description=game["description"], color=Colour.blue())
+        """ Generates the player game embed.
+
+        Parameters:
+        game: The player game.
+
+        Returns:
+        Embed.
+        """
+        guild = self.bot.get_guild(GUILD_ID)
+        embed = Embed(title=f"Just Bob (Lvl {game['levelNum'] + 1})", description=game["description"], color=Color.blue())
 
         playerLayer, playerRow, playerCol = game["playerPos"]
         board = game["level"][playerLayer]
@@ -226,7 +261,16 @@ class JustBob(commands.Cog):
 
         return embed
 
-    def makeMove(self, game, direction):
+    def makeMove(self, game, direction: tuple) -> bool:
+        """ Processes the player movement request.
+
+        Parameters:
+        game: The player game.
+        direction (tuple): A tuple containing the movement specifications.
+
+        Returns:
+        bool.
+        """
         dl, dr, dc = direction
         levelComplete = False
         playerLayer, playerRow, playerCol = game["playerPos"]
@@ -272,5 +316,5 @@ class JustBob(commands.Cog):
             levelComplete = True
         return levelComplete
 
-def setup(bot) -> None:
-    bot.add_cog(JustBob(bot))
+async def setup(bot: commands.Bot) -> None:
+    await bot.add_cog(JustBob(bot))

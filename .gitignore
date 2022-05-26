@@ -1,9 +1,5 @@
-token
-tokenDev
 __pycache__
 .VSCodeCounter
-DEBUG
-HOLD_UPDATE
 secret.py
 tmp
 tmp/*

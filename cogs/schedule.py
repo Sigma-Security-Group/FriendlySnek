@@ -499,19 +499,9 @@ class Schedule(commands.Cog):
         reservationTime = datetime.utcnow()
         guild = self.bot.get_guild(GUILD_ID)
 
-        if member.id in event["declined"]:
-            event["declined"].remove(member.id)
-        if member.id in event["declinedForTiming"]:
-            event["declinedForTiming"].remove(member.id)
-        if member.id in event["tentative"]:
-            event["tentative"].remove(member.id)
-        if member.id not in event["accepted"]:
-            event["accepted"].append(member.id)
-
-        if event["maxPlayers"] is not None and event["accepted"].index(member.id) >= event["maxPlayers"]:
-            embed = Embed(title="❌ Sorry, seems like there's no space left in the :b:op!", color=Color.red())
+        if event["maxPlayers"] is not None and len(event["accepted"]) >= event["maxPlayers"]:
             try:
-                await member.send(embed=embed)
+                await member.send(embed=Embed(title="❌ Sorry, seems like there's no space left in the :b:op!", color=Color.red()))
             except Exception as e:
                 print(member, e)
             return
@@ -546,33 +536,39 @@ class Schedule(commands.Cog):
                 elif reservedRole == "cancel":
                     await self.cancelCommand(dmChannel, "Role reservation")
                     return
-                else:
-                    reserveOk = False
             except asyncio.TimeoutError:
                 await dmChannel.send(embed=TIMEOUT_EMBED)
                 return
 
-            if reserveOk:
-                if reservedRole is not None:
-                    if event["reservableRoles"] is not None:
-                        for roleName in event["reservableRoles"]:
-                            if event["reservableRoles"][roleName] == member.id:
-                                event["reservableRoles"][roleName] = None
-                        if event["reservableRoles"][reservedRole] is None or guild.get_member(event["reservableRoles"][reservedRole]) is None:
-                            event["reservableRoles"][reservedRole] = member.id
-                else:
-                    if event["reservableRoles"] is not None:
-                        for roleName in event["reservableRoles"]:
-                            if event["reservableRoles"][roleName] == member.id:
-                                event["reservableRoles"][roleName] = None
+        if reservedRole is not None:  # User wants to reserve a role
+            if event["reservableRoles"] is not None:
+                for roleName in event["reservableRoles"]:
+                    if event["reservableRoles"][roleName] == member.id:  # If they've already reserved a role
+                        event["reservableRoles"][roleName] = None  # Remove it
+                if event["reservableRoles"][reservedRole] is None or guild.get_member(event["reservableRoles"][reservedRole]) is None:
+                    event["reservableRoles"][reservedRole] = member.id  # Reserve the specified role
 
-                if reservationTime > self.lastUpdate:
-                    embed = Embed(title="✅ Role reservation completed!", color=Color.green())
-                    await dmChannel.send(embed=embed)
-                else:
-                    embed = Embed(title="❌ Schedule was updated while you were reserving a role. Try again!", color=Color.red())
-                    await dmChannel.send(embed=embed)
-                    log.debug(f"{member.display_name} ({member}) was reserving a role but schedule was updated!")
+                    # Put the user in accepted
+                    if member.id in event["declined"]:
+                        event["declined"].remove(member.id)
+                    if member.id in event["declinedForTiming"]:
+                        event["declinedForTiming"].remove(member.id)
+                    if member.id in event["tentative"]:
+                        event["tentative"].remove(member.id)
+                    if member.id not in event["accepted"]:
+                        event["accepted"].append(member.id)
+
+        else:  # User wants to remove their role
+            if event["reservableRoles"] is not None:
+                for roleName in event["reservableRoles"]:
+                    if event["reservableRoles"][roleName] == member.id:
+                        event["reservableRoles"][roleName] = None
+
+        if reservationTime > self.lastUpdate:
+            await dmChannel.send(embed=Embed(title="✅ Role reservation completed!", color=Color.green()))
+        else:
+            await dmChannel.send(embed=Embed(title="❌ Schedule was updated while you were reserving a role. Try again!", color=Color.red()))
+            log.debug(f"{member.display_name} ({member}) was reserving a role but schedule was updated!")
 
     async def eventTime(self, interaction: discord.Interaction, dmChannel: discord.DMChannel, eventType: str, collidingEventTypes: tuple, delta: timedelta) -> tuple:
         """ X.

@@ -4,6 +4,7 @@ import json
 import os
 import re
 import pytz
+import random
 
 from copy import deepcopy
 from datetime import datetime, timedelta
@@ -27,6 +28,9 @@ EVENTS_HISTORY_FILE = "data/eventsHistory.json"
 WORKSHOP_TEMPLATES_FILE = "data/workshopTemplates.json"
 WORKSHOP_TEMPLATES_DELETED_FILE = "data/workshopDeletedTemplates.json"
 WORKSHOP_INTEREST_FILE = "data/workshopInterest.json"
+
+OPERATION_NAME_ADJECTIVES = "constants/opAdjectives.txt"
+OPERATION_NAME_NOUNS = "constants/opNouns.txt"
 
 MAX_SERVER_ATTENDANCE = 50
 
@@ -291,7 +295,7 @@ class Schedule(commands.Cog):
         channel = self.bot.get_channel(SCHEDULE)
         await channel.purge(limit=None, check=lambda m: m.author.id in FRIENDLY_SNEKS)
 
-        await channel.send(f"Welcome to the schedule channel!\nTo schedule an operation you can use the `/operation` command (or `/bop`) and follow the instructions in your DMs.\nFor a workshop use `/workshop` or `/ws`.\nLastly, for generic events use `/event`.\n\nIf you haven't set a preferred time zone yet you will be prompted to do so when you schedule any kind of event. If you want to set, change or delete your time zone preference you may do so with the `/changetimezone` command.\n\nThe times you see on the schedule are based on your __local time zone__.\n\nThe event colors can be used to quickly identify what type of event it is:\n🟩 Operation `/operation` or `/bop`\n🟦 Workshop `/workshop` or `/ws`\n🟨 Event `/event`\n\nIf you have any suggestions for new features or encounter any bugs, please contact: {', '.join([f'**{channel.guild.get_member(name).display_name}**' for name in DEVELOPERS if channel.guild.get_member(name) is not None])}.")
+        await channel.send(f"Welcome to the schedule channel!\nTo schedule an operation you can use the `/operation` command (or `/bop`) and follow the instructions in your DMs.\nFor a workshop use `/workshop` or `/ws`.\nLastly, for generic events use `/event`.\n\nIf you haven't set a preferred time zone yet you will be prompted to do so when you schedule any kind of event. If you want to set, change or delete your time zone preference you may do so with the `/changetimezone` command.\n\nThe times you see on the schedule are based on __your local time zone__.\n\nThe event colors can be used to quickly identify what type of event it is:\n🟩 Operation `/operation` or `/bop`\n🟦 Workshop `/workshop` or `/ws`\n🟨 Event `/event`\n\nIf you have any suggestions for new features or encounter any bugs, please contact: {', '.join([f'**{channel.guild.get_member(name).display_name}**' for name in DEVELOPERS if channel.guild.get_member(name) is not None])}.")
 
         if os.path.exists(EVENTS_FILE):
             try:
@@ -1147,27 +1151,46 @@ class Schedule(commands.Cog):
         await interaction.response.send_message(RESPONSE_EVENT_PROGRESS.format(":b:op."))
         log.info(f"{interaction.user.display_name} ({interaction.user}) is creating an operation...")
 
-        utcNow = UTC.localize(datetime.utcnow())
         authorId = interaction.user.id
 
         # Operation title
-        embed = Embed(title=SCHEDULE_EVENT_TITLE.format("operation"), description="Remeber, operation names should start with the word `Operation`\nE.g. Operation Red Tide.", color=Color.gold())
-        embed.set_footer(text=SCHEDULE_CANCEL)
-        try:
-            msg = await interaction.user.send(embed=embed)
-        except Exception as e:
-            print(interaction.user, e)
-            return
-        dmChannel = msg.channel
-        try:
-            response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, interaction=interaction, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == interaction.user)
-            title = response.content.strip()
-            if title.lower() == "cancel":
-                await self.cancelCommand(dmChannel, "Operation scheduling")
+        titleOk = False
+        color = Color.gold()
+        while not titleOk:
+            embed = Embed(title=SCHEDULE_EVENT_TITLE.format("operation"), description="Remeber, operation names should start with the word `Operation`\nE.g. Operation Red Tide.\n\nEnter `regenerate` to renew the generated operation names.", color=color)
+            color = Color.orange()
+
+            with open(OPERATION_NAME_ADJECTIVES) as f:
+                adjectives = f.readlines()
+                adj = [random.choice(adjectives).strip("\n") for _ in range(10)]
+
+            with open(OPERATION_NAME_NOUNS) as f:
+                nouns = f.readlines()
+                nou = [random.choice(nouns).strip("\n") for _ in range(10)]
+
+            titles = [f"{adj[x].capitalize()} {nou[x].capitalize()}" for x in range(10)]
+            embed.add_field(name="Generated Operation Names", value="\n".join(titles))
+            embed.set_footer(text=SCHEDULE_CANCEL)
+            try:
+                msg = await interaction.user.send(embed=embed)
+            except Exception as e:
+                print(interaction.user, e)
                 return
-        except asyncio.TimeoutError:
-            await dmChannel.send(embed=TIMEOUT_EMBED)
-            return
+            dmChannel = msg.channel
+            try:
+                response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, interaction=interaction, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == interaction.user)
+                title = response.content.strip()
+                if title.lower() == "cancel":
+                    await self.cancelCommand(dmChannel, "Operation scheduling")
+                    return
+                elif title.lower() == "regenerate":
+                    titleOk = False
+                else:
+                    titleOk = True
+
+            except asyncio.TimeoutError:
+                await dmChannel.send(embed=TIMEOUT_EMBED)
+                return
 
         # Operation description
         embed = Embed(title=SCHEDULE_EVENT_DESCRIPTION_QUESTION, color=Color.gold())

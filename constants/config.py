@@ -40,9 +40,6 @@ RESPONSE_EVENT_PROGRESS = "Scheduling... Standby for {0}..."
 RESPONSE_EVENT_DONE = "`{0}` is now on [schedule](<https://discord.com/channels/{1}/{2}/{3}>)!"
 
 ## Errors
-SCHEDULE_EVENT_ERROR_COLLISION = "❌ This time collides with the event: `{0}`!"
-SCHEDULE_EVENT_ERROR_PADDING_EARLY = "❌ Your operation would start less than an hour after `{0}` ends!"
-SCHEDULE_EVENT_ERROR_PADDING_LATE = "❌ `{0}` starts less than an hour after your event ends!"
 SCHEDULE_EVENT_ERROR_DESCRIPTION = "Enter `edit` to input a new time.\nEnter `override` to override this warning."
 
 ### Title
@@ -73,7 +70,7 @@ SCHEDULE_EVENT_SELECTED_TIME_ZONE = "Your current time zone preference is `{0}`.
 ### Time
 SCHEDULE_EVENT_TIME = "What is the time of the {0}?"
 SCHEDULE_EVENT_TIME_TOMORROW = "Time was detected to be in the past 24h and was set to tomorrow."
-SCHEDULE_EVENT_TIME_TOMORROW_PREVIEW = "Input time: <t:{0}:F>\nSelected time: <t:{1}:F>."
+SCHEDULE_EVENT_TIME_TOMORROW_PREVIEW = "Input time: {0}.\nSelected time: {1}."
 SCHEDULE_EVENT_TIME_PAST_QUESTION = "It appears that the selected time is in the past. Are you sure you want to set it to this?"
 SCHEDULE_EVENT_TIME_PAST_PROMPT = "Enter `yes` or `y` to keep this time.\nEnter anything else to change it to another time."
 

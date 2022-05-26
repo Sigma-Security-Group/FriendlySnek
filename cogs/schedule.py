@@ -10,7 +10,7 @@ from datetime import datetime, timedelta
 from dateutil.parser import parse as datetimeParse
 
 import discord
-from discord import app_commands, Embed, Color
+from discord import app_commands, Embed, Color, utils
 from discord.ext import commands, tasks
 
 from constants import *
@@ -343,7 +343,7 @@ class Schedule(commands.Cog):
             embed.add_field(name="\u200B", value="\u200B", inline=False)
             embed.add_field(name=f"Reservable Roles ({len([role for role, memberId in event['reservableRoles'].items() if memberId is not None])}/{len(event['reservableRoles'])}) 👤", value="\n".join(f"{roleName} - {('*' + member.display_name + '*' if (member := guild.get_member(memberId)) is not None else '**VACANT**') if memberId is not None else '**VACANT**'}" for roleName, memberId in event["reservableRoles"].items()), inline=False)
         embed.add_field(name="\u200B", value="\u200B", inline=False)
-        embed.add_field(name="Time", value=f"<t:{round(UTC.localize(datetime.strptime(event['time'], TIME_FORMAT)).timestamp())}:F> - <t:{round(UTC.localize(datetime.strptime(event['endTime'], TIME_FORMAT)).timestamp())}:t>", inline=False)
+        embed.add_field(name="Time", value=f"{utils.format_dt(UTC.localize(datetime.strptime(event['time'], TIME_FORMAT)), style='F')} - {utils.format_dt(UTC.localize(datetime.strptime(event['endTime'], TIME_FORMAT)), style='t')}", inline=False)
         embed.add_field(name="Duration", value=event["duration"], inline=False)
         if event["map"] is not None:
             embed.add_field(name="Map", value=event["map"], inline=False)
@@ -574,7 +574,7 @@ class Schedule(commands.Cog):
                     await dmChannel.send(embed=embed)
                     log.debug(f"{member.display_name} ({member}) was reserving a role but schedule was updated!")
 
-    async def eventTime(self, interaction: discord.Interaction, dmChannel: discord.DMChannel, eventType: str, collidingEventTypes: tuple, delta) -> tuple:
+    async def eventTime(self, interaction: discord.Interaction, dmChannel: discord.DMChannel, eventType: str, collidingEventTypes: tuple, delta: timedelta) -> tuple:
         """ X.
 
         Parameters:
@@ -582,7 +582,7 @@ class Schedule(commands.Cog):
         dmChannel (discord.DMChannel): The DMChannel the user reponse is from.
         eventType (str): The type of event, e.g. Operation
         collidingEventTypes (tuple): A tuple of eventtypes that you want to collide with.
-        delta: idk, it comes from duration in any case.
+        delta (timedelta): Difference in time from start to end.
 
         Returns:
         startTime, endTime (tuple): A tuple which contains the event start time and end time.
@@ -625,7 +625,7 @@ class Schedule(commands.Cog):
                 if startTime < UTC.localize(utcNow):  # Set time is in the past
                     if (delta := UTC.localize(utcNow) - startTime) > timedelta(hours=1) and delta < timedelta(days=1):  # Set time in the past 24 hours
                         newStartTime = startTime + timedelta(days=1)
-                        embed = Embed(title=SCHEDULE_EVENT_TIME_TOMORROW, description=SCHEDULE_EVENT_TIME_TOMORROW_PREVIEW.format(round(startTime.timestamp()), round(newStartTime.timestamp())), color=Color.orange())
+                        embed = Embed(title=SCHEDULE_EVENT_TIME_TOMORROW, description=SCHEDULE_EVENT_TIME_TOMORROW_PREVIEW.format(utils.format_dt(startTime, style="F"), utils.format_dt(newStartTime, style="F")), color=Color.orange())
                         await dmChannel.send(embed=embed)
                         startTime = newStartTime
                         startTimeOk = True
@@ -664,17 +664,17 @@ class Schedule(commands.Cog):
                     eventEndTime = UTC.localize(datetime.strptime(event["endTime"], TIME_FORMAT))  # Target event end time
                     if (eventStartTime <= startTime < eventEndTime) or (eventStartTime <= endTime < eventEndTime) or (startTime <= eventStartTime < endTime):  # If scheduled event and target event overlap
                         eventCollision = True
-                        embed = Embed(title=SCHEDULE_EVENT_ERROR_COLLISION.format(event["title"]), description=SCHEDULE_EVENT_ERROR_DESCRIPTION, color=Color.red())
+                        embed = Embed(title=f"❌ This time collides with the event: `{event['title']}`!", description=SCHEDULE_EVENT_ERROR_DESCRIPTION, color=Color.red())
                         embed.set_footer(text=SCHEDULE_CANCEL)
                         await dmChannel.send(embed=embed)
                     elif eventEndTime < startTime and eventEndTime + timedelta(hours=1) > startTime:
                         eventCollision = True
-                        embed = Embed(title=SCHEDULE_EVENT_ERROR_PADDING_EARLY.format(event["title"]), description=SCHEDULE_EVENT_ERROR_DESCRIPTION, color=Color.red())
+                        embed = Embed(title=f"❌ Your {eventType.lower()} would start less than an hour after `{event['title']}` ends!", description=SCHEDULE_EVENT_ERROR_DESCRIPTION, color=Color.red())
                         embed.set_footer(text=SCHEDULE_CANCEL)
                         await dmChannel.send(embed=embed)
                     elif endTime < eventStartTime and endTime + timedelta(hours=1) > eventStartTime:
                         eventCollision = True
-                        embed = Embed(title=SCHEDULE_EVENT_ERROR_PADDING_LATE.format(event["title"]), description=SCHEDULE_EVENT_ERROR_DESCRIPTION, color=Color.red())
+                        embed = Embed(title=f"❌ `{event['title'].lower()}` starts less than an hour after your event ends!", description=SCHEDULE_EVENT_ERROR_DESCRIPTION, color=Color.red())
                         embed.set_footer(text=SCHEDULE_CANCEL)
                         await dmChannel.send(embed=embed)
 
@@ -734,7 +734,7 @@ class Schedule(commands.Cog):
             if not isTemplateEdit:
                 log.info(f"{author.display_name} ({author}) is editing the event: {event['title']}")
                 embed.insert_field_at(0, name="**0** Type", value=f"```txt\n{event['type']}\n```", inline=False)
-                embed.add_field(name="**7** Time", value=f"<t:{round(UTC.localize(datetime.strptime(event['time'], TIME_FORMAT)).timestamp())}:F>", inline=False)
+                embed.add_field(name="**7** Time", value=utils.format_dt(UTC.localize(datetime.strptime(event["time"], TIME_FORMAT)), style="F"), inline=False)
                 embed.add_field(name="**8** Duration", value=f"```txt\n{event['duration']}\n```", inline=False)
                 choiceNumbers:list = [str(x) for x in range(9)]
             else:
@@ -1016,7 +1016,7 @@ class Schedule(commands.Cog):
                         if startTime < UTC.localize(utcNow):
                             if (delta := UTC.localize(utcNow) - startTime) > timedelta(hours=1) and delta < timedelta(days=1):
                                 newStartTime = startTime + timedelta(days=1)
-                                embed = Embed(title=SCHEDULE_EVENT_TIME_TOMORROW, description=SCHEDULE_EVENT_TIME_TOMORROW_PREVIEW.format(round(startTime.timestamp()), round(newStartTime.timestamp())), color=Color.orange())
+                                embed = Embed(title=SCHEDULE_EVENT_TIME_TOMORROW, description=SCHEDULE_EVENT_TIME_TOMORROW_PREVIEW.format(utils.format_dt(startTime, style="F"), utils.format_dt(newStartTime, style="F")), color=Color.orange())
                                 await dmChannel.send(embed=embed)
                                 startTime = newStartTime
                                 startTimeOk = True
@@ -1048,7 +1048,7 @@ class Schedule(commands.Cog):
                     event["endTime"] = endTime.strftime(TIME_FORMAT)
                     reorderEvents = True
                     guild = self.bot.get_guild(GUILD_ID)
-                    embed = Embed(title=f":clock3: The starting time has changed for: {event['title']}!", description=f"From: <t:{round(UTC.localize(datetime.strptime(oldStartTime, TIME_FORMAT)).timestamp())}:F>\n\u2000\u2000To: <t:{round(UTC.localize(datetime.strptime(event['time'], TIME_FORMAT)).timestamp())}:F>", color=Color.orange())
+                    embed = Embed(title=f":clock3: The starting time has changed for: {event['title']}!", description=f"From: {utils.format_dt(UTC.localize(datetime.strptime(oldStartTime, TIME_FORMAT)), style='F')}:F>\n\u2000\u2000To: {utils.format_dt(UTC.localize(datetime.strptime(event['time'], TIME_FORMAT)), style='F')}", color=Color.orange())
                     for memberId in event["accepted"] + event.get("declinedForTiming", []) + event["tentative"]:
                         member = guild.get_member(memberId)
                         if member is not None:
@@ -1119,7 +1119,7 @@ class Schedule(commands.Cog):
                 for memberId in event["accepted"] + event.get("declinedForTiming", []) + event["tentative"]:
                     member = guild.get_member(memberId)
                     if member is not None:
-                        embed = Embed(title=f"🗑 {event.get('type', 'Operation')} deleted: {event['title']}!", description=f"The {event.get('type', 'Operation').lower()} was scheduled to run:\n<t:{round(UTC.localize(datetime.strptime(event['time'], TIME_FORMAT)).timestamp())}:F>", color=Color.red())
+                        embed = Embed(title=f"🗑 {event.get('type', 'Operation')} deleted: {event['title']}!", description=f"The {event.get('type', 'Operation').lower()} was scheduled to run:\n{utils.format_dt(UTC.localize(datetime.strptime(event['time'], TIME_FORMAT)), style='F')}", color=Color.red())
                         try:
                             await member.send(embed=embed)
                         except Exception as e:
@@ -1992,7 +1992,7 @@ class Schedule(commands.Cog):
             if startTime < UTC.localize(utcNow):
                 if (delta := UTC.localize(utcNow) - startTime) > timedelta(hours=1) and delta < timedelta(days=1):
                     newStartTime = startTime + timedelta(days=1)
-                    embed = Embed(title=SCHEDULE_EVENT_TIME_TOMORROW, description=SCHEDULE_EVENT_TIME_TOMORROW_PREVIEW.format(round(startTime.timestamp()), round(newStartTime.timestamp())), color=Color.orange())
+                    embed = Embed(title=SCHEDULE_EVENT_TIME_TOMORROW, description=SCHEDULE_EVENT_TIME_TOMORROW_PREVIEW.format(utils.format_dt(startTime, style="F"), utils.format_dt(newStartTime, style="F")), color=Color.orange())
                     await dmChannel.send(embed=embed)
                     startTime = newStartTime
                     startTimeOk = True

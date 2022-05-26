@@ -6,3 +6,4 @@ tmp/*
 data
 data/*
 anvilController.json
+update.sh

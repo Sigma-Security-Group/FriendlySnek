@@ -3,7 +3,7 @@ import re
 from datetime import datetime
 from typing import Optional
 
-from discord import Embed, Color
+from discord import utils, Embed, Color
 from discord.ext import commands
 
 from constants import *
@@ -61,7 +61,39 @@ class Staff(commands.Cog):
         if member is None:
             await ctx.send(f"No member found for search term: {searchTerm}")
         else:
-            await ctx.send(f"Member found: {member.display_name} ({member})")
+            embed = Embed(description=member.mention, color=member.color)
+            embed.set_author(icon_url=member.avatar, name=member)
+            embed.set_thumbnail(url=member.avatar)
+            embed.add_field(name="Joined", value=utils.format_dt(member.joined_at, style="f"), inline=True)
+            embed.add_field(name="Registered", value=utils.format_dt(member.created_at, style="f"), inline=True)
+
+            roles = [role.mention for role in member.roles]  # Fetch all member roles
+            roles.pop(0)  # Remove @everyone role
+            roles = roles[::-1]  # Reverse the list
+            embed.add_field(name=f"Roles [{len(member.roles)}]", value=" ".join(roles) if len(roles) > 0 else "None", inline=False)
+
+            embed.add_field(
+                name="Key Permissions",
+                value="Administrator" * member.guild_permissions.administrator +
+                ", Manage Server" * member.guild_permissions.manage_guild +
+                ", Manage Roles" * member.guild_permissions.manage_roles +
+                ", Manage Channels" * member.guild_permissions.manage_channels +
+                ", Manage Messages" * member.guild_permissions.manage_messages +
+                ", Manage Webhooks" * member.guild_permissions.manage_webhooks +
+                ", Manage Nicknames" * member.guild_permissions.manage_nicknames +
+                ", Manage Emojis" * member.guild_permissions.manage_emojis +
+                ", Kick Members" * member.guild_permissions.kick_members +
+                ", Ban Members" * member.guild_permissions.ban_members +
+                ", Mention Everyone" * member.guild_permissions.mention_everyone
+                ,
+                inline=False)
+
+            if member.id == member.guild.owner_id:
+                embed.add_field(name="Acknowledgements", value="Server Owner", inline=False)
+
+            embed.set_footer(text=f"ID: {member.id}")
+            embed.timestamp = datetime.now()
+            await ctx.send(embed=embed)
 
     @commands.command(name="purge")
     @commands.has_any_role(UNIT_STAFF)
@@ -150,7 +182,7 @@ class Staff(commands.Cog):
         await msg.edit(embed=embed)
         # Somewhere after this comment raises the error. I can't figure it out cuz I have no idea what this does
         # > Command raised an exception: TypeError: can't compare offset-naive and offset-aware datetimes
-        lastActivityPerMember = [(f"{member.display_name} ({member.name}#{member.discriminator})", f"{member.mention}\n<t:{round(lastMessage.created_at.timestamp())}:F>\n{lastMessage.jump_url}" if lastMessage is not None else f"{member.mention}\nNOT FOUND")
+        lastActivityPerMember = [(f"{member.display_name} ({member.name}#{member.discriminator})", f"{member.mention}\n{utils.format_dt(lastMessage.created_at.timestamp(), style='F')}\n{lastMessage.jump_url}" if lastMessage is not None else f"{member.mention}\nNOT FOUND")
         for member, lastMessage in sorted(lastMessagePerMember.items(), key=lambda x: x[1].created_at if x[1] is not None else datetime(1970, 1, 1))]
         for i in range(0, len(lastActivityPerMember), 25):
             embed = Embed(title=f"Last activity per member ({i + 1} - {min(i + 25, len(lastActivityPerMember))} / {len(lastActivityPerMember)})")
@@ -187,14 +219,14 @@ class Staff(commands.Cog):
                 if lastMessage is None or lastMessageInChannel.created_at > lastMessage.created_at:
                     lastMessage = lastMessageInChannel
             except Exception:
-                log.warning(f"Could not search messages from channel {channel.mention}!")
+                log.warning(f"Could not search messages from channel #{channel.name}!")
         log.debug("Done searching messages!")
         if lastMessage is None:
             embed = Embed(title="❌ Last activity", description=f"Activity not found!\nMember: {member.mention}", color=Color.red())
             embed.timestamp = datetime.now()
             await ctx.send(embed=embed)
         else:
-            embed = Embed(title="✅ Last activity", description=f"Activity found: <t:{round(lastMessage.created_at.timestamp())}:F>!\nMember: {member.mention}", color=Color.green())
+            embed = Embed(title="✅ Last activity", description=f"Activity found: {utils.format_dt(lastMessage.created_at.timestamp(), style='F')}!\nMember: {member.mention}", color=Color.green())
             embed.timestamp = datetime.now()
             await ctx.send(embed=embed)
 

@@ -1,4 +1,3 @@
-import secret
 import pytz
 import asyncio
 import os
@@ -15,11 +14,6 @@ import discord
 from discord import Embed, Color
 from discord.ext import commands
 
-from constants import *
-if secret.DEBUG:
-    from constants.debug import *
-
-
 if not os.path.exists("./secret.py"):
     log.info("Creating a secret.py file!")
     with open("secret.py", "w") as f:
@@ -33,6 +27,13 @@ if not os.path.exists("./secret.py"):
             "\nDEBUG:bool = True"
             "\n"
         )
+    exit()
+
+import secret
+
+from constants import *
+if secret.DEBUG:
+    from constants.debug import *
 
 if not os.path.exists("./data"):
     log.info("Creating a data directory!")
@@ -81,11 +82,11 @@ async def on_ready() -> None:
 async def on_message(message: discord.Message) -> None:
     """ On message client event.
 
-        Parameters:
-        message (discord.Message): The Discord message.
+    Parameters:
+    message (discord.Message): The Discord message.
 
-        Returns:
-        None.
+    Returns:
+    None.
     """
     if message.author.id == FRIENDLY_SNEK:  # Ignore messages from itself
         return
@@ -114,13 +115,13 @@ async def on_message(message: discord.Message) -> None:
 async def analyzeChannel(client, message: discord.Message, channelID:int, attachmentContentType:str) -> None:
     """ Will analyze the discord.Message contents and see if it meets the channel purpose.
 
-        Parameters:
-        message (discord.Message): The Discord message.
-        channelID (int): The target channel ID.
-        attachmentContentType (str): A string to determine the allowed discord.Message attachment, either "video" or "image".
+    Parameters:
+    message (discord.Message): The Discord message.
+    channelID (int): The target channel ID.
+    attachmentContentType (str): A string to determine the allowed discord.Message attachment, either "video" or "image".
 
-        Returns:
-        None.
+    Returns:
+    None.
     """
     if message.channel.id != channelID:
         return
@@ -146,11 +147,11 @@ async def analyzeChannel(client, message: discord.Message, channelID:int, attach
 async def on_member_join(member: discord.Member) -> None:
     """ On member join client event.
 
-        Parameters:
-        member (discord.Member): X.
+    Parameters:
+    member (discord.Member): The Discord member.
 
-        Returns:
-        None.
+    Returns:
+    None.
     """
     guild = member.guild
     if guild.id != GUILD_ID:
@@ -180,7 +181,7 @@ async def on_member_leave(member: discord.Member) -> None:
     """ On member leave client event.
 
         Parameters:
-        member (discord.Member): X.
+        member (discord.Member): The Discord member.
 
         Returns:
         None.
@@ -200,11 +201,11 @@ async def on_command_error(interaction, error) -> None:
 def devCheck() -> discord.ext.commands.check:
     """ A permissions check for the reload command.
 
-        Parameters:
-        None.
+    Parameters:
+    None.
 
-        Returns:
-        discord.ext.commands.check.
+    Returns:
+    discord.ext.commands.check.
     """
     def predict(ctx: commands.context) -> bool:
         return ctx.author.id in DEVELOPERS
@@ -215,11 +216,11 @@ def devCheck() -> discord.ext.commands.check:
 async def reload(ctx: commands.context) -> None:
     """ Reload bot cogs - Dev only.
 
-        Parameters:
-        ctx (commands.context): The Discord context.
+    Parameters:
+    ctx (commands.context): The Discord context.
 
-        Returns:
-        None.
+    Returns:
+    None.
     """
     log.info(f"{ctx.author.display_name} ({ctx.author}) Reloading bot cogs...")
     if ctx.author.id not in DEVELOPERS:

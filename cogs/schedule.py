@@ -763,15 +763,14 @@ class Schedule(commands.Cog):
                 return False
         reorderEvents = False
 
-        async def editEventDuration(self, isTemplateEdit:bool) -> bool:
-            """
-                Editing the duration of an event or template.
+        async def editEventDuration(isTemplateEdit:bool) -> bool:
+            """ Editing the duration of an event or template.
 
-                Parameters:
-                isTemplateEdit (bool): If the event is a template.
+            Parameters:
+            isTemplateEdit (bool): If the event is a template.
 
-                Returns:
-                bool: If function executed successfully.
+            Returns:
+            bool: If function executed successfully.
             """
             color = Color.gold()
             duration = "INVALID INPUT"
@@ -1048,7 +1047,7 @@ class Schedule(commands.Cog):
                     event["endTime"] = endTime.strftime(TIME_FORMAT)
                     reorderEvents = True
                     guild = self.bot.get_guild(GUILD_ID)
-                    embed = Embed(title=f":clock3: The starting time has changed for: {event['title']}!", description=f"From: {utils.format_dt(UTC.localize(datetime.strptime(oldStartTime, TIME_FORMAT)), style='F')}:F>\n\u2000\u2000To: {utils.format_dt(UTC.localize(datetime.strptime(event['time'], TIME_FORMAT)), style='F')}", color=Color.orange())
+                    embed = Embed(title=f":clock3: The starting time has changed for: {event['title']}!", description=f"From: {utils.format_dt(UTC.localize(datetime.strptime(oldStartTime, TIME_FORMAT)), style='F')}\n\u2000\u2000To: {utils.format_dt(UTC.localize(datetime.strptime(event['time'], TIME_FORMAT)), style='F')}", color=Color.orange())
                     for memberId in event["accepted"] + event.get("declinedForTiming", []) + event["tentative"]:
                         member = guild.get_member(memberId)
                         if member is not None:
@@ -1382,7 +1381,6 @@ class Schedule(commands.Cog):
         await interaction.response.send_message(RESPONSE_EVENT_PROGRESS.format("workshop"))
         log.info(f"{interaction.user.display_name} ({interaction.user}) is creating a workshop...")
 
-        utcNow = UTC.localize(datetime.utcnow())
         authorId = interaction.user.id
 
         templateActionRepeat: bool = True
@@ -1439,7 +1437,7 @@ class Schedule(commands.Cog):
                             with open(WORKSHOP_TEMPLATES_FILE, "w") as f:
                                 json.dump(workshopTemplates, f, indent=4)
                             await dmChannel.send(embed=Embed(title="✅ Template deleted!", color=Color.green()))
-                            return
+                            color = Color.gold()
 
                     elif templateAction.lower().startswith("edit"):
                         templateNumber = templateAction.split(" ")[-1]
@@ -1451,7 +1449,7 @@ class Schedule(commands.Cog):
                             workshopTemplates[int(templateNumber) - 1] = workshopTemplate
                             with open(WORKSHOP_TEMPLATES_FILE, "w") as f:
                                 json.dump(workshopTemplates, f, indent=4)
-                            return
+                            color = Color.gold()
 
                     else: # Select template
                         if templateAction.isdigit() and int(templateAction) <= len(workshopTemplates) and int(templateAction) > 0:

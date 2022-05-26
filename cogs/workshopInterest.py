@@ -16,67 +16,67 @@ WORKSHOP_INTEREST_FILE = "data/workshopInterest.json"
 DEFAULT_WORKSHOP_INTEREST_LISTS = (
     (
         "Rotary Wing",
-        "Rotary Wing 🚁",
+        "🚁 Rotary Wing",
         SME_RW_PILOT,
         "Learn to fly helicopters and provide transport and close air support."
     ),
     (
         "Fixed Wing",
-        "Fixed Wing ✈️",
+        "✈️ Fixed Wing",
         SME_FW_PILOT,
         "Learn the dynamics of using fixed wing and fighter jet aircraft."
     ),
     (
         "JTAC",
-        "JTAC 📡",
+        "📡 JTAC",
         SME_JTAC,
         "Learn how to direct close air support."  # Unverifed description.
     ),
     (
         "Medic",
-        "Medic 💉",
+        "💉 Medic",
         SME_MEDIC,
         "Learn how to administer combat aid to wounded personnel in a timely and effective manner. "  # Unverifed description.
     ),
     (
         "Heavy Weapons",
-        "Heavy Weapons 💣",
+        "💣 Heavy Weapons",
         SME_HEAVY_WEAPONS,
         "Learn how to efficiently operate as a machine gun crew, use grenade launchers, and shoot cretins out of shitboxes (AT & AA)."
     ),
     (
         "Marksman",
-        "Marksman 🎯",
+        "🎯 Marksman",
         SME_MARKSMAN,
         "Learn how to shoot big bullet far."
     ),
     (
         "Breacher",
-        "Breacher 🚪",
+        "🚪 Breacher",
         SME_BREACHER,
         "Become an expert in close-quarters battle (CQB)."  # Unverifed description.
     ),
     (
         "Mechanised",
-        "Mechanised 🛡️​",
+        "🛡️​ Mechanised",
         SME_MECHANISED,
         "A short course on driving, gunning, and commanding a 6.21 million dollar reason the heavy weapons guy is useless."
     ),
     (
         "RPV-SO",
-        "RPV-SO 🛩️​",
+        "🛩️ RPV-SO",
         SME_RPV_SO,
         "Learn how to employ recon and attack Remote Piloted Vehicles (Drones)."  # Unverifed description.
     ),
     (
         "Team Leading",
-        "Team Leading 👨‍🏫",
+        "👨‍🏫 Team Leading",
         SME_MENTOR,
         "Learn how to effectively plan and assault targets with a whole team and assets."  # Unverifed description.
     ),
     (
         "Newcomer",
-        "Newcomer 🐣",
+        "🐣 Newcomer",
         (UNIT_STAFF, ADVISOR, SPECIALIST, TECHNICIAN),
         "Learn what you need to know before attending an operation in Sigma Security Group."
     )

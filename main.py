@@ -227,6 +227,7 @@ async def reload(ctx: commands.context) -> None:
         return
     for cog in COGS:
         await client.reload_extension(f"cogs.{cog}")
+    await client.tree.sync(guild=GUILD)
     await ctx.send("Cogs reloaded!")
 
 if __name__ == "__main__":

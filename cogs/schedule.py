@@ -2122,6 +2122,8 @@ class Schedule(commands.Cog):
             return
 
         # Output timestamp
+        timeZone = pytz.timezone(memberTimeZones[str(interaction.user.id)])
+        time = timeZone.localize(time).astimezone(UTC)
         embed = Embed(color=Color.green())
         embed.set_footer(text=f"Local time: {time.strftime(TIME_FORMAT)}\nTime zone: {memberTimeZones[str(interaction.user.id)]}")
         if format == "None":  # All formats

@@ -82,6 +82,16 @@ TIME_ZONES = {
     "Australian Eastern Time (Sydney)": "Australia/Sydney",
 }
 
+timestampStyles = {
+    "t": "Short Time",
+    "T": "Long Time",
+    "d": "Short Date",
+    "D": "Long Date",
+    "f": "Short Date Time",
+    "F": "Long Date Time",
+    "R": "Relative Time",
+}
+
 if not os.path.exists(EVENTS_HISTORY_FILE):
     with open(EVENTS_HISTORY_FILE, "w") as f:
         json.dump([], f, indent=4)
@@ -249,10 +259,10 @@ class Schedule(commands.Cog):
                     with open(EVENTS_FILE, "w") as f:
                         json.dump(events, f, indent=4)
                     if len(acceptedMembersNotOnline) > 0:
-                        log.debug(f"Pinging members in accepted not in VC: {[member.display_name for member in acceptedMembersNotOnline]}...")
+                        log.debug(f"Pinging members in accepted not in VC: {', '.join([member.display_name for member in acceptedMembersNotOnline])}...")
                         await channel.send(" ".join(member.mention for member in acceptedMembersNotOnline) + f" If you are in-game, please get in <#{COMMAND}> or <#{DEPLOYED}>. If you are not making it to this {event['type'].lower()}, please hit decline ❌ on the <#{SCHEDULE}>.")
                     if len(onlineMembersNotAccepted) > 0:
-                        log.debug(f"Pinging members in VC not in accepted: {[member.display_name for member in onlineMembersNotAccepted]}...")
+                        log.debug(f"Pinging members in VC not in accepted: {', '.join([member.display_name for member in onlineMembersNotAccepted])}...")
                         await channel.send(" ".join(member.mention for member in onlineMembersNotAccepted) + f" If you are in-game, please hit accept ✅ on the <#{SCHEDULE}>.")
         except Exception as e:
             print(e)
@@ -2073,6 +2083,60 @@ class Schedule(commands.Cog):
             with open(EVENTS_FILE) as f:
                 events = json.load(f)
             await interaction.followup.send(RESPONSE_EVENT_DONE.format(newEvent["title"], GUILD_ID, SCHEDULE, events[-1]["messageId"]))
+
+    @app_commands.command(name="timestamp")
+    @app_commands.guilds(GUILD)
+    @app_commands.describe(
+        time = "Your local time",
+        format = "Returns soley the specified format"
+    )
+    @app_commands.choices(format = [app_commands.Choice(name=f"[{style}] {description}", value=style) for style, description in timestampStyles.items()])
+
+    async def timestamp(self, interaction: discord.Interaction, time: str, format: app_commands.Choice[str] = None) -> None:
+        """ Convert your local time to a dynamic Discord timestamp.
+
+        Parameters:
+        interaction (discord.Interaction): The Discord interaction.
+
+        Returns:
+        None.
+        """
+        await interaction.response.defer()
+
+        # Get user time zone
+        with open(MEMBER_TIME_ZONES_FILE) as f:
+            memberTimeZones = json.load(f)
+
+        if not str(interaction.user.id) in memberTimeZones:
+            timeZoneOutput = await self.changeTimeZone(interaction.user, isCommand=False)
+            if not timeZoneOutput:
+                await self.cancelCommand(interaction.user.dm_channel, "Timestamp creation")
+                await interaction.edit_original_message(embed=Embed(title="❌ Timestamp creation canceled", description="You must provide a time zone in your DMs!", color=Color.red()))
+                return
+            with open(MEMBER_TIME_ZONES_FILE) as f:
+                memberTimeZones = json.load(f)
+
+        # Get the inputted time
+        try:
+            time = datetimeParse(time)
+        except ValueError:
+            await interaction.edit_original_message(embed=Embed(title="❌ Invalid time", description="Provide a valid time!", color=Color.red()))
+            return
+
+        # Output timestamp
+        embed = Embed(color=Color.green())
+        embed.set_footer(text=f"Local time: {time.strftime(TIME_FORMAT)}\nTime zone: {memberTimeZones[str(interaction.user.id)]}")
+        if format is None:  # All formats
+            timestamps = [utils.format_dt(time, style=timestampStyle[0]) for timestampStyle in timestampStyles.items()]
+            embed.add_field(name="Timestamp", value="\n".join(timestamps), inline=True)
+            embed.add_field(name="Raw Text", value="\n".join([f"`{stamp}`" for stamp in timestamps]), inline=True)
+            embed.add_field(name="Description", value="\n".join([timestampStyle[1] for timestampStyle in timestampStyles.items()]), inline=True)
+        else:  # One specific format
+            timestamp = utils.format_dt(time, style=format.value)
+            embed.add_field(name="Timestamp", value=timestamp, inline=True)
+            embed.add_field(name="Raw Text", value=f"`{timestamp}`", inline=True)
+
+        await interaction.edit_original_message(embed=embed)
 
     @app_commands.command(name="changetimezone")
     @app_commands.guilds(GUILD)

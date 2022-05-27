@@ -25,20 +25,35 @@ class Poll(commands.Cog):
     @app_commands.command(name="poll")
     @app_commands.guilds(GUILD)
     @app_commands.describe(
-        title="Title",
-        option1="Option 1",
-        description="Description",
-        option2="Option 2",
-        option3="Option 3",
-        option4="Option 4",
-        option5="Option 5",
-        option6="Option 6",
-        option7="Option 7",
-        option8="Option 8",
-        option9="Option 9",
-        option10="Option 10"
+        title = "Title",
+        option1 = "Option 1",
+        description = "Description",
+        option2 = "Option 2",
+        option3 = "Option 3",
+        option4 = "Option 4",
+        option5 = "Option 5",
+        option6 = "Option 6",
+        option7 = "Option 7",
+        option8 = "Option 8",
+        option9 = "Option 9",
+        option10 = "Option 10"
     )
-    async def poll(self, interaction: discord.Interaction, title: str, option1: str, description: str = "", option2: str = None, option3: str = None, option4: str = None, option5: str = None, option6: str = None, option7: str = None, option8: str = None, option9: str = None, option10: str = None) -> None:
+    async def poll(
+        self,
+        interaction: discord.Interaction,
+        title: str,
+        option1: str,
+        description: str = "",
+        option2: str = None,
+        option3: str = None,
+        option4: str = None,
+        option5: str = None,
+        option6: str = None,
+        option7: str = None,
+        option8: str = None,
+        option9: str = None,
+        option10: str = None
+    ) -> None:
         """ Create a poll with up to 10 options.
 
         Parameters:

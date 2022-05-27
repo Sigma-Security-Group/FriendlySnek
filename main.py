@@ -20,8 +20,6 @@ if not os.path.exists("./secret.py"):
         f.write(  # Write secret.py template
             "TOKEN:str = \"\""
             "\nTOKEN_DEV:str = \"\""
-            "\nFTP_HOST:str = \"\"  # E.g. euc-ogs11.armahosts.com"
-            "\nFTP_PORT:int = 0  # E.g. 8821"
             "\nFTP_USERNAME:str = \"\"  # E.g. Froggi"
             "\nFTP_PASSWORD:str = \"\""
             "\nDEBUG:bool = True"

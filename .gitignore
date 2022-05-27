@@ -7,3 +7,4 @@ data
 data/*
 anvilController.json
 update.sh
+bot.log

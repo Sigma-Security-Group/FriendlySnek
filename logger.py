@@ -1,16 +1,23 @@
 import traceback
 import sys
+import os
 
 from datetime import datetime, timedelta, timezone
 from colorama import Fore, Style
 
+LOG_FILE = "./bot.log"
 STD_OUT = sys.stdout
 
 class Logger:
-    def stop(self):
+    def __init__(self) -> None:
+        with open(LOG_FILE, "w") as f:
+            f.write("")
+        self.info(f"Created {LOG_FILE}!")
+
+    def stop(self) -> None:
         STD_OUT.flush()
 
-    def _log(self, level: str, message: str, flush=False):
+    def _log(self, level: str, message: str, flush=False) -> None:
         """ Log message.
 
         Parameters:
@@ -31,27 +38,29 @@ class Logger:
         STD_OUT.write(logStrPrint)
         if flush:
             STD_OUT.flush()
+        with open(LOG_FILE, "a") as f:
+            f.write(f">>> {now} : {level} : {message}\n")
 
-    def debug(self, message: str, flush=False):
+    def debug(self, message: str, flush=False) -> None:
         """ Log debug message """
         self._log("DEBUG", message, flush)
 
-    def info(self, message: str, flush=False):
+    def info(self, message: str, flush=False) -> None:
         """ Log info message """
         self._log("INFO", message, flush)
 
-    def warning(self, message: str, flush=False):
+    def warning(self, message: str, flush=False) -> None:
         """ Log warning message """
         self._log("WARNING", message, flush)
 
-    def error(self, message: str, flush=False):
+    def error(self, message: str, flush=False) -> None:
         """ Log error message """
         self._log("ERROR", message, flush)
 
-    def critical(self, message: str, flush=False):
+    def critical(self, message: str, flush=False) -> None:
         """ Log critical message """
         self._log("CRITICAL", message, flush)
 
-    def exception(self, message: str, flush=False):
+    def exception(self, message: str, flush=False) -> None:
         """ Log error message followed by traceback """
         self._log("ERROR", f"{message}\n{traceback.format_exc()}", flush)

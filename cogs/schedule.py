@@ -2127,12 +2127,12 @@ class Schedule(commands.Cog):
         if format == "None":  # All formats
             timestamps = [utils.format_dt(time, style=timestampStyle[0]) for timestampStyle in timestampStyles.items()]
             embed.add_field(name="Timestamp", value="\n".join(timestamps), inline=True)
-            embed.add_field(name="Raw Text", value="\n".join([f"`{stamp}`" for stamp in timestamps]), inline=True)
-            embed.add_field(name="Description", value="\n".join([timestampStyle[1] for timestampStyle in timestampStyles.items()]), inline=True)
+            embed.add_field(name="Copy this", value="\n".join([f"`{stamp}`" for stamp in timestamps]), inline=True)
+            embed.add_field(name="Description", value="\n".join([f"`{timestampStyle[1]}`" for timestampStyle in timestampStyles.items()]), inline=True)
         else:  # One specific format
             timestamp = utils.format_dt(time, style=format.value)
             embed.add_field(name="Timestamp", value=timestamp, inline=True)
-            embed.add_field(name="Raw Text", value=f"`{timestamp}`", inline=True)
+            embed.add_field(name="Copy this", value=f"`{timestamp}`", inline=True)
 
         await interaction.edit_original_message(embed=embed)
 

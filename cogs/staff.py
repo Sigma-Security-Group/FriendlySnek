@@ -62,7 +62,7 @@ class Staff(commands.Cog):
             await ctx.send(f"No member found for search term: {searchTerm}")
         else:
             embed = Embed(description=member.mention, color=member.color)
-            embed.set_author(icon_url=member.avatar, name=member)
+            embed.set_author(icon_url=member.guild_avatar if member.guild_avatar is not None else member.avatar, name=member)
             embed.set_thumbnail(url=member.avatar)
             embed.add_field(name="Joined", value=utils.format_dt(member.joined_at, style="f"), inline=True)
             embed.add_field(name="Registered", value=utils.format_dt(member.created_at, style="f"), inline=True)

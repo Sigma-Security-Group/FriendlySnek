@@ -2091,7 +2091,6 @@ class Schedule(commands.Cog):
         format = "Returns soley the specified format"
     )
     @app_commands.choices(format = [app_commands.Choice(name=f"[{style}] {description}", value=style) for style, description in timestampStyles.items()])
-
     async def timestamp(self, interaction: discord.Interaction, time: str, format: app_commands.Choice[str] = None) -> None:
         """ Convert your local time to a dynamic Discord timestamp.
 

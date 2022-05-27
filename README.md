@@ -31,4 +31,4 @@ All constants in `constants/debug.py` are for Adrian's personal Bot Testing Rang
 
 Make sure to install all dependencies by executing: `python -m pip install -r requirements.txt`.
 
-Run the bot by executing: `python -OO main.py`.
+Run the bot by executing: `python -O main.py`.

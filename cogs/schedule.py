@@ -513,7 +513,7 @@ class Schedule(commands.Cog):
         reservationTime = datetime.utcnow()
         guild = self.bot.get_guild(GUILD_ID)
 
-        if event["maxPlayers"] is not None and len(event["accepted"]) >= event["maxPlayers"]:
+        if event["maxPlayers"] is not None and len(event["accepted"]) >= event["maxPlayers"] and (member.id not in event["accepted"] or event["accepted"].index(member.id) >= event["maxPlayers"]):
             try:
                 await member.send(embed=Embed(title="❌ Sorry, seems like there's no space left in the :b:op!", color=Color.red()))
             except Exception as e:

@@ -38,22 +38,7 @@ class Poll(commands.Cog):
         option9 = "Option 9",
         option10 = "Option 10"
     )
-    async def poll(
-        self,
-        interaction: discord.Interaction,
-        title: str,
-        option1: str,
-        description: str = "",
-        option2: str = None,
-        option3: str = None,
-        option4: str = None,
-        option5: str = None,
-        option6: str = None,
-        option7: str = None,
-        option8: str = None,
-        option9: str = None,
-        option10: str = None
-    ) -> None:
+    async def poll(self, interaction: discord.Interaction, title: str, option1: str, description: str = "", option2: str = None, option3: str = None, option4: str = None, option5: str = None, option6: str = None, option7: str = None, option8: str = None, option9: str = None, option10: str = None) -> None:
         """ Create a poll with up to 10 options.
 
         Parameters:

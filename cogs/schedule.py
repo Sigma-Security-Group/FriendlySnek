@@ -2086,16 +2086,15 @@ class Schedule(commands.Cog):
 
     @app_commands.command(name="timestamp")
     @app_commands.guilds(GUILD)
-    @app_commands.describe(
-        time = "Your local time",
-        format = "Returns soley the specified format"
-    )
+    @app_commands.describe(time="Your local time", format = "Returns soley the specified format")
     @app_commands.choices(format = [app_commands.Choice(name=f"[{style}] {description}", value=style) for style, description in timestampStyles.items()])
-    async def timestamp(self, interaction: discord.Interaction, time: str, format: app_commands.Choice[str] = None) -> None:
+    async def timestamp(self, interaction: discord.Interaction, time: str, format: app_commands.Choice[str] = "None") -> None:
         """ Convert your local time to a dynamic Discord timestamp.
 
         Parameters:
         interaction (discord.Interaction): The Discord interaction.
+        time (str): Inputted time to be converted.
+        format (app_commands.Choice[str]): An optional specific format - if not specified then all formats will be displayed.
 
         Returns:
         None.
@@ -2125,7 +2124,7 @@ class Schedule(commands.Cog):
         # Output timestamp
         embed = Embed(color=Color.green())
         embed.set_footer(text=f"Local time: {time.strftime(TIME_FORMAT)}\nTime zone: {memberTimeZones[str(interaction.user.id)]}")
-        if format is None:  # All formats
+        if format == "None":  # All formats
             timestamps = [utils.format_dt(time, style=timestampStyle[0]) for timestampStyle in timestampStyles.items()]
             embed.add_field(name="Timestamp", value="\n".join(timestamps), inline=True)
             embed.add_field(name="Raw Text", value="\n".join([f"`{stamp}`" for stamp in timestamps]), inline=True)

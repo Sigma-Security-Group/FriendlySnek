@@ -155,7 +155,7 @@ async def on_member_join(member: discord.Member) -> None:
     if guild.id != GUILD_ID:
         return
     newcomers.add(member.id)
-    log.debug("Member joined")
+    log.debug(f"{member} joined the server!")
     await asyncio.sleep(24 * 60 * 60)  # Seconds
     if member.id not in newcomers:
         log.debug(f"Newcomer is no longer in the server {member.display_name} ({member.name}#{member.discriminator})")
@@ -178,11 +178,11 @@ async def on_member_join(member: discord.Member) -> None:
 async def on_member_leave(member: discord.Member) -> None:
     """ On member leave client event.
 
-        Parameters:
-        member (discord.Member): The Discord member.
+    Parameters:
+    member (discord.Member): The Discord member.
 
-        Returns:
-        None.
+    Returns:
+    None.
     """
     if member.id in newcomers:
         newcomers.remove(member.id)

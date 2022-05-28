@@ -38,6 +38,7 @@ POLL_PERCENT_REGEX = r"\(\d+\.?\d*%\)\s*"
 SCHEDULE_EVENT_SELECTED_TIME_ZONE = "Your current time zone preference is `{0}`."
 RESPONSE_EVENT_PROGRESS = "Scheduling... Standby for {0}..."
 RESPONSE_EVENT_DONE = "`{0}` is now on [schedule](<https://discord.com/channels/{1}/{2}/{3}>)!"
+RESPONSE_GOTO_DMS = "Please follow the steps in [your DMs](<{0}>)!"
 
 ## Errors
 SCHEDULE_EVENT_ERROR_DESCRIPTION = "Enter `edit` to input a new time.\nEnter `override` to override this warning."

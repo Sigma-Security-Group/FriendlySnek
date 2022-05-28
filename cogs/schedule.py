@@ -82,7 +82,7 @@ TIME_ZONES = {
     "Australian Eastern Time (Sydney)": "Australia/Sydney",
 }
 
-timestampStyles = {
+TIMESTAMP_STYLES = {
     "t": "Short Time",
     "T": "Long Time",
     "d": "Short Date",
@@ -103,6 +103,7 @@ if not os.path.exists(WORKSHOP_TEMPLATES_FILE):
 if not os.path.exists(WORKSHOP_TEMPLATES_DELETED_FILE):
     with open(WORKSHOP_TEMPLATES_DELETED_FILE, "w") as f:
         json.dump([], f, indent=4)
+
 
 class Schedule(commands.Cog):
     def __init__(self, bot: commands.Bot) -> None:
@@ -182,7 +183,7 @@ class Schedule(commands.Cog):
 
     @tasks.loop(minutes=10)
     async def autoDeleteEvents(self) -> None:
-        """ X.
+        """ Check for old events and deletes them.
 
         Parameters:
         None.
@@ -316,13 +317,25 @@ class Schedule(commands.Cog):
                     await channel.send(":cry:")
                 for event in sorted(events, key=lambda e: datetime.strptime(e["time"], TIME_FORMAT), reverse=True):
                     embed = self.getEventEmbed(event)
-                    msg = await channel.send(embed=embed)
+
+                    row = discord.ui.View()
+                    row.timeout = None
+                    buttons = [
+                        ScheduleButtons(self, None, row=0, label="Accept", style=discord.ButtonStyle.success, custom_id="accept"),
+                        ScheduleButtons(self, None, row=0, label="Decline", style=discord.ButtonStyle.danger, custom_id="decline"),
+                        ScheduleButtons(self, None, row=0, label="Decline (Time)", style=discord.ButtonStyle.danger, custom_id="declineForTiming"),
+                        ScheduleButtons(self, None, row=0, label="Tentative", style=discord.ButtonStyle.primary, custom_id="tentative")
+                    ]
                     if event["reservableRoles"] is not None:
-                        emojis = ("✅", "⏱", "❌", "❓", "👤", "✏️", "🗑")
-                    else:
-                        emojis = ("✅", "⏱", "❌", "❓", "✏️", "🗑")
-                    for emoji in emojis:
-                        await msg.add_reaction(emoji)
+                        buttons.append(ScheduleButtons(self, None, row=0, label="Reserve", style=discord.ButtonStyle.secondary, custom_id="reserve"))
+
+                    buttons.extend([
+                        ScheduleButtons(self, None, row=1, label="Edit", style=discord.ButtonStyle.secondary, custom_id="edit"),
+                        ScheduleButtons(self, None, row=1, label="Delete", style=discord.ButtonStyle.secondary, custom_id="delete")
+                    ])
+                    [row.add_item(item=button) for button in buttons]
+
+                    msg = await channel.send(embed=embed, view=row)
                     event["messageId"] = msg.id
                 with open(EVENTS_FILE, "w") as f:
                     json.dump(events, f, indent=4)
@@ -391,114 +404,166 @@ class Schedule(commands.Cog):
 
         return embed
 
-    @commands.Cog.listener()
-    async def on_raw_reaction_add(self, payload: discord.RawReactionActionEvent) -> None:
-        """ Listens for actions.
+    async def buttonHandling(self, message, button: discord.ui.Button, interaction: discord.Interaction) -> None:
+        """ Handling all schedule button interactions.
 
         Parameters:
-        payload (discord.RawReactionActionEvent): The raw reaction event.
+        interaction (discord.Interaction): The Discord interaction.
+        button (discord.ui.Button): The Discord button.
 
         Returns:
         None.
         """
-        if payload.channel_id != SCHEDULE:
-            return
+
         try:
+            if not interaction.user.dm_channel:
+                await interaction.user.create_dm()
+
             with open(EVENTS_FILE) as f:
                 events = json.load(f)
 
-            if any(event["messageId"] == payload.message_id for event in events) and self.bot.ready and not payload.member.bot:
-                scheduleNeedsUpdate = True
-                removeReaction = True
-                event = [event for event in events if event["messageId"] == payload.message_id][0]
-                if "declinedForTiming" not in event:
-                    event["declinedForTiming"] = []
-                eventMessage = await self.bot.get_channel(SCHEDULE).fetch_message(event["messageId"])
-                if payload.emoji.name == "✅":
-                    if payload.member.id in event["declined"]:
-                        event["declined"].remove(payload.member.id)
-                    if payload.member.id in event["declinedForTiming"]:
-                        event["declinedForTiming"].remove(payload.member.id)
-                    if payload.member.id in event["tentative"]:
-                        event["tentative"].remove(payload.member.id)
-                    if payload.member.id not in event["accepted"]:
-                        event["accepted"].append(payload.member.id)
-                elif payload.emoji.name == "❌":
-                    if payload.member.id in event["accepted"]:
-                        event["accepted"].remove(payload.member.id)
-                    if payload.member.id in event["declinedForTiming"]:
-                        event["declinedForTiming"].remove(payload.member.id)
-                    if payload.member.id in event["tentative"]:
-                        event["tentative"].remove(payload.member.id)
-                    if payload.member.id not in event["declined"]:
-                        event["declined"].append(payload.member.id)
-                    if event["reservableRoles"] is not None:
-                        for roleName in event["reservableRoles"]:
-                            if event["reservableRoles"][roleName] == payload.member.id:
-                                event["reservableRoles"][roleName] = None
-                elif payload.emoji.name == "⏱":
-                    if payload.member.id in event["accepted"]:
-                        event["accepted"].remove(payload.member.id)
-                    if payload.member.id in event["tentative"]:
-                        event["tentative"].remove(payload.member.id)
-                    if payload.member.id in event["declined"]:
-                        event["declined"].remove(payload.member.id)
-                    if payload.member.id not in event["declinedForTiming"]:
-                        event["declinedForTiming"].append(payload.member.id)
-                    if event["reservableRoles"] is not None:
-                        for roleName in event["reservableRoles"]:
-                            if event["reservableRoles"][roleName] == payload.member.id:
-                                event["reservableRoles"][roleName] = None
-                elif payload.emoji.name == "❓":
-                    if payload.member.id in event["accepted"]:
-                        event["accepted"].remove(payload.member.id)
-                    if payload.member.id in event["declined"]:
-                        event["declined"].remove(payload.member.id)
-                    if payload.member.id in event["declinedForTiming"]:
-                        event["declinedForTiming"].remove(payload.member.id)
-                    if payload.member.id not in event["tentative"]:
-                        event["tentative"].append(payload.member.id)
-                    if event["reservableRoles"] is not None:
-                        for roleName in event["reservableRoles"]:
-                            if event["reservableRoles"][roleName] == payload.member.id:
-                                event["reservableRoles"][roleName] = None
-                elif payload.emoji.name == "👤":
-                    await self.reserveRole(payload.member, event)
-                elif payload.emoji.name == "✏️":
-                    if payload.member.id == event["authorId"] or any(role.id == UNIT_STAFF for role in payload.member.roles):
-                        reorderEvents = await self.editEvent(payload.member, event, isTemplateEdit=False)
-                        if reorderEvents:
-                            with open(EVENTS_FILE, "w") as f:
-                                json.dump(events, f, indent=4)
-                            await self.updateSchedule()
-                            return
-                    else:
-                        scheduleNeedsUpdate = False
-                elif payload.emoji.name == "🗑":
-                    if payload.member.id == event["authorId"] or any(role.id == UNIT_STAFF for role in payload.member.roles):
-                        eventDeleted = await self.deleteEvent(payload.member, eventMessage, event)
-                        if eventDeleted:
-                            events.remove(event)
-                            removeReaction = False
-                    scheduleNeedsUpdate = False
+            scheduleNeedsUpdate = True
+            originalMsgId = interaction.message.id
+            fetchMsg = False
+            event = [event for event in events if event["messageId"] == interaction.message.id]
+            if button.custom_id == "accept":
+                event = event[0]
+                if interaction.user.id in event["declined"]:
+                    event["declined"].remove(interaction.user.id)
+                if interaction.user.id in event["declinedForTiming"]:
+                    event["declinedForTiming"].remove(interaction.user.id)
+                if interaction.user.id in event["tentative"]:
+                    event["tentative"].remove(interaction.user.id)
+                if interaction.user.id not in event["accepted"]:
+                    event["accepted"].append(interaction.user.id)
+
+            elif button.custom_id == "decline":
+                event = event[0]
+                if interaction.user.id in event["accepted"]:
+                    event["accepted"].remove(interaction.user.id)
+                if interaction.user.id in event["declinedForTiming"]:
+                    event["declinedForTiming"].remove(interaction.user.id)
+                if interaction.user.id in event["tentative"]:
+                    event["tentative"].remove(interaction.user.id)
+                if interaction.user.id not in event["declined"] and interaction.user.id != KYANO:
+                    event["declined"].append(interaction.user.id)
+                if event["reservableRoles"] is not None:
+                    for roleName in event["reservableRoles"]:
+                        if event["reservableRoles"][roleName] == interaction.user.id:
+                            event["reservableRoles"][roleName] = None
+
+            elif button.custom_id == "declineForTiming":
+                event = event[0]
+                if interaction.user.id in event["accepted"]:
+                    event["accepted"].remove(interaction.user.id)
+                if interaction.user.id in event["tentative"]:
+                    event["tentative"].remove(interaction.user.id)
+                if interaction.user.id in event["declined"]:
+                    event["declined"].remove(interaction.user.id)
+                if interaction.user.id not in event["declinedForTiming"]:
+                    event["declinedForTiming"].append(interaction.user.id)
+                if event["reservableRoles"] is not None:
+                    for roleName in event["reservableRoles"]:
+                        if event["reservableRoles"][roleName] == interaction.user.id:
+                            event["reservableRoles"][roleName] = None
+
+            elif button.custom_id == "tentative":
+                event = event[0]
+                if interaction.user.id in event["accepted"]:
+                    event["accepted"].remove(interaction.user.id)
+                if interaction.user.id in event["declined"]:
+                    event["declined"].remove(interaction.user.id)
+                if interaction.user.id in event["declinedForTiming"]:
+                    event["declinedForTiming"].remove(interaction.user.id)
+                if interaction.user.id not in event["tentative"]:
+                    event["tentative"].append(interaction.user.id)
+                if event["reservableRoles"] is not None:
+                    for roleName in event["reservableRoles"]:
+                        if event["reservableRoles"][roleName] == interaction.user.id:
+                            event["reservableRoles"][roleName] = None
+
+            elif button.custom_id == "reserve":
+                event = event[0]
+                await interaction.response.send_message(RESPONSE_GOTO_DMS.format(interaction.user.dm_channel.jump_url), ephemeral=True)
+                reservingOutput = await self.reserveRole(interaction.user, event)
+                if not reservingOutput:
+                    return
+                fetchMsg = True
+
+            elif button.custom_id == "edit":
+                event = event[0]
+                await interaction.response.send_message(RESPONSE_GOTO_DMS.format(interaction.user.dm_channel.jump_url), ephemeral=True)
+                if interaction.user.id == event["authorId"] or any(role.id == UNIT_STAFF for role in interaction.user.roles):
+                    reorderEvents = await self.editEvent(interaction.user, event, isTemplateEdit=False)
+                    if reorderEvents:
+                        with open(EVENTS_FILE, "w") as f:
+                            json.dump(events, f, indent=4)
+                        await self.updateSchedule()
+                        return
                 else:
                     scheduleNeedsUpdate = False
-                if removeReaction:
-                    try:
-                        await eventMessage.remove_reaction(payload.emoji, payload.member)
-                    except Exception:
-                        pass
-                if scheduleNeedsUpdate:
-                    try:
-                        embed = self.getEventEmbed(event)
-                        await eventMessage.edit(embed=embed)
-                    except Exception:
-                        pass
+                fetchMsg = True
+
+            elif button.custom_id == "delete":
+                event = event[0]
+                await interaction.response.send_message(RESPONSE_GOTO_DMS.format(interaction.user.dm_channel.jump_url), ephemeral=True)
+                if interaction.user.id == event["authorId"] or any(role.id == UNIT_STAFF for role in interaction.user.roles):
+                    eventDeleted = await self.deleteEvent(interaction.user, interaction.message, event)
+                    if eventDeleted:
+                        events.remove(event)
+                scheduleNeedsUpdate = False
+
+            elif button.custom_id == "delete_event_confirm":
+                scheduleNeedsUpdate = False
+                for button in button.view.children:
+                    button.disabled = True
+                await interaction.response.edit_message(view=button.view)
+                event = [event for event in events if event["messageId"] == message.id][0]
+                await message.delete()
+                try:
+                    await interaction.user.dm_channel.send(embed=Embed(title=f"✅ {event['type']} deleted!", color=Color.green()))
+
+                    utcNow = UTC.localize(datetime.utcnow())
+                    startTime = UTC.localize(datetime.strptime(event["time"], TIME_FORMAT))
+                    if event["maxPlayers"] != 0 and utcNow > startTime + timedelta(minutes=30):
+                        await self.saveEventToHistory(event)
+                    else:
+                        guild = self.bot.get_guild(GUILD_ID)
+                        for memberId in event["accepted"] + event.get("declinedForTiming", []) + event["tentative"]:
+                            member = guild.get_member(memberId)
+                            if member is not None:
+                                embed = Embed(title=f"🗑 {event.get('type', 'Operation')} deleted: {event['title']}!", description=f"The {event.get('type', 'Operation').lower()} was scheduled to run:\n{utils.format_dt(UTC.localize(datetime.strptime(event['time'], TIME_FORMAT)), style='F')}", color=Color.red())
+                                try:
+                                    await member.send(embed=embed)
+                                except Exception as e:
+                                    log.exception(f"{member} | {e}")
+                except Exception as e:
+                    log.exception(e)
+                events.remove(event)
+
+            elif button.custom_id == "delete_event_cancel":
+                for button in button.view.children:
+                    button.disabled = True
+                await interaction.response.edit_message(view=button.view)
+                await self.cancelCommand(interaction.user.dm_channel, "Event deletion")
+                return
+
+
+            if scheduleNeedsUpdate:
+                try:
+                    embed = self.getEventEmbed(event)
+                    if fetchMsg:  # Could be better - could be worse...
+                        msg = await interaction.channel.fetch_message(originalMsgId)
+                        await msg.edit(embed=embed)
+                    else:
+                        await interaction.response.edit_message(embed=embed)
+                except Exception as e:
+                    log.exception(f"{interaction.user} | {e}")
 
             with open(EVENTS_FILE, "w") as f:
                 json.dump(events, f, indent=4)
         except Exception as e:
-            log.error(f"{payload.member} | {e}")
+            log.exception(f"{interaction.user} | {e}")
 
     async def reserveRole(self, member: discord.Member, event) -> None:
         """ Reserving a single role on an event.
@@ -508,19 +573,18 @@ class Schedule(commands.Cog):
         event: X.
 
         Returns:
-        None.
+        bool: Returns False on error and canceling - True on success.
         """
         reservationTime = datetime.utcnow()
-        guild = self.bot.get_guild(GUILD_ID)
 
         if event["maxPlayers"] is not None and len(event["accepted"]) >= event["maxPlayers"] and (member.id not in event["accepted"] or event["accepted"].index(member.id) >= event["maxPlayers"]):
             try:
                 await member.send(embed=Embed(title="❌ Sorry, seems like there's no space left in the :b:op!", color=Color.red()))
             except Exception as e:
-                log.error(f"{member} | {e}")
-            return
+                log.exception(f"{member} | {e}")
+            return False
 
-        vacantRoles = [roleName for roleName, memberId in event["reservableRoles"].items() if memberId is None or guild.get_member(memberId) is None]
+        vacantRoles = [roleName for roleName, memberId in event["reservableRoles"].items() if memberId is None or member.guild.get_member(memberId) is None]
         currentRole = [roleName for roleName, memberId in event["reservableRoles"].items() if memberId == member.id][0] if member.id in event["reservableRoles"].values() else None
 
         reserveOk = False
@@ -528,15 +592,15 @@ class Schedule(commands.Cog):
         while not reserveOk:
             embed = Embed(title="Which role would you like to reserve?", description="Enter a number from the list.\nEnter `none` un-reserve any role you have occupied.", color=color)
             embed.add_field(name="Your current role", value=currentRole if currentRole is not None else "None", inline=False)
-            embed.add_field(name="Vacant roles", value="\n".join(f"**{idx}** {roleName}" for idx, roleName in enumerate(vacantRoles, 1)) if len(vacantRoles) > 0 else "None", inline=False)
+            embed.add_field(name="Vacant roles", value="\n".join(f"**{idx}.** {roleName}" for idx, roleName in enumerate(vacantRoles, 1)) if len(vacantRoles) > 0 else "None", inline=False)
             embed.set_footer(text=SCHEDULE_CANCEL)
             color = Color.red()
 
             try:
                 msg = await member.send(embed=embed)
             except Exception as e:
-                log.error(f"{member} | {e}")
-                return
+                log.exception(f"{member} | {e}")
+                return False
             dmChannel = msg.channel
             try:
                 response = await self.bot.wait_for("message", timeout=TIME_ONE_MIN, check=lambda msg, author=member, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
@@ -549,17 +613,17 @@ class Schedule(commands.Cog):
                     reserveOk = True
                 elif reservedRole == "cancel":
                     await self.cancelCommand(dmChannel, "Role reservation")
-                    return
+                    return False
             except asyncio.TimeoutError:
                 await dmChannel.send(embed=TIMEOUT_EMBED)
-                return
+                return False
 
         if reservedRole is not None:  # User wants to reserve a role
             if event["reservableRoles"] is not None:
                 for roleName in event["reservableRoles"]:
                     if event["reservableRoles"][roleName] == member.id:  # If they've already reserved a role
                         event["reservableRoles"][roleName] = None  # Remove it
-                if event["reservableRoles"][reservedRole] is None or guild.get_member(event["reservableRoles"][reservedRole]) is None:
+                if event["reservableRoles"][reservedRole] is None or member.guild.get_member(event["reservableRoles"][reservedRole]) is None:
                     event["reservableRoles"][reservedRole] = member.id  # Reserve the specified role
 
                     # Put the user in accepted
@@ -583,6 +647,7 @@ class Schedule(commands.Cog):
         else:
             await dmChannel.send(embed=Embed(title="❌ Schedule was updated while you were reserving a role. Try again!", color=Color.red()))
             log.debug(f"{member.display_name} ({member}) was reserving a role but schedule was updated!")
+        return True
 
     async def eventTime(self, interaction: discord.Interaction, dmChannel: discord.DMChannel, eventType: str, collidingEventTypes: tuple, delta: timedelta) -> tuple:
         """ X.
@@ -757,7 +822,7 @@ class Schedule(commands.Cog):
             try:
                 msg = await author.send(embed=embed)
             except Exception as e:
-                log.error(f"{author} | {e}")
+                log.exception(f"{author} | {e}")
                 return False
             dmChannel = msg.channel
             try:
@@ -772,6 +837,7 @@ class Schedule(commands.Cog):
                 await dmChannel.send(embed=TIMEOUT_EMBED)
                 return False
         reorderEvents = False
+
 
         async def editEventDuration(isTemplateEdit:bool) -> bool:
             """ Editing the duration of an event or template.
@@ -807,6 +873,7 @@ class Schedule(commands.Cog):
                 endTime = startTime + delta
                 event["endTime"] = endTime.strftime(TIME_FORMAT)
             return True
+
 
         match choice:
             case "0":
@@ -923,7 +990,7 @@ class Schedule(commands.Cog):
                 while not mapOK:
                     embed = Embed(title=SCHEDULE_EVENT_MAP_PROMPT, description=SCHEDULE_NUMBER_FROM_TO_OR_NONE.format(1, len(MAPS)), color=color)
                     color = Color.red()
-                    embed.add_field(name="Map", value="\n".join(f"**{idx}** {mapName}" for idx, mapName in enumerate(MAPS, 1)))
+                    embed.add_field(name="Map", value="\n".join(f"**{idx}.** {mapName}" for idx, mapName in enumerate(MAPS, 1)))
                     embed.set_footer(text=SCHEDULE_CANCEL)
                     await dmChannel.send(embed=embed)
                     try:
@@ -1001,7 +1068,7 @@ class Schedule(commands.Cog):
                         color = Color.gold()
                         while not isFormatCorrect:
                             embed = Embed(title=SCHEDULE_EVENT_TIME.format("event"), description=SCHEDULE_EVENT_SELECTED_TIME_ZONE.format(timeZone.zone), color=color)
-                            embed.add_field(name="Current Value", value=UTC.localize(datetime.strptime(event["time"], TIME_FORMAT)).astimezone(timeZone).strftime(TIME_FORMAT))
+                            embed.add_field(name="Current Time", value=UTC.localize(datetime.strptime(event["time"], TIME_FORMAT)).astimezone(timeZone).strftime(TIME_FORMAT))
                             embed.set_footer(text=SCHEDULE_CANCEL)
                             color = Color.red()
                             await dmChannel.send(embed=embed)
@@ -1064,7 +1131,7 @@ class Schedule(commands.Cog):
                             try:
                                 await member.send(embed=embed)
                             except Exception as e:
-                                log.error(f"{member} | {e}")
+                                log.exception(f"{member} | {e}")
                 else:  # Template
                     durationOutput = await editEventDuration(isTemplateEdit=True)
                     if not durationOutput:
@@ -1104,38 +1171,18 @@ class Schedule(commands.Cog):
         bool.
         """
         try:
-            msg = await author.send(embed=Embed(title=SCHEDULE_EVENT_CONFIRM_DELETE.format(f"{event['type'].lower()}: `{event['title']}`"), color=Color.orange()))
+            embed = Embed(title=SCHEDULE_EVENT_CONFIRM_DELETE.format(f"{event['type'].lower()}: `{event['title']}`"), color=Color.orange())
+            row = discord.ui.View()
+            row.timeout = TIME_ONE_MIN
+            buttons = [
+                ScheduleButtons(self, message, row=0, label="Delete", style=discord.ButtonStyle.success, custom_id="delete_event_confirm"),
+                ScheduleButtons(self, message, row=0, label="Cancel", style=discord.ButtonStyle.danger, custom_id="delete_event_cancel"),
+            ]
+            [row.add_item(item=button) for button in buttons]
+            await author.send(embed=embed, view=row)
         except Exception as e:
-            log.error(f"{author} | {e}")
+            log.exception(f"{author} | {e}")
             return False
-        await msg.add_reaction("🗑")
-        try:
-            await self.bot.wait_for("reaction_add", timeout=TIME_ONE_MIN, check=lambda reaction, user, author=author: reaction.emoji == "🗑" and user == author)
-        except asyncio.TimeoutError:
-            await author.send(embed=TIMEOUT_EMBED)
-            return False
-        await message.delete()
-        try:
-            embed = Embed(title=f"✅ {event['type']} deleted!", color=Color.green())
-            await author.send(embed=embed)
-
-            utcNow = UTC.localize(datetime.utcnow())
-            startTime = UTC.localize(datetime.strptime(event["time"], TIME_FORMAT))
-            if event["maxPlayers"] != 0 and utcNow > startTime + timedelta(minutes=30):
-                await self.saveEventToHistory(event)
-            else:
-                guild = self.bot.get_guild(GUILD_ID)
-                for memberId in event["accepted"] + event.get("declinedForTiming", []) + event["tentative"]:
-                    member = guild.get_member(memberId)
-                    if member is not None:
-                        embed = Embed(title=f"🗑 {event.get('type', 'Operation')} deleted: {event['title']}!", description=f"The {event.get('type', 'Operation').lower()} was scheduled to run:\n{utils.format_dt(UTC.localize(datetime.strptime(event['time'], TIME_FORMAT)), style='F')}", color=Color.red())
-                        try:
-                            await member.send(embed=embed)
-                        except Exception as e:
-                            log.error(f"{member} | {e}")
-        except Exception as e:
-            log.error(e)
-        return True
 
     @app_commands.command(name="bop")
     @app_commands.guilds(GUILD)
@@ -1184,7 +1231,7 @@ class Schedule(commands.Cog):
             try:
                 msg = await interaction.user.send(embed=embed)
             except Exception as e:
-                log.error(f"{interaction.user} | {e}")
+                log.exception(f"{interaction.user} | {e}")
                 return
             dmChannel = msg.channel
             try:
@@ -1262,7 +1309,7 @@ class Schedule(commands.Cog):
             embed = Embed(title=SCHEDULE_EVENT_MAP_PROMPT, description=SCHEDULE_NUMBER_FROM_TO_OR_NONE.format(1, len(MAPS)), color=color)
             embed.set_footer(text=SCHEDULE_CANCEL)
             color = Color.red()
-            embed.add_field(name="Map", value="\n".join(f"**{idx}** {mapName}" for idx, mapName in enumerate(MAPS, 1)))
+            embed.add_field(name="Map", value="\n".join(f"**{idx}.** {mapName}" for idx, mapName in enumerate(MAPS, 1)))
             await dmChannel.send(embed=embed)
             try:
                 response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, interaction=interaction, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == interaction.user)
@@ -1365,6 +1412,7 @@ class Schedule(commands.Cog):
                 "messageId": None,
                 "accepted": [],
                 "declined": [],
+                "declinedForTiming": [],
                 "tentative": [],
                 "type": "Operation"  # Operation, Workshop, Event
             }
@@ -1418,13 +1466,13 @@ class Schedule(commands.Cog):
             with open(WORKSHOP_TEMPLATES_FILE) as f:
                 workshopTemplates = json.load(f)
             embed = Embed(title=":clipboard: Templates", description="Enter a template number.\nEnter `none` to make a workshop from scratch.\n\nEdit template: `edit` + template number. E.g. `edit 2`.\nDelete template: `delete` + template number. E.g. `delete 4`. **IRREVERSIBLE!**", color=color)
-            embed.add_field(name="Templates", value="\n".join(f"**{idx}** {template['name']}" for idx, template in enumerate(workshopTemplates, 1)) if len(workshopTemplates) > 0 else "-")
+            embed.add_field(name="Templates", value="\n".join(f"**{idx}.** {template['name']}" for idx, template in enumerate(workshopTemplates, 1)) if len(workshopTemplates) > 0 else "-")
             embed.set_footer(text=SCHEDULE_CANCEL)
             color = Color.red()
             try:
                 msg = await interaction.user.send(embed=embed)
             except Exception as e:
-                log.error(f"{interaction.user} | {e}")
+                log.exception(f"{interaction.user} | {e}")
                 return
             dmChannel = msg.channel
 
@@ -1446,7 +1494,7 @@ class Schedule(commands.Cog):
                             try:
                                 msg = await dmChannel.send(embed=Embed(title=SCHEDULE_EVENT_CONFIRM_DELETE.format(f"template: `{workshopTemplate['name']}`"), color=Color.orange()))
                             except Exception as e:
-                                log.error(f"{interaction.user} | {e}")
+                                log.exception(f"{interaction.user} | {e}")
                                 return
                             await msg.add_reaction("🗑")
                             try:
@@ -1575,7 +1623,7 @@ class Schedule(commands.Cog):
             while not mapOk:
                 embed = Embed(title=SCHEDULE_EVENT_MAP_PROMPT, description=SCHEDULE_NUMBER_FROM_TO_OR_NONE.format(1, len(MAPS)), color=color)
                 color=Color.red()
-                embed.add_field(name="Map", value="\n".join(f"**{idx}** {mapName}" for idx, mapName in enumerate(MAPS, 1)))
+                embed.add_field(name="Map", value="\n".join(f"**{idx}.** {mapName}" for idx, mapName in enumerate(MAPS, 1)))
                 embed.set_footer(text=SCHEDULE_CANCEL)
                 await dmChannel.send(embed=embed)
                 try:
@@ -1663,7 +1711,7 @@ class Schedule(commands.Cog):
                 with open(WORKSHOP_INTEREST_FILE) as f:
                     workshopInterestOptions = [{"name": name, "title": wsInterest["title"]} for name, wsInterest in json.load(f).items()]
                 embed = Embed(title=":link: Which workshop waiting list is your workshop linked to?", description="When linking your workshop and finished scheduling it, it will automatically ping everyone interested in it.\nFurthermore, those that complete the workshop will be removed from the interest list!", color=color)
-                embed.add_field(name="Workshop Lists", value="\n".join(f"**{idx}** {wsInterest['title']}" for idx, wsInterest in enumerate(workshopInterestOptions, 1)))
+                embed.add_field(name="Workshop Lists", value="\n".join(f"**{idx}.** {wsInterest['title']}" for idx, wsInterest in enumerate(workshopInterestOptions, 1)))
                 embed.set_footer(text=SCHEDULE_CANCEL)
                 color = Color.red()
                 await dmChannel.send(embed=embed)
@@ -1826,7 +1874,7 @@ class Schedule(commands.Cog):
         try:
             msg = await interaction.user.send(embed=embed)
         except Exception as e:
-            log.error(f"{interaction.user} | {e}")
+            log.exception(f"{interaction.user} | {e}")
             return
         dmChannel = msg.channel
         try:
@@ -1899,7 +1947,7 @@ class Schedule(commands.Cog):
             embed = Embed(title=SCHEDULE_EVENT_MAP_PROMPT, description=SCHEDULE_NUMBER_FROM_TO_OR_NONE.format(1, len(MAPS)), color=color)
             embed.set_footer(text=SCHEDULE_CANCEL)
             color=Color.red()
-            embed.add_field(name="Map", value="\n".join(f"**{idx}** {mapName}" for idx, mapName in enumerate(MAPS, 1)))
+            embed.add_field(name="Map", value="\n".join(f"**{idx}.** {mapName}" for idx, mapName in enumerate(MAPS, 1)))
             await dmChannel.send(embed=embed)
             try:
                 response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, interaction=interaction, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == interaction.user)
@@ -2087,7 +2135,7 @@ class Schedule(commands.Cog):
     @app_commands.command(name="timestamp")
     @app_commands.guilds(GUILD)
     @app_commands.describe(time="Your local time", format = "Returns soley the specified format")
-    @app_commands.choices(format = [app_commands.Choice(name=f"[{style}] {description}", value=style) for style, description in timestampStyles.items()])
+    @app_commands.choices(format = [app_commands.Choice(name=f"[{style}] {description}", value=style) for style, description in TIMESTAMP_STYLES.items()])
     async def timestamp(self, interaction: discord.Interaction, time: str, format: app_commands.Choice[str] = "None") -> None:
         """ Convert your local time to a dynamic Discord timestamp.
 
@@ -2127,10 +2175,10 @@ class Schedule(commands.Cog):
         embed = Embed(color=Color.green())
         embed.set_footer(text=f"Local time: {time.strftime(TIME_FORMAT)}\nTime zone: {memberTimeZones[str(interaction.user.id)]}")
         if format == "None":  # All formats
-            timestamps = [utils.format_dt(time, style=timestampStyle[0]) for timestampStyle in timestampStyles.items()]
+            timestamps = [utils.format_dt(time, style=timestampStyle[0]) for timestampStyle in TIMESTAMP_STYLES.items()]
             embed.add_field(name="Timestamp", value="\n".join(timestamps), inline=True)
             embed.add_field(name="Copy this", value="\n".join([f"`{stamp}`" for stamp in timestamps]), inline=True)
-            embed.add_field(name="Description", value="\n".join([f"`{timestampStyle[1]}`" for timestampStyle in timestampStyles.items()]), inline=True)
+            embed.add_field(name="Description", value="\n".join([f"`{timestampStyle[1]}`" for timestampStyle in TIMESTAMP_STYLES.items()]), inline=True)
         else:  # One specific format
             timestamp = utils.format_dt(time, style=format.value)
             embed.add_field(name="Timestamp", value=timestamp, inline=True)
@@ -2170,13 +2218,13 @@ class Schedule(commands.Cog):
         color = Color.gold()
         while not timezoneOk:
             embed = Embed(title=":clock1: What's your preferred time zone?", description=(SCHEDULE_EVENT_SELECTED_TIME_ZONE.format(memberTimeZones[str(author.id)]) if str(author.id) in memberTimeZones else "You don't have a preferred time zone set.") + "\n\nEnter a number from the list below.\nEnter any time zone name from the column \"**TZ DATABASE NAME**\" in this [Wikipedia article](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones)." + "\nEnter `none` to erase current preferences." * isCommand, color=color)
-            embed.add_field(name="Popular Time Zones", value="\n".join(f"**{idx}** {tz}" for idx, tz in enumerate(TIME_ZONES, 1)))
+            embed.add_field(name="Popular Time Zones", value="\n".join(f"**{idx}.** {tz}" for idx, tz in enumerate(TIME_ZONES, 1)))
             embed.set_footer(text="Enter `cancel` to abort this command.")
             color = Color.red()
             try:
                 msg = await author.send(embed=embed)
             except Exception as e:
-                log.error(f"{author} | {e}")
+                log.exception(f"{author} | {e}")
                 return False
             dmChannel = msg.channel
             try:
@@ -2213,6 +2261,20 @@ class Schedule(commands.Cog):
             except asyncio.TimeoutError:
                 await dmChannel.send(embed=TIMEOUT_EMBED)
                 return False
+
+
+class ScheduleButtons(discord.ui.Button):
+    def __init__(self, instance, message, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.instance = instance
+        self.message = message
+
+    async def callback(self, interaction: discord.Interaction):
+        await self.instance.buttonHandling(self.message, self, interaction)
+
+    async def on_timeout(self):
+        self.disabled = True
+
 
 async def setup(bot: commands.Bot) -> None:
     await bot.add_cog(Schedule(bot))

@@ -1824,6 +1824,7 @@ class Schedule(commands.Cog):
                 "messageId": None,
                 "accepted": [],
                 "declined": [],
+                "declinedForTiming": [],
                 "tentative": [],
                 "workshopInterest": workshopInterest,
                 "type": "Workshop"  # Operation, Workshop, Event
@@ -2115,6 +2116,7 @@ class Schedule(commands.Cog):
                 "messageId": None,
                 "accepted": [],
                 "declined": [],
+                "declinedForTiming": [],
                 "tentative": [],
                 "type": "Event"  # Operation, Workshop, Event
             }

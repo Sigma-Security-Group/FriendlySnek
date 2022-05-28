@@ -135,10 +135,10 @@ async def analyzeChannel(client, message: discord.Message, channelID:int, attach
         pass
     try:
         log.warning(f"Removing message in #{client.get_channel(channelID)} from {message.author.display_name} ({message.author})")
-        devs = ", ".join([f"**{message.guild.get_member(name)}**" for name in DEVELOPERS if message.guild.get_member(name) is not None])
-        await message.author.send(embed=Embed(title="❌ Invalid message!", description=f"The message you just posted in <#{channelID}> was deleted because no {attachmentContentType} was detected in it.\n\nIf this is an error, then please ask **staff** to post the {attachmentContentType} for you and inform: {devs}!", color=Color.red()))
+        DEVS = ", ".join([f"**{message.guild.get_member(name)}**" for name in DEVELOPERS if message.guild.get_member(name) is not None])
+        await message.author.send(embed=Embed(title="❌ Invalid message!", description=f"The message you just posted in <#{channelID}> was deleted because no {attachmentContentType} was detected in it.\n\nIf this is an error, then please ask **staff** to post the {attachmentContentType} for you and inform: {DEVS}!", color=Color.red()))
     except Exception as e:
-        print(message.author, e)
+        log.error(f"{message.author} | {e}")
     return
 
 @client.event

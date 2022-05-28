@@ -77,7 +77,7 @@ class Poll(commands.Cog):
             for x in range(optionCount):
                 await poll.add_reaction(emojiNumbers[x])
         except Exception as e:
-            print(interaction.user, e)
+            log.error(f"{interaction.user} | {e}")
 
     async def reactionShit(self, payload: discord.RawReactionActionEvent) -> None:
         """ Handles all poll reactions.

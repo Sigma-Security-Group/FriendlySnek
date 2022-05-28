@@ -71,7 +71,7 @@ class MissionUploader(commands.Cog):
                 ftp.cwd(server["Directory"])
                 missionFilesOnServer = ftp.nlst()
         except Exception as e:
-            print(e)
+            log.error(e)
         attachmentOk = False
         if len(attachments) == 0:
             embed = Embed(title="❌ You didn't upload a file. Please upload the mission file!", color=Color.red())

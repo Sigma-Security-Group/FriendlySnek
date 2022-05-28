@@ -211,7 +211,7 @@ class WorkshopInterest(commands.Cog):
             with open(WORKSHOP_INTEREST_FILE, "w") as f:
                 json.dump(workshopInterest, f, indent=4)
         except Exception as e:
-            print(e)
+            log.error(e)
 
 async def setup(bot: commands.Bot) -> None:
     await bot.add_cog(WorkshopInterest(bot))

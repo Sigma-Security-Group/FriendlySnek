@@ -12,7 +12,7 @@ class Logger:
     def __init__(self) -> None:
         with open(LOG_FILE, "w") as f:
             f.write("")
-        self.info(f"Created {LOG_FILE}!")
+        self.info(f"Created {LOG_FILE[2:]}!")
 
     def stop(self) -> None:
         STD_OUT.flush()

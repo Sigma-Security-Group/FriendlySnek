@@ -216,7 +216,7 @@ class Schedule(commands.Cog):
             with open(EVENTS_FILE, "w") as f:
                 json.dump(events, f, indent=4)
         except Exception as e:
-            print(e)
+            log.error(e)
 
     @tasks.loop(minutes=10)
     async def checkAcceptedReminder(self) -> None:
@@ -265,7 +265,7 @@ class Schedule(commands.Cog):
                         log.debug(f"Pinging members in VC not in accepted: {', '.join([member.display_name for member in onlineMembersNotAccepted])}...")
                         await channel.send(" ".join(member.mention for member in onlineMembersNotAccepted) + f" If you are in-game, please hit accept ✅ on the <#{SCHEDULE}>.")
         except Exception as e:
-            print(e)
+            log.error(e)
 
     @app_commands.command(name="refreshschedule")
     @app_commands.guilds(GUILD)
@@ -327,7 +327,7 @@ class Schedule(commands.Cog):
                 with open(EVENTS_FILE, "w") as f:
                     json.dump(events, f, indent=4)
             except Exception as e:
-                print(e)
+                log.error(e)
         else:
             with open(EVENTS_FILE, "w") as f:
                 json.dump([], f, indent=4)
@@ -498,7 +498,7 @@ class Schedule(commands.Cog):
             with open(EVENTS_FILE, "w") as f:
                 json.dump(events, f, indent=4)
         except Exception as e:
-            print(e)
+            log.error(f"{payload.member} | {e}")
 
     async def reserveRole(self, member: discord.Member, event) -> None:
         """ Reserving a single role on an event.
@@ -517,7 +517,7 @@ class Schedule(commands.Cog):
             try:
                 await member.send(embed=Embed(title="❌ Sorry, seems like there's no space left in the :b:op!", color=Color.red()))
             except Exception as e:
-                print(member, e)
+                log.error(f"{member} | {e}")
             return
 
         vacantRoles = [roleName for roleName, memberId in event["reservableRoles"].items() if memberId is None or guild.get_member(memberId) is None]
@@ -535,7 +535,7 @@ class Schedule(commands.Cog):
             try:
                 msg = await member.send(embed=embed)
             except Exception as e:
-                print(member, e)
+                log.error(f"{member} | {e}")
                 return
             dmChannel = msg.channel
             try:
@@ -757,7 +757,7 @@ class Schedule(commands.Cog):
             try:
                 msg = await author.send(embed=embed)
             except Exception as e:
-                print(author, e)
+                log.error(f"{author} | {e}")
                 return False
             dmChannel = msg.channel
             try:
@@ -1064,7 +1064,7 @@ class Schedule(commands.Cog):
                             try:
                                 await member.send(embed=embed)
                             except Exception as e:
-                                print(member, e)
+                                log.error(f"{member} | {e}")
                 else:  # Template
                     durationOutput = await editEventDuration(isTemplateEdit=True)
                     if not durationOutput:
@@ -1106,7 +1106,7 @@ class Schedule(commands.Cog):
         try:
             msg = await author.send(embed=Embed(title=SCHEDULE_EVENT_CONFIRM_DELETE.format(f"{event['type'].lower()}: `{event['title']}`"), color=Color.orange()))
         except Exception as e:
-            print(author, e)
+            log.error(f"{author} | {e}")
             return False
         await msg.add_reaction("🗑")
         try:
@@ -1132,9 +1132,9 @@ class Schedule(commands.Cog):
                         try:
                             await member.send(embed=embed)
                         except Exception as e:
-                            print(member, e)
+                            log.error(f"{member} | {e}")
         except Exception as e:
-            print(e)
+            log.error(e)
         return True
 
     @app_commands.command(name="bop")
@@ -1184,7 +1184,7 @@ class Schedule(commands.Cog):
             try:
                 msg = await interaction.user.send(embed=embed)
             except Exception as e:
-                print(interaction.user, e)
+                log.error(f"{interaction.user} | {e}")
                 return
             dmChannel = msg.channel
             try:
@@ -1372,7 +1372,7 @@ class Schedule(commands.Cog):
             with open(EVENTS_FILE, "w") as f:
                 json.dump(events, f, indent=4)
         except Exception as e:
-            print(e)
+            log.error(e)
             newEvent = None
 
         embed = Embed(title="✅ Operation created!", color=Color.green())
@@ -1424,7 +1424,7 @@ class Schedule(commands.Cog):
             try:
                 msg = await interaction.user.send(embed=embed)
             except Exception as e:
-                print(interaction.user, e)
+                log.error(f"{interaction.user} | {e}")
                 return
             dmChannel = msg.channel
 
@@ -1446,7 +1446,7 @@ class Schedule(commands.Cog):
                             try:
                                 msg = await dmChannel.send(embed=Embed(title=SCHEDULE_EVENT_CONFIRM_DELETE.format(f"template: `{workshopTemplate['name']}`"), color=Color.orange()))
                             except Exception as e:
-                                print(interaction.user, e)
+                                log.error(f"{interaction.user} | {e}")
                                 return
                             await msg.add_reaction("🗑")
                             try:
@@ -1780,7 +1780,7 @@ class Schedule(commands.Cog):
             with open(EVENTS_FILE, "w") as f:
                 json.dump(events, f, indent=4)
         except Exception as e:
-            print(e)
+            log.error(e)
             newEvent = None
 
         embed = Embed(title="✅ Workshop created!", color=Color.green())
@@ -1826,7 +1826,7 @@ class Schedule(commands.Cog):
         try:
             msg = await interaction.user.send(embed=embed)
         except Exception as e:
-            print(interaction.user, e)
+            log.error(f"{interaction.user} | {e}")
             return
         dmChannel = msg.channel
         try:
@@ -2070,7 +2070,7 @@ class Schedule(commands.Cog):
             with open(EVENTS_FILE, "w") as f:
                 json.dump(events, f, indent=4)
         except Exception as e:
-            print(e)
+            log.error(e)
             newEvent = None
 
         embed = Embed(title="✅ Event created!", color=Color.green())
@@ -2176,7 +2176,7 @@ class Schedule(commands.Cog):
             try:
                 msg = await author.send(embed=embed)
             except Exception as e:
-                print(author, e)
+                log.error(f"{author} | {e}")
                 return False
             dmChannel = msg.channel
             try:

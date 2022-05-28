@@ -59,34 +59,37 @@ class Staff(commands.Cog):
         """
         member = self._getMember(searchTerm)
         if member is None:
-            await ctx.send(f"No member found for search term: {searchTerm}")
+            await ctx.send(f"No member found for search term: `{searchTerm}`")
         else:
             embed = Embed(description=member.mention, color=member.color)
-            embed.set_author(icon_url=member.guild_avatar if member.guild_avatar is not None else member.avatar, name=member)
-            embed.set_thumbnail(url=member.avatar)
+            avatar = member.avatar if member.avatar else member.display_avatar
+            embed.set_author(icon_url=member.display_avatar, name=member)
+            embed.set_thumbnail(url=avatar)
             embed.add_field(name="Joined", value=utils.format_dt(member.joined_at, style="f"), inline=True)
             embed.add_field(name="Registered", value=utils.format_dt(member.created_at, style="f"), inline=True)
 
             roles = [role.mention for role in member.roles]  # Fetch all member roles
             roles.pop(0)  # Remove @everyone role
             roles = roles[::-1]  # Reverse the list
-            embed.add_field(name=f"Roles [{len(member.roles)}]", value=" ".join(roles) if len(roles) > 0 else "None", inline=False)
+            embed.add_field(name=f"Roles [{len(member.roles) - 1}]", value=" ".join(roles) if len(roles) > 0 else "None", inline=False)
 
-            embed.add_field(
-                name="Key Permissions",
-                value="Administrator" * member.guild_permissions.administrator +
-                ", Manage Server" * member.guild_permissions.manage_guild +
-                ", Manage Roles" * member.guild_permissions.manage_roles +
-                ", Manage Channels" * member.guild_permissions.manage_channels +
-                ", Manage Messages" * member.guild_permissions.manage_messages +
-                ", Manage Webhooks" * member.guild_permissions.manage_webhooks +
-                ", Manage Nicknames" * member.guild_permissions.manage_nicknames +
-                ", Manage Emojis" * member.guild_permissions.manage_emojis +
-                ", Kick Members" * member.guild_permissions.kick_members +
-                ", Ban Members" * member.guild_permissions.ban_members +
-                ", Mention Everyone" * member.guild_permissions.mention_everyone
-                ,
-                inline=False)
+            KEY_PERMISSIONS = {
+                "Administrator": member.guild_permissions.administrator,
+                "Manage Server": member.guild_permissions.manage_guild,
+                "Manage Roles": member.guild_permissions.manage_roles,
+                "Manage Channels": member.guild_permissions.manage_channels,
+                "Manage Messages": member.guild_permissions.manage_messages,
+                "Manage Webhooks": member.guild_permissions.manage_webhooks,
+                "Manage Nicknames": member.guild_permissions.manage_nicknames,
+                "Manage Emojis": member.guild_permissions.manage_emojis,
+                "Kick Members": member.guild_permissions.kick_members,
+                "Ban Members": member.guild_permissions.ban_members,
+                "Mention Everyone": member.guild_permissions.mention_everyone
+            }
+
+            PERMISSIONS = [name for name, perm in KEY_PERMISSIONS.items() if perm]
+            if len(PERMISSIONS) > 0:
+                embed.add_field(name="Key Permissions", value=", ".join(PERMISSIONS), inline=False)
 
             if member.id == member.guild.owner_id:
                 embed.add_field(name="Acknowledgements", value="Server Owner", inline=False)

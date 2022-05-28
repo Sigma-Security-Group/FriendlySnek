@@ -82,6 +82,75 @@ DEFAULT_WORKSHOP_INTEREST_LISTS = (
     )
 )
 
+def getWorkshopEmbed(guild: discord.Guild, workshop) -> Embed:
+    """ Generates an embed from the given workshop.
+
+    Parameters:
+    guild (discord.Guild): The target guild.
+    workshop: The workshop event.
+
+    Returns:
+    Embed.
+    """
+    embed = Embed(title=workshop["title"], description=workshop["description"], color=Color.dark_blue())
+    idsToMembers = lambda ids: [member.display_name for memberId in ids if (member := guild.get_member(memberId)) is not None]
+    interestedList = idsToMembers(workshop["members"])
+    interestedStr = "\n".join(interestedList)
+
+    if interestedStr == "":
+        interestedStr = "-"
+    embed.add_field(name=f"Interested People ({len(interestedList)})", value=interestedStr)
+    if workshop["sme"] and type(workshop["sme"]) == int:
+        smes = [sme.display_name for sme in guild.get_role(workshop["sme"]).members]
+        if smes:
+            embed.set_footer(text=f"SME{'s' * (len(smes) > 1)}: {', '.join(smes)}")
+
+    elif workshop["sme"] and type(workshop["sme"]) == list:
+        smeroles = [guild.get_role(role).name for role in workshop["sme"]]
+        embed.set_footer(text=f"SME roles: {', '.join(smeroles)}")
+
+    return embed
+
+async def updateInterestList(button: discord.ui.Button, interaction: discord.Interaction) -> None:
+    """ Handling all button interactions.
+
+    Parameters:
+    interaction (discord.Interaction): The Discord interaction.
+    button (discord.ui.Button): The Discord button.
+
+    Returns:
+    None.
+    """
+    try:
+        with open(WORKSHOP_INTEREST_FILE) as f:
+            workshopInterest = json.load(f)
+        workshop = [workshop for workshop in workshopInterest.values() if workshop["messageId"] == interaction.message.id][0]
+        if button.custom_id == "add":
+            if interaction.user.id not in workshop["members"]:
+                workshop["members"].append(interaction.user.id)  # Add member to list
+            else:
+                await interaction.response.send_message("You are already interested!", ephemeral=True)
+                return
+
+        elif button.custom_id == "remove":
+            if interaction.user.id in workshop["members"]:
+                workshop["members"].remove(interaction.user.id)  # Remove member from list
+            else:
+                await interaction.response.send_message("You are already not interested!", ephemeral=True)
+                return
+
+        try:
+            embed = getWorkshopEmbed(interaction.guild, workshop)
+            await interaction.response.edit_message(embed=embed)
+        except Exception as e:
+            log.error(f"{interaction.user} | {e}")
+
+        with open(WORKSHOP_INTEREST_FILE, "w") as f:
+            json.dump(workshopInterest, f, indent=4)
+
+    except Exception as e:
+        log.error(f"{interaction.user} | {e}")
+
 class WorkshopInterest(commands.Cog):
     def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
@@ -114,35 +183,6 @@ class WorkshopInterest(commands.Cog):
                 json.dump(workshopInterest, f, indent=4)
         await self.updateChannel()
 
-    def getWorkshopEmbed(self, workshop) -> Embed:
-        """ Generates an embed from the given workshop.
-
-        Parameters:
-        workshop: The workshop event.
-
-        Returns:
-        Embed.
-        """
-        guild = self.bot.get_guild(GUILD_ID)
-        embed = Embed(title=workshop["title"], description=workshop["description"], color=Color.dark_blue())
-        idsToMembers = lambda ids: [member.display_name for memberId in ids if (member := guild.get_member(memberId)) is not None]
-        interestedList = idsToMembers(workshop["members"])
-        interestedStr = "\n".join(interestedList)
-
-        if interestedStr == "":
-            interestedStr = "-"
-        embed.add_field(name=f"Interested People ({len(interestedList)})", value=interestedStr)
-        if workshop["sme"] and type(workshop["sme"]) == int:
-            smes = [sme.display_name for sme in guild.get_role(workshop["sme"]).members]
-            if smes:
-                embed.set_footer(text=f"SME{'s' * (len(smes) > 1)}: {', '.join(smes)}")
-
-        elif workshop["sme"] and type(workshop["sme"]) == list:
-            smeroles = [guild.get_role(role).name for role in workshop["sme"]]
-            embed.set_footer(text=f"SME roles: {', '.join(smeroles)}")
-
-        return embed
-
     async def updateChannel(self) -> None:
         """ Updates the interest channel with all messages.
 
@@ -159,59 +199,22 @@ class WorkshopInterest(commands.Cog):
         with open(WORKSHOP_INTEREST_FILE) as f:
             workshopInterest = json.load(f)
         for workshop in workshopInterest.values():
-            embed = self.getWorkshopEmbed(workshop)
-            msg = await channel.send(embed=embed)
+            embed = getWorkshopEmbed(self.bot.get_guild(GUILD_ID), workshop)
+            row = discord.ui.View()
+            row.timeout = None
+            buttons = [
+                WorkshopInterestButtons(label="Interested", style=discord.ButtonStyle.green, custom_id="add"),
+                WorkshopInterestButtons(label="Not Interested", style=discord.ButtonStyle.red, custom_id="remove")
+            ]
+            [row.add_item(item=button) for button in buttons]
+            msg = await channel.send(embed=embed, view=row)
             workshop["messageId"] = msg.id
-            for emoji in ("✅", "❌"):
-                await msg.add_reaction(emoji)
         with open(WORKSHOP_INTEREST_FILE, "w") as f:
             json.dump(workshopInterest, f, indent=4)
 
-    @commands.Cog.listener()
-    async def on_raw_reaction_add(self, payload: discord.RawReactionActionEvent) -> None:
-        """ Listens for interests.
-
-        Parameters:
-        payload (discord.RawReactionActionEvent): The raw reaction event.
-
-        Returns:
-        None.
-        """
-        if payload.channel_id != WORKSHOP_INTEREST:
-            return
-        try:
-            with open(WORKSHOP_INTEREST_FILE) as f:
-                workshopInterest = json.load(f)
-
-            if any(workshop["messageId"] == payload.message_id for workshop in workshopInterest.values()) and self.bot.ready and not payload.member.bot:
-                channelNeedsUpdate = True
-                workshop = [workshop for workshop in workshopInterest.values() if workshop["messageId"] == payload.message_id][0]
-                workshopMessage = await self.bot.get_channel(WORKSHOP_INTEREST).fetch_message(workshop["messageId"])
-                if payload.emoji.name == "✅":
-                    if payload.member.id not in workshop["members"]:
-                        workshop["members"].append(payload.member.id)
-                elif payload.emoji.name == "❌":
-                    if payload.member.id in workshop["members"]:
-                        workshop["members"].remove(payload.member.id)
-                else:
-                    channelNeedsUpdate = False
-
-                try:
-                    await workshopMessage.remove_reaction(payload.emoji, payload.member)
-                except Exception:
-                    pass
-
-                if channelNeedsUpdate:
-                    try:
-                        embed = self.getWorkshopEmbed(workshop)
-                        await workshopMessage.edit(embed=embed)
-                    except Exception:
-                        pass
-
-            with open(WORKSHOP_INTEREST_FILE, "w") as f:
-                json.dump(workshopInterest, f, indent=4)
-        except Exception as e:
-            log.error(e)
+class WorkshopInterestButtons(discord.ui.Button):
+    async def callback(self, interaction: discord.Interaction):
+        await updateInterestList(self, interaction)
 
 async def setup(bot: commands.Bot) -> None:
     await bot.add_cog(WorkshopInterest(bot))

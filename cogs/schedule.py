@@ -492,8 +492,8 @@ class Schedule(commands.Cog):
 
             elif button.custom_id == "edit":
                 event = event[0]
-                await interaction.response.send_message(RESPONSE_GOTO_DMS.format(interaction.user.dm_channel.jump_url), ephemeral=True)
                 if interaction.user.id == event["authorId"] or any(role.id == UNIT_STAFF for role in interaction.user.roles):
+                    await interaction.response.send_message(RESPONSE_GOTO_DMS.format(interaction.user.dm_channel.jump_url), ephemeral=True)
                     reorderEvents = await self.editEvent(interaction.user, event, isTemplateEdit=False)
                     if reorderEvents:
                         with open(EVENTS_FILE, "w") as f:
@@ -501,16 +501,20 @@ class Schedule(commands.Cog):
                         await self.updateSchedule()
                         return
                 else:
-                    scheduleNeedsUpdate = False
+                    await interaction.response.send_message(RESPONSE_UNALLOWED.format("edit"), ephemeral=True)
+                    return
                 fetchMsg = True
 
             elif button.custom_id == "delete":
                 event = event[0]
-                await interaction.response.send_message(RESPONSE_GOTO_DMS.format(interaction.user.dm_channel.jump_url), ephemeral=True)
                 if interaction.user.id == event["authorId"] or any(role.id == UNIT_STAFF for role in interaction.user.roles):
+                    await interaction.response.send_message(RESPONSE_GOTO_DMS.format(interaction.user.dm_channel.jump_url), ephemeral=True)
                     eventDeleted = await self.deleteEvent(interaction.user, interaction.message, event)
                     if eventDeleted:
                         events.remove(event)
+                else:
+                    await interaction.response.send_message(RESPONSE_UNALLOWED.format("delete"), ephemeral=True)
+                    return
                 scheduleNeedsUpdate = False
 
             elif button.custom_id == "delete_event_confirm":

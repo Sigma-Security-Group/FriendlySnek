@@ -59,6 +59,7 @@ class Poll(commands.Cog):
         Returns:
         None.
         """
+        group = {}
         embed = Embed(title=title, description=f"{description}\n\n", color=Color.gold())
         embed.set_footer(text=f"Poll by {interaction.user.display_name}")
         embed.timestamp = datetime.utcnow()
@@ -72,46 +73,68 @@ class Poll(commands.Cog):
                 optionCount += 1
 
         try:
-            await interaction.response.send_message(embed=embed)
-            poll = await interaction.original_message()
-            for x in range(optionCount):
-                await poll.add_reaction(emojiNumbers[x])
+            row = discord.ui.View()
+            row.timeout = None
+            buttons = []
+            for num in range(optionCount):
+                group[f"poll_vote_{num}"] = []
+                buttons.append(
+                    PollButtons(self, group, emoji=emojiNumbers[num], label="(0)", style=discord.ButtonStyle.secondary, custom_id=f"poll_vote_{num}")
+                )
+            [row.add_item(item=button) for button in buttons]
+            await interaction.response.send_message(embed=embed, view=row)
         except Exception as e:
-            log.error(f"{interaction.user} | {e}")
+            log.exception(f"{interaction.user} | {e}")
 
-    async def reactionShit(self, payload: discord.RawReactionActionEvent) -> None:
-        """ Handles all poll reactions.
+    async def buttonHandling(self, button: discord.ui.Button, interaction: discord.Interaction, group: dict) -> None:
+        """ Handling all poll button interactions.
 
         Parameters:
-        payload (discord.RawReactionActionEvent): The raw reaction event.
+        interaction (discord.Interaction): The Discord interaction.
+        button (discord.ui.Button): The Discord button.
 
         Returns:
         None.
         """
-        if payload.user_id in FRIENDLY_SNEKS:
-            return
-
-        channel = self.bot.get_channel(payload.channel_id)
-        msg = await channel.fetch_message(payload.message_id)
-
-        if hasattr(payload, "member") and hasattr(payload.member, "bot") and payload.member.bot:
-            return
-
-        if msg.author.id in FRIENDLY_SNEKS and payload.channel_id != SCHEDULE and payload.channel_id != WORKSHOP_INTEREST and payload.emoji.name in emojiNumbers and len(msg.embeds) > 0 and msg.embeds[0].footer.text and msg.embeds[0].footer.text.startswith("Poll by"):
+        try:
+            msg = await interaction.channel.fetch_message(interaction.message.id)
             embed = msg.embeds[0]
             optionRows = (emojiNumbers[0] + embed.description.split(emojiNumbers[0])[1]).split("\n")
-            if len(optionRows) == 1:
+            row = discord.ui.View()
+            row.timeout = None
+            buttons = []
+
+            for num in range(len(optionRows)):  # Loop through the amount of buttons
+                label = button.view.children[num].label
+                if button.view.children[num].custom_id == button.custom_id and interaction.user.id not in group[button.custom_id]:  # If pressed button (register vote) is same as iteration
+                    group[button.custom_id].append(interaction.user.id)
+                    buttons.append(  # Update button label with +1
+                        PollButtons(self, group, emoji=emojiNumbers[num], label=f"({int(label[1:][:-1]) + 1})", style=discord.ButtonStyle.secondary, custom_id=button.custom_id)
+                    )
+                elif button.view.children[num].custom_id == button.custom_id and interaction.user.id in group[button.custom_id]:  # If pressed button (remove registered vote) is same as iteration
+                    group[button.custom_id].remove(interaction.user.id)
+                    buttons.append(  # Update button label with -1
+                        PollButtons(self, group, emoji=emojiNumbers[num], label=f"({int(label[1:][:-1]) - 1})", style=discord.ButtonStyle.secondary, custom_id=button.custom_id)
+                    )
+                else:  # If not pressed button
+                    buttons.append(
+                        PollButtons(self, group, emoji=emojiNumbers[num], label=label, style=discord.ButtonStyle.secondary, custom_id=f"poll_vote_{num}")
+                    )
+
+            [row.add_item(item=button) for button in buttons]
+            await interaction.response.edit_message(view=row)
+
+            if len(button.view.children) == 1:
                 return  # Do not continue editing the message if there's 1 option
 
-            reactionCount: list = [reaction.count for reaction in msg.reactions if reaction.emoji in emojiNumbers]  # Get all reactions from msg that is in emojiNumbers
-            reactionSum = (sum(reactionCount) - len(reactionCount)) or 1  # Sums all reactions on msg, excl. the bot, but if 0, change to 1 (not divide by 0)
+            voteCount: list = [int(button.label[1:][:-1]) for button in row.children]  # Get all votes from poll
+            voteSum = sum(voteCount) or 1  # Sums all votes - but if 0, change to 1 (not divide by 0)
 
             newPercentText: list = []
             for rowNum in range(len(optionRows)):
                 # percent = f'{((reactionCount[rowNum] - 1) / reactionSum) * 100:.1f}'.strip('0').strip('.') or 0  # Floats
-                percent = round(((reactionCount[rowNum] - 1) / reactionSum) * 100)  # Ints
+                percent = round((voteCount[rowNum] / voteSum) * 100)  # Ints
                 newPercentText.append(re.sub(POLL_PERCENT_REGEX, f"({percent}%)", optionRows[rowNum]))
-
             percentTextMaxLen = max([len(percentText) for percentText in re.findall(POLL_PERCENT_REGEX, "".join(newPercentText))])
             for rowNum in range(len(optionRows)):
                 padding = "\u2000" * (percentTextMaxLen - len(re.findall(POLL_PERCENT_REGEX, newPercentText[rowNum])[0]))
@@ -120,30 +143,22 @@ class Poll(commands.Cog):
 
             embed.description = embed.description.split(emojiNumbers[0])[0] + "\n".join(optionRows)  # Concat "description" with options
             await msg.edit(embed=embed)
+            userVotes = ', '.join([emojiNumbers[int(buttonId.split('_')[-1])] for buttonId, ppl in group.items() if interaction.user.id in ppl])  # E.g. 8️⃣, 9️⃣, 🔟
+            await interaction.followup.send(f"You've voted for:\n{userVotes if len(userVotes) > 0 else 'Nothing.'}", ephemeral=True)
 
-    @commands.Cog.listener()
-    async def on_raw_reaction_add(self, payload: discord.RawReactionActionEvent) -> None:
-        """ Listens for reaction additions.
+        except Exception as e:
+            log.exception(f"{interaction.user} | {e}")
 
-        Parameters:
-        payload (discord.RawReactionActionEvent): The raw reaction event.
 
-        Returns:
-        None.
-        """
-        await self.reactionShit(payload)
+class PollButtons(discord.ui.Button):
+    def __init__(self, instance, group, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.instance = instance
+        self.group = group
 
-    @commands.Cog.listener()
-    async def on_raw_reaction_remove(self, payload: discord.RawReactionActionEvent) -> None:
-        """ Listens for reaction removals.
+    async def callback(self, interaction: discord.Interaction):
+        await self.instance.buttonHandling(self, interaction, self.group)
 
-        Parameters:
-        payload (discord.RawReactionActionEvent): The raw reaction event.
-
-        Returns:
-        None.
-        """
-        await self.reactionShit(payload)
 
 async def setup(bot: commands.Bot) -> None:
     await bot.add_cog(Poll(bot))

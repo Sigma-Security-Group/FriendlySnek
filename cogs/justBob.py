@@ -150,25 +150,24 @@ class JustBob(commands.Cog):
             await msg.add_reaction(emoji)
         await msg.add_reaction(STOP)
 
-    @commands.Cog.listener()
-    async def on_raw_reaction_add(self, payload: discord.RawReactionActionEvent) -> None:
+    async def buttonHandling(self, button: discord.ui.Button, interaction: discord.Interaction) -> None:
         """ Listens for actions.
 
         Parameters:
-        payload (discord.RawReactionActionEvent): The raw reaction event.
+        interaction (discord.Interaction): The Discord interaction.
+        button (discord.ui.Button): The Discord button.
 
         Returns:
         None.
         """
-        if self.bot.ready and payload.member is not None and not payload.member.bot and ((payload.member is not None and payload.member.id in self.games and self.games[payload.member.id]["messageId"] == payload.message_id) or (any(role is not None and role.id == UNIT_STAFF for role in payload.member.roles) and payload.emoji.name == STOP)):
-            channel = self.bot.get_channel(payload.channel_id)
+        if ((interaction.user.id in self.games and self.games[interaction.user.id]["messageId"] == interaction.message.id) or (any(role is not None and role.id == UNIT_STAFF for role in interaction.user.roles) and button.emoji == STOP)):
             try:
-                game = self.games[payload.member.id]
+                game = self.games[interaction.user.id]
             except KeyError:
                 return
-            gameMessage = await channel.fetch_message(game["messageId"])
-            if payload.emoji.name in LEVEL_NUMBERS:
-                levelNum = LEVEL_NUMBERS.index(payload.emoji.name)
+            gameMessage = await interaction.channel.fetch_message(game["messageId"])
+            if button.emoji in LEVEL_NUMBERS:
+                levelNum = LEVEL_NUMBERS.index(button.emoji)
                 with open(LEVELS_FILE) as f:
                     levels = json.load(f)
                 _, level, startPos, trophyPositions, doorLevers, description = levels[levelNum]
@@ -179,31 +178,27 @@ class JustBob(commands.Cog):
                 game["doorLevers"] = doorLevers
                 game["openDoors"] = []  # Format for each open door is [[door layer, door row, door column], remaining moves until close]
                 game["description"] = description
-                game["playerId"] = payload.member.id
+                game["playerId"] = interaction.user.id
                 await gameMessage.delete()
                 embed = self.getGameEmbed(game)
-                msg = await channel.send(embed=embed)
+                msg = await interaction.channel.send(embed=embed)
                 game["messageId"] = msg.id
                 for directionEmoji in DIRECTIONS:
                     await msg.add_reaction(directionEmoji)
                 await msg.add_reaction(STOP)
-            elif payload.emoji.name in DIRECTIONS:
-                direction = DIRECTIONS[payload.emoji.name]
+            elif button.emoji in DIRECTIONS:
+                direction = DIRECTIONS[button.emoji]
                 levelComplete = self.makeMove(game, direction)
                 embed = self.getGameEmbed(game)
                 await gameMessage.edit(embed=embed)
                 if levelComplete:
                     await asyncio.sleep(1)
                     await gameMessage.delete()
-                    await self.levelSelect(channel, payload.member)
-            elif payload.emoji.name == STOP:
-                del self.games[payload.member.id]
+                    await self.levelSelect(interaction.channel, interaction.user)
+            elif button.emoji == STOP:
+                del self.games[interaction.user.id]
                 await gameMessage.delete()
 
-            try:
-                await gameMessage.remove_reaction(payload.emoji, payload.member)
-            except Exception:
-                pass
 
     def getGameEmbed(self, game) -> Embed:
         """ Generates the player game embed.
@@ -315,6 +310,17 @@ class JustBob(commands.Cog):
             del self.games[game["playerId"]]
             levelComplete = True
         return levelComplete
+
+
+class JustBobButtons(discord.ui.Button):
+    def __init__(self, instance, message, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.instance = instance
+        self.message = message
+
+    async def callback(self, interaction: discord.Interaction):
+        await self.instance.buttonHandling(self.message, self, interaction)
+
 
 async def setup(bot: commands.Bot) -> None:
     await bot.add_cog(JustBob(bot))

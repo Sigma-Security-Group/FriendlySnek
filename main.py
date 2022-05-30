@@ -129,14 +129,16 @@ async def analyzeChannel(client, message: discord.Message, channelID:int, attach
         return
     elif attachmentContentType == "video" and re.search(r"https?:\/\/((www)?(clips)?\.)?(youtu(be)?|twitch|streamable)\.(com|be|tv).+", message.content):
         return
+
     try:
         await message.delete()
-    except Exception:
-        pass
+    except Exception as e:
+        log.exception(f"{message.author} | {e}")
+
     try:
-        log.warning(f"Removing message in #{client.get_channel(channelID)} from {message.author.display_name} ({message.author})")
+        log.warning(f"Removed message in #{client.get_channel(channelID)} from {message.author.display_name} ({message.author}). Message content: {message.content}")
         DEVS = ", ".join([f"**{message.guild.get_member(name)}**" for name in DEVELOPERS if message.guild.get_member(name) is not None])
-        await message.author.send(embed=Embed(title="❌ Invalid message!", description=f"The message you just posted in <#{channelID}> was deleted because no {attachmentContentType} was detected in it.\n\nIf this is an error, then please ask **staff** to post the {attachmentContentType} for you and inform: {DEVS}!", color=Color.red()))
+        await message.author.send(embed=Embed(title="❌ Message removed", description=f"The message you just posted in <#{channelID}> was deleted because no {attachmentContentType} was detected in it.\n\nIf this is an error, then please ask **staff** to post the {attachmentContentType} for you and inform: {DEVS}!", color=Color.red()))
     except Exception as e:
         log.exception(f"{message.author} | {e}")
     return

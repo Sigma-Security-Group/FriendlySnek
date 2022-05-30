@@ -71,7 +71,7 @@ class MissionUploader(commands.Cog):
                 ftp.cwd(server["Directory"])
                 missionFilesOnServer = ftp.nlst()
         except Exception as e:
-            log.error(e)
+            log.exception(e)
         attachmentOk = False
         if len(attachments) == 0:
             embed = Embed(title="❌ You didn't upload a file. Please upload the mission file!", color=Color.red())
@@ -104,7 +104,7 @@ class MissionUploader(commands.Cog):
         None.
         """
         await interaction.response.send_message("Upload mission file in DMs...")
-        log.info(f"{interaction.user.display_name} ({interaction.user.name}#{interaction.user.discriminator}) is uploading a mission file...")
+        log.info(f"{interaction.user.display_name} ({interaction.user}) is uploading a mission file...")
 
         # Server
         serverSelectOk = False
@@ -166,7 +166,7 @@ class MissionUploader(commands.Cog):
 
         filename = attachment.filename
         utcTime = UTC.localize(datetime.utcnow())
-        member = f"{interaction.user.display_name} ({interaction.user.name}#{interaction.user.discriminator})"
+        member = f"{interaction.user.display_name} ({interaction.user})"
 
         with open(MISSIONS_UPLOADED_FILE, "a") as f:
             f.write(f"\nFilename: {filename}\nUTC Time: {utcTime.strftime(TIME_FORMAT)}\nMember: {member}\nMember ID: {interaction.user.id}\n")

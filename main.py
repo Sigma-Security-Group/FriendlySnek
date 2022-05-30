@@ -138,7 +138,7 @@ async def analyzeChannel(client, message: discord.Message, channelID:int, attach
         DEVS = ", ".join([f"**{message.guild.get_member(name)}**" for name in DEVELOPERS if message.guild.get_member(name) is not None])
         await message.author.send(embed=Embed(title="❌ Invalid message!", description=f"The message you just posted in <#{channelID}> was deleted because no {attachmentContentType} was detected in it.\n\nIf this is an error, then please ask **staff** to post the {attachmentContentType} for you and inform: {DEVS}!", color=Color.red()))
     except Exception as e:
-        log.error(f"{message.author} | {e}")
+        log.exception(f"{message.author} | {e}")
     return
 
 @client.event
@@ -158,19 +158,19 @@ async def on_member_join(member: discord.Member) -> None:
     log.debug(f"{member} joined the server!")
     await asyncio.sleep(24 * 60 * 60)  # Seconds
     if member.id not in newcomers:
-        log.debug(f"Newcomer is no longer in the server {member.display_name} ({member.name}#{member.discriminator})")
+        log.debug(f"Newcomer is no longer in the server {member.display_name} ({member})")
         return
     currentMembers = await guild.fetch_members().flatten()
     if member in currentMembers:
         updatedMember = await guild.fetch_member(member.id)
         if len(updatedMember.roles) < 2:
             unitStaffRole = guild.get_role(UNIT_STAFF)
-            log.debug(f"Sending ping reminder to {updatedMember.display_name} ({updatedMember.name}#{updatedMember.discriminator})")
+            log.debug(f"Sending ping reminder to {updatedMember.display_name} ({updatedMember})")
             await client.get_channel(WELCOME).send(f"{updatedMember.mention} Don't forget to ping {unitStaffRole.name} when you are ready.")
         else:
-            log.debug(f"Newcomer is no longer in need of an interview {updatedMember.display_name} ({updatedMember.name}#{updatedMember.discriminator})")
+            log.debug(f"Newcomer is no longer in need of an interview {updatedMember.display_name} ({updatedMember})")
     else:
-        log.debug(f"Newcomer is no longer in the server {member.display_name}({member.name}#{member.discriminator})")
+        log.debug(f"Newcomer is no longer in the server {member.display_name}({member})")
     if member.id in newcomers:
         newcomers.remove(member.id)
 
@@ -194,7 +194,7 @@ async def on_error(event, *args, **kwargs) -> None:
 
 @client.event
 async def on_command_error(interaction, error) -> None:
-    log.error(error)
+    log.exception(error)
 
 def devCheck() -> discord.ext.commands.check:
     """ A permissions check for the reload command.

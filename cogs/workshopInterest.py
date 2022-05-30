@@ -204,13 +204,13 @@ class WorkshopInterest(commands.Cog):
                 embed = self.getWorkshopEmbed(interaction.guild, workshop)
                 await interaction.response.edit_message(embed=embed)
             except Exception as e:
-                log.error(f"{interaction.user} | {e}")
+                log.exception(f"{interaction.user} | {e}")
 
             with open(WORKSHOP_INTEREST_FILE, "w") as f:
                 json.dump(workshopInterest, f, indent=4)
 
         except Exception as e:
-            log.error(f"{interaction.user} | {e}")
+            log.exception(f"{interaction.user} | {e}")
 
 
 class WorkshopInterestButtons(discord.ui.Button):

@@ -124,12 +124,12 @@ class Staff(commands.Cog):
 
         guild = self.bot.get_guild(GUILD_ID)
         for channel in guild.text_channels:
-            log.debug(f"Purging {member.display_name} ({member.name}#{member.discriminator}) messages in {channel.mention}.")
+            log.debug(f"Purging {member.display_name} ({member}) messages in {channel.mention}.")
             try:
                 await channel.purge(limit=None, check=lambda m: m.author.id == member.id)
             except Exception:
-                log.warning(f"Could not purge {member.display_name} ({member.name}#{member.discriminator}) messages from {channel.mention}!")
-        log.info(f"Done purging {member.display_name} ({member.name}#{member.discriminator}) messages!")
+                log.warning(f"Could not purge {member.display_name} ({member}) messages from {channel.mention}!")
+        log.info(f"Done purging {member.display_name} ({member}) messages!")
         embed = Embed(title="✅ Messages purged", description=f"Member: {member.mention}", color=Color.green())
         embed.set_footer(text=f"ID: {member.id}")
         embed.timestamp = datetime.now()
@@ -185,7 +185,7 @@ class Staff(commands.Cog):
         await msg.edit(embed=embed)
         # Somewhere after this comment raises the error. I can't figure it out cuz I have no idea what this does
         # > Command raised an exception: TypeError: can't compare offset-naive and offset-aware datetimes
-        lastActivityPerMember = [(f"{member.display_name} ({member.name}#{member.discriminator})", f"{member.mention}\n{utils.format_dt(lastMessage.created_at.timestamp(), style='F')}\n{lastMessage.jump_url}" if lastMessage is not None else f"{member.mention}\nNOT FOUND")
+        lastActivityPerMember = [(f"{member.display_name} ({member})", f"{member.mention}\n{utils.format_dt(lastMessage.created_at.timestamp(), style='F')}\n{lastMessage.jump_url}" if lastMessage is not None else f"{member.mention}\nNOT FOUND")
         for member, lastMessage in sorted(lastMessagePerMember.items(), key=lambda x: x[1].created_at if x[1] is not None else datetime(1970, 1, 1))]
         for i in range(0, len(lastActivityPerMember), 25):
             embed = Embed(title=f"Last activity per member ({i + 1} - {min(i + 25, len(lastActivityPerMember))} / {len(lastActivityPerMember)})")
@@ -372,9 +372,9 @@ class Staff(commands.Cog):
             log.debug(f"Checked {numMessages} message{'s' * (numMessages != 1)}")
             if len(messageLinksList) > 0:
                 messageLinks = "\n".join(messageLinksList[::-1])
-                await self.bot.get_channel(STAFF_CHAT).send(f"Moderation Logs related to {member.display_name} ({member.name}#{member.discriminator}):\n{messageLinks}")
+                await self.bot.get_channel(STAFF_CHAT).send(f"Moderation Logs related to {member.display_name} ({member}):\n{messageLinks}")
             else:
-                await self.bot.get_channel(STAFF_CHAT).send(f"No Moderation Logs related to {member.display_name} ({member.name}#{member.discriminator})")
+                await self.bot.get_channel(STAFF_CHAT).send(f"No Moderation Logs related to {member.display_name} ({member})")
 
 async def setup(bot: commands.Bot) -> None:
     await bot.add_cog(Staff(bot))

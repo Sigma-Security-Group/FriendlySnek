@@ -217,7 +217,7 @@ class Schedule(commands.Cog):
             with open(EVENTS_FILE, "w") as f:
                 json.dump(events, f, indent=4)
         except Exception as e:
-            log.error(e)
+            log.exception(e)
 
     @tasks.loop(minutes=10)
     async def checkAcceptedReminder(self) -> None:
@@ -266,7 +266,7 @@ class Schedule(commands.Cog):
                         log.debug(f"Pinging members in VC not in accepted: {', '.join([member.display_name for member in onlineMembersNotAccepted])}...")
                         await channel.send(" ".join(member.mention for member in onlineMembersNotAccepted) + f" If you are in-game, please hit accept ✅ on the <#{SCHEDULE}>.")
         except Exception as e:
-            log.error(e)
+            log.exception(e)
 
     @app_commands.command(name="refreshschedule")
     @app_commands.guilds(GUILD)
@@ -340,7 +340,7 @@ class Schedule(commands.Cog):
                 with open(EVENTS_FILE, "w") as f:
                     json.dump(events, f, indent=4)
             except Exception as e:
-                log.error(e)
+                log.exception(e)
         else:
             with open(EVENTS_FILE, "w") as f:
                 json.dump([], f, indent=4)
@@ -1424,7 +1424,7 @@ class Schedule(commands.Cog):
             with open(EVENTS_FILE, "w") as f:
                 json.dump(events, f, indent=4)
         except Exception as e:
-            log.error(e)
+            log.exception(e)
             newEvent = None
 
         embed = Embed(title="✅ Operation created!", color=Color.green())
@@ -1833,7 +1833,7 @@ class Schedule(commands.Cog):
             with open(EVENTS_FILE, "w") as f:
                 json.dump(events, f, indent=4)
         except Exception as e:
-            log.error(e)
+            log.exception(e)
             newEvent = None
 
         embed = Embed(title="✅ Workshop created!", color=Color.green())
@@ -2124,7 +2124,7 @@ class Schedule(commands.Cog):
             with open(EVENTS_FILE, "w") as f:
                 json.dump(events, f, indent=4)
         except Exception as e:
-            log.error(e)
+            log.exception(e)
             newEvent = None
 
         embed = Embed(title="✅ Event created!", color=Color.green())

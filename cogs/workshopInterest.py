@@ -134,8 +134,8 @@ class WorkshopInterest(commands.Cog):
             row = discord.ui.View()
             row.timeout = None
             buttons = [
-                WorkshopInterestButtons(self, row=0, label="Interested", style=discord.ButtonStyle.green, custom_id="add"),
-                WorkshopInterestButtons(self, row=0, label="Not Interested", style=discord.ButtonStyle.red, custom_id="remove")
+                WorkshopInterestButtons(self, row=0, label="Interested", style=discord.ButtonStyle.success, custom_id="add"),
+                WorkshopInterestButtons(self, row=0, label="Not Interested", style=discord.ButtonStyle.danger, custom_id="remove")
             ]
             [row.add_item(item=button) for button in buttons]
             msg = await channel.send(embed=embed, view=row)

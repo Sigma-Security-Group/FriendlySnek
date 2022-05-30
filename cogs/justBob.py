@@ -144,11 +144,21 @@ class JustBob(commands.Cog):
         gameComplete = lastLevelUnlocked > len(levels)
         embed = Embed(title="Just Bob", description="Congratulations, you completed all levels! 🎉\nYou can replay them if you'd like.\nMore levels coming soon!" if gameComplete else f"Choose a level!\n({(lastLevelUnlocked - 1) / len(levels) * 100:.2f}% complete)", color=Color.green() if gameComplete else Color.blue())
         embed.set_footer(text=f"Player: {player.display_name}")
-        msg = await channel.send(embed=embed)
+
+        row = discord.ui.View()
+        row.timeout = None
+        buttons = []
+
+        for emoji, level in zip(LEVEL_NUMBERS[:lastLevelUnlocked], levels):
+            buttons.append(
+                JustBobButtons(self, emoji=emoji, style=discord.ButtonStyle.secondary, custom_id=level)
+            )
+        buttons.append(
+            JustBobButtons(self, emoji=STOP, style=discord.ButtonStyle.secondary, custom_id="justbob_stop")
+        )
+        [row.add_item(item=button) for button in buttons]
+        msg = await channel.send(embed=embed, view=row)
         self.games[player.id] = {"levelNum": None, "level": None, "playerPos": None, "trophyPositions": None, "doorLevers": None, "openDoors": None, "description": None, "playerId": None, "messageId": msg.id}
-        for emoji, _ in zip(LEVEL_NUMBERS[:lastLevelUnlocked], levels):
-            await msg.add_reaction(emoji)
-        await msg.add_reaction(STOP)
 
     async def buttonHandling(self, button: discord.ui.Button, interaction: discord.Interaction) -> None:
         """ Listens for actions.
@@ -182,16 +192,14 @@ class JustBob(commands.Cog):
                 await gameMessage.delete()
                 embed = self.getGameEmbed(game)
 
-
                 row = discord.ui.View()
-            row.timeout = TIME_ONE_MIN
-            buttons = [
-                ScheduleButtons(self, message, row=0, label="Delete", style=discord.ButtonStyle.success, custom_id="delete_event_confirm"),
-                ScheduleButtons(self, message, row=0, label="Cancel", style=discord.ButtonStyle.danger, custom_id="delete_event_cancel"),
-            ]
-            [row.add_item(item=button) for button in buttons]
-            await author.send(embed=embed, view=row)
-
+                row.timeout = None
+                buttons = [
+                    JustBobButtons(self, label="", style=discord.ButtonStyle.success, custom_id=""),
+                    JustBobButtons(self, label="", style=discord.ButtonStyle.danger, custom_id=""),
+                ]
+                [row.add_item(item=button) for button in buttons]
+                await author.send(embed=embed, view=row)
 
                 msg = await interaction.channel.send(embed=embed)
                 game["messageId"] = msg.id
@@ -210,7 +218,6 @@ class JustBob(commands.Cog):
             elif button.emoji == STOP:
                 del self.games[interaction.user.id]
                 await gameMessage.delete()
-
 
     def getGameEmbed(self, game) -> Embed:
         """ Generates the player game embed.
@@ -325,10 +332,9 @@ class JustBob(commands.Cog):
 
 
 class JustBobButtons(discord.ui.Button):
-    def __init__(self, instance, message, *args, **kwargs):
+    def __init__(self, instance, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.instance = instance
-        self.message = message
 
     async def callback(self, interaction: discord.Interaction):
         await self.instance.buttonHandling(self.message, self, interaction)

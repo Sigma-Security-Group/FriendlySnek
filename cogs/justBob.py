@@ -181,6 +181,18 @@ class JustBob(commands.Cog):
                 game["playerId"] = interaction.user.id
                 await gameMessage.delete()
                 embed = self.getGameEmbed(game)
+
+
+                row = discord.ui.View()
+            row.timeout = TIME_ONE_MIN
+            buttons = [
+                ScheduleButtons(self, message, row=0, label="Delete", style=discord.ButtonStyle.success, custom_id="delete_event_confirm"),
+                ScheduleButtons(self, message, row=0, label="Cancel", style=discord.ButtonStyle.danger, custom_id="delete_event_cancel"),
+            ]
+            [row.add_item(item=button) for button in buttons]
+            await author.send(embed=embed, view=row)
+
+
                 msg = await interaction.channel.send(embed=embed)
                 game["messageId"] = msg.id
                 for directionEmoji in DIRECTIONS:

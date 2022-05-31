@@ -169,7 +169,7 @@ class MissionUploader(commands.Cog):
         member = f"{interaction.user.display_name} ({interaction.user})"
 
         with open(MISSIONS_UPLOADED_FILE, "a") as f:
-            f.write(f"\nFilename: {filename}\nUTC Time: {utcTime.strftime(TIME_FORMAT)}\nMember: {member}\nMember ID: {interaction.user.id}\n")
+            f.write(f"\nFilename: {filename}\nServer: {server['Name']}\nUTC Time: {utcTime.strftime(TIME_FORMAT)}\nMember: {member}\nMember ID: {interaction.user.id}\n")
 
         embed = Embed(title="Uploaded mission file", color=Color.blue())
         embed.add_field(name="Filename", value=f"`{filename}`")

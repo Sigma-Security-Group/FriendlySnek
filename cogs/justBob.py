@@ -124,6 +124,7 @@ class JustBob(commands.Cog):
         if interaction.channel.id != GENERAL and interaction.channel.id != BOT_SPAM:
             await interaction.response.send_message(f"Sorry, but you can only play Just Bob in <#{GENERAL}> or in <#{BOT_SPAM}>!")
             return
+        log.info(f"{interaction.user.display_name} ({interaction.user}) is playing Just Bob!")
         await interaction.response.send_message("Playing Just Bob...")
         if interaction.user.id in self.games:  # Remove previous active Just Bob game if it exists
             msg = await interaction.channel.fetch_message(self.games[interaction.user.id]["messageId"])

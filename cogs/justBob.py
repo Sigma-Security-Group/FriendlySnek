@@ -67,7 +67,7 @@ Levels structure. WIP levels use emojis for easier level design, but when a leve
         [
             {"l": [1, 1, 1], "d": [2, 2, 2], "m": 5}
         ],  # Door levers [{"l": [lever layer, lever row, lever column], "d": [door layer, door row, door column], "m": moves before closing door}, ...]
-        "Use reactions to move. Use :cyclone: to warp through the different planes of existence in the level. Your goal is to  find your way to the trophy"  # Level message (could be tutorial, hint, story or anything. to be put in embed description)
+        "Use the buttons to move.\nPress :cyclone: to warp through the different planes of existence in the level.\nYour goal is to find your way to the :trophy:!"  # Level message (could be tutorial, hint, story or anything. to be put in embed description)
     ],
     [
         "Level 2",
@@ -95,6 +95,7 @@ FLOOR = "⬛"
 WALL = "🟪"
 DOOR = "🟧"
 LEVER = "🔶"
+
 
 class JustBob(commands.Cog):
     def __init__(self, bot: commands.Bot) -> None:
@@ -124,14 +125,18 @@ class JustBob(commands.Cog):
             await interaction.response.send_message(f"Sorry, but you can only play Just Bob in <#{GENERAL}> or in <#{BOT_SPAM}>!")
             return
         await interaction.response.send_message("Playing Just Bob...")
-        await self.levelSelect(interaction.channel, interaction.user)
+        if interaction.user.id in self.games:  # Remove previous active Just Bob game if it exists
+            msg = await interaction.channel.fetch_message(self.games[interaction.user.id]["messageId"])
+            del self.games[interaction.user.id]
+            await msg.delete()
+        self.games[interaction.user.id] = {"levelNum": None, "level": None, "playerPos": None, "trophyPositions": None, "doorLevers": None, "openDoors": None, "description": None, "playerId": None, "messageId": None, "messageChangeCounter": 0}
+        await self.levelSelect(interaction)
 
-    async def levelSelect(self, channel: discord.abc.GuildChannel, player: discord.Member) -> None:
+    async def levelSelect(self, interaction: discord.Interaction) -> None:
         """ Showing the player the level select prompt.
 
         Parameters:
-        channel (discord.abc.GuildChannel): A disord guild channel.
-        player (discord.Member): The player.
+        interaction (discord.Interaction): The Discord interaction.
 
         Returns:
         None.
@@ -140,35 +145,42 @@ class JustBob(commands.Cog):
             levels = json.load(f)
         with open(PLAYERS_PROGRESS_FILE) as f:
             playersProgress = json.load(f)
-        lastLevelUnlocked = playersProgress.get(str(player.id), 1)
+        lastLevelUnlocked = playersProgress.get(str(interaction.user.id), 1)
         gameComplete = lastLevelUnlocked > len(levels)
-        embed = Embed(title="Just Bob", description="Congratulations, you completed all levels! 🎉\nYou can replay them if you'd like.\nMore levels coming soon!" if gameComplete else f"Choose a level!\n({(lastLevelUnlocked - 1) / len(levels) * 100:.2f}% complete)", color=Color.green() if gameComplete else Color.blue())
-        embed.set_footer(text=f"Player: {player.display_name}")
-        msg = await channel.send(embed=embed)
-        self.games[player.id] = {"levelNum": None, "level": None, "playerPos": None, "trophyPositions": None, "doorLevers": None, "openDoors": None, "description": None, "playerId": None, "messageId": msg.id}
-        for emoji, _ in zip(LEVEL_NUMBERS[:lastLevelUnlocked], levels):
-            await msg.add_reaction(emoji)
-        await msg.add_reaction(STOP)
+        embed = Embed(title="Just Bob", description="Congratulations, you completed all levels! 🎉\nYou can replay them if you'd like.\nMore levels coming soon:tm:!" if gameComplete else f"Choose a level!\n({(lastLevelUnlocked - 1) / len(levels) * 100:.2f}% complete)", color=Color.green() if gameComplete else Color.blue())
+        embed.set_footer(text=f"Player: {interaction.user.display_name}")
 
-    @commands.Cog.listener()
-    async def on_raw_reaction_add(self, payload: discord.RawReactionActionEvent) -> None:
+        self.games[interaction.user.id]["messageChangeCounter"] += 1
+        row = JustBobView(self, interaction, self.games[interaction.user.id]["messageChangeCounter"])
+        row.timeout = TIME_TEN_MIN
+        buttons = []
+        for emoji, _ in zip(LEVEL_NUMBERS[:lastLevelUnlocked], levels):
+            buttons.append(JustBobButton(self, emoji=emoji, style=discord.ButtonStyle.secondary))
+        buttons.append(JustBobButton(self, emoji=STOP, style=discord.ButtonStyle.secondary))
+        [row.add_item(item=button) for button in buttons]
+
+        msg = await interaction.channel.send(embed=embed, view=row)
+        self.games[interaction.user.id]["messageId"] = msg.id
+
+    async def buttonHandling(self, button: discord.ui.Button, interaction: discord.Interaction) -> None:
         """ Listens for actions.
 
         Parameters:
-        payload (discord.RawReactionActionEvent): The raw reaction event.
+        button (discord.ui.Button): The Discord button.
+        interaction (discord.Interaction): The Discord interaction.
 
         Returns:
         None.
         """
-        if self.bot.ready and payload.member is not None and not payload.member.bot and ((payload.member is not None and payload.member.id in self.games and self.games[payload.member.id]["messageId"] == payload.message_id) or (any(role is not None and role.id == UNIT_STAFF for role in payload.member.roles) and payload.emoji.name == STOP)):
-            channel = self.bot.get_channel(payload.channel_id)
+        if ((interaction.user.id in self.games and self.games[interaction.user.id]["messageId"] == interaction.message.id) or (any(role is not None and role.id == UNIT_STAFF for role in interaction.user.roles) and button.emoji == STOP)):
             try:
-                game = self.games[payload.member.id]
+                game = self.games[interaction.user.id]
             except KeyError:
                 return
-            gameMessage = await channel.fetch_message(game["messageId"])
-            if payload.emoji.name in LEVEL_NUMBERS:
-                levelNum = LEVEL_NUMBERS.index(payload.emoji.name)
+
+            emoji = str(button.emoji)
+            if emoji in LEVEL_NUMBERS:
+                levelNum = LEVEL_NUMBERS.index(emoji)
                 with open(LEVELS_FILE) as f:
                     levels = json.load(f)
                 _, level, startPos, trophyPositions, doorLevers, description = levels[levelNum]
@@ -179,31 +191,39 @@ class JustBob(commands.Cog):
                 game["doorLevers"] = doorLevers
                 game["openDoors"] = []  # Format for each open door is [[door layer, door row, door column], remaining moves until close]
                 game["description"] = description
-                game["playerId"] = payload.member.id
-                await gameMessage.delete()
+                game["playerId"] = interaction.user.id
+                game["messageChangeCounter"] += 1
+
                 embed = self.getGameEmbed(game)
-                msg = await channel.send(embed=embed)
-                game["messageId"] = msg.id
+                row = JustBobView(self, interaction, self.games[interaction.user.id]["messageChangeCounter"])
+                row.timeout = TIME_TEN_MIN
+                buttons = []
                 for directionEmoji in DIRECTIONS:
-                    await msg.add_reaction(directionEmoji)
-                await msg.add_reaction(STOP)
-            elif payload.emoji.name in DIRECTIONS:
-                direction = DIRECTIONS[payload.emoji.name]
+                    buttons.append(JustBobButton(self, emoji=directionEmoji, style=discord.ButtonStyle.secondary))
+                buttons.append(JustBobButton(self, emoji=STOP, style=discord.ButtonStyle.secondary))
+                [row.add_item(item=button) for button in buttons]
+                await interaction.response.edit_message(embed=embed, view=row)
+
+            elif emoji in DIRECTIONS:
+                direction = DIRECTIONS[emoji]
                 levelComplete = self.makeMove(game, direction)
                 embed = self.getGameEmbed(game)
-                await gameMessage.edit(embed=embed)
+                await interaction.response.edit_message(embed=embed)
+
                 if levelComplete:
                     await asyncio.sleep(1)
-                    await gameMessage.delete()
-                    await self.levelSelect(channel, payload.member)
-            elif payload.emoji.name == STOP:
-                del self.games[payload.member.id]
-                await gameMessage.delete()
+                    await interaction.message.delete()
+                    game["messageChangeCounter"] += 1
+                    await self.levelSelect(interaction)
 
-            try:
-                await gameMessage.remove_reaction(payload.emoji, payload.member)
-            except Exception:
-                pass
+            elif emoji == STOP:
+                del self.games[interaction.user.id]
+                game["messageChangeCounter"] += 1
+                await interaction.message.delete()
+                #await interaction.response.edit_message(content="Terminated Just Bob!", embed=None, view=None)
+
+        else:
+            await interaction.response.send_message("This is not for you!", ephemeral=True)
 
     def getGameEmbed(self, game) -> Embed:
         """ Generates the player game embed.
@@ -215,7 +235,7 @@ class JustBob(commands.Cog):
         Embed.
         """
         guild = self.bot.get_guild(GUILD_ID)
-        embed = Embed(title=f"Just Bob (Lvl {game['levelNum'] + 1})", description=game["description"], color=Color.blue())
+        embed = Embed(title=f"Just Bob (Level {game['levelNum'] + 1})", description=game["description"], color=Color.blue())
 
         playerLayer, playerRow, playerCol = game["playerPos"]
         board = game["level"][playerLayer]
@@ -312,9 +332,38 @@ class JustBob(commands.Cog):
             playersProgress[str(game["playerId"])] = max(playersProgress.get(str(game["playerId"]), 1), game["levelNum"] + 2)
             with open(PLAYERS_PROGRESS_FILE, "w") as f:
                 json.dump(playersProgress, f, indent=4)
-            del self.games[game["playerId"]]
             levelComplete = True
         return levelComplete
+
+
+class JustBobView(discord.ui.View):
+    def __init__(self, instance, interaction, messageChangeCounter, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.instance = instance
+        self.interaction = interaction
+        self.messageChangeCounter = messageChangeCounter
+
+    async def on_timeout(self: discord.ui.View):
+        try:
+            msg = await self.interaction.channel.fetch_message(self.instance.games[self.interaction.user.id]["messageId"])
+            if self.messageChangeCounter == self.instance.games[self.interaction.user.id]["messageChangeCounter"]:  # If time'd out buttons are the same as the displayed ones
+                for btn in self.children:
+                    btn.disabled = True
+                await msg.edit(view=self)
+                del self.instance.games[self.interaction.user.id]
+                await asyncio.sleep(5)
+                await msg.delete()
+        except Exception:
+            pass
+
+class JustBobButton(discord.ui.Button):
+    def __init__(self, instance, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.instance = instance
+
+    async def callback(self: discord.ui.Button, interaction: discord.Interaction):
+        await self.instance.buttonHandling(self, interaction)
+
 
 async def setup(bot: commands.Bot) -> None:
     await bot.add_cog(JustBob(bot))

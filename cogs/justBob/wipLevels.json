@@ -42,7 +42,7 @@
         [0, 2, 2],
         [[2, 7, 9]],
         [],
-        "Use reactions to move. Use :cyclone: to warp through the different layers of existence in the level. Your goal is to find your way to the :trophy:!"
+        "Use the buttons to move.\nPress :cyclone: to warp through the different planes of existence in the level.\nYour goal is to find your way to the :trophy:!"
     ],
     [
         "Level 2",
@@ -87,7 +87,7 @@
         [0, 1, 1],
         [[1, 4, 8]],
         [],
-        "This level looks more difficult, but it works exactly the same!"
+        "This level looks more difficult, but it works in the exact same way!"
     ],
     [
         "Level 3",
@@ -123,7 +123,7 @@
             {"l": [0, 6, 3], "d": [0, 3, 4], "m": 8},
             {"l": [0, 6, 6], "d": [1, 6, 7], "m": 8}
         ],
-        "This level only has 2 layers, but it has doors (:orange_square:). To open a door, you need to move on top of the correct lever (:large_orange_diamond:). When a door is opened, it will close after a certain amount of steps. Each door has its own timer. Doors and levers don't need to be on the same layer!"
+        "This level has only 2 layers. However, it has doors (:orange_square:).\nTo open a door, you need to move on top of the correct lever (:large_orange_diamond:).\nWhen a door is opened, it will close after a certain amount of steps. Each door has its own timer.\nDoors and levers don't need to be on the same layer!"
     ],
     [
         "Level 4",

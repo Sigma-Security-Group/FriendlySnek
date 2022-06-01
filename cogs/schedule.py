@@ -306,9 +306,9 @@ class Schedule(commands.Cog):
         channel = self.bot.get_channel(SCHEDULE)
         await channel.purge(limit=None, check=lambda m: m.author.id in FRIENDLY_SNEKS)
 
-        row = discord.ui.View()
+        row = ScheduleView(self, None)
         row.timeout = None
-        issueButton = ScheduleButtons(self, None, row=0, emoji="📩", label="Create Ticket", style=discord.ButtonStyle.secondary, custom_id="issues_and_suggestions")
+        issueButton = ScheduleButton(self, None, row=0, emoji="📩", label="Create Ticket", style=discord.ButtonStyle.secondary, custom_id="issues_and_suggestions")
         row.add_item(item=issueButton)
 
         await channel.send(f"Welcome to the schedule channel!\nTo schedule an operation you can use the `/operation` command (or `/bop`) and follow the instructions in your DMs.\nFor a workshop use `/workshop` or `/ws`.\nLastly, for generic events use `/event`.\n\nIf you haven't set a preferred time zone yet you will be prompted to do so when you schedule any kind of event. If you want to set, change or delete your time zone preference you may do so with the `/changetimezone` command.\n\nThe times you see on the schedule are based on __your local time zone__.\n\nThe event colors can be used to quickly identify what type of event it is:\n🟩 Operation `/operation` or `/bop`.\n🟦 Workshop `/workshop` or `/ws`.\n🟨 Event `/event`.\n\nGithub: <https://github.com/Sigma-Security-Group/FriendlySnek>.\n\nIf you have any suggestions for new features or encounter any bugs, please contact: {', '.join([f'**{channel.guild.get_member(name).display_name}**' for name in DEVELOPERS if channel.guild.get_member(name) is not None])} - or simply click the button below!", view=row)
@@ -323,20 +323,20 @@ class Schedule(commands.Cog):
                 for event in sorted(events, key=lambda e: datetime.strptime(e["time"], TIME_FORMAT), reverse=True):
                     embed = self.getEventEmbed(event)
 
-                    row = discord.ui.View()
+                    row = ScheduleView(self, None)
                     row.timeout = None
                     buttons = [
-                        ScheduleButtons(self, None, row=0, label="Accept", style=discord.ButtonStyle.success, custom_id="accept"),
-                        ScheduleButtons(self, None, row=0, label="Decline", style=discord.ButtonStyle.danger, custom_id="decline"),
-                        ScheduleButtons(self, None, row=0, label="Decline (Time)", style=discord.ButtonStyle.danger, custom_id="declineForTiming"),
-                        ScheduleButtons(self, None, row=0, label="Tentative", style=discord.ButtonStyle.primary, custom_id="tentative")
+                        ScheduleButton(self, None, row=0, label="Accept", style=discord.ButtonStyle.success, custom_id="accept"),
+                        ScheduleButton(self, None, row=0, label="Decline", style=discord.ButtonStyle.danger, custom_id="decline"),
+                        ScheduleButton(self, None, row=0, label="Decline (Time)", style=discord.ButtonStyle.danger, custom_id="declineForTiming"),
+                        ScheduleButton(self, None, row=0, label="Tentative", style=discord.ButtonStyle.primary, custom_id="tentative")
                     ]
                     if event["reservableRoles"] is not None:
-                        buttons.append(ScheduleButtons(self, None, row=0, label="Reserve", style=discord.ButtonStyle.secondary, custom_id="reserve"))
+                        buttons.append(ScheduleButton(self, None, row=0, label="Reserve", style=discord.ButtonStyle.secondary, custom_id="reserve"))
 
                     buttons.extend([
-                        ScheduleButtons(self, None, row=1, label="Edit", style=discord.ButtonStyle.secondary, custom_id="edit"),
-                        ScheduleButtons(self, None, row=1, label="Delete", style=discord.ButtonStyle.secondary, custom_id="delete")
+                        ScheduleButton(self, None, row=1, label="Edit", style=discord.ButtonStyle.secondary, custom_id="edit"),
+                        ScheduleButton(self, None, row=1, label="Delete", style=discord.ButtonStyle.secondary, custom_id="delete")
                     ])
                     [row.add_item(item=button) for button in buttons]
 
@@ -450,7 +450,7 @@ class Schedule(commands.Cog):
                     event["declinedForTiming"].remove(interaction.user.id)
                 if interaction.user.id in event["tentative"]:
                     event["tentative"].remove(interaction.user.id)
-                if interaction.user.id not in event["declined"] and interaction.user.id != KYANO:
+                if interaction.user.id not in event["declined"]:
                     event["declined"].append(interaction.user.id)
                 if event["reservableRoles"] is not None:
                     for roleName in event["reservableRoles"]:
@@ -547,7 +547,7 @@ class Schedule(commands.Cog):
                                 except Exception as e:
                                     log.exception(f"{member} | {e}")
                 except Exception as e:
-                    log.exception(e)
+                    log.exception(f"{interaction.user} | {e}")
                 events.remove(event)
 
             elif button.custom_id == "delete_event_cancel":
@@ -1219,14 +1219,16 @@ class Schedule(commands.Cog):
         """
         try:
             embed = Embed(title=SCHEDULE_EVENT_CONFIRM_DELETE.format(f"{event['type'].lower()}: `{event['title']}`"), color=Color.orange())
-            row = discord.ui.View()
+            deletePrompts = [discord.Message]
+            row = ScheduleView(self, deletePrompts)
             row.timeout = TIME_ONE_MIN
             buttons = [
-                ScheduleButtons(self, message, row=0, label="Delete", style=discord.ButtonStyle.success, custom_id="delete_event_confirm"),
-                ScheduleButtons(self, message, row=0, label="Cancel", style=discord.ButtonStyle.danger, custom_id="delete_event_cancel"),
+                ScheduleButton(self, message, row=0, label="Delete", style=discord.ButtonStyle.success, custom_id="delete_event_confirm"),
+                ScheduleButton(self, message, row=0, label="Cancel", style=discord.ButtonStyle.danger, custom_id="delete_event_cancel"),
             ]
             [row.add_item(item=button) for button in buttons]
-            await author.send(embed=embed, view=row)
+            message = await author.send(embed=embed, view=row)
+            deletePrompts[0] = message
         except Exception as e:
             log.exception(f"{author} | {e}")
             return False
@@ -1467,7 +1469,7 @@ class Schedule(commands.Cog):
             with open(EVENTS_FILE, "w") as f:
                 json.dump(events, f, indent=4)
         except Exception as e:
-            log.exception(e)
+            log.exception(f"{interaction.user} | {e}")
             newEvent = None
 
         embed = Embed(title="✅ Operation created!", color=Color.green())
@@ -1876,7 +1878,7 @@ class Schedule(commands.Cog):
             with open(EVENTS_FILE, "w") as f:
                 json.dump(events, f, indent=4)
         except Exception as e:
-            log.exception(e)
+            log.exception(f"{interaction.user} | {e}")
             newEvent = None
 
         embed = Embed(title="✅ Workshop created!", color=Color.green())
@@ -2167,7 +2169,7 @@ class Schedule(commands.Cog):
             with open(EVENTS_FILE, "w") as f:
                 json.dump(events, f, indent=4)
         except Exception as e:
-            log.exception(e)
+            log.exception(f"{interaction.user} | {e}")
             newEvent = None
 
         embed = Embed(title="✅ Event created!", color=Color.green())
@@ -2312,17 +2314,29 @@ class Schedule(commands.Cog):
                 return False
 
 
-class ScheduleButtons(discord.ui.Button):
+class ScheduleView(discord.ui.View):
+    def __init__(self, instance, message: list, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.instance = instance  # Schedule cog instance
+        self.message = message  # Message to reference when view has timeout
+
+    async def on_timeout(self: discord.ui.View):
+        try:
+            for button in self.children:
+                button.disabled = True
+            message = self.message[0]
+            await message.edit(view=self)
+        except Exception as e:
+            log.exception(e)
+
+class ScheduleButton(discord.ui.Button):
     def __init__(self, instance, message, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.instance = instance
         self.message = message
 
-    async def callback(self, interaction: discord.Interaction):
+    async def callback(self: discord.ui.Button, interaction: discord.Interaction):
         await self.instance.buttonHandling(self.message, self, interaction)
-
-    async def on_timeout(self):
-        self.disabled = True
 
 
 async def setup(bot: commands.Bot) -> None:

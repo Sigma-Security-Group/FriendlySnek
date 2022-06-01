@@ -346,16 +346,17 @@ class JustBobView(discord.ui.View):
 
     async def on_timeout(self: discord.ui.View):
         try:
-            msg = await self.interaction.channel.fetch_message(self.instance.games[self.interaction.user.id]["messageId"])
+            message = await self.interaction.channel.fetch_message(self.instance.games[self.interaction.user.id]["messageId"])
             if self.messageChangeCounter == self.instance.games[self.interaction.user.id]["messageChangeCounter"]:  # If time'd out buttons are the same as the displayed ones
-                for btn in self.children:
-                    btn.disabled = True
-                await msg.edit(view=self)
+                for button in self.children:
+                    button.disabled = True
+                await message.edit(view=self)
                 del self.instance.games[self.interaction.user.id]
                 await asyncio.sleep(5)
-                await msg.delete()
+                await message.delete()
         except Exception:
             pass
+
 
 class JustBobButton(discord.ui.Button):
     def __init__(self, instance, *args, **kwargs):

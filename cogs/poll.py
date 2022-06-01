@@ -73,14 +73,12 @@ class Poll(commands.Cog):
                 optionCount += 1
 
         try:
-            row = discord.ui.View()
+            row = PollView(self)
             row.timeout = None
             buttons = []
             for num in range(optionCount):
                 group[f"poll_vote_{num}"] = []
-                buttons.append(
-                    PollButtons(self, group, emoji=emojiNumbers[num], label="(0)", style=discord.ButtonStyle.secondary, custom_id=f"poll_vote_{num}")
-                )
+                buttons.append(PollButton(self, group, emoji=emojiNumbers[num], label="(0)", style=discord.ButtonStyle.secondary, custom_id=f"poll_vote_{num}"))
             [row.add_item(item=button) for button in buttons]
             await interaction.response.send_message(embed=embed, view=row)
         except Exception as e:
@@ -100,7 +98,7 @@ class Poll(commands.Cog):
             msg = await interaction.channel.fetch_message(interaction.message.id)
             embed = msg.embeds[0]
             optionRows = (emojiNumbers[0] + embed.description.split(emojiNumbers[0])[1]).split("\n")
-            row = discord.ui.View()
+            row = PollView(self)
             row.timeout = None
             buttons = []
 
@@ -108,18 +106,15 @@ class Poll(commands.Cog):
                 label = button.view.children[num].label
                 if button.view.children[num].custom_id == button.custom_id and interaction.user.id not in group[button.custom_id]:  # If pressed button (register vote) is same as iteration
                     group[button.custom_id].append(interaction.user.id)
-                    buttons.append(  # Update button label with +1
-                        PollButtons(self, group, emoji=emojiNumbers[num], label=f"({int(label[1:][:-1]) + 1})", style=discord.ButtonStyle.secondary, custom_id=button.custom_id)
-                    )
+                    # Update button label with +1
+                    buttons.append(PollButton(self, group, emoji=emojiNumbers[num], label=f"({int(label[1:][:-1]) + 1})", style=discord.ButtonStyle.secondary, custom_id=button.custom_id))
                 elif button.view.children[num].custom_id == button.custom_id and interaction.user.id in group[button.custom_id]:  # If pressed button (remove registered vote) is same as iteration
                     group[button.custom_id].remove(interaction.user.id)
-                    buttons.append(  # Update button label with -1
-                        PollButtons(self, group, emoji=emojiNumbers[num], label=f"({int(label[1:][:-1]) - 1})", style=discord.ButtonStyle.secondary, custom_id=button.custom_id)
-                    )
-                else:  # If not pressed button
-                    buttons.append(
-                        PollButtons(self, group, emoji=emojiNumbers[num], label=label, style=discord.ButtonStyle.secondary, custom_id=f"poll_vote_{num}")
-                    )
+                    # Update button label with -1
+                    buttons.append(PollButton(self, group, emoji=emojiNumbers[num], label=f"({int(label[1:][:-1]) - 1})", style=discord.ButtonStyle.secondary, custom_id=button.custom_id))
+                # If not pressed button
+                else:
+                    buttons.append(PollButton(self, group, emoji=emojiNumbers[num], label=label, style=discord.ButtonStyle.secondary, custom_id=f"poll_vote_{num}"))
 
             [row.add_item(item=button) for button in buttons]
             await interaction.response.edit_message(view=row)
@@ -150,8 +145,17 @@ class Poll(commands.Cog):
             log.exception(f"{interaction.user} | {e}")
 
 
-class PollButtons(discord.ui.Button):
-    def __init__(self, instance, group, *args, **kwargs):
+class PollView(discord.ui.View):
+    def __init__(self, instance, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.instance = instance
+
+    async def on_timeout(self: discord.ui.View):
+        pass
+
+
+class PollButton(discord.ui.Button):
+    def __init__(self, instance, group: dict, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.instance = instance
         self.group = group

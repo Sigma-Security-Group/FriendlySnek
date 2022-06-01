@@ -450,8 +450,6 @@ class Schedule(commands.Cog):
                     event["declinedForTiming"].remove(interaction.user.id)
                 if interaction.user.id in event["tentative"]:
                     event["tentative"].remove(interaction.user.id)
-                if interaction.user.id not in event["declined"] and interaction.user.id != KYANO:
-                    event["declined"].append(interaction.user.id)
                 if event["reservableRoles"] is not None:
                     for roleName in event["reservableRoles"]:
                         if event["reservableRoles"][roleName] == interaction.user.id:

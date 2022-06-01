@@ -306,7 +306,7 @@ class Schedule(commands.Cog):
         channel = self.bot.get_channel(SCHEDULE)
         await channel.purge(limit=None, check=lambda m: m.author.id in FRIENDLY_SNEKS)
 
-        row = ScheduleView(self, None)
+        row = ScheduleView(None)
         row.timeout = None
         issueButton = ScheduleButton(self, None, row=0, emoji="📩", label="Create Ticket", style=discord.ButtonStyle.secondary, custom_id="issues_and_suggestions")
         row.add_item(item=issueButton)
@@ -323,7 +323,7 @@ class Schedule(commands.Cog):
                 for event in sorted(events, key=lambda e: datetime.strptime(e["time"], TIME_FORMAT), reverse=True):
                     embed = self.getEventEmbed(event)
 
-                    row = ScheduleView(self, None)
+                    row = ScheduleView(None)
                     row.timeout = None
                     buttons = [
                         ScheduleButton(self, None, row=0, label="Accept", style=discord.ButtonStyle.success, custom_id="accept"),
@@ -590,7 +590,7 @@ class Schedule(commands.Cog):
                     return
 
                 try:
-                    embed = Embed(title="Incoming Ticket", description=f"Reporter: {interaction.user.mention}\n**Message:**\n{concern}", color=0xFF69B4, timestamp=datetime.now())
+                    embed = Embed(title="Incoming Ticket", description=f"Reporter: {interaction.user.mention} - {interaction.user}\n**Message:**\n{concern}", color=0xFF69B4, timestamp=datetime.now())
                     embed.set_footer(text=f"Reporter ID: {interaction.user.id}")
                     [await dev.send(embed=embed, files=([await attachment.to_file() for attachment in response.attachments] if len(response.attachments) > 0 else None)) for dev in devs]
                 except Exception as e:
@@ -1220,7 +1220,7 @@ class Schedule(commands.Cog):
         try:
             embed = Embed(title=SCHEDULE_EVENT_CONFIRM_DELETE.format(f"{event['type'].lower()}: `{event['title']}`"), color=Color.orange())
             deletePrompts = [discord.Message]
-            row = ScheduleView(self, deletePrompts)
+            row = ScheduleView(deletePrompts)
             row.timeout = TIME_ONE_MIN
             buttons = [
                 ScheduleButton(self, message, row=0, label="Delete", style=discord.ButtonStyle.success, custom_id="delete_event_confirm"),
@@ -2315,9 +2315,8 @@ class Schedule(commands.Cog):
 
 
 class ScheduleView(discord.ui.View):
-    def __init__(self, instance, message: list, *args, **kwargs):
+    def __init__(self, message: list, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.instance = instance  # Schedule cog instance
         self.message = message  # Message to reference when view has timeout
 
     async def on_timeout(self: discord.ui.View):
@@ -2328,6 +2327,7 @@ class ScheduleView(discord.ui.View):
             await message.edit(view=self)
         except Exception as e:
             log.exception(e)
+
 
 class ScheduleButton(discord.ui.Button):
     def __init__(self, instance, message, *args, **kwargs):

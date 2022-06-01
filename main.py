@@ -140,13 +140,13 @@ async def analyzeChannel(client, message: discord.Message, channelID:int, attach
         log.warning(f"Removed message in #{client.get_channel(channelID)} from {message.author.display_name} ({message.author}). Message content: {message.content}")
         DEVS = ", ".join([f"**{message.guild.get_member(name)}**" for name in DEVELOPERS if message.guild.get_member(name) is not None])
 
-        issueButtonMessageId = []
+        issueButtonMessageId = [discord.Message]
         row = MainView(issueButtonMessageId)
         row.timeout = TIME_TEN_MIN
         issueButton = MainButton(row=0, emoji="📩", label="Create Ticket", style=discord.ButtonStyle.secondary, custom_id="issue")
         row.add_item(item=issueButton)
         msg = await message.author.send(embed=Embed(title="❌ Message removed", description=f"The message you just posted in <#{channelID}> was deleted because no {attachmentContentType} was detected in it.\n\nIf this is an error, then please ask **staff** to post the {attachmentContentType} for you, and inform: {DEVS} - or simply raise a ticket below!", color=Color.red()), view=row)
-        issueButtonMessageId.append(msg)
+        issueButtonMessageId[0] = msg
     except Exception as e:
         log.exception(f"{message.author} | {e}")
 
@@ -294,7 +294,6 @@ class MainView(discord.ui.View):
                 button.disabled = True
             message = self.message[0]
             await message.edit(view=self)
-            self.message.pop(0)
         except Exception as e:
             log.exception(e)
 

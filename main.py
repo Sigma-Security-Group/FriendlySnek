@@ -276,7 +276,7 @@ async def buttonHandling(button: discord.ui.Button, interaction: discord.Interac
         return
 
     try:
-        embed = Embed(title="Incoming Ticket", description=f"Reporter: {interaction.user.mention} - {interaction.user}\n**Message:**\n{concern}", color=0xFF69B4, timestamp=datetime.now())
+        embed = Embed(title="Incoming Ticket (Msg removal)", description=f"Reporter: {interaction.user.mention} - {interaction.user}\n**Message:**\n{concern}", color=0xFF69B4, timestamp=datetime.now())
         embed.set_footer(text=f"Reporter ID: {interaction.user.id}")
         [await dev.send(embed=embed, files=([await attachment.to_file() for attachment in response.attachments] if len(response.attachments) > 0 else None)) for dev in devs]
     except Exception as e:

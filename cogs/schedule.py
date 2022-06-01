@@ -105,8 +105,11 @@ if not os.path.exists(WORKSHOP_TEMPLATES_DELETED_FILE):
         json.dump([], f, indent=4)
 
 
-with open("./.git/logs/refs/heads/main") as f:
-    commitHash = f.readlines()[-1].split()[1][:7]  # The commit hash that the bot is running on
+try:
+    with open("./.git/logs/refs/heads/main") as f:
+        commitHash = f.readlines()[-1].split()[1][:7]  # The commit hash that the bot is running on (last line, second column, first 7 characters)
+except Exception:
+    pass
 
 
 class Schedule(commands.Cog):

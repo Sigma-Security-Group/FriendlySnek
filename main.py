@@ -169,8 +169,8 @@ async def on_member_join(member: discord.Member) -> None:
     if member.id not in newcomers:
         log.debug(f"Newcomer is no longer in the server {member.display_name} ({member})")
         return
-    currentMembers = await guild.fetch_members().flatten()
-    if member in currentMembers:
+    currentMembers = await guild.fetch_members()
+    if member in currentMembers.flatten():
         updatedMember = await guild.fetch_member(member.id)
         if len(updatedMember.roles) < 2:
             unitStaffRole = guild.get_role(UNIT_STAFF)
@@ -202,8 +202,8 @@ async def on_error(event, *args, **kwargs) -> None:
     log.exception("An error occured!")
 
 @client.event
-async def on_command_error(interaction, error) -> None:
-    log.exception(error)
+async def on_command_error(ctx: discord.ext.commands.Context, error: discord.ext.commands.errors) -> None:
+    log.exception(f"{ctx.author} | {error}")
 
 def devCheck() -> discord.ext.commands.check:
     """ A permissions check for the reload command.

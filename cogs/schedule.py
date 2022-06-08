@@ -2192,15 +2192,15 @@ class Schedule(commands.Cog):
 
     @app_commands.command(name="timestamp")
     @app_commands.guilds(GUILD)
-    @app_commands.describe(time="Your local time", format = "Returns soley the specified format")
-    @app_commands.choices(format = [app_commands.Choice(name=f"[{style}] {description}", value=style) for style, description in TIMESTAMP_STYLES.items()])
-    async def timestamp(self, interaction: discord.Interaction, time: str, format: app_commands.Choice[str] = "None") -> None:
+    @app_commands.describe(time = "Your local time", informative = "Displays all formats, raw text, etc.")
+    @app_commands.choices(informative = [app_commands.Choice(name="Yes plz", value="Very informative")])
+    async def timestamp(self, interaction: discord.Interaction, time: str, informative: app_commands.Choice[str] = "No") -> None:
         """ Convert your local time to a dynamic Discord timestamp.
 
         Parameters:
         interaction (discord.Interaction): The Discord interaction.
         time (str): Inputted time to be converted.
-        format (app_commands.Choice[str]): An optional specific format - if not specified then all formats will be displayed.
+        informative (app_commands.Choice[str]): If the user want's the informative embed - displaying all timestamps with desc, etc.
 
         Returns:
         None.
@@ -2230,19 +2230,18 @@ class Schedule(commands.Cog):
         # Output timestamp
         timeZone = pytz.timezone(memberTimeZones[str(interaction.user.id)])
         time = timeZone.localize(time).astimezone(UTC)
-        embed = Embed(color=Color.green())
-        embed.set_footer(text=f"Local time: {time.strftime(TIME_FORMAT)}\nTime zone: {memberTimeZones[str(interaction.user.id)]}")
-        if format == "None":  # All formats
+        if informative == "No":  # Clean output
+            await interaction.edit_original_message(content=utils.format_dt(time, "F"))
+
+        else:  # Informative output
+            embed = Embed(color=Color.green())
+            embed.set_footer(text=f"Local time: {time.strftime(TIME_FORMAT)}\nTime zone: {memberTimeZones[str(interaction.user.id)]}")
             timestamps = [utils.format_dt(time, style=timestampStyle[0]) for timestampStyle in TIMESTAMP_STYLES.items()]
             embed.add_field(name="Timestamp", value="\n".join(timestamps), inline=True)
             embed.add_field(name="Copy this", value="\n".join([f"`{stamp}`" for stamp in timestamps]), inline=True)
             embed.add_field(name="Description", value="\n".join([f"`{timestampStyle[1]}`" for timestampStyle in TIMESTAMP_STYLES.items()]), inline=True)
-        else:  # One specific format
-            timestamp = utils.format_dt(time, style=format.value)
-            embed.add_field(name="Timestamp", value=timestamp, inline=True)
-            embed.add_field(name="Copy this", value=f"`{timestamp}`", inline=True)
+            await interaction.edit_original_message(embed=embed)
 
-        await interaction.edit_original_message(embed=embed)
 
     @app_commands.command(name="changetimezone")
     @app_commands.guilds(GUILD)

@@ -272,7 +272,7 @@ class Staff(commands.Cog):
                 await ctx.send(embed=embed)
                 break
         else:
-            log.warning(f"No promotion possible for {member.display_name} ({member})!")
+            log.info(f"No promotion possible for {member.display_name} ({member})!")
             embed = Embed(title="❌ No possible promotion", description=f"Member: {member.mention}", color=Color.red())
             embed.set_footer(text=f"ID: {member.id}")
             embed.timestamp = datetime.now()
@@ -308,7 +308,7 @@ class Staff(commands.Cog):
                 await ctx.send(embed=embed)
                 break
         else:
-            log.warning(f"No demotion possible for {member.display_name} ({member})!")
+            log.info(f"No demotion possible for {member.display_name} ({member})!")
             embed = Embed(title="❌ No possible demotion", description=f"Member: {member.mention}", color=Color.red())
             embed.set_footer(text=f"ID: {member.id}")
             embed.timestamp = datetime.now()
@@ -328,7 +328,7 @@ class Staff(commands.Cog):
         """
         member = self._getMember(searchTerm)
         if member is None:
-            log.warning(f"No member found for search term: {searchTerm}")
+            log.info(f"No member found for search term: {searchTerm}")
             log.debug(f"Searching Moderation Logs for search term: {searchTerm}")
             await self.bot.get_channel(STAFF_CHAT).send(f"Searching Moderation Logs for search term: {searchTerm}")
             messageLinksList = []

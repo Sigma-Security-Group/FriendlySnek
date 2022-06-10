@@ -1,16 +1,15 @@
-from secret import DEBUG
 import asyncio
 import pytz
 import secret
 from datetime import datetime
-from ftplib import FTP
+import pysftp
 
 from discord import app_commands, Embed, Color, utils
 from discord.ext import commands
 
 from constants import *
 from __main__ import log, cogsReady
-if DEBUG:
+if secret.DEBUG:
     from constants.debug import *
 
 
@@ -29,7 +28,7 @@ SERVERS = [
         "Name": "SSG - Training & Testing Server",
         "Directory": "/euc-ogs11.armahosts.com_2492/mpmissions",
         "Host": "euc-ogs11.armahosts.com",
-        "Port": 8821
+        "Port": 8822
     }
 ]
 
@@ -58,6 +57,7 @@ class MissionUploader(commands.Cog):
         """ Checks a users' message attachemnts if it complies with the set boundries.
 
         Parameters:
+        server (dict): X.
         dmChannel (discord.DMChannel): The DMChannel the user reponse is from.
         attachments (list[discord.Attachment]): A list of attachments from the user response.
 
@@ -65,13 +65,15 @@ class MissionUploader(commands.Cog):
         bool.
         """
         try:
-            with FTP() as ftp:
-                ftp.connect(host=server["Host"], port=server["Port"])
-                ftp.login(user=secret.FTP_USERNAME, passwd=secret.FTP_PASSWORD)
-                ftp.cwd(server["Directory"])
-                missionFilesOnServer = ftp.nlst()
+            cnopts = pysftp.CnOpts()
+            cnopts.hostkeys = None
+            with pysftp.Connection(server["Host"], port=server["Port"], username=secret.FTP_USERNAME, password=secret.FTP_PASSWORD, cnopts=cnopts, default_path=server["Directory"]) as sftp:
+                missionFilesOnServer = [file.filename for file in sftp.listdir_attr()]
         except Exception as e:
             log.exception(e)
+        finally:
+            sftp.close()
+
         attachmentOk = False
         if len(attachments) == 0:
             embed = Embed(title="❌ You didn't upload a file. Please upload the mission file!", color=Color.red())
@@ -110,7 +112,7 @@ class MissionUploader(commands.Cog):
         serverSelectOk = False
         color = Color.gold()
         while not serverSelectOk:
-            embed = Embed(title="Which server would you like to upload to?", description="\n".join([f"{index}. {server['Name']}" for index, server in enumerate(SERVERS, 1)]), color=color)
+            embed = Embed(title="Which server would you like to upload to?", description="\n".join([f"{index}. {server['Name']}" for index, server in enumerate(SERVERS, start=1)]), color=color)
             embed.set_footer(text=SCHEDULE_CANCEL)
             color = Color.red()
             msg = await interaction.user.send(embed=embed)
@@ -121,7 +123,7 @@ class MissionUploader(commands.Cog):
                 if serverNumber == "cancel":
                     await self.cancelCommand(dmChannel, "Mission uploading")
                     return
-                elif serverNumber in [str(idx[0]) for idx in enumerate(SERVERS, 1)]:
+                elif serverNumber in [str(index[0]) for index in enumerate(SERVERS, start=1)]:
                     serverSelectOk = True
                     server = SERVERS[int(serverNumber) - 1]
             except asyncio.TimeoutError:
@@ -151,27 +153,31 @@ class MissionUploader(commands.Cog):
         attachment = attachments[0]
 
         # Uploading
-        await dmChannel.send(embed=Embed(title="Uploading mission file...", color=Color.green()))
-
-        with open(f"tmp/{attachment.filename}", "wb") as f:
-            await attachment.save(f)
-
-        with FTP() as ftp:
-            ftp.connect(host=server["Host"], port=server["Port"])
-            ftp.login(user=secret.FTP_USERNAME, passwd=secret.FTP_PASSWORD)
-            ftp.cwd(server["Directory"])
-            if not DEBUG:
-                with open(f"tmp/{attachment.filename}", "rb") as f:
-                    ftp.storbinary(f"STOR {attachment.filename}", f)
+        await dmChannel.send(embed=Embed(title="Uploading mission file...", description="Standby, this can take a minute...", color=Color.green()))
 
         filename = attachment.filename
+        with open(f"tmp/{filename}", "wb") as f:
+            await attachment.save(f)
+
+        if not secret.DEBUG:
+            try:
+                cnopts = pysftp.CnOpts()
+                cnopts.hostkeys = None
+                with pysftp.Connection(server["Host"], port=server["Port"], username=secret.FTP_USERNAME, password=secret.FTP_PASSWORD, cnopts=cnopts, default_path=server["Directory"]) as sftp:
+                    with open(f"tmp/{filename}", "rb") as f:
+                        sftp.put(f"tmp/{filename}")
+            except Exception as e:
+                log.exception(e)
+            finally:
+                sftp.close()
+
         utcTime = UTC.localize(datetime.utcnow())
         member = f"{interaction.user.display_name} ({interaction.user})"
 
         with open(MISSIONS_UPLOADED_FILE, "a") as f:
             f.write(f"\nFilename: {filename}\nServer: {server['Name']}\nUTC Time: {utcTime.strftime(TIME_FORMAT)}\nMember: {member}\nMember ID: {interaction.user.id}\n")
 
-        embed = Embed(title="Uploaded mission file", color=Color.blue())
+        embed = Embed(title="Uploaded mission file" + (" (Debug)" if secret.DEBUG else ""), color=Color.blue())
         embed.add_field(name="Filename", value=f"`{filename}`")
         embed.add_field(name="Server", value=f"`{server['Name']}`")
         embed.add_field(name="Time", value=utils.format_dt(pytz.timezone("UTC").localize(datetime.utcnow()).astimezone(UTC), style="F"))
@@ -181,9 +187,9 @@ class MissionUploader(commands.Cog):
         await self.bot.get_channel(BOT).send(embed=embed)  # Send the log message in the BOT channel
 
         log.info(f"{interaction.user.display_name} ({interaction.user}) uploaded the mission file {filename}!")
-        if not DEBUG:
+        if not secret.DEBUG:
             embed = Embed(title="✅ Mission file uploaded", color=Color.green())
-        if DEBUG:
+        else:
             embed = Embed(title="Mission file uploaded", description="Actually... The file did not actually upload hehe.\nBot has debug mode enabled!", color=Color.orange())
         await dmChannel.send(embed=embed)
 

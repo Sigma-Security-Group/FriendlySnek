@@ -5,3 +5,4 @@ colorama
 requests
 python-dateutil
 git+https://github.com/Rapptz/discord.py
+pysftp

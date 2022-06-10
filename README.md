@@ -18,8 +18,6 @@ The file needs to declare the following variables:
 ```py
 TOKEN:str
 TOKEN_DEV:str
-FTP_HOST:str
-FTP_PORT:int
 FTP_USERNAME:str
 FTP_PASSWORD:str
 DEBUG:bool

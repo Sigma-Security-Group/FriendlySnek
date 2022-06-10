@@ -53,46 +53,6 @@ class MissionUploader(commands.Cog):
         """
         await channel.send(embed=Embed(title=f"❌ {abortText} canceled!", color=Color.red()))
 
-    async def checkAttachments(self, server: dict, dmChannel: discord.DMChannel, attachments: list[discord.Attachment]) -> bool:
-        """ Checks a users' message attachemnts if it complies with the set boundries.
-
-        Parameters:
-        server (dict): X.
-        dmChannel (discord.DMChannel): The DMChannel the user reponse is from.
-        attachments (list[discord.Attachment]): A list of attachments from the user response.
-
-        Returns:
-        bool.
-        """
-        try:
-            cnopts = pysftp.CnOpts()
-            cnopts.hostkeys = None
-            with pysftp.Connection(server["Host"], port=server["Port"], username=secret.FTP_USERNAME, password=secret.FTP_PASSWORD, cnopts=cnopts, default_path=server["Directory"]) as sftp:
-                missionFilesOnServer = [file.filename for file in sftp.listdir_attr()]
-        except Exception as e:
-            log.exception(e)
-        finally:
-            sftp.close()
-
-        attachmentOk = False
-        if len(attachments) == 0:
-            embed = Embed(title="❌ You didn't upload a file. Please upload the mission file!", color=Color.red())
-            await dmChannel.send(embed=embed)
-        elif len(attachments) > 1:
-            embed = Embed(title="❌ You supplied too many files. Plese only upload one file!", color=Color.red())
-            await dmChannel.send(embed=embed)
-        else:
-            attachment = attachments[0]
-            if not attachment.filename.endswith(".pbo"):
-                embed = Embed(title="❌ This is not a PBO file. Please upload a PBO file!", color=Color.red())
-                await dmChannel.send(embed=embed)
-            elif attachment.filename in missionFilesOnServer:
-                embed = Embed(title="❌ This file already exists. Please rename the file and reupload it!", color=Color.red())
-                await dmChannel.send(embed=embed)
-            else:
-                attachmentOk = True
-        return attachmentOk
-
     @app_commands.command(name="uploadmission")
     @app_commands.guilds(GUILD)
     @app_commands.checks.has_any_role(UNIT_STAFF, SERVER_HAMSTER, MISSION_BUILDER, CURATOR)
@@ -145,31 +105,64 @@ class MissionUploader(commands.Cog):
                 if file.lower() == "cancel":
                     await self.cancelCommand(dmChannel, "Mission uploading")
                     return
-                attachments = response.attachments
-                attachmentOk = await self.checkAttachments(server, dmChannel, attachments)
             except asyncio.TimeoutError:
                 await dmChannel.send(embed=TIMEOUT_EMBED)
                 return
-        attachment = attachments[0]
 
-        # Uploading
-        await dmChannel.send(embed=Embed(title="Uploading mission file...", description="Standby, this can take a minute...", color=Color.green()))
-
-        filename = attachment.filename
-        with open(f"tmp/{filename}", "wb") as f:
-            await attachment.save(f)
-
-        if not secret.DEBUG:
+            sftp = None
             try:
+                attachments = response.attachments
+                if len(attachments) == 0:
+                    embed = Embed(title="❌ You didn't upload a file. Please upload the mission file!", color=Color.red())
+                    await dmChannel.send(embed=embed)
+                    continue
+                elif len(attachments) > 1:
+                    embed = Embed(title="❌ You supplied too many files. Plese only upload one file!", color=Color.red())
+                    await dmChannel.send(embed=embed)
+                    continue
+
+                attachment = attachments[0]
+                if len(attachments) == 1 and not attachment.filename.endswith(".pbo"):
+                    embed = Embed(title="❌ This is not a PBO file. Please upload a PBO file!", color=Color.red())
+                    await dmChannel.send(embed=embed)
+                    continue
+
                 cnopts = pysftp.CnOpts()
                 cnopts.hostkeys = None
                 with pysftp.Connection(server["Host"], port=server["Port"], username=secret.FTP_USERNAME, password=secret.FTP_PASSWORD, cnopts=cnopts, default_path=server["Directory"]) as sftp:
-                    with open(f"tmp/{filename}", "rb") as f:
-                        sftp.put(f"tmp/{filename}")
+                    missionFilesOnServer = [file.filename for file in sftp.listdir_attr()]
+
+                    if len(attachments) == 1 and attachment.filename in missionFilesOnServer:
+                        embed = Embed(title="❌ This file already exists. Please rename the file and reupload it!", color=Color.red())
+                        await dmChannel.send(embed=embed)
+                        continue
+
+                    else:
+                        attachmentOk = True
+
+                    # Uploading
+                    await dmChannel.send(embed=Embed(title="Uploading mission file...", description="Standby, this can take a minute...", color=Color.green()))
+
+                    # Saving file locally
+                    attachment = attachments[0]
+                    filename = attachment.filename
+                    with open(f"tmp/{filename}", "wb") as f:
+                        await attachment.save(f)
+
+                    if not secret.DEBUG:
+                        try:
+                            # Upload file from tmp
+                            with open(f"tmp/{filename}", "rb") as f:
+                                sftp.put(f"tmp/{filename}")
+                        except Exception as e:
+                            log.exception(f"{interaction.user} | {e}")
+
             except Exception as e:
-                log.exception(e)
+                log.exception(f"{interaction.user} | {e}")
             finally:
-                sftp.close()
+                if sftp is not None:
+                    sftp.close()
+
 
         utcTime = UTC.localize(datetime.utcnow())
         member = f"{interaction.user.display_name} ({interaction.user})"

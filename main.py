@@ -165,17 +165,16 @@ async def on_member_join(member: discord.Member) -> None:
         return
     newcomers.add(member.id)
     log.debug(f"{member} joined the server!")
-    await asyncio.sleep(24 * 60 * 60)  # Seconds
+    await asyncio.sleep(24 * 60 * 60)  # 24 hours in seconds
     if member.id not in newcomers:
         log.debug(f"Newcomer is no longer in the server {member.display_name} ({member})")
         return
-    currentMembers = await guild.fetch_members()
-    if member in currentMembers.flatten():
+
+    if member in [member async for member in guild.fetch_members()]:
         updatedMember = await guild.fetch_member(member.id)
         if len(updatedMember.roles) < 2:
-            unitStaffRole = guild.get_role(UNIT_STAFF)
             log.debug(f"Sending ping reminder to {updatedMember.display_name} ({updatedMember})")
-            await client.get_channel(WELCOME).send(f"{updatedMember.mention} Don't forget to ping {unitStaffRole.name} when you are ready.")
+            await client.get_channel(WELCOME).send(f"{updatedMember.mention} Don't forget to ping @ {guild.get_role(UNIT_STAFF).name} when you are ready!")
         else:
             log.debug(f"Newcomer is no longer in need of an interview {updatedMember.display_name} ({updatedMember})")
     else:

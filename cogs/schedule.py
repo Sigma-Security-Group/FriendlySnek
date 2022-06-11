@@ -368,11 +368,11 @@ class Schedule(commands.Cog):
             with open(MEMBER_TIME_ZONES_FILE, "w") as f:
                 json.dump({}, f, indent=4)
 
-    def getEventEmbed(self, event) -> Embed:
+    def getEventEmbed(self, event: dict) -> Embed:
         """ Generates an embed from the given event.
 
         Parameters:
-        event: X.
+        event (dict): The event.
 
         Returns:
         Embed: The generated embed.
@@ -638,12 +638,12 @@ class Schedule(commands.Cog):
         except Exception as e:
             log.exception(f"{interaction.user} | {e}")
 
-    async def reserveRole(self, member: discord.Member, event) -> None:
+    async def reserveRole(self, member: discord.Member, event: dict) -> None:
         """ Reserving a single role on an event.
 
         Parameters:
         member (discord.Member): The Discord user.
-        event (): X.
+        event (dict): The event.
 
         Returns:
         bool: Returns False on error and canceling - True on success.
@@ -850,12 +850,12 @@ class Schedule(commands.Cog):
 
         return (startTime, endTime)
 
-    async def editEvent(self, author: discord.Member, event, isTemplateEdit: bool) -> bool:
+    async def editEvent(self, author: discord.Member, event: dict, isTemplateEdit: bool) -> bool:
         """ Edits a preexisting event.
 
         Parameters:
         author (discord.Member): The Discord user.
-        event (): X.
+        event (dict): The event.
         isTemplateEdit (bool): A boolean to check if the user is editing a template or not.
 
         Returns:
@@ -2356,7 +2356,7 @@ class ScheduleView(discord.ui.View):
 
 
 class ScheduleButton(discord.ui.Button):
-    def __init__(self, instance, message, *args, **kwargs):
+    def __init__(self, instance, message: Optional[discord.Message], *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.instance = instance
         self.message = message

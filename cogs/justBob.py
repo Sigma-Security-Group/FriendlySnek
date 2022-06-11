@@ -228,14 +228,14 @@ class JustBob(commands.Cog):
         else:
             await interaction.response.send_message("This is not for you!", ephemeral=True)
 
-    def getGameEmbed(self, game) -> Embed:
+    def getGameEmbed(self, game: dict) -> Embed:
         """ Generates the player game embed.
 
         Parameters:
-        game: The player game.
+        game (dict): The player game.
 
         Returns:
-        Embed.
+        Embed: The generated embed.
         """
         guild = self.bot.get_guild(GUILD_ID)
         embed = Embed(title=f"Just Bob (Level {game['levelNum'] + 1})", description=game["description"], color=Color.blue())
@@ -284,15 +284,15 @@ class JustBob(commands.Cog):
 
         return embed
 
-    def makeMove(self, game, direction: tuple) -> bool:
+    def makeMove(self, game: dict, direction: tuple) -> bool:
         """ Processes the player movement request.
 
         Parameters:
-        game: The player game.
+        game (dict): The player game.
         direction (tuple): A tuple containing the movement specifications.
 
         Returns:
-        bool.
+        bool: If level is now completed.
         """
         dl, dr, dc = direction
         levelComplete = False
@@ -340,7 +340,7 @@ class JustBob(commands.Cog):
 
 
 class JustBobView(discord.ui.View):
-    def __init__(self, instance, interaction, messageChangeCounter, *args, **kwargs):
+    def __init__(self, instance, interaction: discord.Interaction, messageChangeCounter, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.instance = instance
         self.interaction = interaction

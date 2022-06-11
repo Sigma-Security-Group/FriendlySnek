@@ -144,15 +144,15 @@ class WorkshopInterest(commands.Cog):
         with open(WORKSHOP_INTEREST_FILE, "w") as f:
             json.dump(workshopInterest, f, indent=4)
 
-    def getWorkshopEmbed(self, guild: discord.Guild, workshop) -> Embed:
+    def getWorkshopEmbed(self, guild: discord.Guild, workshop: dict) -> Embed:
         """ Generates an embed from the given workshop.
 
         Parameters:
         guild (discord.Guild): The target guild.
-        workshop: The workshop event.
+        workshop (dict): The workshop event.
 
         Returns:
-        Embed.
+        Embed: The generated embed.
         """
         embed = Embed(title=workshop["title"], description=workshop["description"], color=Color.dark_blue())
         idsToMembers = lambda ids: [member.display_name for memberId in ids if (member := guild.get_member(memberId)) is not None]
@@ -177,8 +177,8 @@ class WorkshopInterest(commands.Cog):
         """ Handling all workshop interest button interactions.
 
         Parameters:
-        interaction (discord.Interaction): The Discord interaction.
         button (discord.ui.Button): The Discord button.
+        interaction (discord.Interaction): The Discord interaction.
 
         Returns:
         None.

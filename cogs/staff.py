@@ -1,6 +1,6 @@
 from secret import DEBUG
 import re
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 
 from discord import utils, Embed, Color
@@ -138,7 +138,7 @@ class Staff(commands.Cog):
     @commands.command(name="lastactivity")
     @commands.has_any_role(UNIT_STAFF)
     async def lastActivity(self, ctx: commands.context, pingStaff: str = "yes") -> None:
-        """ Get last activity for all members.
+        """ Get last activity (message) for all members.
 
         Parameters:
         ctx (commands.context): The Discord context.
@@ -147,7 +147,7 @@ class Staff(commands.Cog):
         Returns:
         None.
         """
-        log.debug(f"Analyzing members' last activity")
+        log.info(f"Analyzing members' last activity")
         embed = Embed(title="Analyzing members' last activity", description="This may take a while!", color=Color.orange())
         embed.timestamp = datetime.now()
         await ctx.send(embed=embed)
@@ -155,7 +155,7 @@ class Staff(commands.Cog):
         guild = self.bot.get_guild(GUILD_ID)
         lastMessagePerMember = {member: None for member in guild.members}
         embed = Embed(title="Channel checking", color=Color.orange())
-        embed.add_field(name="Channel", value="#Loading...", inline=True)
+        embed.add_field(name="Channel", value="Loading...", inline=True)
         embed.add_field(name="Progress", value="0 / 0", inline=True)
         embed.set_footer(text=f"Run by: {ctx.author}")
         msg = await ctx.send(embed=embed)
@@ -178,17 +178,15 @@ class Staff(commands.Cog):
                         lastMessagePerMember[message.author] = message
                 if len(membersNotChecked) == 0:
                     break
-        log.debug("Message searching done!")
+        log.info("Message searching done!")
         embed = Embed(title="✅ Channel checking", description="Message searching done!", color=Color.green())
         embed.set_footer(text=f"Run by: {ctx.author}")
         embed.timestamp = datetime.now()
         await msg.edit(embed=embed)
-        # Somewhere after this comment raises the error. I can't figure it out cuz I have no idea what this does
-        # > Command raised an exception: TypeError: can't compare offset-naive and offset-aware datetimes
-        lastActivityPerMember = [(f"{member.display_name} ({member})", f"{member.mention}\n{utils.format_dt(lastMessage.created_at.timestamp(), style='F')}\n{lastMessage.jump_url}" if lastMessage is not None else f"{member.mention}\nNOT FOUND")
-        for member, lastMessage in sorted(lastMessagePerMember.items(), key=lambda x: x[1].created_at if x[1] is not None else datetime(1970, 1, 1))]
+        lastActivityPerMember = [(f"{member.display_name} ({member})", f"{member.mention}\n{utils.format_dt(lastMessage.created_at, style='F')}\n[Last Message]({lastMessage.jump_url})" if lastMessage is not None else f"{member.mention}\nNot Found!")
+        for member, lastMessage in sorted(lastMessagePerMember.items(), key=lambda x: x[1].created_at if x[1] is not None else datetime(1970, 1, 1).replace(tzinfo=timezone.utc))]
         for i in range(0, len(lastActivityPerMember), 25):
-            embed = Embed(title=f"Last activity per member ({i + 1} - {min(i + 25, len(lastActivityPerMember))} / {len(lastActivityPerMember)})")
+            embed = Embed(title=f"Last activity per member ({i + 1} - {min(i + 25, len(lastActivityPerMember))} / {len(lastActivityPerMember)})", color=Color.dark_green())
             for j in range(i, min(i + 25, len(lastActivityPerMember))):
                 embed.add_field(name=lastActivityPerMember[j][0], value=lastActivityPerMember[j][1], inline=False)
             await ctx.send(embed=embed)

@@ -6,6 +6,7 @@ import re
 import pytz
 import random
 
+from typing import Optional
 from copy import deepcopy
 from datetime import datetime, timedelta
 from dateutil.parser import parse as datetimeParse
@@ -144,11 +145,11 @@ class Schedule(commands.Cog):
         await channel.send(embed=Embed(title=f"❌ {abortText} canceled!", color=Color.red()))
 
     async def saveEventToHistory(self, event, autoDeleted=False) -> None:
-        """ X.
+        """ Saves a specific event to history.
 
         Parameters:
-        event: X.
-        autoDeleted (bool): X.
+        event: The specified event.
+        autoDeleted (bool): If the event was automatically deleted.
 
         Returns:
         None.
@@ -200,7 +201,6 @@ class Schedule(commands.Cog):
         """
         while not self.bot.ready:
             await asyncio.sleep(1)
-        log.debug(LOG_CHECKING.format("to auto delete events"))
         try:
             with open(EVENTS_FILE) as f:
                 events = json.load(f)
@@ -228,7 +228,7 @@ class Schedule(commands.Cog):
 
     @tasks.loop(minutes=10)
     async def checkAcceptedReminder(self) -> None:
-        """ X.
+        """ A task that checks if players have accepted the event and joined the voice channel.
 
         Parameters:
         None.
@@ -239,7 +239,7 @@ class Schedule(commands.Cog):
         while not self.bot.ready:
             await asyncio.sleep(1)
         guild = self.bot.get_guild(GUILD_ID)
-        log.debug(LOG_CHECKING.format("for accepted reminders"))
+        log.debug("Checking for accepted reminders...")
         try:
             with open(EVENTS_FILE) as f:
                 events = json.load(f)
@@ -279,7 +279,14 @@ class Schedule(commands.Cog):
     @app_commands.guilds(GUILD)
     @app_commands.checks.has_any_role(UNIT_STAFF, SERVER_HAMSTER, CURATOR)
     async def refreshSchedule(self, interaction: discord.Interaction) -> None:
-        """ Refreshes the schedule - Use if an event was deleted without using the reaction. """
+        """ Refreshes the schedule - Use if an event was deleted without using the reaction.
+
+        Parameters:
+        interaction (discord.Interaction): The Discord interaction.
+
+        Returns:
+        None.
+        """
         await interaction.response.send_message(f"Refreshing <#{SCHEDULE}>...")
         log.info(f"{interaction.user.display_name} ({interaction.user}) is refreshing the schedule...")
         await self.updateSchedule()
@@ -345,7 +352,8 @@ class Schedule(commands.Cog):
                         ScheduleButton(self, None, row=1, label="Edit", style=discord.ButtonStyle.secondary, custom_id="edit"),
                         ScheduleButton(self, None, row=1, label="Delete", style=discord.ButtonStyle.secondary, custom_id="delete")
                     ])
-                    [row.add_item(item=button) for button in buttons]
+                    for button in buttons:
+                        row.add_item(item=button)
 
                     msg = await channel.send(embed=embed, view=row)
                     event["messageId"] = msg.id
@@ -367,7 +375,7 @@ class Schedule(commands.Cog):
         event: X.
 
         Returns:
-        Embed.
+        Embed: The generated embed.
         """
         guild = self.bot.get_guild(GUILD_ID)
 
@@ -416,12 +424,13 @@ class Schedule(commands.Cog):
 
         return embed
 
-    async def buttonHandling(self, message, button: discord.ui.Button, interaction: discord.Interaction) -> None:
+    async def buttonHandling(self, message: Optional[discord.Message], button: discord.ui.Button, interaction: discord.Interaction) -> None:
         """ Handling all schedule button interactions.
 
         Parameters:
-        interaction (discord.Interaction): The Discord interaction.
+        message (None | discord.Message): If the message is provided, it's used along with some specific button action.
         button (discord.ui.Button): The Discord button.
+        interaction (discord.Interaction): The Discord interaction.
 
         Returns:
         None.
@@ -521,9 +530,18 @@ class Schedule(commands.Cog):
                 event = event[0]
                 if interaction.user.id == event["authorId"] or any(role.id == UNIT_STAFF for role in interaction.user.roles):
                     await interaction.response.send_message(RESPONSE_GOTO_DMS.format(interaction.user.dm_channel.jump_url), ephemeral=True)
-                    eventDeleted = await self.deleteEvent(interaction.user, interaction.message, event)
-                    if eventDeleted:
-                        events.remove(event)
+                    embed = Embed(title=SCHEDULE_EVENT_CONFIRM_DELETE.format(f"{event['type'].lower()}: `{event['title']}`"), color=Color.orange())
+                    deletePrompts = [discord.Message]
+                    row = ScheduleView(deletePrompts)
+                    row.timeout = TIME_ONE_MIN
+                    buttons = [
+                        ScheduleButton(self, interaction.message, row=0, label="Delete", style=discord.ButtonStyle.success, custom_id="delete_event_confirm"),
+                        ScheduleButton(self, interaction.message, row=0, label="Cancel", style=discord.ButtonStyle.danger, custom_id="delete_event_cancel"),
+                    ]
+                    for button in buttons:
+                        row.add_item(item=button)
+                    message = await interaction.user.send(embed=embed, view=row)
+                    deletePrompts[0] = message
                 else:
                     await interaction.response.send_message(RESPONSE_UNALLOWED.format("delete"), ephemeral=True)
                     return
@@ -537,6 +555,7 @@ class Schedule(commands.Cog):
                 event = [event for event in events if event["messageId"] == message.id][0]
                 await message.delete()
                 try:
+                    log.info(f"{interaction.user.display_name} ({interaction.user}) deleted the event: {event['title']}")
                     await interaction.user.dm_channel.send(embed=Embed(title=f"✅ {event['type']} deleted!", color=Color.green()))
 
                     utcNow = UTC.localize(datetime.utcnow())
@@ -624,7 +643,7 @@ class Schedule(commands.Cog):
 
         Parameters:
         member (discord.Member): The Discord user.
-        event: X.
+        event (): X.
 
         Returns:
         bool: Returns False on error and canceling - True on success.
@@ -704,7 +723,7 @@ class Schedule(commands.Cog):
         return True
 
     async def eventTime(self, interaction: discord.Interaction, dmChannel: discord.DMChannel, eventType: str, collidingEventTypes: tuple, delta: timedelta) -> tuple:
-        """ X.
+        """ Handles the timpe part of scheduling an event; prompts, collision, etc.
 
         Parameters:
         interaction (discord.Interaction): The Discord interaction.
@@ -714,7 +733,7 @@ class Schedule(commands.Cog):
         delta (timedelta): Difference in time from start to end.
 
         Returns:
-        startTime, endTime (tuple): A tuple which contains the event start time and end time.
+        tuple: A tuple which contains the event start time and end time.
         """
         with open(MEMBER_TIME_ZONES_FILE) as f:
             memberTimeZones = json.load(f)
@@ -836,7 +855,7 @@ class Schedule(commands.Cog):
 
         Parameters:
         author (discord.Member): The Discord user.
-        event: X.
+        event (): X.
         isTemplateEdit (bool): A boolean to check if the user is editing a template or not.
 
         Returns:
@@ -1240,33 +1259,6 @@ class Schedule(commands.Cog):
             embed = Embed(title=f"✅ Template edited!", color=Color.green())
             await dmChannel.send(embed=embed)
             log.info(f"{author.display_name} ({author}) edited the template: {event['name']}!")
-
-    async def deleteEvent(self, author: discord.Member, message: discord.Message, event) -> bool:
-        """ X.
-
-        Parameters:
-        member (discord.Member): The Discord user.
-        message (discord.Message): The event message.
-        event: X.
-
-        Returns:
-        bool.
-        """
-        try:
-            embed = Embed(title=SCHEDULE_EVENT_CONFIRM_DELETE.format(f"{event['type'].lower()}: `{event['title']}`"), color=Color.orange())
-            deletePrompts = [discord.Message]
-            row = ScheduleView(deletePrompts)
-            row.timeout = TIME_ONE_MIN
-            buttons = [
-                ScheduleButton(self, message, row=0, label="Delete", style=discord.ButtonStyle.success, custom_id="delete_event_confirm"),
-                ScheduleButton(self, message, row=0, label="Cancel", style=discord.ButtonStyle.danger, custom_id="delete_event_cancel"),
-            ]
-            [row.add_item(item=button) for button in buttons]
-            message = await author.send(embed=embed, view=row)
-            deletePrompts[0] = message
-        except Exception as e:
-            log.exception(f"{author} | {e}")
-            return False
 
     @app_commands.command(name="bop")
     @app_commands.guilds(GUILD)
@@ -2349,7 +2341,7 @@ class Schedule(commands.Cog):
 
 
 class ScheduleView(discord.ui.View):
-    def __init__(self, message: list, *args, **kwargs):
+    def __init__(self, message: Optional[list[discord.Message]], *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.message = message  # Message to reference when view has timeout
 

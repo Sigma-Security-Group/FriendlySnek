@@ -137,7 +137,8 @@ class WorkshopInterest(commands.Cog):
                 WorkshopInterestButtons(self, row=0, label="Interested", style=discord.ButtonStyle.success, custom_id="add"),
                 WorkshopInterestButtons(self, row=0, label="Not Interested", style=discord.ButtonStyle.danger, custom_id="remove")
             ]
-            [row.add_item(item=button) for button in buttons]
+            for button in buttons:
+                row.add_item(item=button)
             msg = await channel.send(embed=embed, view=row)
             workshop["messageId"] = msg.id
         with open(WORKSHOP_INTEREST_FILE, "w") as f:

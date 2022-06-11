@@ -21,7 +21,7 @@ if not os.path.exists("./secret.py"):
         f.write(  # Write secret.py template
             "TOKEN:str = \"\""
             "\nTOKEN_DEV:str = \"\""
-            "\nFTP_USERNAME:str = \"\"  # E.g. Froggi"
+            "\nFTP_USERNAME:str = \"\""
             "\nFTP_PASSWORD:str = \"\""
             "\nDEBUG:bool = True"
             "\n"
@@ -220,14 +220,7 @@ def devCheck() -> discord.ext.commands.check:
 @client.command()
 @devCheck()
 async def reload(ctx: commands.context) -> None:
-    """ Reload bot cogs - Dev only.
-
-    Parameters:
-    ctx (commands.context): The Discord context.
-
-    Returns:
-    None.
-    """
+    """ Reload bot cogs - Devs only. """
     log.info(f"{ctx.author.display_name} ({ctx.author}) Reloading bot cogs...")
     if ctx.author.id not in DEVELOPERS:
         return

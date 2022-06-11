@@ -15,8 +15,6 @@ ERROR_TIMEOUT = ":clock3: You were too slow, try again!"
 ## Logging
 LOG_COG_READY = "{0} cog is ready!"
 LOG_COULDNT_START = "Couldn't start {0}!"
-LOG_CHECKING = "Checking {0}..."
-
 
 ## Time in seconds
 TIME_ONE_MIN = 60  # Short

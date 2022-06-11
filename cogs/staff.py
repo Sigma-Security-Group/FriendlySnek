@@ -22,13 +22,13 @@ class Staff(commands.Cog):
         cogsReady["staff"] = True
 
     def _getMember(self, searchTerm: str) -> Optional[discord.Member]:
-        """ Serach for a discord.Member with a wide support query.
+        """ Searches for a discord.Member - supports a lot of different serach terms.
 
         Parameters:
         searchTerm (str): Search query for a discord.Member.
 
         Returns:
-        None | discord.Member: If the provided serach term found a member, it will return one discord.Member otherwise returns None.
+        None | discord.Member: Returns a discord.Member if found, otherwise None.
         """
         member = None
         for member_ in self.bot.get_guild(GUILD_ID).members:
@@ -47,108 +47,85 @@ class Staff(commands.Cog):
 
     @commands.command(name="getmember")
     @commands.has_any_role(UNIT_STAFF)
-    async def getMember(self, ctx: commands.context, *, searchTerm: str) -> None:
-        """ Get a member.
+    async def getMember(self, ctx: commands.context, *, member: str) -> None:
+        """ Get detailed information about a guild member. """
 
-        Parameters:
-        ctx (commands.context): The Discord context.
-        searchTerm (str): Search query for a discord.Member.
-
-        Returns:
-        None.
-        """
-        member = self._getMember(searchTerm)
-        if member is None:
-            await ctx.send(f"No member found for search term: `{searchTerm}`")
+        targetMember = self._getMember(member)
+        if targetMember is None:
+            await ctx.send(f"No member found for search term: `{member}`")
         else:
-            embed = Embed(description=member.mention, color=member.color)
-            avatar = member.avatar if member.avatar else member.display_avatar
-            embed.set_author(icon_url=member.display_avatar, name=member)
+            embed = Embed(description=targetMember.mention, color=targetMember.color)
+            avatar = targetMember.avatar if targetMember.avatar else targetMember.display_avatar
+            embed.set_author(icon_url=targetMember.display_avatar, name=targetMember)
             embed.set_thumbnail(url=avatar)
-            embed.add_field(name="Joined", value=utils.format_dt(member.joined_at, style="f"), inline=True)
-            embed.add_field(name="Registered", value=utils.format_dt(member.created_at, style="f"), inline=True)
+            embed.add_field(name="Joined", value=utils.format_dt(targetMember.joined_at, style="f"), inline=True)
+            embed.add_field(name="Registered", value=utils.format_dt(targetMember.created_at, style="f"), inline=True)
 
-            roles = [role.mention for role in member.roles]  # Fetch all member roles
+            roles = [role.mention for role in targetMember.roles]  # Fetch all member roles
             roles.pop(0)  # Remove @everyone role
             roles = roles[::-1]  # Reverse the list
-            embed.add_field(name=f"Roles [{len(member.roles) - 1}]", value=" ".join(roles) if len(roles) > 0 else "None", inline=False)
+            embed.add_field(name=f"Roles [{len(targetMember.roles) - 1}]", value=" ".join(roles) if len(roles) > 0 else "None", inline=False)
 
             KEY_PERMISSIONS = {
-                "Administrator": member.guild_permissions.administrator,
-                "Manage Server": member.guild_permissions.manage_guild,
-                "Manage Roles": member.guild_permissions.manage_roles,
-                "Manage Channels": member.guild_permissions.manage_channels,
-                "Manage Messages": member.guild_permissions.manage_messages,
-                "Manage Webhooks": member.guild_permissions.manage_webhooks,
-                "Manage Nicknames": member.guild_permissions.manage_nicknames,
-                "Manage Emojis": member.guild_permissions.manage_emojis,
-                "Kick Members": member.guild_permissions.kick_members,
-                "Ban Members": member.guild_permissions.ban_members,
-                "Mention Everyone": member.guild_permissions.mention_everyone
+                "Administrator": targetMember.guild_permissions.administrator,
+                "Manage Server": targetMember.guild_permissions.manage_guild,
+                "Manage Roles": targetMember.guild_permissions.manage_roles,
+                "Manage Channels": targetMember.guild_permissions.manage_channels,
+                "Manage Messages": targetMember.guild_permissions.manage_messages,
+                "Manage Webhooks": targetMember.guild_permissions.manage_webhooks,
+                "Manage Nicknames": targetMember.guild_permissions.manage_nicknames,
+                "Manage Emojis": targetMember.guild_permissions.manage_emojis,
+                "Kick Members": targetMember.guild_permissions.kick_members,
+                "Ban Members": targetMember.guild_permissions.ban_members,
+                "Mention Everyone": targetMember.guild_permissions.mention_everyone
             }
 
             PERMISSIONS = [name for name, perm in KEY_PERMISSIONS.items() if perm]
             if len(PERMISSIONS) > 0:
                 embed.add_field(name="Key Permissions", value=", ".join(PERMISSIONS), inline=False)
 
-            if member.id == member.guild.owner_id:
+            if targetMember.id == targetMember.guild.owner_id:
                 embed.add_field(name="Acknowledgements", value="Server Owner", inline=False)
 
-            embed.set_footer(text=f"ID: {member.id}")
+            embed.set_footer(text=f"ID: {targetMember.id}")
             embed.timestamp = datetime.now()
             await ctx.send(embed=embed)
 
     @commands.command(name="purge")
     @commands.has_any_role(UNIT_STAFF)
-    async def purgeMessagesFromMember(self, ctx: commands.context, *, searchTerm: str) -> None:
-        """ Purges all messages from a member.
-
-        Parameters:
-        ctx (commands.context): The Discord context.
-        searchTerm (str): Search query for a discord.Member.
-
-        Returns:
-        None.
-        """
-        member = self._getMember(searchTerm)
-        if member is None:
-            log.info(f"No member found for search term: {searchTerm}")
-            await ctx.send(embed=Embed(title="❌ No member found", description=f"Searched for: `{searchTerm}`", color=Color.red()))
+    async def purgeMessagesFromMember(self, ctx: commands.context, *, member: str) -> None:
+        """ Purges all messages from a specific member. """
+        tagetMember = self._getMember(member)
+        if tagetMember is None:
+            log.info(f"No member found for search term: {member}")
+            await ctx.send(embed=Embed(title="❌ No member found", description=f"Searched for: `{member}`", color=Color.red()))
             return
 
-        log.critical(f"\n---------\n{ctx.author.display_name} ({ctx.author}) is purging all messages from {searchTerm}: {member.display_name} ({member})\n---------")
-        embed = Embed(title="Purging messages", description=f"Member: {member.mention}\nThis may take a while!", color=Color.orange())
-        embed.set_footer(text=f"ID: {member.id}")
+        log.critical(f"\n---------\n{ctx.author.display_name} ({ctx.author}) is purging all messages from {member}: {tagetMember.display_name} ({tagetMember})\n---------")
+        embed = Embed(title="Purging messages", description=f"Member: {tagetMember.mention}\nThis may take a while!", color=Color.orange())
+        embed.set_footer(text=f"ID: {tagetMember.id}")
         embed.timestamp = datetime.now()
         await ctx.send(embed=embed)
 
         guild = self.bot.get_guild(GUILD_ID)
         for channel in guild.text_channels:
-            log.debug(f"Purging {member.display_name} ({member}) messages in {channel.mention}.")
+            log.debug(f"Purging {tagetMember.display_name} ({tagetMember}) messages in {channel.mention}.")
             try:
-                await channel.purge(limit=None, check=lambda m: m.author.id == member.id)
+                await channel.purge(limit=None, check=lambda m: m.author.id == tagetMember.id)
             except Exception:
-                log.warning(f"Could not purge {member.display_name} ({member}) messages from {channel.mention}!")
-        log.info(f"Done purging {member.display_name} ({member}) messages!")
-        embed = Embed(title="✅ Messages purged", description=f"Member: {member.mention}", color=Color.green())
-        embed.set_footer(text=f"ID: {member.id}")
+                log.warning(f"Could not purge {tagetMember.display_name} ({tagetMember}) messages from {channel.mention}!")
+        log.info(f"Done purging {tagetMember.display_name} ({tagetMember}) messages!")
+        embed = Embed(title="✅ Messages purged", description=f"Member: {tagetMember.mention}", color=Color.green())
+        embed.set_footer(text=f"ID: {tagetMember.id}")
         embed.timestamp = datetime.now()
         await ctx.send(embed=embed)
 
     @commands.command(name="lastactivity")
     @commands.has_any_role(UNIT_STAFF)
     async def lastActivity(self, ctx: commands.context, pingStaff: str = "yes") -> None:
-        """ Get last activity (message) for all members.
-
-        Parameters:
-        ctx (commands.context): The Discord context.
-        pingStaff (str): A string boolean to decide if to ping staff on command completion.
-
-        Returns:
-        None.
-        """
+        """ Get last activity (message) for all members. """
         log.info(f"Analyzing members' last activity")
-        embed = Embed(title="Analyzing members' last activity", description="This may take a while!", color=Color.orange())
+        embed = Embed(title="Analyzing members' last activity", color=Color.orange())
         embed.timestamp = datetime.now()
         await ctx.send(embed=embed)
 
@@ -179,7 +156,7 @@ class Staff(commands.Cog):
                 if len(membersNotChecked) == 0:
                     break
         log.info("Message searching done!")
-        embed = Embed(title="✅ Channel checking", description="Message searching done!", color=Color.green())
+        embed = Embed(title="✅ Channel checking", color=Color.green())
         embed.set_footer(text=f"Run by: {ctx.author}")
         embed.timestamp = datetime.now()
         await msg.edit(embed=embed)
@@ -190,31 +167,23 @@ class Staff(commands.Cog):
             for j in range(i, min(i + 25, len(lastActivityPerMember))):
                 embed.add_field(name=lastActivityPerMember[j][0], value=lastActivityPerMember[j][1], inline=False)
             await ctx.send(embed=embed)
-        if pingStaff in ("y", "yes", "ping"):
-            await ctx.send(f"{guild.get_role(UNIT_STAFF).mention} Last activity analysis has finished")
+        if pingStaff.lower() in ("y", "ye", "yes", "ping"):
+            await ctx.send(f"{guild.get_role(UNIT_STAFF).mention} Last activity analysis has finished!")
 
     @commands.command(name="lastactivitymember")
     @commands.has_any_role(UNIT_STAFF)
-    async def lastActivityForMember(self, ctx: commands.context, *, searchTerm: str) -> None:
-        """ Get last activity for member.
-
-        Parameters:
-        ctx (commands.context): The Discord context.
-        searchTerm (str): Search query for a discord.Member.
-
-        Returns:
-        None.
-        """
-        member = self._getMember(searchTerm)
-        if member is None:
-            log.info(f"No member found for search term: {searchTerm}!")
-            await ctx.send(embed=Embed(title="❌ No member found", description=f"Searched for: `{searchTerm}`", color=Color.red()))
+    async def lastActivityForMember(self, ctx: commands.context, *, member: str) -> None:
+        """ Get last activity (message) for a specific member. """
+        targetMember = self._getMember(member)
+        if targetMember is None:
+            log.info(f"No member found for search term: {member}!")
+            await ctx.send(embed=Embed(title="❌ No member found", description=f"Searched for: `{member}`", color=Color.red()))
             return
         guild = self.bot.get_guild(GUILD_ID)
         lastMessage = None
         for channel in guild.text_channels:
             try:
-                lastMessageInChannel = await channel.history(limit=None).find(lambda m: m.author.id == member.id)
+                lastMessageInChannel = await channel.history(limit=None).find(lambda m: m.author.id == targetMember.id)
                 if lastMessageInChannel is None:
                     continue
                 if lastMessage is None or lastMessageInChannel.created_at > lastMessage.created_at:
@@ -223,156 +192,132 @@ class Staff(commands.Cog):
                 log.warning(f"Could not search messages from channel #{channel.name}!")
         log.debug("Done searching messages!")
         if lastMessage is None:
-            embed = Embed(title="❌ Last activity", description=f"Activity not found!\nMember: {member.mention}", color=Color.red())
+            embed = Embed(title="❌ Last activity", description=f"Activity not found!\nMember: {targetMember.mention}", color=Color.red())
             embed.timestamp = datetime.now()
             await ctx.send(embed=embed)
         else:
-            embed = Embed(title="✅ Last activity", description=f"Activity found: {utils.format_dt(lastMessage.created_at.timestamp(), style='F')}!\nMember: {member.mention}", color=Color.green())
+            embed = Embed(title="✅ Last activity", description=f"Activity found: {utils.format_dt(lastMessage.created_at.timestamp(), style='F')}!\nMember: {targetMember.mention}", color=Color.green())
             embed.timestamp = datetime.now()
             await ctx.send(embed=embed)
 
-    @commands.command()
+    @commands.command(name="promote")
     @commands.has_any_role(UNIT_STAFF)
-    async def promote(self, ctx: commands.context, *, searchTerm: str) -> None:
-        """ Promote a member to the next rank.
-
-        Parameters:
-        ctx (commands.context): The Discord context.
-        searchTerm (str): Search query for a discord.Member.
-
-        Returns:
-        None.
-        """
-        member = self._getMember(searchTerm)
-        if member is None:
-            log.info(f"No member found for search term: {searchTerm}!")
-            await ctx.send(embed=Embed(title="❌ No member found", description=f"Searched for: `{searchTerm}`", color=Color.red()))
+    async def promote(self, ctx: commands.context, *, member: str) -> None:
+        """ Promote a member to the next rank. """
+        targetMember = self._getMember(member)
+        if targetMember is None:
+            log.info(f"No member found for search term: {member}!")
+            await ctx.send(embed=Embed(title="❌ No member found", description=f"Searched for: `{member}`", color=Color.red()))
             return
         guild = self.bot.get_guild(GUILD_ID)
-        for role in member.roles:
+        for role in targetMember.roles:
             if role.id in PROMOTIONS:
                 newRole = guild.get_role(PROMOTIONS[role.id])
                 # Promote member to Technician if they are a SME
                 if newRole.id == OPERATOR:
                     isSME = False
-                    for role_ in member.roles:
+                    for role_ in targetMember.roles:
                         if role_.id in SME_ROLES:
                             isSME = True
                             break
                     if isSME:
                         newRole = guild.get_role(TECHNICIAN)
-                log.info(f"Promoting {member.display_name} ({member}) from {role} to {newRole}!")
-                await member.remove_roles(role)
-                await member.add_roles(newRole)
-                embed = Embed(title="✅ Member promoted", description=f"{member.mention} promoted from {role.mention} to {newRole.mention}!", color=Color.green())
-                embed.set_footer(text=f"ID: {member.id}")
+                log.info(f"Promoting {targetMember.display_name} ({targetMember}) from {role} to {newRole}!")
+                await targetMember.remove_roles(role)
+                await targetMember.add_roles(newRole)
+                embed = Embed(title="✅ Member promoted", description=f"{targetMember.mention} promoted from {role.mention} to {newRole.mention}!", color=Color.green())
+                embed.set_footer(text=f"ID: {targetMember.id}")
                 embed.timestamp = datetime.now()
                 await ctx.send(embed=embed)
                 break
         else:
-            log.info(f"No promotion possible for {member.display_name} ({member})!")
-            embed = Embed(title="❌ No possible promotion", description=f"Member: {member.mention}", color=Color.red())
-            embed.set_footer(text=f"ID: {member.id}")
+            log.info(f"No promotion possible for {targetMember.display_name} ({targetMember})!")
+            embed = Embed(title="❌ No possible promotion", description=f"Member: {targetMember.mention}", color=Color.red())
+            embed.set_footer(text=f"ID: {targetMember.id}")
             embed.timestamp = datetime.now()
             await ctx.send(embed=embed)
 
-    @commands.command()
+    @commands.command(name="demote")
     @commands.has_any_role(UNIT_STAFF)
-    async def demote(self, ctx: commands.context, *, searchTerm: str) -> None:
-        """ Demote a member to the previous rank.
-
-        Parameters:
-        ctx (commands.context): The Discord context.
-        searchTerm (str): Search query for a discord.Member.
-
-        Returns:
-        None.
-        """
-        member = self._getMember(searchTerm)
-        if member is None:
-            log.info(f"No member found for search term: {searchTerm}")
-            await ctx.send(embed=Embed(title="❌ No member found", description=f"Searched for: `{searchTerm}`", color=Color.red()))
+    async def demote(self, ctx: commands.context, *, member: str) -> None:
+        """ Demote a member to the previous rank. """
+        targetMember = self._getMember(member)
+        if targetMember is None:
+            log.info(f"No member found for search term: {member}")
+            await ctx.send(embed=Embed(title="❌ No member found", description=f"Searched for: `{member}`", color=Color.red()))
             return
         guild = self.bot.get_guild(GUILD_ID)
-        for role in member.roles:
+        for role in targetMember.roles:
             if role.id in DEMOTIONS:
                 newRole = guild.get_role(DEMOTIONS[role.id])
-                log.info(f"Demoting {member.display_name} ({member}) from {role} to {newRole}!")
-                await member.remove_roles(role)
-                await member.add_roles(newRole)
-                embed = Embed(title="✅ Member demoted", description=f"{member.mention} demoted from {role.mention} to {newRole.mention}!", color=Color.green())
-                embed.set_footer(text=f"ID: {member.id}")
+                log.info(f"Demoting {targetMember.display_name} ({targetMember}) from {role} to {newRole}!")
+                await targetMember.remove_roles(role)
+                await targetMember.add_roles(newRole)
+                embed = Embed(title="✅ Member demoted", description=f"{targetMember.mention} demoted from {role.mention} to {newRole.mention}!", color=Color.green())
+                embed.set_footer(text=f"ID: {targetMember.id}")
                 embed.timestamp = datetime.now()
                 await ctx.send(embed=embed)
                 break
         else:
-            log.info(f"No demotion possible for {member.display_name} ({member})!")
-            embed = Embed(title="❌ No possible demotion", description=f"Member: {member.mention}", color=Color.red())
-            embed.set_footer(text=f"ID: {member.id}")
+            log.info(f"No demotion possible for {targetMember.display_name} ({targetMember})!")
+            embed = Embed(title="❌ No possible demotion", description=f"Member: {targetMember.mention}", color=Color.red())
+            embed.set_footer(text=f"ID: {targetMember.id}")
             embed.timestamp = datetime.now()
             await ctx.send(embed=embed)
 
     @commands.command(name="searchmodlogs")
     @commands.has_any_role(UNIT_STAFF)
-    async def searchModLogs(self, ctx: commands.context, *, searchTerm: str) -> None:
-        """ Search through the moderation logs.
-
-        Parameters:
-        ctx (commands.context): The Discord context.
-        searchTerm (str): Search query for a discord.Member.
-
-        Returns:
-        None.
-        """
-        member = self._getMember(searchTerm)
-        if member is None:
-            log.info(f"No member found for search term: {searchTerm}")
-            log.debug(f"Searching Moderation Logs for search term: {searchTerm}")
-            await self.bot.get_channel(STAFF_CHAT).send(f"Searching Moderation Logs for search term: {searchTerm}")
+    async def searchModLogs(self, ctx: commands.context, *, member: str) -> None:
+        """ Search through the moderation logs. """
+        targetMember = self._getMember(member)
+        if targetMember is None:
+            log.info(f"No member found for search term: {member}")
+            log.debug(f"Searching Moderation Logs for search term: {member}")
+            await self.bot.get_channel(STAFF_CHAT).send(f"Searching Moderation Logs for search term: {member}")
             messageLinksList = []
             numMessages = 0
             async for message in self.bot.get_channel(MODERATION_LOG).history(limit=None):
                 numMessages += 1
-                if searchTerm in message.content.lower():
+                if member in message.content.lower():
                     messageLinksList.append(message.jump_url)
             log.debug(f"Checked {numMessages} message{'s' * (numMessages != 1)}")
             if len(messageLinksList) > 0:
                 messageLinks = "\n".join(messageLinksList[::-1])
-                await self.bot.get_channel(STAFF_CHAT).send(f"Moderation Logs related to search term: {searchTerm}\n{messageLinks}")
+                await self.bot.get_channel(STAFF_CHAT).send(f"Moderation Logs related to search term: {member}\n{messageLinks}")
             else:
-                await self.bot.get_channel(STAFF_CHAT).send(f"No Moderation Logs related to search term: {searchTerm}")
+                await self.bot.get_channel(STAFF_CHAT).send(f"No Moderation Logs related to search term: {member}")
         else:
-            log.debug(f"Searching Moderation Logs for {member.display_name} ({member})")
-            await self.bot.get_channel(STAFF_CHAT).send(f"Searching Moderation Logs for {member.display_name} ({member})")
+            log.debug(f"Searching Moderation Logs for {targetMember.display_name} ({targetMember})")
+            await self.bot.get_channel(STAFF_CHAT).send(f"Searching Moderation Logs for {targetMember.display_name} ({targetMember})")
             messageLinksList = []
             numMessages = 0
             async for message in self.bot.get_channel(MODERATION_LOG).history(limit=None):
                 numMessages += 1
                 try:
-                    if (member.display_name.lower() in message.content.lower() and not re.match(r"\w", message.content.lower()[message.content.lower().index(member.display_name.lower()) - 1]) and not re.match(r"\w", message.content.lower()[message.content.lower().index(member.display_name.lower()) + len(member.display_name)])) or\
-                       (member.name.lower() in message.content.lower() and not re.match(r"\w", message.content.lower()[message.content.lower().index(member.name.lower()) - 1]) and not re.match(r"\w", message.content.lower()[message.content.lower().index(member.name.lower()) + len(member.name)])) or\
-                       (member.mention in message.content and not re.match(r"\w", message.content[message.content.index(member.mention) - 1]) and not re.match(r"\w", message.content[message.content.index(member.mention) + len(member.mention)])) or\
-                       (member.mention.replace("<@", "<@!") in message.content and not re.match(r"\w", message.content[message.content.index(member.mention.replace("<@", "<@!")) - 1]) and not re.match(r"\w", message.content[message.content.index(member.mention.replace("<@", "<@!")) + len(member.mention.replace("<@", "<@!"))])) or\
-                       (member.mention.replace("<@!", "<@") in message.content and not re.match(r"\w", message.content[message.content.index(member.mention.replace("<@!", "<@")) - 1]) and not re.match(r"\w", message.content[message.content.index(member.mention.replace("<@!", "<@")) + len(member.mention.replace("<@!", "<@"))])) or\
-                       str(member.id) in message.content:
+                    if (targetMember.display_name.lower() in message.content.lower() and not re.match(r"\w", message.content.lower()[message.content.lower().index(targetMember.display_name.lower()) - 1]) and not re.match(r"\w", message.content.lower()[message.content.lower().index(targetMember.display_name.lower()) + len(targetMember.display_name)])) or\
+                       (targetMember.name.lower() in message.content.lower() and not re.match(r"\w", message.content.lower()[message.content.lower().index(targetMember.name.lower()) - 1]) and not re.match(r"\w", message.content.lower()[message.content.lower().index(targetMember.name.lower()) + len(targetMember.name)])) or\
+                       (targetMember.mention in message.content and not re.match(r"\w", message.content[message.content.index(targetMember.mention) - 1]) and not re.match(r"\w", message.content[message.content.index(targetMember.mention) + len(targetMember.mention)])) or\
+                       (targetMember.mention.replace("<@", "<@!") in message.content and not re.match(r"\w", message.content[message.content.index(targetMember.mention.replace("<@", "<@!")) - 1]) and not re.match(r"\w", message.content[message.content.index(targetMember.mention.replace("<@", "<@!")) + len(targetMember.mention.replace("<@", "<@!"))])) or\
+                       (targetMember.mention.replace("<@!", "<@") in message.content and not re.match(r"\w", message.content[message.content.index(targetMember.mention.replace("<@!", "<@")) - 1]) and not re.match(r"\w", message.content[message.content.index(targetMember.mention.replace("<@!", "<@")) + len(targetMember.mention.replace("<@!", "<@"))])) or\
+                       str(targetMember.id) in message.content:
                         messageLinksList.append(message.jump_url)
                 except Exception:
                     try:
-                        if (member.display_name.lower() in message.content.lower() and not re.match(r"\w", message.content.lower()[message.content.lower().index(member.display_name.lower()) - 1])) or\
-                           (member.name.lower() in message.content.lower() and not re.match(r"\w", message.content.lower()[message.content.lower().index(member.name.lower()) - 1])) or\
-                           (member.mention in message.content and not re.match(r"\w", message.content[message.content.index(member.mention) - 1])) or\
-                           (member.mention.replace("<@", "<@!") in message.content and not re.match(r"\w", message.content[message.content.index(member.mention.replace("<@", "<@!")) - 1])) or\
-                           (member.mention.replace("<@!", "<@") in message.content and not re.match(r"\w", message.content[message.content.index(member.mention.replace("<@!", "<@")) - 1])) or\
-                           str(member.id) in message.content:
+                        if (targetMember.display_name.lower() in message.content.lower() and not re.match(r"\w", message.content.lower()[message.content.lower().index(targetMember.display_name.lower()) - 1])) or\
+                           (targetMember.name.lower() in message.content.lower() and not re.match(r"\w", message.content.lower()[message.content.lower().index(targetMember.name.lower()) - 1])) or\
+                           (targetMember.mention in message.content and not re.match(r"\w", message.content[message.content.index(targetMember.mention) - 1])) or\
+                           (targetMember.mention.replace("<@", "<@!") in message.content and not re.match(r"\w", message.content[message.content.index(targetMember.mention.replace("<@", "<@!")) - 1])) or\
+                           (targetMember.mention.replace("<@!", "<@") in message.content and not re.match(r"\w", message.content[message.content.index(targetMember.mention.replace("<@!", "<@")) - 1])) or\
+                           str(targetMember.id) in message.content:
                             messageLinksList.append(message.jump_url)
                     except Exception:
                         log.exception(f"Message:\n\n{message.content}\n")
             log.debug(f"Checked {numMessages} message{'s' * (numMessages != 1)}")
             if len(messageLinksList) > 0:
                 messageLinks = "\n".join(messageLinksList[::-1])
-                await self.bot.get_channel(STAFF_CHAT).send(f"Moderation Logs related to {member.display_name} ({member}):\n{messageLinks}")
+                await self.bot.get_channel(STAFF_CHAT).send(f"Moderation Logs related to {targetMember.display_name} ({targetMember}):\n{messageLinks}")
             else:
-                await self.bot.get_channel(STAFF_CHAT).send(f"No Moderation Logs related to {member.display_name} ({member})")
+                await self.bot.get_channel(STAFF_CHAT).send(f"No Moderation Logs related to {targetMember.display_name} ({targetMember})")
 
 async def setup(bot: commands.Bot) -> None:
     await bot.add_cog(Staff(bot))

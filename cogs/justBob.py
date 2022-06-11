@@ -158,7 +158,8 @@ class JustBob(commands.Cog):
         for emoji, _ in zip(LEVEL_NUMBERS[:lastLevelUnlocked], levels):
             buttons.append(JustBobButton(self, emoji=emoji, style=discord.ButtonStyle.secondary))
         buttons.append(JustBobButton(self, emoji=STOP, style=discord.ButtonStyle.secondary))
-        [row.add_item(item=button) for button in buttons]
+        for button in buttons:
+            row.add_item(item=button)
 
         msg = await interaction.channel.send(embed=embed, view=row)
         self.games[interaction.user.id]["messageId"] = msg.id
@@ -202,7 +203,8 @@ class JustBob(commands.Cog):
                 for directionEmoji in DIRECTIONS:
                     buttons.append(JustBobButton(self, emoji=directionEmoji, style=discord.ButtonStyle.secondary))
                 buttons.append(JustBobButton(self, emoji=STOP, style=discord.ButtonStyle.secondary))
-                [row.add_item(item=button) for button in buttons]
+                for button in buttons:
+                    row.add_item(item=button)
                 await interaction.response.edit_message(embed=embed, view=row)
 
             elif emoji in DIRECTIONS:

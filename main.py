@@ -167,18 +167,18 @@ async def on_member_join(member: discord.Member) -> None:
     log.debug(f"{member} joined the server!")
     await asyncio.sleep(24 * 60 * 60)  # 24 hours in seconds
     if member.id not in newcomers:
-        log.debug(f"Newcomer is no longer in the server {member.display_name} ({member})")
+        log.debug(f"Newcomer is no longer in the server: {member.display_name} ({member})")
         return
 
     if member in [member async for member in guild.fetch_members()]:
         updatedMember = await guild.fetch_member(member.id)
-        if len(updatedMember.roles) < 2:
+        if len(updatedMember.roles) <= 2:
             log.debug(f"Sending ping reminder to {updatedMember.display_name} ({updatedMember})")
             await client.get_channel(WELCOME).send(f"{updatedMember.mention} Don't forget to ping @ {guild.get_role(UNIT_STAFF).name} when you are ready!")
         else:
-            log.debug(f"Newcomer is no longer in need of an interview {updatedMember.display_name} ({updatedMember})")
+            log.debug(f"Newcomer is no longer in need of an interview: {updatedMember.display_name} ({updatedMember})")
     else:
-        log.debug(f"Newcomer is no longer in the server {member.display_name}({member})")
+        log.debug(f"Newcomer is no longer in the server: {member.display_name} ({member})")
     if member.id in newcomers:
         newcomers.remove(member.id)
 
@@ -194,7 +194,7 @@ async def on_member_leave(member: discord.Member) -> None:
     """
     if member.id in newcomers:
         newcomers.remove(member.id)
-        log.debug(f"Newcomer left {member.display_name} ({member})")
+        log.debug(f"Newcomer left: {member.display_name} ({member})")
 
 @client.event
 async def on_error(event, *args, **kwargs) -> None:

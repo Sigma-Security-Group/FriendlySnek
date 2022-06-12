@@ -2212,14 +2212,15 @@ class Schedule(commands.Cog):
 
     @app_commands.command(name="timestamp")
     @app_commands.guilds(GUILD)
-    @app_commands.describe(time = "Your local time", informative = "Displays all formats, raw text, etc.")
+    @app_commands.describe(time = "Your local time", message = "Add a message before the timestamp", informative = "Displays all formats, raw text, etc.")
     @app_commands.choices(informative = [app_commands.Choice(name="Yes plz", value="Yes")])
-    async def timestamp(self, interaction: discord.Interaction, time: str, informative: app_commands.Choice[str] = "No") -> None:
+    async def timestamp(self, interaction: discord.Interaction, time: str, message: str = "", informative: app_commands.Choice[str] = "No") -> None:
         """ Convert your local time to a dynamic Discord timestamp.
 
         Parameters:
         interaction (discord.Interaction): The Discord interaction.
         time (str): Inputted time to be converted.
+        message (str): Optionally adding a message before the timestamp.
         informative (app_commands.Choice[str]): If the user want's the informative embed - displaying all timestamps with desc, etc.
 
         Returns:
@@ -2250,18 +2251,15 @@ class Schedule(commands.Cog):
         # Output timestamp
         timeZone = pytz.timezone(memberTimeZones[str(interaction.user.id)])
         time = timeZone.localize(time).astimezone(UTC)
-        if informative == "No":  # Clean output
-            await interaction.edit_original_message(content=utils.format_dt(time, "F"))
-
-        else:  # Informative output
+        await interaction.edit_original_message(content = f"{message} {utils.format_dt(time, 'F')}")
+        if informative == "Yes":
             embed = Embed(color=Color.green())
             embed.set_footer(text=f"Local time: {time.strftime(TIME_FORMAT)}\nTime zone: {memberTimeZones[str(interaction.user.id)]}")
             timestamps = [utils.format_dt(time, style=timestampStyle[0]) for timestampStyle in TIMESTAMP_STYLES.items()]
             embed.add_field(name="Timestamp", value="\n".join(timestamps), inline=True)
             embed.add_field(name="Copy this", value="\n".join([f"`{stamp}`" for stamp in timestamps]), inline=True)
             embed.add_field(name="Description", value="\n".join([f"`{timestampStyle[1]}`" for timestampStyle in TIMESTAMP_STYLES.items()]), inline=True)
-            await interaction.edit_original_message(embed=embed)
-
+            await interaction.user.send(embed=embed)
 
     @app_commands.command(name="changetimezone")
     @app_commands.guilds(GUILD)

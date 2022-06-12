@@ -25,6 +25,7 @@ class Poll(commands.Cog):
     @app_commands.command(name="poll")
     @app_commands.guilds(GUILD)
     @app_commands.describe(
+        multivote = "If you're able to vote for multiple options.",
         title = "Title",
         option1 = "Option 1",
         description = "Description",
@@ -38,11 +39,13 @@ class Poll(commands.Cog):
         option9 = "Option 9",
         option10 = "Option 10"
     )
-    async def poll(self, interaction: discord.Interaction, title: str, option1: str, description: str = "", option2: str = None, option3: str = None, option4: str = None, option5: str = None, option6: str = None, option7: str = None, option8: str = None, option9: str = None, option10: str = None) -> None:
+    @app_commands.choices(multivote = [app_commands.Choice(name="Multiple votes", value="Yes"), app_commands.Choice(name="One vote", value="No")])
+    async def poll(self, interaction: discord.Interaction, multivote: app_commands.Choice[str], title: str, option1: str, description: str = "", option2: str = None, option3: str = None, option4: str = None, option5: str = None, option6: str = None, option7: str = None, option8: str = None, option9: str = None, option10: str = None) -> None:
         """ Create a poll with up to 10 options.
 
         Parameters:
         interaction (discord.Interaction): The Discord interaction.
+        multivote (app_commands.Choice[str]): If a user is able to cast their votes on multiple options.
         title (str): Poll title.
         option1 (str): Poll option 1.
         description (str): Poll description.
@@ -59,7 +62,8 @@ class Poll(commands.Cog):
         Returns:
         None.
         """
-        group = {}
+        log.info(f"{interaction.user.display_name} ({interaction.user}) Created a poll!")
+        group = {"Multivote": True if multivote.value == "Yes" else False}
         embed = Embed(title=title, description=f"{description}\n\n", color=Color.gold())
         embed.set_footer(text=f"Poll by {interaction.user.display_name}")
         embed.timestamp = datetime.utcnow()
@@ -70,6 +74,7 @@ class Poll(commands.Cog):
         for optionInp in options:
             if optionInp is not None:
                 embed.description += f"{emojiNumbers[optionCount]}{' **(0%)**' * isOneOption} {optionInp}\n"
+                group[f"poll_vote_{optionCount}"] = []
                 optionCount += 1
 
         try:
@@ -77,9 +82,8 @@ class Poll(commands.Cog):
             row.timeout = None
             buttons = []
             for num in range(optionCount):
-                group[f"poll_vote_{num}"] = []
                 buttons.append(PollButton(self, group, emoji=emojiNumbers[num], label="(0)", style=discord.ButtonStyle.secondary, custom_id=f"poll_vote_{num}"))
-            [row.add_item(item=button) for button in buttons]
+                row.add_item(item=buttons[num])
             await interaction.response.send_message(embed=embed, view=row)
         except Exception as e:
             log.exception(f"{interaction.user} | {e}")
@@ -88,8 +92,9 @@ class Poll(commands.Cog):
         """ Handling all poll button interactions.
 
         Parameters:
-        interaction (discord.Interaction): The Discord interaction.
         button (discord.ui.Button): The Discord button.
+        interaction (discord.Interaction): The Discord interaction.
+        group (dict): Poll specifics, e.g. multivote & voters.
 
         Returns:
         None.
@@ -103,20 +108,19 @@ class Poll(commands.Cog):
             buttons = []
 
             for num in range(len(optionRows)):  # Loop through the amount of buttons
-                label = button.view.children[num].label
                 if button.view.children[num].custom_id == button.custom_id and interaction.user.id not in group[button.custom_id]:  # If pressed button (register vote) is same as iteration
+                    if not group["Multivote"]:  # One vote per person
+                        for i in range(len(optionRows)):  # Remove previous user votes
+                            if interaction.user.id in group[f"poll_vote_{i}"]:
+                                group[f"poll_vote_{i}"].remove(interaction.user.id)
                     group[button.custom_id].append(interaction.user.id)
-                    # Update button label with +1
-                    buttons.append(PollButton(self, group, emoji=emojiNumbers[num], label=f"({int(label[1:][:-1]) + 1})", style=discord.ButtonStyle.secondary, custom_id=button.custom_id))
                 elif button.view.children[num].custom_id == button.custom_id and interaction.user.id in group[button.custom_id]:  # If pressed button (remove registered vote) is same as iteration
                     group[button.custom_id].remove(interaction.user.id)
-                    # Update button label with -1
-                    buttons.append(PollButton(self, group, emoji=emojiNumbers[num], label=f"({int(label[1:][:-1]) - 1})", style=discord.ButtonStyle.secondary, custom_id=button.custom_id))
-                # If not pressed button
-                else:
-                    buttons.append(PollButton(self, group, emoji=emojiNumbers[num], label=label, style=discord.ButtonStyle.secondary, custom_id=f"poll_vote_{num}"))
 
-            [row.add_item(item=button) for button in buttons]
+                buttons.append(PollButton(self, group, emoji=emojiNumbers[num], label=f"({len(group[f'poll_vote_{num}'])})", style=discord.ButtonStyle.secondary, custom_id=f"poll_vote_{num}"))  # Add button
+
+            for button in buttons:
+                row.add_item(item=button)
             await interaction.response.edit_message(view=row)
 
             if len(button.view.children) == 1:
@@ -138,8 +142,8 @@ class Poll(commands.Cog):
 
             embed.description = embed.description.split(emojiNumbers[0])[0] + "\n".join(optionRows)  # Concat "description" with options
             await msg.edit(embed=embed)
-            userVotes = ', '.join([emojiNumbers[int(buttonId.split('_')[-1])] for buttonId, ppl in group.items() if interaction.user.id in ppl])  # E.g. 8️⃣, 9️⃣, 🔟
-            await interaction.followup.send(f"You've voted for:\n{userVotes if len(userVotes) > 0 else 'Nothing.'}", ephemeral=True)
+            userVotes = ', '.join([emojiNumbers[int(buttonId.split('_')[-1])] for buttonId, ppl in group.items() if buttonId.startswith("poll_vote_") and interaction.user.id in ppl])  # E.g. 8️⃣, 9️⃣, 🔟
+            await interaction.followup.send(("(Multi-vote poll)" if group["Multivote"] else "(Single vote poll)") + f"\nYou've voted for:\n{userVotes if len(userVotes) > 0 else 'Nothing.'}", ephemeral=True)
 
         except Exception as e:
             log.exception(f"{interaction.user} | {e}")

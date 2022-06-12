@@ -2212,34 +2212,22 @@ class Schedule(commands.Cog):
 
     @app_commands.command(name="timestamp")
     @app_commands.guilds(GUILD)
-    @app_commands.describe(time = "Your local time", message = "Add a message before the timestamp", informative = "Displays all formats, raw text, etc.")
+    @app_commands.describe(time = "Your local time, e.g. 9:00 PM", message = "Add a message before the timestamp", timezone = "Convert the time from a different time zone other than your personal, e.g. EST & Europe/London", informative = "Displays all formats, raw text, etc.")
     @app_commands.choices(informative = [app_commands.Choice(name="Yes plz", value="Yes")])
-    async def timestamp(self, interaction: discord.Interaction, time: str, message: str = "", informative: app_commands.Choice[str] = "No") -> None:
+    async def timestamp(self, interaction: discord.Interaction, time: str, message: str = "", timezone: str = "", informative: app_commands.Choice[str] = "No") -> None:
         """ Convert your local time to a dynamic Discord timestamp.
 
         Parameters:
         interaction (discord.Interaction): The Discord interaction.
         time (str): Inputted time to be converted.
         message (str): Optionally adding a message before the timestamp.
+        timezone (str): Optional custom time zone, which is separate from the user set preferred time zone.
         informative (app_commands.Choice[str]): If the user want's the informative embed - displaying all timestamps with desc, etc.
 
         Returns:
         None.
         """
         await interaction.response.defer()
-
-        # Get user time zone
-        with open(MEMBER_TIME_ZONES_FILE) as f:
-            memberTimeZones = json.load(f)
-
-        if not str(interaction.user.id) in memberTimeZones:
-            timeZoneOutput = await self.changeTimeZone(interaction.user, isCommand=False)
-            if not timeZoneOutput:
-                await self.cancelCommand(interaction.user.dm_channel, "Timestamp creation")
-                await interaction.edit_original_message(embed=Embed(title="❌ Timestamp creation canceled", description="You must provide a time zone in your DMs!", color=Color.red()))
-                return
-            with open(MEMBER_TIME_ZONES_FILE) as f:
-                memberTimeZones = json.load(f)
 
         # Get the inputted time
         try:
@@ -2248,13 +2236,34 @@ class Schedule(commands.Cog):
             await interaction.edit_original_message(embed=Embed(title="❌ Invalid time", description="Provide a valid time!", color=Color.red()))
             return
 
+        if not timezone:  # User's time zone
+            # Get user time zone
+            with open(MEMBER_TIME_ZONES_FILE) as f:
+                memberTimeZones = json.load(f)
+
+            if not str(interaction.user.id) in memberTimeZones:
+                timeZoneOutput = await self.changeTimeZone(interaction.user, isCommand=False)
+                if not timeZoneOutput:
+                    await self.cancelCommand(interaction.user.dm_channel, "Timestamp creation")
+                    await interaction.edit_original_message(embed=Embed(title="❌ Timestamp creation canceled", description="You must provide a time zone in your DMs!", color=Color.red()))
+                    return
+                with open(MEMBER_TIME_ZONES_FILE) as f:
+                    memberTimeZones = json.load(f)
+            timeZone = pytz.timezone(memberTimeZones[str(interaction.user.id)])
+
+        else:  # Custom time zone
+            try:
+                timeZone = pytz.timezone(timezone)
+            except pytz.exceptions.UnknownTimeZoneError:
+                await interaction.edit_original_message(embed=Embed(title="❌ Invalid time zone", description="Provide a valid time zone!", color=Color.red()))
+                return
+
         # Output timestamp
-        timeZone = pytz.timezone(memberTimeZones[str(interaction.user.id)])
         time = timeZone.localize(time).astimezone(UTC)
         await interaction.edit_original_message(content = f"{message} {utils.format_dt(time, 'F')}")
-        if informative == "Yes":
+        if not informative == "No":
             embed = Embed(color=Color.green())
-            embed.set_footer(text=f"Local time: {time.strftime(TIME_FORMAT)}\nTime zone: {memberTimeZones[str(interaction.user.id)]}")
+            embed.set_footer(text=f"Local time: {time.strftime(TIME_FORMAT)}\nTime zone: {memberTimeZones[str(interaction.user.id)] if not timezone else timeZone}")
             timestamps = [utils.format_dt(time, style=timestampStyle[0]) for timestampStyle in TIMESTAMP_STYLES.items()]
             embed.add_field(name="Timestamp", value="\n".join(timestamps), inline=True)
             embed.add_field(name="Copy this", value="\n".join([f"`{stamp}`" for stamp in timestamps]), inline=True)

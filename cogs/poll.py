@@ -63,7 +63,10 @@ class Poll(commands.Cog):
         None.
         """
         log.info(f"{interaction.user.display_name} ({interaction.user}) Created a poll!")
-        group = {"Multivote": True if multivote.value == "Yes" else False}
+        group = {
+            "Creator": interaction.user.display_name,
+            "Multivote": True if multivote.value == "Yes" else False
+        }
         embed = Embed(title=title, description=f"{description}\n\n", color=Color.gold())
         embed.set_footer(text=f"Poll by {interaction.user.display_name}")
         embed.timestamp = datetime.utcnow()
@@ -84,6 +87,8 @@ class Poll(commands.Cog):
             for num in range(optionCount):
                 buttons.append(PollButton(self, group, emoji=emojiNumbers[num], label="(0)", style=discord.ButtonStyle.secondary, custom_id=f"poll_vote_{num}"))
                 row.add_item(item=buttons[num])
+            buttons.append(PollButton(self, group, emoji="👀", style=discord.ButtonStyle.primary, custom_id="results"))
+            row.add_item(item=buttons[-1])
             await interaction.response.send_message(embed=embed, view=row)
         except Exception as e:
             log.exception(f"{interaction.user} | {e}")
@@ -99,13 +104,20 @@ class Poll(commands.Cog):
         Returns:
         None.
         """
+        if button.custom_id == "results":
+            embed = Embed(title="Poll results", color=Color.green())
+            for key, value in group.items():
+                if key.startswith("poll_vote_"):
+                    embed.add_field(name=emojiNumbers[int(key.split("_")[-1])], value="\n".join([interaction.guild.get_member(voterId).mention for voterId in value if interaction.guild.get_member(voterId) is not None]) if len(value) > 0 else "No votes", inline=True)
+            embed.set_footer(text=f"Poll by {group['Creator']}")
+            await interaction.response.send_message(embed=embed, ephemeral=True)
+            return
+
         try:
             msg = await interaction.channel.fetch_message(interaction.message.id)
             embed = msg.embeds[0]
             optionRows = (emojiNumbers[0] + embed.description.split(emojiNumbers[0])[1]).split("\n")
-            row = PollView(self)
-            row.timeout = None
-            buttons = []
+            row = button.view
 
             for num in range(len(optionRows)):  # Loop through the amount of buttons
                 if button.view.children[num].custom_id == button.custom_id and interaction.user.id not in group[button.custom_id]:  # If pressed button (register vote) is same as iteration
@@ -117,21 +129,19 @@ class Poll(commands.Cog):
                 elif button.view.children[num].custom_id == button.custom_id and interaction.user.id in group[button.custom_id]:  # If pressed button (remove registered vote) is same as iteration
                     group[button.custom_id].remove(interaction.user.id)
 
-                buttons.append(PollButton(self, group, emoji=emojiNumbers[num], label=f"({len(group[f'poll_vote_{num}'])})", style=discord.ButtonStyle.secondary, custom_id=f"poll_vote_{num}"))  # Add button
-
-            for button in buttons:
-                row.add_item(item=button)
+            for btnNum in range(len(row.children)):
+                if row.children[btnNum].custom_id.startswith("poll_vote_"):
+                    row.children[btnNum].label = f"({len(group[f'poll_vote_{btnNum}'])})"
             await interaction.response.edit_message(view=row)
 
             if len(button.view.children) == 1:
                 return  # Do not continue editing the message if there's 1 option
 
-            voteCount: list = [int(button.label[1:][:-1]) for button in row.children]  # Get all votes from poll
+            voteCount: list = [int(button.label[1:][:-1]) for button in row.children if button.custom_id.startswith("poll_vote_")]  # Get all votes from poll
             voteSum = sum(voteCount) or 1  # Sums all votes - but if 0, change to 1 (not divide by 0)
 
             newPercentText: list = []
             for rowNum in range(len(optionRows)):
-                # percent = f'{((reactionCount[rowNum] - 1) / reactionSum) * 100:.1f}'.strip('0').strip('.') or 0  # Floats
                 percent = round((voteCount[rowNum] / voteSum) * 100)  # Ints
                 newPercentText.append(re.sub(POLL_PERCENT_REGEX, f"({percent}%)", optionRows[rowNum]))
             percentTextMaxLen = max([len(percentText) for percentText in re.findall(POLL_PERCENT_REGEX, "".join(newPercentText))])

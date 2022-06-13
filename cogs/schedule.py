@@ -217,8 +217,6 @@ class Schedule(commands.Cog):
                     # await self.bot.get_channel(ARMA_DISCUSSION).send(f"{author.mention} You silly goose, you forgot to delete your operation. I'm not your mother, but this time I will do it for you")
                     if event["maxPlayers"] != -1:  # Save events that does not have hidden attendance
                         await self.saveEventToHistory(event, autoDeleted=True)
-            if len(deletedEvents) == 0:
-                log.debug("No events were auto deleted!")
             for event in deletedEvents:
                 events.remove(event)
             with open(EVENTS_FILE, "w") as f:
@@ -239,7 +237,6 @@ class Schedule(commands.Cog):
         while not self.bot.ready:
             await asyncio.sleep(1)
         guild = self.bot.get_guild(GUILD_ID)
-        log.debug("Checking for accepted reminders...")
         try:
             with open(EVENTS_FILE) as f:
                 events = json.load(f)

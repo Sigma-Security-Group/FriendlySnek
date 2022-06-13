@@ -302,5 +302,5 @@ if __name__ == "__main__":
     try:
         client.run(secret.TOKEN_DEV if secret.DEBUG else secret.TOKEN)
         log.info("Bot stopped!")
-    except Exception:
-        log.exception("An error occured!")
+    except Exception as e:
+        log.exception(e)

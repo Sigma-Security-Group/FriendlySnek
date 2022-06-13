@@ -65,7 +65,7 @@ MAPS = [
     "Uzbin Valley",
     "Vinjesvingen",
     "Virolahti",
-    "Zargabad",
+    "Zargabad"
 ]
 
 UTC = pytz.utc
@@ -80,7 +80,7 @@ TIME_ZONES = {
     "Australian Western Time (Perth)": "Australia/Perth",
     "Australian Central Western Time (Eucla)": "Australia/Eucla",
     "Australian Central Time (Adelaide)": "Australia/Adelaide",
-    "Australian Eastern Time (Sydney)": "Australia/Sydney",
+    "Australian Eastern Time (Sydney)": "Australia/Sydney"
 }
 
 TIMESTAMP_STYLES = {
@@ -90,7 +90,7 @@ TIMESTAMP_STYLES = {
     "D": "Long Date",
     "f": "Short Date Time",
     "F": "Long Date Time",
-    "R": "Relative Time",
+    "R": "Relative Time"
 }
 
 if not os.path.exists(EVENTS_HISTORY_FILE):

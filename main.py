@@ -164,21 +164,21 @@ async def on_member_join(member: discord.Member) -> None:
     if guild.id != GUILD_ID:
         return
     newcomers.add(member.id)
-    log.debug(f"{member} joined the server!")
+    log.debug(f"Newcomer joined the server: {member}")
     await asyncio.sleep(24 * 60 * 60)  # 24 hours in seconds
     if member.id not in newcomers:
-        log.debug(f"Newcomer is no longer in the server: {member.display_name} ({member})")
+        log.debug(f"Newcomer is no longer in the server: {member}")
         return
 
     if member in [member async for member in guild.fetch_members()]:
         updatedMember = await guild.fetch_member(member.id)
         if len(updatedMember.roles) <= 2:
-            log.debug(f"Sending ping reminder to {updatedMember.display_name} ({updatedMember})")
+            log.debug(f"Newcomer ping reminder: {updatedMember}")
             await client.get_channel(WELCOME).send(f"{updatedMember.mention} Don't forget to ping @ {guild.get_role(UNIT_STAFF).name} when you are ready!")
         else:
             log.debug(f"Newcomer is no longer in need of an interview: {updatedMember.display_name} ({updatedMember})")
     else:
-        log.debug(f"Newcomer is no longer in the server: {member.display_name} ({member})")
+        log.debug(f"Newcomer is no longer in the server: {member}")
     if member.id in newcomers:
         newcomers.remove(member.id)
 
@@ -202,7 +202,8 @@ async def on_error(event, *args, **kwargs) -> None:
 
 @client.event
 async def on_command_error(ctx: discord.ext.commands.Context, error: discord.ext.commands.errors) -> None:
-    log.exception(f"{ctx.author} | {error}")
+    if not type(error) == discord.ext.commands.CommandNotFound:
+        log.exception(f"{ctx.author} | {error}")
 
 def devCheck() -> discord.ext.commands.check:
     """ A permissions check for the reload command.

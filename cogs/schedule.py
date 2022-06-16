@@ -103,6 +103,10 @@ TIMESTAMP_STYLES = {
     "R": "Relative Time"
 }
 
+if not os.path.exists(MEMBER_TIME_ZONES_FILE):
+    with open(MEMBER_TIME_ZONES_FILE, "w") as f:
+        json.dump({}, f, indent=4)
+
 if not os.path.exists(EVENTS_HISTORY_FILE):
     with open(EVENTS_HISTORY_FILE, "w") as f:
         json.dump([], f, indent=4)
@@ -341,6 +345,11 @@ class Schedule(commands.Cog):
                 if len(events) == 0:
                     await channel.send("...\nNo bop?\n...\nSnek is sad")
                     await channel.send(":cry:")
+                    return
+
+                newEvents = []
+                with open(EVENTS_FILE, "w") as f:
+                    json.dump(newEvents, f, indent=4)
                 for event in sorted(events, key=lambda e: datetime.strptime(e["time"], TIME_FORMAT), reverse=True):
                     embed = self.getEventEmbed(event)
 
@@ -364,16 +373,14 @@ class Schedule(commands.Cog):
 
                     msg = await channel.send(embed=embed, view=row)
                     event["messageId"] = msg.id
-                with open(EVENTS_FILE, "w") as f:
-                    json.dump(events, f, indent=4)
+                    newEvents.append(event)
+                    with open(EVENTS_FILE, "w") as f:
+                        json.dump(newEvents, f, indent=4)
             except Exception as e:
                 log.exception(e)
         else:
             with open(EVENTS_FILE, "w") as f:
                 json.dump([], f, indent=4)
-        if not os.path.exists(MEMBER_TIME_ZONES_FILE):
-            with open(MEMBER_TIME_ZONES_FILE, "w") as f:
-                json.dump({}, f, indent=4)
 
     def getEventEmbed(self, event: dict) -> Embed:
         """ Generates an embed from the given event.
@@ -2297,10 +2304,6 @@ class Schedule(commands.Cog):
         bool: If function executed successfully.
         """
         log.info(f"{author.display_name} ({author}) is updating their time zone preferences...")
-
-        if not os.path.exists(MEMBER_TIME_ZONES_FILE):
-            with open(MEMBER_TIME_ZONES_FILE, "w") as f:
-                json.dump({}, f, indent=4)
 
         with open(MEMBER_TIME_ZONES_FILE) as f:
             memberTimeZones = json.load(f)

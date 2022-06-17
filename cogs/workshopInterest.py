@@ -24,7 +24,7 @@ DEFAULT_WORKSHOP_INTEREST_LISTS = (
         "Fixed Wing",
         "✈️ Fixed Wing",
         SME_FW_PILOT,
-        "Learn the dynamics of using fixed wing and fighter jet aircraft."
+        "Learn the dynamics of a fighter jet to drop enough ordnance to fund a school on a single guy with binoculars."
     ),
     (
         "JTAC",
@@ -36,7 +36,7 @@ DEFAULT_WORKSHOP_INTEREST_LISTS = (
         "Medic",
         "💉 Medic",
         SME_MEDIC,
-        "Learn how to administer combat aid to wounded personnel in a timely and effective manner. "  # Unverifed description.
+        "Learn how to administer combat aid to wounded personnel in a timely and effective manner."  # Unverifed description.
     ),
     (
         "Heavy Weapons",

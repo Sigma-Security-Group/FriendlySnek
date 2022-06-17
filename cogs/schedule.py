@@ -737,7 +737,7 @@ class Schedule(commands.Cog):
             log.debug(f"{member.display_name} ({member}) was reserving a role but schedule was updated!")
         return True
 
-    async def eventTime(self, interaction: discord.Interaction, dmChannel: discord.DMChannel, eventType: str, collidingEventTypes: tuple, delta: timedelta) -> tuple:
+    async def eventTime(self, interaction: discord.Interaction, dmChannel: discord.DMChannel, eventType: str, collidingEventTypes: tuple, delta: timedelta) -> Optional[tuple]:
         """ Handles the timpe part of scheduling an event; prompts, collision, etc.
 
         Parameters:
@@ -748,7 +748,7 @@ class Schedule(commands.Cog):
         delta (timedelta): Difference in time from start to end.
 
         Returns:
-        tuple: A tuple which contains the event start time and end time.
+        None | tuple: A tuple which contains the event start time and end time, if the funtion successfully executes, otherwise None.
         """
         with open(MEMBER_TIME_ZONES_FILE) as f:
             memberTimeZones = json.load(f)
@@ -1477,10 +1477,12 @@ class Schedule(commands.Cog):
             timeZoneOutput = await self.changeTimeZone(interaction.user, isCommand=False)
             if not timeZoneOutput:
                 await self.cancelCommand(dmChannel, "Event editing")
-                return False
+                return
 
         # Operation time
-        eventTimes: tuple = await self.eventTime(interaction, dmChannel, "Operation", ("Operation", "Workshop"), delta)
+        eventTimes = await self.eventTime(interaction, dmChannel, "Operation", ("Operation", "Workshop"), delta)
+        if eventTimes is None:
+            return
 
         # Operation finalizing
         try:
@@ -1516,7 +1518,7 @@ class Schedule(commands.Cog):
 
         embed = Embed(title="✅ Operation created!", color=Color.green())
         await dmChannel.send(embed=embed)
-        log.info(f"{interaction.user.display_name} ({interaction.user}) created the operation: {title}!")
+        log.info(f"{interaction.user.display_name} ({interaction.user}) created the operation: {title}")
 
         await self.updateSchedule()
 
@@ -1925,7 +1927,7 @@ class Schedule(commands.Cog):
 
         embed = Embed(title="✅ Workshop created!", color=Color.green())
         await dmChannel.send(embed=embed)
-        log.info(f"{interaction.user.display_name} ({interaction.user}) created the workshop: {title}!")
+        log.info(f"{interaction.user.display_name} ({interaction.user}) created the workshop: {title}")
 
         await self.updateSchedule()
 
@@ -2216,7 +2218,7 @@ class Schedule(commands.Cog):
 
         embed = Embed(title="✅ Event created!", color=Color.green())
         await dmChannel.send(embed=embed)
-        log.info(f"{interaction.user.display_name} ({interaction.user}) created the event: {title}!")
+        log.info(f"{interaction.user.display_name} ({interaction.user}) created the event: {title}")
 
         await self.updateSchedule()
 

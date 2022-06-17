@@ -405,8 +405,9 @@ class Schedule(commands.Cog):
             embed.add_field(name="\u200B", value="\u200B", inline=False)
             embed.add_field(name=f"Reservable Roles ({len([role for role, memberId in event['reservableRoles'].items() if memberId is not None])}/{len(event['reservableRoles'])}) 👤", value="\n".join(f"{roleName} - {('*' + member.display_name + '*' if (member := guild.get_member(memberId)) is not None else '**VACANT**') if memberId is not None else '**VACANT**'}" for roleName, memberId in event["reservableRoles"].items()), inline=False)
 
+        durationHours = int(event["duration"].split("h")[0].strip()) if "h" in event["duration"] else 0
         embed.add_field(name="\u200B", value="\u200B", inline=False)
-        embed.add_field(name="Time", value=f"{utils.format_dt(UTC.localize(datetime.strptime(event['time'], TIME_FORMAT)), style='F')} - {utils.format_dt(UTC.localize(datetime.strptime(event['endTime'], TIME_FORMAT)), style='t')}", inline=True)
+        embed.add_field(name="Time", value=f"{utils.format_dt(UTC.localize(datetime.strptime(event['time'], TIME_FORMAT)), style='F')} - {utils.format_dt(UTC.localize(datetime.strptime(event['endTime'], TIME_FORMAT)), style='t' if durationHours < 24 else 'F')}", inline=True if durationHours < 24 else False)
         embed.add_field(name="Duration", value=event["duration"], inline=True)
 
         if event["map"] is not None:
@@ -1459,6 +1460,7 @@ class Schedule(commands.Cog):
         while not re.match(SCHEDULE_EVENT_DURATION_REGEX, duration):
             embed = Embed(title=SCHEDULE_EVENT_DURATION_QUESTION.format("operation"), description=SCHEDULE_EVENT_DURATION_PROMPT, color=color)
             embed.set_footer(text=SCHEDULE_CANCEL)
+            color = Color.red()
             await dmChannel.send(embed=embed)
             try:
                 response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, interaction=interaction, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == interaction.user)

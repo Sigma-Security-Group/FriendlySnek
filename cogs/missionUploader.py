@@ -94,7 +94,7 @@ class MissionUploader(commands.Cog):
         color = Color.gold()
         attachmentOk = False
         while not attachmentOk:
-            embed = Embed(title="Upload mission file", description="Please rename your mission file according to the naming convention, to make it easier for everyone!\n`YYYY-MM-DD-Operation-Name.Map.pbo`\nE.g. `2022-06-17-Operation-Honda-Civic.Altis.pbo`", color=color)
+            embed = Embed(title="Upload mission file", description="Please rename your mission file according to the naming convention, to make it easier for everyone!\n`YYYY_MM_DD_Operation_Name.Map.pbo`\nE.g. `2022_06_17_Operation_Honda_Civic.Altis.pbo`", color=color)
             embed.set_footer(text=SCHEDULE_CANCEL)
             color = Color.red()
             msg = await interaction.user.send(embed=embed)

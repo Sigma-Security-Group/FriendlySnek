@@ -170,25 +170,24 @@ class Schedule(commands.Cog):
         None.
         """
         guild = self.bot.get_guild(GUILD_ID)
-        if event.get("type", "Operation") == "Workshop":
-            if (workshopInterestName := event.get("workshopInterest")) is not None:
-                with open(WORKSHOP_INTEREST_FILE) as f:
-                    workshopInterest = json.load(f)
-                if (workshop := workshopInterest.get(workshopInterestName)) is not None:
-                    accepted = event["accepted"]
-                    if event["maxPlayers"] is not None:
-                        accepted = accepted[:event["maxPlayers"]]
-                    updateWorkshopInterest = False
-                    for memberId in accepted:
-                        if memberId in workshop["members"]:
-                            updateWorkshopInterest = True
-                            workshop["members"].remove(memberId)
-                    if updateWorkshopInterest:
-                        with open(WORKSHOP_INTEREST_FILE, "w") as f:
-                            json.dump(workshopInterest, f, indent=4)
-                        embed = self.bot.get_cog("WorkshopInterest").getWorkshopEmbed(workshop)
-                        workshopMessage = await self.bot.get_channel(WORKSHOP_INTEREST).fetch_message(workshop["messageId"])
-                        await workshopMessage.edit(embed=embed)
+        if event.get("type", "Operation") == "Workshop" and (workshopInterestName := event.get("workshopInterest")) is not None:
+            with open(WORKSHOP_INTEREST_FILE) as f:
+                workshopInterest = json.load(f)
+            if (workshop := workshopInterest.get(workshopInterestName)) is not None:
+                accepted = event["accepted"]
+                if event["maxPlayers"] is not None:
+                    accepted = accepted[:event["maxPlayers"]]
+                updateWorkshopInterest = False
+                for memberId in accepted:
+                    if memberId in workshop["members"]:
+                        updateWorkshopInterest = True
+                        workshop["members"].remove(memberId)
+                if updateWorkshopInterest:
+                    with open(WORKSHOP_INTEREST_FILE, "w") as f:
+                        json.dump(workshopInterest, f, indent=4)
+                    embed = self.bot.get_cog("WorkshopInterest").getWorkshopEmbed(guild, workshop)
+                    workshopMessage = await self.bot.get_channel(WORKSHOP_INTEREST).fetch_message(workshop["messageId"])
+                    await workshopMessage.edit(embed=embed)
 
         with open(EVENTS_HISTORY_FILE) as f:
             eventsHistory = json.load(f)
@@ -224,15 +223,15 @@ class Schedule(commands.Cog):
             for event in events:
                 endTime = UTC.localize(datetime.strptime(event["endTime"], TIME_FORMAT))
                 if utcNow > endTime + timedelta(minutes=69):
+                    if event["maxPlayers"] != -1:  # Save events that does not have hidden attendance
+                        await self.saveEventToHistory(event, autoDeleted=True)
                     log.debug(f"Auto deleting event: {event['title']}")
                     deletedEvents.append(event)
                     eventMessage = await self.bot.get_channel(SCHEDULE).fetch_message(event["messageId"])
                     await eventMessage.delete()
                     author = self.bot.get_guild(GUILD_ID).get_member(event["authorId"])
-                    embed = Embed(title="Event autodeleted", description=f"You forgot to delete your event: `{event['title']}`\nI have now done it for you. Don't do it again {PEPE_GUN}", color=Color.orange())
+                    embed = Embed(title="Event auto deleted", description=f"You forgot to delete your event: `{event['title']}`\nI have now done it for you. Don't do it again {PEPE_GUN}", color=Color.orange())
                     await author.send(embed=embed)
-                    if event["maxPlayers"] != -1:  # Save events that does not have hidden attendance
-                        await self.saveEventToHistory(event, autoDeleted=True)
             for event in deletedEvents:
                 events.remove(event)
             with open(EVENTS_FILE, "w") as f:
@@ -405,11 +404,14 @@ class Schedule(commands.Cog):
         if event["reservableRoles"] is not None:
             embed.add_field(name="\u200B", value="\u200B", inline=False)
             embed.add_field(name=f"Reservable Roles ({len([role for role, memberId in event['reservableRoles'].items() if memberId is not None])}/{len(event['reservableRoles'])}) 👤", value="\n".join(f"{roleName} - {('*' + member.display_name + '*' if (member := guild.get_member(memberId)) is not None else '**VACANT**') if memberId is not None else '**VACANT**'}" for roleName, memberId in event["reservableRoles"].items()), inline=False)
+
         embed.add_field(name="\u200B", value="\u200B", inline=False)
         embed.add_field(name="Time", value=f"{utils.format_dt(UTC.localize(datetime.strptime(event['time'], TIME_FORMAT)), style='F')} - {utils.format_dt(UTC.localize(datetime.strptime(event['endTime'], TIME_FORMAT)), style='t')}", inline=True)
         embed.add_field(name="Duration", value=event["duration"], inline=True)
+
         if event["map"] is not None:
             embed.add_field(name="Map", value=event["map"], inline=False)
+
         if event["externalURL"] is not None:
             embed.add_field(name="\u200B", value="\u200B", inline=False)
             embed.add_field(name="External URL", value=event["externalURL"], inline=False)

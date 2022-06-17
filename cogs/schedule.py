@@ -224,12 +224,13 @@ class Schedule(commands.Cog):
             for event in events:
                 endTime = UTC.localize(datetime.strptime(event["endTime"], TIME_FORMAT))
                 if utcNow > endTime + timedelta(minutes=69):
-                    log.debug(f"Auto deleting: {event['title']}.")
+                    log.debug(f"Auto deleting event: {event['title']}")
                     deletedEvents.append(event)
                     eventMessage = await self.bot.get_channel(SCHEDULE).fetch_message(event["messageId"])
                     await eventMessage.delete()
-                    # author = self.bot.get_guild(SERVER).get_member(event["authorId"])
-                    # await self.bot.get_channel(ARMA_DISCUSSION).send(f"{author.mention} You silly goose, you forgot to delete your operation. I'm not your mother, but this time I will do it for you")
+                    author = self.bot.get_guild(GUILD_ID).get_member(event["authorId"])
+                    embed = Embed(title="Event autodeleted", description=f"You forgot to delete your event: `{event['title']}`\nI have now done it for you. Don't do it again {PEPE_GUN}", color=Color.orange())
+                    await author.send(embed=embed)
                     if event["maxPlayers"] != -1:  # Save events that does not have hidden attendance
                         await self.saveEventToHistory(event, autoDeleted=True)
             for event in deletedEvents:

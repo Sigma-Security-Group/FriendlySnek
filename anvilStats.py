@@ -1,5 +1,5 @@
 import json
-from ftplib import FTP
+import pysftp
 import anvil.server
 import anvil.users
 
@@ -48,15 +48,19 @@ def getSsgRep(numLogs=2):
         return None
     files = []
     reports = []
-    with FTP() as ftp:
-        ftp.connect(host=secret.FTP_HOST, port=secret.FTP_PORT)
-        ftp.login(user=secret.FTP_USERNAME, passwd=secret.FTP_PASSWORD)
-        ftp.cwd(FTP_A3DS_FOLDER)
-        for filename in sorted(ftp.nlst()):
+    cnopts = pysftp.CnOpts()
+    cnopts.hostkeys = None
+    with pysftp.Connection("euc-ogs7.armahosts.com", port=8822, username=secret.FTP_USERNAME, password=secret.FTP_PASSWORD, cnopts=cnopts, default_path="/euc-ogs7.armahosts.com_2482/mpmissions") as sftp:
+        for filename in sftp.listdir():
             if filename.endswith(".rpt"):
                 files.append(filename)
         for filename in sorted(files, reverse=True)[:numLogs]:
-            ftp.retrlines(f"RETR {filename}", lambda l, r=reports: (r.append(l) if "SSG REP" in l and "SSG REP JIP Exec added" not in l and "SSG REP Added " not in l else None))
+            sftp.get_d(filename, "./tmp/")
+            with open(f"./tmp/{filename}") as f:
+                for l in f.readlines():
+                    if "SSG REP" in l and "SSG REP JIP Exec added" not in l and "SSG REP Added " not in l:
+                        reports.append(l)
+
     return sorted(reports, reverse=True)
 
 if __name__ == "__main__":

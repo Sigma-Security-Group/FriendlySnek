@@ -147,7 +147,7 @@ class Schedule(commands.Cog):
         except Exception:
             log.warning(LOG_COULDNT_START.format("checkAcceptedReminder scheduler"))
 
-    async def cancelCommand(self, channel: discord.DMChannel, abortText:str) -> None:
+    async def cancelCommand(self, channel: discord.DMChannel, abortText: str) -> None:
         """ Sends an abort response to the user.
 
         Parameters:
@@ -279,10 +279,10 @@ class Schedule(commands.Cog):
                     with open(EVENTS_FILE, "w") as f:
                         json.dump(events, f, indent=4)
                     if len(acceptedMembersNotOnline) > 0:
-                        log.debug(f"Pinging members in accepted not in VC: {', '.join([member.display_name for member in acceptedMembersNotOnline])}...")
+                        log.debug(f"Pinging members in accepted not in VC: {', '.join([member.display_name for member in acceptedMembersNotOnline])}")
                         await channel.send(" ".join(member.mention for member in acceptedMembersNotOnline) + f" If you are in-game, please get in <#{COMMAND}> or <#{DEPLOYED}>. If you are not making it to this {event['type'].lower()}, please hit decline ❌ on the <#{SCHEDULE}>.")
                     if len(onlineMembersNotAccepted) > 0:
-                        log.debug(f"Pinging members in VC not in accepted: {', '.join([member.display_name for member in onlineMembersNotAccepted])}...")
+                        log.debug(f"Pinging members in VC not in accepted: {', '.join([member.display_name for member in onlineMembersNotAccepted])}")
                         await channel.send(" ".join(member.mention for member in onlineMembersNotAccepted) + f" If you are in-game, please hit accept ✅ on the <#{SCHEDULE}>.")
         except Exception as e:
             log.exception(e)

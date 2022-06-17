@@ -202,7 +202,10 @@ async def on_error(event, *args, **kwargs) -> None:
 
 @client.event
 async def on_command_error(ctx: discord.ext.commands.Context, error: discord.ext.commands.errors) -> None:
-    if not type(error) == discord.ext.commands.CommandNotFound:
+    errorType = type(error)
+    if errorType is discord.ext.commands.errors.MissingRequiredArgument:
+        await ctx.send_help(ctx.command)
+    elif not errorType is discord.ext.commands.CommandNotFound:
         log.exception(f"{ctx.author} | {error}")
 
 def devCheck() -> discord.ext.commands.check:

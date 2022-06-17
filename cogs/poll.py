@@ -28,6 +28,7 @@ class Poll(commands.Cog):
         multivote = "If you're able to vote for multiple options.",
         title = "Title",
         option1 = "Option 1",
+        timeout = "The amount of seconds the poll will be open for votes. (Leave empty if no limit)",
         description = "Description",
         option2 = "Option 2",
         option3 = "Option 3",
@@ -40,7 +41,7 @@ class Poll(commands.Cog):
         option10 = "Option 10"
     )
     @app_commands.choices(multivote = [app_commands.Choice(name="Multiple votes", value="Yes"), app_commands.Choice(name="One vote", value="No")])
-    async def poll(self, interaction: discord.Interaction, multivote: app_commands.Choice[str], title: str, option1: str, description: str = "", option2: str = None, option3: str = None, option4: str = None, option5: str = None, option6: str = None, option7: str = None, option8: str = None, option9: str = None, option10: str = None) -> None:
+    async def poll(self, interaction: discord.Interaction, multivote: app_commands.Choice[str], title: str, option1: str, timeout: int = 0, description: str = "", option2: str = None, option3: str = None, option4: str = None, option5: str = None, option6: str = None, option7: str = None, option8: str = None, option9: str = None, option10: str = None) -> None:
         """ Create a poll with up to 10 options.
 
         Parameters:
@@ -48,6 +49,7 @@ class Poll(commands.Cog):
         multivote (app_commands.Choice[str]): If a user is able to cast their votes on multiple options.
         title (str): Poll title.
         option1 (str): Poll option 1.
+        timeout (int): The amount of seconds that the poll will be open for votes.
         description (str): Poll description.
         option2 (str): Poll option 2.
         option3 (str): Poll option 3.
@@ -82,7 +84,7 @@ class Poll(commands.Cog):
 
         try:
             row = PollView(self)
-            row.timeout = None
+            row.timeout = None if timeout == 0 else timeout
             buttons = []
             for num in range(optionCount):
                 buttons.append(PollButton(self, group, emoji=emojiNumbers[num], label="(0)", style=discord.ButtonStyle.secondary, custom_id=f"poll_vote_{num}"))
@@ -165,6 +167,7 @@ class PollView(discord.ui.View):
         self.instance = instance
 
     async def on_timeout(self: discord.ui.View):
+        print("on Timeout Poll")
         pass
 
 

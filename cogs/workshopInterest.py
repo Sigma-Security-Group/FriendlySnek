@@ -103,6 +103,7 @@ class WorkshopInterest(commands.Cog):
                 }
             with open(WORKSHOP_INTEREST_FILE, "w") as f:
                 json.dump(workshopInterest, f, indent=4)
+
         else:
             with open(WORKSHOP_INTEREST_FILE) as f:
                 workshopInterest = json.load(f)
@@ -112,6 +113,7 @@ class WorkshopInterest(commands.Cog):
                 workshopInterest[name]["description"] = description
             with open(WORKSHOP_INTEREST_FILE, "w") as f:
                 json.dump(workshopInterest, f, indent=4)
+
         await self.updateChannel()
 
     async def updateChannel(self) -> None:
@@ -125,7 +127,7 @@ class WorkshopInterest(commands.Cog):
         """
         channel = self.bot.get_channel(WORKSHOP_INTEREST)
         await channel.purge(limit=None, check=lambda message: message.author.id in FRIENDLY_SNEKS)
-        await channel.send("Welcome to the Workshop Interest Channel! Here you can show interest for different workshops!\nYou will also get pinged when a workshop you are interested in is scheduled!")
+        await channel.send("Welcome to the Workshop Interest Channel! Here you can show interest for different workshops!\nYou'll be pinged when a workshop you are interested in is scheduled!")
 
         with open(WORKSHOP_INTEREST_FILE) as f:
             workshopInterest = json.load(f)

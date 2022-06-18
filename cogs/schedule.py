@@ -356,14 +356,18 @@ class Schedule(commands.Cog):
 
                     row = ScheduleView(None)
                     row.timeout = None
-                    buttons = [
-                        ScheduleButton(self, None, row=0, label="Accept", style=discord.ButtonStyle.success, custom_id="accept"),
-                        ScheduleButton(self, None, row=0, label="Decline", style=discord.ButtonStyle.danger, custom_id="decline"),
-                        ScheduleButton(self, None, row=0, label="Decline (Time)", style=discord.ButtonStyle.danger, custom_id="declineForTiming"),
-                        ScheduleButton(self, None, row=0, label="Tentative", style=discord.ButtonStyle.primary, custom_id="tentative")
-                    ]
-                    if event["reservableRoles"] is not None:
-                        buttons.append(ScheduleButton(self, None, row=0, label="Reserve", style=discord.ButtonStyle.secondary, custom_id="reserve"))
+                    buttons = []
+
+                    # Add attendance buttons if maxPlayers is not hidden
+                    if event["maxPlayers"] != -1:
+                        buttons.extend([
+                            ScheduleButton(self, None, row=0, label="Accept", style=discord.ButtonStyle.success, custom_id="accept"),
+                            ScheduleButton(self, None, row=0, label="Decline", style=discord.ButtonStyle.danger, custom_id="decline"),
+                            ScheduleButton(self, None, row=0, label="Decline (Time)", style=discord.ButtonStyle.danger, custom_id="declineForTiming"),
+                            ScheduleButton(self, None, row=0, label="Tentative", style=discord.ButtonStyle.primary, custom_id="tentative")
+                        ])
+                        if event["reservableRoles"] is not None:
+                            buttons.append(ScheduleButton(self, None, row=0, label="Reserve", style=discord.ButtonStyle.secondary, custom_id="reserve"))
 
                     buttons.extend([
                         ScheduleButton(self, None, row=1, label="Edit", style=discord.ButtonStyle.secondary, custom_id="edit"),
@@ -1146,6 +1150,7 @@ class Schedule(commands.Cog):
                     await dmChannel.send(embed=TIMEOUT_EMBED)
                     return False
             event["maxPlayers"] = maxPlayers
+            reorderEvents = True
 
         elif editOption == "Time":
             with open(MEMBER_TIME_ZONES_FILE) as f:

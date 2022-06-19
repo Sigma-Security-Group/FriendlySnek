@@ -411,7 +411,7 @@ class Schedule(commands.Cog):
 
         durationHours = int(event["duration"].split("h")[0].strip()) if "h" in event["duration"] else 0
         embed.add_field(name="\u200B", value="\u200B", inline=False)
-        embed.add_field(name="Time", value=f"{utils.format_dt(UTC.localize(datetime.strptime(event['time'], TIME_FORMAT)), style='F')} - {utils.format_dt(UTC.localize(datetime.strptime(event['endTime'], TIME_FORMAT)), style='t' if durationHours < 24 else 'F')}", inline=True if durationHours < 24 else False)
+        embed.add_field(name="Time", value=f"{utils.format_dt(UTC.localize(datetime.strptime(event['time'], TIME_FORMAT)), style='F')} - {utils.format_dt(UTC.localize(datetime.strptime(event['endTime'], TIME_FORMAT)), style='t' if durationHours < 24 else 'F')}", inline=(durationHours < 24))
         embed.add_field(name="Duration", value=event["duration"], inline=True)
 
         if event["map"] is not None:

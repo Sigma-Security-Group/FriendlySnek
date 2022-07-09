@@ -179,7 +179,7 @@ class MissionUploader(commands.Cog):
 
         await self.bot.get_channel(BOT).send(embed=embed)  # Send the log message in the BOT channel
 
-        log.info(f"{interaction.user.display_name} ({interaction.user}) uploaded the mission file {filename}!")
+        log.info(f"{interaction.user.display_name} ({interaction.user}) uploaded the mission file: {filename}!")
         if not secret.DEBUG:
             embed = Embed(title="✅ Mission file uploaded", color=Color.green())
         else:

@@ -594,7 +594,7 @@ class Schedule(commands.Cog):
                                 try:
                                     await member.send(embed=embed)
                                 except Exception as e:
-                                    log.exception(f"{member} | {e}")
+                                    log.warning(f"{member} | {e}")
                 except Exception as e:
                     log.exception(f"{interaction.user} | {e}")
                 events.remove(event)

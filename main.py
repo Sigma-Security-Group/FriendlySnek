@@ -174,7 +174,7 @@ async def on_member_join(member: discord.Member) -> None:
         updatedMember = await guild.fetch_member(member.id)
         if len(updatedMember.roles) <= 2:
             log.debug(f"Newcomer ping reminder: {updatedMember}")
-            await client.get_channel(WELCOME).send(f"{updatedMember.mention} Don't forget to ping @ {guild.get_role(UNIT_STAFF).name} when you are ready!")
+            await client.get_channel(WELCOME).send(f"{updatedMember.mention} Don't forget to ping @​{guild.get_role(UNIT_STAFF).name} or @​{guild.get_role(ADVISOR).name} when you are ready!")
         else:
             log.debug(f"Newcomer is no longer in need of an interview: {updatedMember.display_name} ({updatedMember})")
     else:

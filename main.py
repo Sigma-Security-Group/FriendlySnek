@@ -47,7 +47,7 @@ cogsReady = {cog: False for cog in COGS}
 
 INTENTS = discord.Intents.all()
 UTC = pytz.utc
-newcomers = set()
+newcomers: set[int] = set()
 
 class FriendlySnek(commands.Bot):
     def __init__(self, *, intents: discord.Intents) -> None:
@@ -111,7 +111,7 @@ async def on_message(message: discord.Message) -> None:
     await analyzeChannel(client, message, COMBAT_FOOTAGE, "video")
     await analyzeChannel(client, message, PROPAGANDA, "image")
 
-async def analyzeChannel(client, message: discord.Message, channelID:int, attachmentContentType:str) -> None:
+async def analyzeChannel(client, message: discord.Message, channelID: int, attachmentContentType: str) -> None:
     """ Will analyze the discord.Message contents and see if it meets the channel purpose.
 
     Parameters:
@@ -124,9 +124,9 @@ async def analyzeChannel(client, message: discord.Message, channelID:int, attach
     """
     if message.channel.id != channelID:
         return
-    elif any(role.id == UNIT_STAFF for role in message.author.roles):
+    elif any(role.id == UNIT_STAFF for role in (message.author.roles if isinstance(message.author, discord.Member) else [])):
         return
-    elif any(attachment.content_type.startswith(f"{attachmentContentType}/") for attachment in message.attachments):
+    elif any(attachment.content_type.startswith(f"{attachmentContentType}/") for attachment in message.attachments if attachment.content_type is not None):
         return
     elif attachmentContentType == "video" and re.search(r"https?:\/\/((www)?(clips)?\.)?(youtu(be)?|twitch|streamable)\.(com|be|tv).+", message.content):
         return
@@ -138,9 +138,9 @@ async def analyzeChannel(client, message: discord.Message, channelID:int, attach
 
     try:
         log.warning(f"Removed message in #{client.get_channel(channelID)} from {message.author.display_name} ({message.author}). Message content: {message.content}")
-        DEVS = ", ".join([f"**{message.guild.get_member(name)}**" for name in DEVELOPERS if message.guild.get_member(name) is not None])
+        DEVS = ", ".join([f"**{message.guild.get_member(name)}**" for name in DEVELOPERS if message.guild is not None and message.guild.get_member(name) is not None])
 
-        issueButtonMessageId = [discord.Message]
+        issueButtonMessageId: list = [discord.Message]
         row = MainView(issueButtonMessageId)
         row.timeout = TIME_TEN_MIN
         issueButton = MainButton(row=0, emoji="📩", label="Create Ticket", style=discord.ButtonStyle.secondary, custom_id="issue")
@@ -174,7 +174,9 @@ async def on_member_join(member: discord.Member) -> None:
         updatedMember = await guild.fetch_member(member.id)
         if len(updatedMember.roles) <= 2:
             log.debug(f"Newcomer ping reminder: {updatedMember}")
-            await client.get_channel(WELCOME).send(f"{updatedMember.mention} Don't forget to ping @​{guild.get_role(UNIT_STAFF).name} or @​{guild.get_role(ADVISOR).name} when you are ready!")
+            unitStaff = guild.get_role(UNIT_STAFF)
+            advisor = guild.get_role(ADVISOR)
+            await client.get_channel(WELCOME).send(f"{updatedMember.mention} Don't forget to ping{' @​' + unitStaff.name if unitStaff is not None else ''}{' or' if unitStaff and advisor else ''}{' @​' + advisor.name if advisor is not None else ''} when you are ready!")
         else:
             log.debug(f"Newcomer is no longer in need of an interview: {updatedMember.display_name} ({updatedMember})")
     else:
@@ -236,11 +238,12 @@ async def reload(ctx: commands.context) -> None:
 async def buttonHandling(button: discord.ui.Button, interaction: discord.Interaction) -> None:
     log.info(f"{interaction.user.display_name} ({interaction.user}) created a ticket!")
     try:
-        for btn in button.view.children:
-            btn.disabled = True
-        await interaction.response.edit_message(view=button.view)
+        if button.view is not None:
+            for btn in button.view.children:
+                btn.disabled = True
+            await interaction.response.edit_message(view=button.view)
     except Exception as e:
-        log.exception(e)
+        log.exception(repr(e))
 
     try:
         embed = Embed(title="Ticket", description="Thank you for reaching out to us!\nPlease tell us what your issue is in **one** message below!\nInclude screenshot(s) if suitable!", color=Color.orange())
@@ -284,7 +287,7 @@ class MainView(discord.ui.View):
         super().__init__(*args, **kwargs)
         self.message = message  # Message to reference when view has timeout
 
-    async def on_timeout(self: discord.ui.View):
+    async def on_timeout(self):
         try:
             for button in self.children:
                 button.disabled = True
@@ -307,4 +310,4 @@ if __name__ == "__main__":
         client.run(secret.TOKEN_DEV if secret.DEBUG else secret.TOKEN)
         log.info("Bot stopped!")
     except Exception as e:
-        log.exception(e)
+        log.exception(repr(e))

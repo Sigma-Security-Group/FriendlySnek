@@ -103,7 +103,7 @@ class JustBob(commands.Cog):
         if not os.path.exists(PLAYERS_PROGRESS_FILE):
             with open(PLAYERS_PROGRESS_FILE, "w") as f:
                 json.dump({}, f, indent=4)
-        self.games = {}
+        self.games: dict = {}
 
     @commands.Cog.listener()
     async def on_ready(self) -> None:
@@ -121,12 +121,12 @@ class JustBob(commands.Cog):
         Returns:
         None.
         """
-        if interaction.channel.id != GENERAL and interaction.channel.id != BOT_SPAM:
+        if interaction.channel is not None and interaction.channel.id != GENERAL and interaction.channel.id != BOT_SPAM:
             await interaction.response.send_message(f"Sorry, but you can only play Just Bob in <#{GENERAL}> or in <#{BOT_SPAM}>!")
             return
         log.info(f"{interaction.user.display_name} ({interaction.user}) is playing Just Bob!")
         await interaction.response.send_message("Playing Just Bob...")
-        if interaction.user.id in self.games:  # Remove previous active Just Bob game if it exists
+        if interaction.user.id in self.games and isinstance(interaction.channel, discord.TextChannel):  # Remove previous active Just Bob game if it exists
             msg = await interaction.channel.fetch_message(self.games[interaction.user.id]["messageId"])
             del self.games[interaction.user.id]
             await msg.delete()
@@ -142,6 +142,8 @@ class JustBob(commands.Cog):
         Returns:
         None.
         """
+        if not isinstance(interaction.channel, discord.TextChannel):
+            return
         with open(LEVELS_FILE) as f:
             levels = json.load(f)
         with open(PLAYERS_PROGRESS_FILE) as f:
@@ -174,7 +176,7 @@ class JustBob(commands.Cog):
         Returns:
         None.
         """
-        if ((interaction.user.id in self.games and self.games[interaction.user.id]["messageId"] == interaction.message.id) or (any(role is not None and role.id == UNIT_STAFF for role in interaction.user.roles) and button.emoji == STOP)):
+        if interaction.message is not None and ((interaction.user.id in self.games and self.games[interaction.user.id]["messageId"] == interaction.message.id) or isinstance(interaction.user, discord.Member) and (any(role is not None and role.id == UNIT_STAFF for role in interaction.user.roles) and button.emoji == STOP)):
             try:
                 game = self.games[interaction.user.id]
             except KeyError:
@@ -346,7 +348,7 @@ class JustBobView(discord.ui.View):
         self.interaction = interaction
         self.messageChangeCounter = messageChangeCounter
 
-    async def on_timeout(self: discord.ui.View):
+    async def on_timeout(self):
         try:
             message = await self.interaction.channel.fetch_message(self.instance.games[self.interaction.user.id]["messageId"])
             if self.messageChangeCounter == self.instance.games[self.interaction.user.id]["messageChangeCounter"]:  # If time'd out buttons are the same as the displayed ones
@@ -365,7 +367,7 @@ class JustBobButton(discord.ui.Button):
         super().__init__(*args, **kwargs)
         self.instance = instance
 
-    async def callback(self: discord.ui.Button, interaction: discord.Interaction):
+    async def callback(self, interaction: discord.Interaction):
         await self.instance.buttonHandling(self, interaction)
 
 

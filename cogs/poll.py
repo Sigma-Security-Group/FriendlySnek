@@ -76,6 +76,7 @@ class Poll(commands.Cog):
         optionCount: int = 0
         for optionInp in options:
             if optionInp is not None:
+                assert embed.description is not None
                 embed.description += f"{emojiNumbers[optionCount]}{' **(0%)**' * isOneOption} {optionInp}\n"
                 group[f"poll_vote_{optionCount}"] = []
                 optionCount += 1
@@ -108,7 +109,7 @@ class Poll(commands.Cog):
             embed = Embed(title="Poll results", color=Color.green())
             for key, value in group.items():
                 if key.startswith("poll_vote_"):
-                    embed.add_field(name=emojiNumbers[int(key.split("_")[-1])], value="\n".join([interaction.guild.get_member(voterId).mention for voterId in value if interaction.guild.get_member(voterId) is not None]) if len(value) > 0 else "No votes", inline=True)
+                    embed.add_field(name=emojiNumbers[int(key.split("_")[-1])], value="\n".join([member.mention for voterId in value if interaction.guild is not None and (member := interaction.guild.get_member(voterId)) is not None]) if len(value) > 0 else "No votes", inline=True)
             embed.set_footer(text=f"Poll by {group['Creator']}")
             await interaction.response.send_message(embed=embed, ephemeral=True)
             return

@@ -2,7 +2,7 @@ import asyncio
 import pytz
 import secret
 from datetime import datetime
-import pysftp
+import pysftp  # type: ignore
 
 from discord import app_commands, Embed, Color, utils
 from discord.ext import commands

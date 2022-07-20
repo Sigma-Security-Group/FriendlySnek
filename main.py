@@ -101,10 +101,9 @@ async def on_message(message: discord.Message) -> None:
         message.content = message.content.lower()
         await client.process_commands(message)
 
-    # Unmark newcomer pinging unit staff as needing a reminder to ping unit staff
+    # Unmark newcomer pinging Unit Staff or Advisor as needing a reminder to ping Unit Staff or Advisor
     if message.author.id in newcomers:
-        unitStaffRole = message.guild.get_role(UNIT_STAFF)
-        if unitStaffRole in message.role_mentions:
+        if message.guild.get_role(UNIT_STAFF) in message.role_mentions or message.guild.get_role(ADVISOR) in message.role_mentions:
             newcomers.remove(message.author.id)
 
     # Run message content analysis

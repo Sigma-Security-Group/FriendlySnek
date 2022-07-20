@@ -348,7 +348,7 @@ class Schedule(commands.Cog):
                     await channel.send(":cry:")
                     return
 
-                newEvents = []
+                newEvents: list[dict] = []
                 with open(EVENTS_FILE, "w") as f:
                     json.dump(newEvents, f, indent=4)
                 for event in sorted(events, key=lambda e: datetime.strptime(e["time"], TIME_FORMAT), reverse=True):
@@ -469,9 +469,9 @@ class Schedule(commands.Cog):
             scheduleNeedsUpdate = True
             originalMsgId = interaction.message.id
             fetchMsg = False
-            event = [event for event in events if event["messageId"] == interaction.message.id]
+            event_: list[dict] = [event for event in events if event["messageId"] == interaction.message.id]
             if button.custom_id == "accept":
-                event = event[0]
+                event = event_[0]
                 if interaction.user.id in event["declined"]:
                     event["declined"].remove(interaction.user.id)
                 if interaction.user.id in event["declinedForTiming"]:
@@ -482,7 +482,7 @@ class Schedule(commands.Cog):
                     event["accepted"].append(interaction.user.id)
 
             elif button.custom_id == "decline":
-                event = event[0]
+                event = event_[0]
                 if interaction.user.id in event["accepted"]:
                     event["accepted"].remove(interaction.user.id)
                 if interaction.user.id in event["declinedForTiming"]:
@@ -497,7 +497,7 @@ class Schedule(commands.Cog):
                             event["reservableRoles"][roleName] = None
 
             elif button.custom_id == "declineForTiming":
-                event = event[0]
+                event = event_[0]
                 if interaction.user.id in event["accepted"]:
                     event["accepted"].remove(interaction.user.id)
                 if interaction.user.id in event["tentative"]:
@@ -512,7 +512,7 @@ class Schedule(commands.Cog):
                             event["reservableRoles"][roleName] = None
 
             elif button.custom_id == "tentative":
-                event = event[0]
+                event = event_[0]
                 if interaction.user.id in event["accepted"]:
                     event["accepted"].remove(interaction.user.id)
                 if interaction.user.id in event["declined"]:
@@ -527,7 +527,7 @@ class Schedule(commands.Cog):
                             event["reservableRoles"][roleName] = None
 
             elif button.custom_id == "reserve":
-                event = event[0]
+                event = event_[0]
                 await interaction.response.send_message(RESPONSE_GOTO_DMS.format(interaction.user.dm_channel.jump_url), ephemeral=True)
                 reservingOutput = await self.reserveRole(interaction.user, event)
                 if not reservingOutput:
@@ -535,7 +535,7 @@ class Schedule(commands.Cog):
                 fetchMsg = True
 
             elif button.custom_id == "edit":
-                event = event[0]
+                event = event_[0]
                 if interaction.user.id == event["authorId"] or any(role.id == UNIT_STAFF for role in interaction.user.roles):
                     await interaction.response.send_message(RESPONSE_GOTO_DMS.format(interaction.user.dm_channel.jump_url), ephemeral=True)
                     reorderEvents = await self.editEvent(interaction.user, event, isTemplateEdit=False)
@@ -550,7 +550,7 @@ class Schedule(commands.Cog):
                 fetchMsg = True
 
             elif button.custom_id == "delete":
-                event = event[0]
+                event = event_[0]
                 if interaction.user.id == event["authorId"] or any(role.id == UNIT_STAFF for role in interaction.user.roles):
                     await interaction.response.send_message(RESPONSE_GOTO_DMS.format(interaction.user.dm_channel.jump_url), ephemeral=True)
                     embed = Embed(title=SCHEDULE_EVENT_CONFIRM_DELETE.format(f"{event['type'].lower()}: `{event['title']}`"), color=Color.orange())

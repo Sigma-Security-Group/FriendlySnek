@@ -95,6 +95,7 @@ class Staff(commands.Cog):
     @commands.has_any_role(UNIT_STAFF)
     async def purgeMessagesFromMember(self, ctx: commands.context, *, member: str) -> None:
         """ Purges all messages from a specific member. """
+
         tagetMember = self._getMember(member)
         if tagetMember is None:
             log.info(f"No member found for search term: {member}")
@@ -124,6 +125,7 @@ class Staff(commands.Cog):
     @commands.has_any_role(UNIT_STAFF)
     async def lastActivity(self, ctx: commands.context, pingStaff: str = "yes") -> None:
         """ Get last activity (message) for all members. """
+
         log.info(f"Analyzing members' last activity")
         embed = Embed(title="Analyzing members' last activity", color=Color.orange())
         embed.timestamp = datetime.now()
@@ -174,6 +176,7 @@ class Staff(commands.Cog):
     @commands.has_any_role(UNIT_STAFF)
     async def lastActivityForMember(self, ctx: commands.context, *, member: str) -> None:
         """ Get last activity (message) for a specific member. """
+
         targetMember = self._getMember(member)
         if targetMember is None:
             log.info(f"No member found for search term: {member}!")
@@ -204,6 +207,7 @@ class Staff(commands.Cog):
     @commands.has_any_role(UNIT_STAFF)
     async def promote(self, ctx: commands.context, *, member: str) -> None:
         """ Promote a member to the next rank. """
+
         targetMember = self._getMember(member)
         if targetMember is None:
             log.info(f"No member found for search term: {member}!")
@@ -241,6 +245,7 @@ class Staff(commands.Cog):
     @commands.has_any_role(UNIT_STAFF)
     async def demote(self, ctx: commands.context, *, member: str) -> None:
         """ Demote a member to the previous rank. """
+
         targetMember = self._getMember(member)
         if targetMember is None:
             log.info(f"No member found for search term: {member}")
@@ -269,6 +274,7 @@ class Staff(commands.Cog):
     @commands.has_any_role(UNIT_STAFF)
     async def searchModLogs(self, ctx: commands.context, *, member: str) -> None:
         """ Search through the moderation logs. """
+
         targetMember = self._getMember(member)
         if targetMember is None:
             log.info(f"No member found for search term: {member}")

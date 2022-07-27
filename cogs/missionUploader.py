@@ -1,4 +1,5 @@
 import asyncio
+from os import remove as osRemove
 import pytz
 import secret
 from datetime import datetime
@@ -20,17 +21,18 @@ UTC = pytz.utc
 SERVERS = [
     {
         "Name": "SSG - Operations Server",
-        "Directory": "/euc-ogs7.armahosts.com_2482/mpmissions",
+        "Directory": "euc-ogs7.armahosts.com_2482/mpmissions",
         "Host": "euc-ogs7.armahosts.com",
         "Port": 8822
     },
     {
         "Name": "SSG - Training & Testing Server",
-        "Directory": "/euc-ogs11.armahosts.com_2492/mpmissions",
+        "Directory": "euc-ogs11.armahosts.com_2492/mpmissions",
         "Host": "euc-ogs11.armahosts.com",
         "Port": 8822
     }
 ]
+
 
 class MissionUploader(commands.Cog):
     def __init__(self, bot: commands.Bot) -> None:
@@ -201,6 +203,51 @@ class MissionUploader(commands.Cog):
             guild = self.bot.get_guild(GUILD_ID)
             embed = Embed(title="❌ Missing permissions", description=f"You do not have the permissions to upload a mission file!\nThe permitted roles are: {', '.join([guild.get_role(role).name for role in (UNIT_STAFF, SERVER_HAMSTER, MISSION_BUILDER, CURATOR)])}.", color=Color.red())
             await interaction.response.send_message(embed=embed)
+
+
+    @commands.command(name="installedmods")
+    @commands.has_any_role(UNIT_STAFF, SERVER_HAMSTER)
+    async def installedmods(self, ctx: commands.context, *, server: str = "Operations Server") -> None:
+        """ Fetch all installed mods on a server. Specific server can be chosen - defaults to Operation """
+
+        try:
+            for term in ("test", "train", "second", "back"):
+                if term in server.lower():
+                    host = SERVERS[1]
+                    break
+            else:
+                host = SERVERS[0]
+
+            cnopts = pysftp.CnOpts()
+            cnopts.hostkeys = None
+            assert isinstance(host["Directory"], str)
+            with pysftp.Connection(host["Host"], port=host["Port"], username=secret.FTP_USERNAME, password=secret.FTP_PASSWORD, cnopts=cnopts, default_path=host["Directory"].split("/")[0]) as sftp:
+                modList = [file for file in sftp.listdir() if file.startswith("@")]
+
+            modList.sort(key=lambda x: x.upper())
+
+            modListServer: list[str] = []
+            SERVER_MODS = ("SSG_REP", )
+            for mod in SERVER_MODS:
+                mod = f"@{mod}"
+                try:
+                    if mod in modList:
+                        modPos = modList.index(mod)
+                        modListServer.append(modList[modPos])
+                        modList.remove(mod)
+                except ValueError:
+                    pass
+
+            fileContent = f"{host['Name']}\n\nClient Mods: {';'.join(modList)}\n\nServer Mods: {';'.join(modListServer)}\n​"
+
+            tempFile = "tmp/installedmods.txt"
+            with open(tempFile, "w", encoding="UTF-8") as f:
+                f.write(fileContent)
+            await ctx.send(file=discord.File(tempFile))
+            osRemove(tempFile)
+
+        except Exception as e:
+            log.exception(e)
 
 async def setup(bot: commands.Bot) -> None:
     await bot.add_cog(MissionUploader(bot))

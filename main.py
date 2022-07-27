@@ -234,6 +234,13 @@ async def reload(ctx: commands.context) -> None:
     await client.tree.sync(guild=GUILD)
     await ctx.send("Cogs reloaded!")
 
+if secret.DEBUG:
+    @client.command()
+    @devCheck()
+    async def stop(ctx: commands.context) -> None:
+        """ Stops bot - Devs only. """
+        await client.close()
+
 async def buttonHandling(button: discord.ui.Button, interaction: discord.Interaction) -> None:
     log.info(f"{interaction.user.display_name} ({interaction.user}) created a ticket!")
     try:

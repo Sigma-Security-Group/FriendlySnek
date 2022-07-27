@@ -13,7 +13,7 @@ from dateutil.parser import parse as datetimeParse
 
 import discord
 from discord import app_commands, Embed, Color, utils
-from discord.ext import commands, tasks
+from discord.ext import commands, tasks  # type: ignore
 
 from constants import *
 from __main__ import log, cogsReady

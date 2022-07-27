@@ -2,7 +2,10 @@ import pytz
 import asyncio
 import os
 import re
+import requests
+import json
 
+from bs4 import BeautifulSoup as BS  # type: ignore
 from datetime import datetime
 from logger import Logger
 log = Logger()
@@ -13,7 +16,7 @@ if platform.system() == "Windows":
 
 import discord
 from discord import Embed, Color
-from discord.ext import commands
+from discord.ext import commands, tasks  # type: ignore
 
 if not os.path.exists("./secret.py"):
     log.info("Creating a secret.py file!")
@@ -70,12 +73,54 @@ class FriendlySnek(commands.Bot):
 client = FriendlySnek(intents=INTENTS)
 client.ready = False
 
+
+@tasks.loop(minutes=10)  # Battlemetrics pings the server about every 30 min
+async def pingServers() -> None:
+    """  """
+
+    try:
+        URL = "https://www.battlemetrics.com/servers/arma3/"
+        SERVERS: dict[int, str] = {
+            STATUS_OPERATION: "14797431",
+            STATUS_TRAINING_AND_TESTING: "15133462"
+        }
+
+        STATUS = {
+            "online": "Online",
+            "dead": "Offline"
+        }
+
+        for prefix in SERVERS.items():
+            shit = requests.get(URL + prefix[1])  # Fetch the shit provided
+            soup = BS(shit.text, "html.parser")  # Parse it to beautiful shit
+
+            jsonStr = ""
+            for tag in soup.find_all("script"):  # Find all script tags
+                if tag.has_attr("type") and tag["type"] == "application/json":  # Filter to only get the specific one
+                    jsonStr = tag.string  # Get the actual shit
+                    break
+
+            if jsonStr:  # If nothing has fucked up
+                js = json.loads(jsonStr)  # Load the shit up into JSON
+                serverStatus = js["state"]["servers"]["servers"][prefix[1]]["status"]  # Filter the shit to get the status
+
+            guild = client.get_guild(GUILD_ID)
+            vc = await guild.fetch_channel(prefix[0])
+            await vc.edit(name=f"{vc.name.split(':')[0]}: {STATUS[serverStatus]}")
+    except Exception as e:
+        log.exception(repr(e))
+
 @client.event
 async def on_ready() -> None:
     while not all(cogsReady.values()):
         await asyncio.sleep(1)
     client.ready = True
     log.info(f"Bot Ready! Logged in as {client.user}.")
+
+    try:
+        pingServers.start()
+    except Exception:
+        log.warning(LOG_COULDNT_START.format("pingServers"))
 
 @client.event
 async def on_message(message: discord.Message) -> None:

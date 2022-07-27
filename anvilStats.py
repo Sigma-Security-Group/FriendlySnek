@@ -1,7 +1,7 @@
 import json
-import pysftp
-import anvil.server
-import anvil.users
+import pysftp  # type: ignore
+import anvil.server  # type: ignore
+import anvil.users  # type: ignore
 
 import secret
 

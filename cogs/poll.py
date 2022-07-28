@@ -165,7 +165,7 @@ class PollView(discord.ui.View):
         super().__init__(*args, **kwargs)
         self.instance = instance
 
-    async def on_timeout(self: discord.ui.View):
+    async def on_timeout(self):
         pass
 
 

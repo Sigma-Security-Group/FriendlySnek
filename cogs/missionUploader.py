@@ -43,7 +43,7 @@ class MissionUploader(commands.Cog):
         log.debug(LOG_COG_READY.format("MissionUploader"), flush=True)
         cogsReady["missionUploader"] = True
 
-    async def cancelCommand(self, channel: discord.DMChannel, abortText:str) -> None:
+    async def cancelCommand(self, channel: discord.TextChannel | discord.VoiceChannel | discord.Thread | discord.DMChannel | discord.PartialMessageable | discord.GroupChannel, abortText:str) -> None:
         """ Sends an abort response to the user.
 
         Parameters:

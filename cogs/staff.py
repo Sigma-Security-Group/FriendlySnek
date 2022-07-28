@@ -58,7 +58,8 @@ class Staff(commands.Cog):
             avatar = targetMember.avatar if targetMember.avatar else targetMember.display_avatar
             embed.set_author(icon_url=targetMember.display_avatar, name=targetMember)
             embed.set_thumbnail(url=avatar)
-            embed.add_field(name="Joined", value=utils.format_dt(targetMember.joined_at, style="f"), inline=True)
+            if targetMember.joined_at is not None:
+                embed.add_field(name="Joined", value=utils.format_dt(targetMember.joined_at, style="f"), inline=True)
             embed.add_field(name="Registered", value=utils.format_dt(targetMember.created_at, style="f"), inline=True)
 
             roles = [role.mention for role in targetMember.roles]  # Fetch all member roles

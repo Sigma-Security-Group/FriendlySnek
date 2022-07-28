@@ -754,7 +754,7 @@ class Schedule(commands.Cog):
             log.debug(f"{member.display_name} ({member}) was reserving a role but schedule was updated!")
         return True
 
-    async def eventTime(self, *, interaction: discord.Interaction, dmChannel: discord.DMChannel, eventType: str, collidingEventTypes: tuple | None, delta: timedelta) -> tuple[datetime, datetime] | None:
+    async def eventTime(self, *, interaction: discord.Interaction, dmChannel: discord.TextChannel | discord.VoiceChannel | discord.Thread | discord.DMChannel | discord.PartialMessageable | discord.GroupChannel, eventType: str, collidingEventTypes: tuple | None, delta: timedelta) -> tuple[datetime, datetime] | None:
         """ Handles the timpe part of scheduling an event; prompts, collision, etc.
 
         Parameters:
@@ -2373,7 +2373,7 @@ class Schedule(commands.Cog):
 
         # Get the inputted time
         try:
-            time = datetimeParse(time)
+            parsedTime = datetimeParse(time)
         except ValueError:
             await interaction.edit_original_message(embed=Embed(title="❌ Invalid time", description="Provide a valid time!", color=Color.red()))
             return
@@ -2386,7 +2386,9 @@ class Schedule(commands.Cog):
             if not str(interaction.user.id) in memberTimeZones:
                 timeZoneOutput = await self.changeTimeZone(interaction.user, isCommand=False)
                 if not timeZoneOutput:
-                    await self.cancelCommand(interaction.user.dm_channel, "Timestamp creation")
+                    dmChannel = interaction.user.dm_channel
+                    if dmChannel:
+                        await self.cancelCommand(dmChannel, "Timestamp creation")
                     await interaction.edit_original_message(embed=Embed(title="❌ Timestamp creation canceled", description="You must provide a time zone in your DMs!", color=Color.red()))
                     return
                 with open(MEMBER_TIME_ZONES_FILE) as f:
@@ -2401,12 +2403,12 @@ class Schedule(commands.Cog):
                 return
 
         # Output timestamp
-        time = timeZone.localize(time).astimezone(UTC)
-        await interaction.edit_original_message(content = f"{message} {utils.format_dt(time, 'F')}")
+        parsedTime = timeZone.localize(parsedTime).astimezone(UTC)
+        await interaction.edit_original_message(content = f"{message} {utils.format_dt(parsedTime, 'F')}")
         if not informative == "No":
             embed = Embed(color=Color.green())
-            embed.set_footer(text=f"Local time: {time.strftime(TIME_FORMAT)}\nTime zone: {memberTimeZones[str(interaction.user.id)] if not timezone else timeZone}")
-            timestamps = [utils.format_dt(time, style=timestampStyle[0]) for timestampStyle in TIMESTAMP_STYLES.items()]
+            embed.set_footer(text=f"Local time: {parsedTime.strftime(TIME_FORMAT)}\nTime zone: {memberTimeZones[str(interaction.user.id)] if not timezone else timeZone}")
+            timestamps = [utils.format_dt(parsedTime, style=timestampStyle[0]) for timestampStyle in TIMESTAMP_STYLES.items()]
             embed.add_field(name="Timestamp", value="\n".join(timestamps), inline=True)
             embed.add_field(name="Copy this", value="\n".join([f"`{stamp}`" for stamp in timestamps]), inline=True)
             embed.add_field(name="Description", value="\n".join([f"`{timestampStyle[1]}`" for timestampStyle in TIMESTAMP_STYLES.items()]), inline=True)
@@ -2414,7 +2416,7 @@ class Schedule(commands.Cog):
 
     @app_commands.command(name="changetimezone")
     @app_commands.guilds(GUILD)
-    async def timeZone(self, interaction: discord.Interaction) -> bool:
+    async def timeZone(self, interaction: discord.Interaction) -> None:
         """ Change your time zone preferences for your next scheduled event. """
         await interaction.response.send_message("Changing time zone preferences...")
         timeZoneOutput = await self.changeTimeZone(interaction.user, isCommand=True)
@@ -2490,7 +2492,7 @@ class ScheduleView(discord.ui.View):
         super().__init__(*args, **kwargs)
         self.message = message  # Message to reference when view has timeout
 
-    async def on_timeout(self: discord.ui.View):
+    async def on_timeout(self):
         try:
             for button in self.children:
                 button.disabled = True
@@ -2506,7 +2508,7 @@ class ScheduleButton(discord.ui.Button):
         self.instance = instance
         self.message = message
 
-    async def callback(self: discord.ui.Button, interaction: discord.Interaction):
+    async def callback(self, interaction: discord.Interaction):
         await self.instance.buttonHandling(self.message, self, interaction)
 
 

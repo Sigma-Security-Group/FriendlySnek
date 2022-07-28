@@ -76,15 +76,25 @@ client.ready = False
 
 @tasks.loop(minutes=10)  # Battlemetrics pings the server about every 30 min
 async def pingServers() -> None:
-    """  """
+    """ Pinging arma servers, get their status, and display it on a vc name.
+
+        Parameters:
+        None.
+
+        Returns:
+        None.
+    """
 
     try:
         URL = "https://www.battlemetrics.com/servers/arma3/"
-        SERVERS: dict[int, str] = {
+
+        # Listing each server (vc) with their battlemetric ID as key
+        SERVERS = {
             STATUS_OPERATION: "14797431",
             STATUS_TRAINING_AND_TESTING: "15133462"
         }
 
+        # Convert received status to a custom status
         STATUS = {
             "online": "Online",
             "dead": "Offline"
@@ -104,9 +114,11 @@ async def pingServers() -> None:
                 js = json.loads(jsonStr)  # Load the shit up into JSON
                 serverStatus = js["state"]["servers"]["servers"][prefix[1]]["status"]  # Filter the shit to get the status
 
-            guild = client.get_guild(GUILD_ID)
-            vc = await guild.fetch_channel(prefix[0])
-            await vc.edit(name=f"{vc.name.split(':')[0]}: {STATUS[serverStatus]}")
+                guild = client.get_guild(GUILD_ID)
+                vc = await guild.fetch_channel(prefix[0])
+                await vc.edit(name=f"{vc.name.split(':')[0]}: {STATUS[serverStatus]}")  # Update the shitty status
+            else:
+                raise Exception("No JSON in script found!")
     except Exception as e:
         log.exception(repr(e))
 

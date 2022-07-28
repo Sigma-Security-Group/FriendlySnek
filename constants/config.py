@@ -80,6 +80,7 @@ SCHEDULE_EVENT_DURATION_PROMPT = "E.g.\n`30m`\n`2h`\n`4h 30m`\n`2h30`"
 SCHEDULE_EVENT_DURATION_REGEX = r"^\s*((([1-9]\d*)?\d\s*h(\s*([0-5])?\d\s*m?)?)|(([0-5])?\d\s*m))\s*$"
 
 ### Templates
+SCHEDULE_EVENT_TEMPLATE_PROMPT = "Enter a template number.\nEnter `none` to make it from scratch.\n\nEdit template: `edit` + template number. E.g. `edit 2`.\nDelete template: `delete` + template number. E.g. `delete 4`. **IRREVERSIBLE!**"
 SCHEDULE_EVENT_TEMPLATE_ACTION_REGEX = r"(edit |delete )?\d+"
 SCHEDULE_EVENT_TEMPLATE_SAVE_NAME_QUESTION = "Which name would you like to save the template as?"
 SCHEDULE_EVENT_CONFIRM_DELETE = "Are you sure you want to delete this {0}?"

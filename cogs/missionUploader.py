@@ -211,6 +211,7 @@ class MissionUploader(commands.Cog):
         """ Fetch all installed mods on a server. Specific server can be chosen - defaults to Operation """
 
         try:
+            msg = await ctx.send("Gotcha mate. Standby while I threat some rats who got the answer...")
             for term in ("test", "train", "second", "back"):
                 if term in server.lower():
                     host = SERVERS[1]
@@ -238,12 +239,12 @@ class MissionUploader(commands.Cog):
                 except ValueError:
                     pass
 
-            fileContent = f"{host['Name']}\n\nClient Mods: {';'.join(modList)}\n\nServer Mods: {';'.join(modListServer)}\n​"
+            fileContent = f"{host['Name']}\n\nClient Mods: {';'.join(modList)}\nAmount: {len(modList)}\n\nServer Mods: {';'.join(modListServer)}\nAmount: {len(modListServer)}"
 
             tempFile = "tmp/installedmods.txt"
             with open(tempFile, "w", encoding="UTF-8") as f:
                 f.write(fileContent)
-            await ctx.send(file=discord.File(tempFile))
+            await msg.edit(content=None, attachments=[discord.File(tempFile)])
             osRemove(tempFile)
 
         except Exception as e:

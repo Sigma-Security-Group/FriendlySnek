@@ -73,8 +73,10 @@ class FriendlySnek(commands.Bot):
 client = FriendlySnek(intents=INTENTS)
 client.ready = False
 
+guild = client.get_guild(GUILD_ID)
 
-@tasks.loop(minutes=10)  # Battlemetrics pings the server about every 30 min
+
+@tasks.loop(minutes=1)
 async def pingServers() -> None:
     """ Pinging arma servers, get their status, and display it on a vc name.
 
@@ -86,39 +88,25 @@ async def pingServers() -> None:
     """
 
     try:
-        URL = "https://www.battlemetrics.com/servers/arma3/"
+        URL = "https://api.steampowered.com/ISteamApps/GetServersAtAddress/v0001?addr="
 
         # Listing each server (vc) with their battlemetric ID as key
         SERVERS = {
-            STATUS_OPERATION: "14797431",
-            STATUS_TRAINING_AND_TESTING: "15133462"
+            STATUS_OPERATION: "144.76.173.27:2483",
+            STATUS_TRAINING_AND_TESTING: "157.90.34.159:2493"
         }
 
-        # Convert received status to a custom status
-        STATUS = {
-            "online": "Online",
-            "dead": "Offline"
-        }
 
         for prefix in SERVERS.items():
             shit = requests.get(URL + prefix[1])  # Fetch the shit provided
-            soup = BS(shit.text, "html.parser")  # Parse it to beautiful shit
 
-            jsonStr = ""
-            for tag in soup.find_all("script"):  # Find all script tags
-                if tag.has_attr("type") and tag["type"] == "application/json":  # Filter to only get the specific one
-                    jsonStr = tag.string  # Get the actual shit
-                    break
+            shittyJSON = json.loads(shit.text)  # Load the shit up into JSON
+            serverStatus = shittyJSON["response"]["servers"]  # Filter the shit to get the status
+            serverStatus = "Offline 🔴" if not len(serverStatus) else "Online 🟢"
 
-            if jsonStr:  # If nothing has fucked up
-                js = json.loads(jsonStr)  # Load the shit up into JSON
-                serverStatus = js["state"]["servers"]["servers"][prefix[1]]["status"]  # Filter the shit to get the status
-
-                guild = client.get_guild(GUILD_ID)
-                vc = await guild.fetch_channel(prefix[0])
-                await vc.edit(name=f"{vc.name.split(':')[0]}: {STATUS[serverStatus]}")  # Update the shitty status
-            else:
-                raise Exception("No JSON in script found!")
+            vc = await guild.fetch_channel(prefix[0])
+            await vc.edit(name=f"{vc.name.split(':')[0]}: {serverStatus}")  # Update the shitty status
+            await asyncio.sleep(5)
     except Exception as e:
         log.exception(repr(e))
 
@@ -216,7 +204,6 @@ async def on_member_join(member: discord.Member) -> None:
     Returns:
     None.
     """
-    guild = member.guild
     if guild.id != GUILD_ID:
         return
     newcomers.add(member.id)
@@ -329,7 +316,7 @@ async def buttonHandling(button: discord.ui.Button, interaction: discord.Interac
 
     try:
         embed = Embed(title="✅ Ticket sent", description="Thank you for contacting us!\nWe will respond as soon as possible.", color=Color.green())
-        guild = client.get_guild(GUILD_ID)
+
         devs = [guild.get_member(developer) for developer in DEVELOPERS if guild.get_member(developer) is not None]
         embed.set_footer(text=f"Developers: {', '.join([dev.display_name for dev in devs])}")
         msg = await interaction.user.send(embed=embed)

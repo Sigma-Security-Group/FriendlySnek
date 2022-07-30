@@ -73,8 +73,6 @@ class FriendlySnek(commands.Bot):
 client = FriendlySnek(intents=INTENTS)
 client.ready = False
 
-guild = client.get_guild(GUILD_ID)
-
 
 @tasks.loop(minutes=1)
 async def pingServers() -> None:
@@ -103,7 +101,7 @@ async def pingServers() -> None:
             shittyJSON = json.loads(shit.text)  # Load the shit up into JSON
             serverStatus = shittyJSON["response"]["servers"]  # Filter the shit to get the status
             serverStatus = "Offline 🔴" if not len(serverStatus) else "Online 🟢"
-
+            guild = client.get_guild(GUILD_ID)
             vc = await guild.fetch_channel(prefix[0])
             await vc.edit(name=f"{vc.name.split(':')[0]}: {serverStatus}")  # Update the shitty status
             await asyncio.sleep(5)
@@ -204,6 +202,7 @@ async def on_member_join(member: discord.Member) -> None:
     Returns:
     None.
     """
+    guild = member.guild
     if guild.id != GUILD_ID:
         return
     newcomers.add(member.id)
@@ -316,7 +315,7 @@ async def buttonHandling(button: discord.ui.Button, interaction: discord.Interac
 
     try:
         embed = Embed(title="✅ Ticket sent", description="Thank you for contacting us!\nWe will respond as soon as possible.", color=Color.green())
-
+        guild = client.get_guild(GUILD_ID)
         devs = [guild.get_member(developer) for developer in DEVELOPERS if guild.get_member(developer) is not None]
         embed.set_footer(text=f"Developers: {', '.join([dev.display_name for dev in devs])}")
         msg = await interaction.user.send(embed=embed)

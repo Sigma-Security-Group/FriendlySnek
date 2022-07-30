@@ -536,7 +536,7 @@ class Schedule(commands.Cog):
 
             elif button.custom_id == "edit":
                 event = event_[0]
-                if interaction.user.id == event["authorId"] or any(role.id == UNIT_STAFF for role in interaction.user.roles):
+                if interaction.user.id == event["authorId"] or interaction.user.id in DEVELOPERS or any(role.id == UNIT_STAFF for role in interaction.user.roles):
                     await interaction.response.send_message(RESPONSE_GOTO_DMS.format(interaction.user.dm_channel.jump_url), ephemeral=True)
                     reorderEvents = await self.editEvent(interaction.user, event, isTemplateEdit=False)
                     if reorderEvents:
@@ -551,7 +551,7 @@ class Schedule(commands.Cog):
 
             elif button.custom_id == "delete":
                 event = event_[0]
-                if interaction.user.id == event["authorId"] or any(role.id == UNIT_STAFF for role in interaction.user.roles):
+                if interaction.user.id == event["authorId"] or interaction.user.id in DEVELOPERS or any(role.id == UNIT_STAFF for role in interaction.user.roles):
                     await interaction.response.send_message(RESPONSE_GOTO_DMS.format(interaction.user.dm_channel.jump_url), ephemeral=True)
                     embed = Embed(title=SCHEDULE_EVENT_CONFIRM_DELETE.format(f"{event['type'].lower()}: `{event['title']}`"), color=Color.orange())
                     deletePrompts = [discord.Message]

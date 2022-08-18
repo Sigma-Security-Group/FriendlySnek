@@ -2260,7 +2260,7 @@ class Schedule(commands.Cog):
         try:
             time = datetimeParse(time)
         except ValueError:
-            await interaction.edit_original_message(embed=Embed(title="❌ Invalid time", description="Provide a valid time!", color=Color.red()))
+            await interaction.edit_original_response(embed=Embed(title="❌ Invalid time", description="Provide a valid time!", color=Color.red()))
             return
 
         if not timezone:  # User's time zone
@@ -2272,7 +2272,7 @@ class Schedule(commands.Cog):
                 timeZoneOutput = await self.changeTimeZone(interaction.user, isCommand=False)
                 if not timeZoneOutput:
                     await self.cancelCommand(interaction.user.dm_channel, "Timestamp creation")
-                    await interaction.edit_original_message(embed=Embed(title="❌ Timestamp creation canceled", description="You must provide a time zone in your DMs!", color=Color.red()))
+                    await interaction.edit_original_response(embed=Embed(title="❌ Timestamp creation canceled", description="You must provide a time zone in your DMs!", color=Color.red()))
                     return
                 with open(MEMBER_TIME_ZONES_FILE) as f:
                     memberTimeZones = json.load(f)
@@ -2282,12 +2282,12 @@ class Schedule(commands.Cog):
             try:
                 timeZone = pytz.timezone(timezone)
             except pytz.exceptions.UnknownTimeZoneError:
-                await interaction.edit_original_message(embed=Embed(title="❌ Invalid time zone", description="Provide a valid time zone!", color=Color.red()))
+                await interaction.edit_original_response(embed=Embed(title="❌ Invalid time zone", description="Provide a valid time zone!", color=Color.red()))
                 return
 
         # Output timestamp
         time = timeZone.localize(time).astimezone(UTC)
-        await interaction.edit_original_message(content = f"{message} {utils.format_dt(time, 'F')}")
+        await interaction.edit_original_response(content = f"{message} {utils.format_dt(time, 'F')}")
         if not informative == "No":
             embed = Embed(color=Color.green())
             embed.set_footer(text=f"Local time: {time.strftime(TIME_FORMAT)}\nTime zone: {memberTimeZones[str(interaction.user.id)] if not timezone else timeZone}")

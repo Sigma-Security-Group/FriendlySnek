@@ -307,7 +307,7 @@ class MainButton(discord.ui.Button):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    async def callback(self: discord.ui.Button, interaction: discord.Interaction):
+    async def callback(self, interaction: discord.Interaction):
         await buttonHandling(self, interaction)
 
 

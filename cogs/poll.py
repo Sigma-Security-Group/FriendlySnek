@@ -135,8 +135,8 @@ class Poll(commands.Cog):
                     row.children[btnNum].label = f"({len(group[f'poll_vote_{btnNum}'])})"
             await interaction.response.edit_message(view=row)
 
-            if len(button.view.children) == 1:
-                return  # Do not continue editing the message if there's 1 option
+            if len(button.view.children) == 2:
+                return  # Do not continue editing the message if there's only 1 option (+ Eyes emoji)
 
             voteCount: list = [int(button.label[1:][:-1]) for button in row.children if button.custom_id.startswith("poll_vote_")]  # Get all votes from poll
             voteSum = sum(voteCount) or 1  # Sums all votes - but if 0, change to 1 (not divide by 0)
@@ -153,6 +153,7 @@ class Poll(commands.Cog):
 
             embed.description = embed.description.split(emojiNumbers[0])[0] + "\n".join(optionRows)  # Concat "description" with options
             await msg.edit(embed=embed)
+
             userVotes = ', '.join([emojiNumbers[int(buttonId.split('_')[-1])] for buttonId, ppl in group.items() if buttonId.startswith("poll_vote_") and interaction.user.id in ppl])  # E.g. 8️⃣, 9️⃣, 🔟
             await interaction.followup.send(("(Multi-vote poll)" if group["Multivote"] else "(Single vote poll)") + f"\nYou've voted for:\n{userVotes if len(userVotes) > 0 else 'Nothing.'}", ephemeral=True)
 
@@ -165,7 +166,7 @@ class PollView(discord.ui.View):
         super().__init__(*args, **kwargs)
         self.instance = instance
 
-    async def on_timeout(self: discord.ui.View):
+    async def on_timeout(self):
         pass
 
 

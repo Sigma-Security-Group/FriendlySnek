@@ -13,7 +13,7 @@ from dateutil.parser import parse as datetimeParse
 
 import discord
 from discord import app_commands, Embed, Color, utils
-from discord.ext import commands, tasks
+from discord.ext import commands, tasks  # type: ignore
 
 from constants import *
 from __main__ import log, cogsReady
@@ -2375,7 +2375,7 @@ class ScheduleView(discord.ui.View):
         super().__init__(*args, **kwargs)
         self.message = message  # Message to reference when view has timeout
 
-    async def on_timeout(self: discord.ui.View):
+    async def on_timeout(self):
         try:
             for button in self.children:
                 button.disabled = True
@@ -2391,7 +2391,7 @@ class ScheduleButton(discord.ui.Button):
         self.instance = instance
         self.message = message
 
-    async def callback(self: discord.ui.Button, interaction: discord.Interaction):
+    async def callback(self, interaction: discord.Interaction):
         await self.instance.buttonHandling(self.message, self, interaction)
 
 

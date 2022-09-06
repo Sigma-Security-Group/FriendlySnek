@@ -1373,7 +1373,7 @@ class Schedule(commands.Cog):
             if externalURL.lower() == "cancel":
                 await self.cancelCommand(dmChannel, "Operation scheduling")
                 return
-            if externalURL.lower() == "none" or (len(externalURL) == 4 and "n" in externalURL.lower()):
+            if externalURL.lower() == "none" or externalURL.lower() == "" or (len(externalURL) == 4 and "n" in externalURL.lower()):
                 externalURL = None
         except asyncio.TimeoutError:
             await dmChannel.send(embed=TIMEOUT_EMBED)

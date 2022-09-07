@@ -1059,7 +1059,7 @@ class Schedule(commands.Cog):
                 if externalURL.lower() == "cancel":
                     await self.cancelCommand(dmChannel, "Event editing")
                     return False
-                elif externalURL.lower() == "none" or (len(externalURL) == 4 and "n" in externalURL.lower()):
+                elif externalURL.lower() == "none" or externalURL.lower() == "" or (len(externalURL) == 4 and "n" in externalURL.lower()):
                     externalURL = None
             except asyncio.TimeoutError:
                 await dmChannel.send(embed=TIMEOUT_EMBED)
@@ -1685,7 +1685,7 @@ class Schedule(commands.Cog):
                 if externalURL.lower() == "cancel":
                     await self.cancelCommand(dmChannel, "Workshop scheduling")
                     return
-                elif externalURL.lower() == "none" or (len(externalURL) == 4 and "n" in externalURL.lower()):
+                elif externalURL.lower() == "none" or externalURL.lower() == "" or (len(externalURL) == 4 and "n" in externalURL.lower()):
                     externalURL = None
             except asyncio.TimeoutError:
                 await dmChannel.send(embed=TIMEOUT_EMBED)
@@ -2015,7 +2015,7 @@ class Schedule(commands.Cog):
             if externalURL.lower() == "cancel":
                 await self.cancelCommand(dmChannel, "Event scheduling")
                 return
-            elif externalURL.lower() == "none" or (len(externalURL) == 4 and "n" in externalURL.lower()):
+            elif externalURL.lower() == "none" or externalURL.lower() == "" or (len(externalURL) == 4 and "n" in externalURL.lower()):
                 externalURL = None
         except asyncio.TimeoutError:
             await dmChannel.send(embed=TIMEOUT_EMBED)

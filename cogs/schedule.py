@@ -5,13 +5,11 @@ import os
 import re
 import pytz
 import random
-import requests
 
 from typing import Optional
 from copy import deepcopy
 from datetime import datetime, timedelta
 from dateutil.parser import parse as datetimeParse
-from bs4 import BeautifulSoup as BS
 
 import discord
 from discord import app_commands, Embed, Color, utils
@@ -107,13 +105,6 @@ TIMESTAMP_STYLES = {
     "R": "Relative Time"
 }
 
-
-# checkModUpdates()
-CHANGELOG_URL = "https://steamcommunity.com/sharedfiles/filedetails/changelog/{0}"
-
-MOD_IDS = [1673456286, 623475643, 463939057, 1724154473, 773131200, 773125288, 884966711, 2174495332, 1376867375, 2522638637, 751965892, 2372036642, 1314910827, 2242548109, 450814997, 837729515, 897295039, 2447965207, 1643720957, 1375890861, 583496184, 583544987, 2264863911, 1638341685, 686802825, 2467590475, 333310405, 2811760677, 1284600102, 1224892496, 1291778160, 1883956552, 648775794, 2020940806, 1866738558, 1726494027, 1188303655, 2140288272, 1858075458, 1858070328, 1808238502, 1862208264, 718649903, 736829758, 929396506, 1845100804, 930903722, 2814015609, 2801060088, 2585749287, 1770265310, 1423583812, 1397683809, 843425103, 843593391, 843632231, 843577117, 2466229756, 2550364722, 2013446344, 1187306764, 2811886291, 1623498241, 2397371875, 2397360831, 2397376046, 2377329491, 1703187116, 1757672655, 1926513010, 1963617777, 1251859358, 1779063631, 2018593688]  # Just take it from the modpack HTML, ez clap
-
-
 if not os.path.exists(MEMBER_TIME_ZONES_FILE):
     with open(MEMBER_TIME_ZONES_FILE, "w") as f:
         json.dump({}, f, indent=4)
@@ -155,7 +146,6 @@ class Schedule(commands.Cog):
 
         try:
             self.checkAcceptedReminder.start()
-            self.checkModUpdates.start()
         except Exception:
             log.warning(LOG_COULDNT_START.format("checkAcceptedReminder scheduler"))
 
@@ -298,82 +288,6 @@ class Schedule(commands.Cog):
                         await channel.send(" ".join(member.mention for member in onlineMembersNotAccepted) + f" If you are in-game, please hit accept ✅ on the <#{SCHEDULE}>.")
         except Exception as e:
             log.exception(e)
-
-    @tasks.loop(minutes=30)
-    async def checkModUpdates(self) -> None:
-        output = []
-
-        for modID in MOD_IDS:
-            # Fetch mod
-            response = requests.get(url=CHANGELOG_URL.format(modID))
-
-            # Parse HTML
-            soup = BS(response.text, "html.parser")
-
-            # Mod Title
-            name = soup.find("div", class_="workshopItemTitle").string
-
-            # Find latest update
-            update = soup.find_all("div", class_="detailBox workshopAnnouncement noFooter")[0]
-
-
-            # Loop paragraphs in latest update
-            for paragraph in update.descendants:
-                stripTxt = str(paragraph).strip()
-                if not stripTxt:  # Ignore empty shit
-                    continue
-
-                # Find update time
-                elif stripTxt.startswith("Update: "):
-                    date = stripTxt
-
-                # Find update changelog
-                elif stripTxt.startswith("<p id=\""):  # THE changelog, dw bout shit after it
-                    changelog = stripTxt
-                    break
-
-
-            # Parse time to datetime
-            dateTimeParse = datetimeParse(date[len("Update: "):].replace("@ ", ""))
-
-            # Convert it into UTC (shitty arbitrary code)
-            utcTime = pytz.UTC.localize(dateTimeParse + timedelta(hours=8))
-
-            # Current time
-            now = pytz.UTC.localize(datetime.utcnow())
-
-            # Check if update is new
-            if utcTime > (now - timedelta(minutes=29.0, seconds=30.0)):  # Relative time checking
-                changelog = re.sub(r"<[^<>]+>", "", changelog.replace("<br/>", "\n")).strip()
-                output.append(
-                    {
-                        "name": name,
-                        "date": date,
-                        "datetime": utcTime,
-                        "changelog": changelog if changelog != "" else "No Changelog."
-                    }
-                )
-
-
-        if len(output) > 0:
-            # Create message
-            guild = self.bot.get_guild(GUILD_ID)
-            c = await guild.fetch_channel(THE_DATACENTER)
-            message = f"**Mod Update** {guild.get_role(SERVER_HAMSTER).mention}\n\n"  # Ping for first message
-            for m in output:
-                # Timestamp
-                message += utils.format_dt(m["datetime"], style="R")
-
-                # Title + Date
-                message += f"\n{m['name']}\n{m['date']}\n"
-
-                # Changelog
-                message += f"\`\`\`\n{m['changelog'][:3800]}\n\`\`\`"  # Make sure desc is no longer than 4096 chars. 3800 is arbitrary, just like the rest of the code lmfao
-
-                # Each new mod update will be sent in a separate message
-                await c.send(message)
-                message = ""
-
 
     @app_commands.command(name="refreshschedule")
     @app_commands.guilds(GUILD)

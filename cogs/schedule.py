@@ -143,6 +143,7 @@ class Schedule(commands.Cog):
             self.autoDeleteEvents.start()
         except Exception:
             log.warning(LOG_COULDNT_START.format("autoDeleteEvents scheduler"))
+
         try:
             self.checkAcceptedReminder.start()
         except Exception:

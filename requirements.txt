@@ -6,3 +6,4 @@ colorama
 requests
 python-dateutil
 pysftp
+beautifulsoup4

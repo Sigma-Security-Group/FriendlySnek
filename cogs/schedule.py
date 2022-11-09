@@ -303,7 +303,7 @@ class Schedule(commands.Cog):
         except Exception as e:
             log.exception(e)
 
-    @tasks.loop(minutes=30)
+    @tasks.loop(minutes=30.0)
     async def checkModUpdates(self) -> None:
         output = []
 
@@ -330,11 +330,12 @@ class Schedule(commands.Cog):
                 # Find update time
                 elif stripTxt.startswith("Update: "):
                     date = stripTxt
+                    break  # dw bout shit after this
 
                 # Find update changelog
-                elif stripTxt.startswith("<p id=\""):  # THE changelog, dw bout shit after it
-                    changelog = stripTxt
-                    break
+                #elif stripTxt.startswith("<p id=\""):  # THE changelog, dw bout shit after it
+                #    chl = stripTxt
+                #    break
 
 
             # Parse time to datetime
@@ -348,13 +349,11 @@ class Schedule(commands.Cog):
 
             # Check if update is new
             if utcTime > (now - timedelta(minutes=29.0, seconds=30.0)):  # Relative time checking
-                changelog = re.sub(r"<[^<>]+>", "", changelog.replace("<br/>", "\n")).strip()
                 output.append(
                     {
+                        "modID": modID,
                         "name": name,
-                        "date": date,
-                        "datetime": utcTime,
-                        "changelog": changelog if changelog != "" else "No Changelog."
+                        "datetime": utcTime
                     }
                 )
 
@@ -362,17 +361,17 @@ class Schedule(commands.Cog):
         if len(output) > 0:
             # Create message
             guild = self.bot.get_guild(GUILD_ID)
-            c = await guild.fetch_channel(THE_DATACENTER)
-            message = f"**Mod Update** {guild.get_role(SERVER_HAMSTER).mention}\n\n"  # Ping for first message
-            for m in output:
-                # Timestamp
-                message += utils.format_dt(m["datetime"], style="R")
-
+            c = await guild.fetch_channel(CHANGELOG)
+            message = f"{guild.get_role(SERVER_HAMSTER).mention} ({len(output)})\n\n"  # Ping for first message
+            for mod in output:
                 # Title + Date
-                message += f"\n{m['name']}\n{m['date']}\n"
+                message += f"{mod['name']}\n"
 
-                # Changelog
-                message += f"\`\`\`\n{m['changelog'][:3800]}\n\`\`\`"  # Make sure desc is no longer than 4096 chars. 3800 is arbitrary, just like the rest of the code lmfao
+                # Timestamp
+                message += utils.format_dt(mod["datetime"], style="F") + "\n"
+
+                # Link
+                message += f"<{CHANGELOG_URL.format(mod['modID'])}>"
 
                 # Each new mod update will be sent in a separate message
                 await c.send(message)

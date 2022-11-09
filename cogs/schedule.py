@@ -343,7 +343,15 @@ class Schedule(commands.Cog):
 
             # Check if update is new
             if utcTime > (now - timedelta(minutes=29.0, seconds=30.0)):  # Relative time checking
-                output.append({"name": name, "date": date, "datetime": utcTime, "epoch": int(utcTime.timestamp()), "changelog": re.sub(r"<[^<>]+>", "", changelog.replace("<br/>", "\n"))})
+                changelog = re.sub(r"<[^<>]+>", "", changelog.replace("<br/>", "\n")).strip()
+                output.append(
+                    {
+                        "name": name,
+                        "date": date,
+                        "datetime": utcTime,
+                        "changelog": changelog if changelog != "" else "No Changelog."
+                    }
+                )
 
 
         if len(output) > 0:

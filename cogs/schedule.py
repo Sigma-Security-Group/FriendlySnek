@@ -318,7 +318,7 @@ class Schedule(commands.Cog):
             name = soup.find("div", class_="workshopItemTitle").string
 
             # Find latest update
-            update = soup.find_all("div", class_="detailBox workshopAnnouncement noFooter")[0]
+            update = soup.find("div", class_="detailBox workshopAnnouncement noFooter")
 
 
             # Loop paragraphs in latest update

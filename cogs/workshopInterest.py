@@ -26,7 +26,7 @@ DEFAULT_WORKSHOP_INTEREST_LISTS = {
     "JTAC": {
         "emoji": "📡",
         "role": SME_JTAC,
-        "description": "Learn how to direct close air support."  # Unverifed description.
+        "description": "Learn how to direct close air support."
     },
     "Medic": {
         "emoji": "💉",
@@ -61,7 +61,7 @@ DEFAULT_WORKSHOP_INTEREST_LISTS = {
     "Team Leading": {
         "emoji": "👨‍🏫",
         "role": SME_MENTOR,
-        "description": "Learn how to effectively plan and assault targets with a whole team and assets."  # Unverifed description.
+        "description": "Learn how to effectively plan and maneuver your team on target."
     },
     "Newcomer": {
         "emoji": "🐣",

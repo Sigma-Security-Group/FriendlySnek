@@ -92,19 +92,6 @@ class WorkshopInterest(commands.Cog):
             with open(WORKSHOP_INTEREST_FILE, "w") as f:
                 json.dump(workshopInterest, f, indent=4)
 
-        ########## TODO REMOVE AFTER PUSH - JUST TO CHANGE PROD FILE
-        else:
-            with open("data/workshopInterest.json") as f:
-                file = json.load(f)
-            for ws in file:
-                members = file[ws]["members"]
-                file[ws].clear()
-                file[ws]["members"] = members
-            with open("data/workshopInterest.json", "w") as f:
-                json.dump(file, f, indent=4)
-        ##########
-
-
         await self.updateChannel()
 
     async def updateChannel(self) -> None:

@@ -1,6 +1,5 @@
 from secret import DEBUG
-import json
-import os
+import os, json
 
 from discord import Embed, Color
 from discord.ext import commands
@@ -13,74 +12,64 @@ if DEBUG:
 
 WORKSHOP_INTEREST_FILE = "data/workshopInterest.json"
 
-DEFAULT_WORKSHOP_INTEREST_LISTS = (
-    (
-        "Rotary Wing",
-        "🚁 Rotary Wing",
-        SME_RW_PILOT,
-        "Learn to fly helicopters and provide transport and close air support."
-    ),
-    (
-        "Fixed Wing",
-        "✈️ Fixed Wing",
-        SME_FW_PILOT,
-        "Learn the dynamics of a fighter jet to drop enough ordnance to fund a school on a single guy with binoculars."
-    ),
-    (
-        "JTAC",
-        "📡 JTAC",
-        SME_JTAC,
-        "Learn how to direct close air support."  # Unverifed description.
-    ),
-    (
-        "Medic",
-        "💉 Medic",
-        SME_MEDIC,
-        "Learn how to administer combat aid to wounded personnel in a timely and effective manner."  # Unverifed description.
-    ),
-    (
-        "Heavy Weapons",
-        "💣 Heavy Weapons",
-        SME_HEAVY_WEAPONS,
-        "Learn how to efficiently operate as a machine gun crew, use grenade launchers, and shoot cretins out of shitboxes (AT & AA)."
-    ),
-    (
-        "Marksman",
-        "🎯 Marksman",
-        SME_MARKSMAN,
-        "Learn how to shoot big bullet far."
-    ),
-    (
-        "Breacher",
-        "🚪 Breacher",
-        SME_BREACHER,
-        "Become an expert in close-quarters battle (CQB)."  # Unverifed description.
-    ),
-    (
-        "Mechanised",
-        "🛡️​ Mechanised",
-        SME_MECHANISED,
-        "A short course on driving, gunning, and commanding a 6.21 million dollar reason the heavy weapons guy is useless."
-    ),
-    (
-        "RPV-SO",
-        "🛩️ RPV-SO",
-        SME_RPV_SO,
-        "Learn how to employ recon and attack Remote Piloted Vehicles (Drones)."  # Unverifed description.
-    ),
-    (
-        "Team Leading",
-        "👨‍🏫 Team Leading",
-        SME_MENTOR,
-        "Learn how to effectively plan and assault targets with a whole team and assets."  # Unverifed description.
-    ),
-    (
-        "Newcomer",
-        "🐣 Newcomer",
-        (UNIT_STAFF, ADVISOR, SPECIALIST, TECHNICIAN),
-        "Learn what you need to know before attending an operation in Sigma Security Group."
-    )
-)
+DEFAULT_WORKSHOP_INTEREST_LISTS = {
+    "Rotary Wing": {
+        "emoji": "🚁",
+        "role": SME_RW_PILOT,
+        "description": "Learn to fly helicopters and provide transport and close air support."
+    },
+    "Fixed Wing": {
+        "emoji": "✈️",
+        "role": SME_FW_PILOT,
+        "description": "Learn the dynamics of a fighter jet to drop enough ordnance to fund a school on a single guy with binoculars."
+    },
+    "JTAC": {
+        "emoji": "📡",
+        "role": SME_JTAC,
+        "description": "Learn how to direct close air support."  # Unverifed description.
+    },
+    "Medic": {
+        "emoji": "💉",
+        "role": SME_MEDIC,
+        "description": "Learn how to administer combat aid to wounded personnel in a timely and effective manner."  # Unverifed description.
+    },
+    "Heavy Weapons": {
+        "emoji": "💣",
+        "role": SME_HEAVY_WEAPONS,
+        "description": "Learn how to efficiently operate as a machine gun crew, use grenade launchers, and shoot cretins out of shitboxes (AT & AA)."
+    },
+    "Marksman": {
+        "emoji": "🎯",
+        "role": SME_MARKSMAN,
+        "description": "Learn how to shoot big bullet far."
+    },
+    "Breacher": {
+        "emoji": "🚪",
+        "role": SME_BREACHER,
+        "description": "Become an expert in close-quarters battle (CQB)."  # Unverifed description.
+    },
+    "Mechanised": {
+        "emoji": "🛡️",
+        "role": SME_MECHANISED,
+        "description": "A short course on driving, gunning, and commanding a 6.21 million dollar reason the heavy weapons guy is useless."
+    },
+    "RPV-SO": {
+        "emoji": "🛩️",
+        "role": SME_RPV_SO,
+        "description": "Learn how to employ recon and attack Remote Piloted Vehicles (Drones)."
+    },
+    "Team Leading": {
+        "emoji": "👨‍🏫",
+        "role": SME_MENTOR,
+        "description": "Learn how to effectively plan and assault targets with a whole team and assets."  # Unverifed description.
+    },
+    "Newcomer": {
+        "emoji": "🐣",
+        "role": (UNIT_STAFF, ADVISOR, SPECIALIST, TECHNICIAN),
+        "description": "Learn what you need to know before attending an operation in Sigma Security Group."
+    }
+}
+
 
 class WorkshopInterest(commands.Cog):
     def __init__(self, bot: commands.Bot) -> None:
@@ -92,27 +81,29 @@ class WorkshopInterest(commands.Cog):
         cogsReady["workshopInterest"] = True
 
         if not os.path.exists(WORKSHOP_INTEREST_FILE):
+            # JSON dump template
             workshopInterest = {}
-            for name, title, sme, description in DEFAULT_WORKSHOP_INTEREST_LISTS:
+            for name in DEFAULT_WORKSHOP_INTEREST_LISTS.keys():
                 workshopInterest[name] = {
-                    "title": title,
-                    "sme": sme,
-                    "description": description,
-                    "members": [],
-                    "messageId": None
+                    "members": []
                 }
+
+            # Write to file
             with open(WORKSHOP_INTEREST_FILE, "w") as f:
                 json.dump(workshopInterest, f, indent=4)
 
+        ########## TODO REMOVE AFTER PUSH - JUST TO CHANGE PROD FILE
         else:
-            with open(WORKSHOP_INTEREST_FILE) as f:
-                workshopInterest = json.load(f)
-            for name, title, sme, description in DEFAULT_WORKSHOP_INTEREST_LISTS:
-                workshopInterest[name]["title"] = title
-                workshopInterest[name]["sme"] = sme
-                workshopInterest[name]["description"] = description
-            with open(WORKSHOP_INTEREST_FILE, "w") as f:
-                json.dump(workshopInterest, f, indent=4)
+            with open("data/workshopInterest.json") as f:
+                file = json.load(f)
+            for ws in file:
+                members = file[ws]["members"]
+                file[ws].clear()
+                file[ws]["members"] = members
+            with open("data/workshopInterest.json", "w") as f:
+                json.dump(file, f, indent=4)
+        ##########
+
 
         await self.updateChannel()
 
@@ -125,52 +116,73 @@ class WorkshopInterest(commands.Cog):
         Returns:
         None.
         """
+        # TODO Goddamnit I hate this fucking resend shit. Please implement persistent views
+
         channel = self.bot.get_channel(WORKSHOP_INTEREST)
         await channel.purge(limit=None, check=lambda message: message.author.id in FRIENDLY_SNEKS)
         await channel.send("Welcome to the Workshop Interest Channel! Here you can show interest for different workshops!\nYou'll be pinged when a workshop you are interested in is scheduled!")
 
-        with open(WORKSHOP_INTEREST_FILE) as f:
-            workshopInterest = json.load(f)
-        for workshop in workshopInterest.values():
-            embed = self.getWorkshopEmbed(self.bot.get_guild(GUILD_ID), workshop)
+        guild = self.bot.get_guild(GUILD_ID)
+
+        for workshop in DEFAULT_WORKSHOP_INTEREST_LISTS.items():
+            # Fetch embed
+            embed = self.getWorkshopEmbed(guild, workshop)
+
+            # Do button stuff
             row = discord.ui.View()
             row.timeout = None
-            buttons = [
+            buttons = (
                 WorkshopInterestButtons(self, row=0, label="Interested", style=discord.ButtonStyle.success, custom_id="add"),
                 WorkshopInterestButtons(self, row=0, label="Not Interested", style=discord.ButtonStyle.danger, custom_id="remove")
-            ]
+            )
             for button in buttons:
                 row.add_item(item=button)
-            msg = await channel.send(embed=embed, view=row)
-            workshop["messageId"] = msg.id
-        with open(WORKSHOP_INTEREST_FILE, "w") as f:
-            json.dump(workshopInterest, f, indent=4)
 
-    def getWorkshopEmbed(self, guild: discord.Guild, workshop: dict) -> Embed:
+            await channel.send(embed=embed, view=row)
+
+    def getWorkshopEmbed(self, guild: discord.Guild, workshop: tuple) -> Embed:
         """ Generates an embed from the given workshop.
 
         Parameters:
         guild (discord.Guild): The target guild.
-        workshop (dict): The workshop event.
+        workshop (tuple): The workshop event. [0] Name. [1] emoji, role, desc.
 
         Returns:
-        Embed: The generated embed.
+        discord.Embed: The generated embed.
         """
-        embed = Embed(title=workshop["title"], description=workshop["description"], color=Color.dark_blue())
-        idsToMembers = lambda ids: [member.display_name for memberId in ids if (member := guild.get_member(memberId)) is not None]
-        interestedList = idsToMembers(workshop["members"])
-        interestedStr = "\n".join(interestedList)
+        embed = Embed(title=f"{workshop[1]['emoji']} {workshop[0]}", description=workshop[1]["description"], color=Color.dark_blue())
 
-        if interestedStr == "":
-            interestedStr = "-"
-        embed.add_field(name=f"Interested People ({len(interestedList)})", value=interestedStr)
-        if workshop["sme"] and type(workshop["sme"]) == int:
-            smes = [sme.display_name for sme in guild.get_role(workshop["sme"]).members]
+        with open(WORKSHOP_INTEREST_FILE) as f:
+            workshopInterest = json.load(f)
+            removedMember = False
+
+        # Get the interested member's name. If they aren't found, remove them
+        interestedMembers = ""
+        for memberID in workshopInterest[workshop[0]]["members"]:
+            member = guild.get_member(memberID)
+            if member is not None:
+                interestedMembers += member.display_name + "\n"
+            else:
+                workshopInterest[workshop[0]]["members"].remove(memberID)
+                removedMember = True
+
+        if removedMember:
+            with open(WORKSHOP_INTEREST_FILE, "w", encoding="utf-8") as f:
+                json.dump(workshopInterest, f, indent=4)
+
+        interestedMembers = "-" if interestedMembers == "" else interestedMembers.strip()  # Indicate if empty
+
+        lenInterested = interestedMembers.count('\n')
+        embed.add_field(name=f"Interested People ({lenInterested})", value=interestedMembers)
+        # 1 discord.Role
+        if workshop[1]["role"] and isinstance(workshop[1]["role"], int):
+            smes = [sme.display_name for sme in guild.get_role(workshop[1]["role"]).members]
             if smes:
                 embed.set_footer(text=f"SME{'s' * (len(smes) > 1)}: {', '.join(smes)}")
 
-        elif workshop["sme"] and type(workshop["sme"]) == list:
-            smeroles = [guild.get_role(role).name for role in workshop["sme"]]
+        # >1 discord.Role
+        elif workshop[1]["role"] and isinstance(workshop[1]["role"], tuple):
+            smeroles = [guild.get_role(role).name for role in workshop[1]["role"]]
             embed.set_footer(text=f"SME roles: {', '.join(smeroles)}")
 
         return embed
@@ -188,29 +200,36 @@ class WorkshopInterest(commands.Cog):
         try:
             with open(WORKSHOP_INTEREST_FILE) as f:
                 workshopInterest = json.load(f)
-            workshop = [workshop for workshop in workshopInterest.values() if workshop["messageId"] == interaction.message.id][0]
+            wsTitle = interaction.message.embeds[0].title
+
+            # Brute force emoji removal, produces title
+            for i in range(len(wsTitle)):
+                if wsTitle[i:] in DEFAULT_WORKSHOP_INTEREST_LISTS:
+                    wsTitle = wsTitle[i:]
+                    break
+            wsMembers = workshopInterest[wsTitle]["members"]
+
             if button.custom_id == "add":
-                if interaction.user.id not in workshop["members"]:
-                    workshop["members"].append(interaction.user.id)  # Add member to list
+                if interaction.user.id not in wsMembers:
+                    wsMembers.append(interaction.user.id)  # Add member to WS
                 else:
                     await interaction.response.send_message("You are already interested!", ephemeral=True)
                     return
 
             elif button.custom_id == "remove":
-                if interaction.user.id in workshop["members"]:
-                    workshop["members"].remove(interaction.user.id)  # Remove member from list
+                if interaction.user.id in wsMembers:
+                    wsMembers.remove(interaction.user.id)  # Remove member from WS
                 else:
                     await interaction.response.send_message("You are already not interested!", ephemeral=True)
                     return
 
-            try:
-                embed = self.getWorkshopEmbed(interaction.guild, workshop)
-                await interaction.response.edit_message(embed=embed)
-            except Exception as e:
-                log.exception(f"{interaction.user} | {e}")
-
             with open(WORKSHOP_INTEREST_FILE, "w") as f:
                 json.dump(workshopInterest, f, indent=4)
+
+            try:
+                await interaction.response.edit_message(embed=self.getWorkshopEmbed(interaction.guild, (wsTitle, DEFAULT_WORKSHOP_INTEREST_LISTS[wsTitle])))
+            except Exception as e:
+                log.exception(f"{interaction.user} | {e}")
 
         except Exception as e:
             log.exception(f"{interaction.user} | {e}")

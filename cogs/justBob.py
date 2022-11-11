@@ -1,7 +1,5 @@
 from secret import DEBUG
-import os
-import json
-import asyncio
+import os, json, asyncio
 
 from discord import app_commands, Embed, Color
 from discord.ext import commands

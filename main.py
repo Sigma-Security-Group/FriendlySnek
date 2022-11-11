@@ -1,7 +1,4 @@
-import pytz
-import asyncio
-import os
-import re
+import os, re, pytz, asyncio
 
 from datetime import datetime
 from logger import Logger
@@ -38,7 +35,7 @@ if not os.path.exists("./data"):
     log.info("Creating a data directory!")
     os.mkdir("data")
 
-if not os.path.exists("./tmp"):  # Mission missionUploader stuff
+if not os.path.exists("./tmp"):  # Mission missionUploader stuff- TODO maybe create it if it's needed?
     log.info("Creating a tmp directory!")
     os.mkdir("tmp")
 
@@ -199,7 +196,7 @@ async def on_member_leave(member: discord.Member) -> None:
 
 @client.event
 async def on_error(event, *args, **kwargs) -> None:
-    log.exception("An error occured!")
+    log.exception(f"An error occured! {event}")
 
 @client.event
 async def on_command_error(ctx: discord.ext.commands.Context, error: discord.ext.commands.errors) -> None:

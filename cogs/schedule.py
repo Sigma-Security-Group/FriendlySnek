@@ -1,11 +1,5 @@
 from secret import DEBUG
-import asyncio
-import json
-import os
-import re
-import pytz
-import random
-import requests
+import os, re, json, asyncio, pytz, random, requests
 
 from typing import Optional
 from copy import deepcopy

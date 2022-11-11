@@ -27,4 +27,4 @@ You can easily toggle the bot's debug mode by changing the DEBUG variable in `se
 
 All constants in `constants/debug.py` are for Adrian's personal Bot Testing Range (BTR). If you want the bot to work on another server you must replace all the IDs in said file.
 
-Run the bot by executing: `python -O main.py`.
+Run the bot by executing: `python main.py`.

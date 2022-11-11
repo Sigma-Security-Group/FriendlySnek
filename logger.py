@@ -1,6 +1,4 @@
-import traceback
-import sys
-import os
+import sys, traceback
 
 from datetime import datetime, timedelta, timezone
 from colorama import Fore, Style

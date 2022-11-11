@@ -2,20 +2,6 @@ import discord
 GUILD_ID = 288446755219963914
 GUILD = discord.Object(id=GUILD_ID)
 
-TIME_ZONES = {
-    "UTC": "UTC",
-    "British Time (London)": "Europe/London",
-    "Central European Time (Brussels)": "Europe/Brussels",
-    "Eastern European Time (Sofia)": "Europe/Sofia",
-    "Pacific American Time (LA)": "America/Los_Angeles",
-    "Eastern American Time (NY)": "America/New_York",
-    "Japanese Time (Tokyo)": "Asia/Tokyo",
-    "Australian Western Time (Perth)": "Australia/Perth",
-    "Australian Central Western Time (Eucla)": "Australia/Eucla",
-    "Australian Central Time (Adelaide)": "Australia/Adelaide",
-    "Australian Eastern Time (Sydney)": "Australia/Sydney",
-}
-
 
 ####################
 # PEOPLE

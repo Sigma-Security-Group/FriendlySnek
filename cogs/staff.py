@@ -1,7 +1,6 @@
 from secret import DEBUG
 import re
 from datetime import datetime, timezone
-from typing import Optional
 
 from discord import utils, Embed, Color
 from discord.ext import commands
@@ -21,7 +20,7 @@ class Staff(commands.Cog):
         log.debug(LOG_COG_READY.format("Staff"), flush=True)
         cogsReady["staff"] = True
 
-    def _getMember(self, searchTerm: str) -> Optional[discord.Member]:
+    def _getMember(self, searchTerm: str) -> discord.Member | None:
         """ Searches for a discord.Member - supports a lot of different serach terms.
 
         Parameters:

@@ -1,9 +1,9 @@
-import asyncio
-from os import remove as osRemove
-import pytz
 import secret
-from datetime import datetime
+import asyncio, pytz
 import pysftp  # type: ignore
+
+from os import remove as osRemove
+from datetime import datetime
 
 from discord import app_commands, Embed, Color, utils
 from discord.ext import commands

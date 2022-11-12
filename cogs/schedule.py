@@ -375,7 +375,7 @@ class Schedule(commands.Cog):
     @app_commands.guilds(GUILD)
     @app_commands.checks.has_any_role(UNIT_STAFF, SERVER_HAMSTER, CURATOR)
     async def refreshSchedule(self, interaction: discord.Interaction) -> None:
-        """ Refreshes the schedule - Use if an event was deleted without using the reaction.
+        """ Refreshes the schedule - Use if an event was deleted without using the buttons.
 
         Parameters:
         interaction (discord.Interaction): The Discord interaction.
@@ -398,7 +398,7 @@ class Schedule(commands.Cog):
         Returns:
         None.
         """
-        if type(error) == discord.app_commands.errors.MissingAnyRole:
+        if isinstance(error, discord.app_commands.errors.MissingAnyRole):
             guild = self.bot.get_guild(GUILD_ID)
             embed = Embed(title="❌ Missing permissions", description=f"You do not have the permissions to refresh the schedule!\nThe permitted roles are: {', '.join([guild.get_role(role).name for role in (UNIT_STAFF, SERVER_HAMSTER, CURATOR)])}.", color=Color.red())
             await interaction.response.send_message(embed=embed)
@@ -830,7 +830,7 @@ class Schedule(commands.Cog):
         return True
 
     async def eventTime(self, interaction: discord.Interaction, dmChannel: discord.DMChannel, eventType: str, collidingEventTypes: tuple, delta: timedelta) -> Optional[tuple]:
-        """ Handles the timpe part of scheduling an event; prompts, collision, etc.
+        """ Handles the time part of scheduling an event; prompts, collision, etc.
 
         Parameters:
         interaction (discord.Interaction): The Discord interaction.
@@ -840,7 +840,7 @@ class Schedule(commands.Cog):
         delta (timedelta): Difference in time from start to end.
 
         Returns:
-        None | tuple: A tuple which contains the event start time and end time, if the funtion successfully executes, otherwise None.
+        tuple | None: A tuple which contains the event start time and end time, if the funtion successfully executes, otherwise None.
         """
         with open(MEMBER_TIME_ZONES_FILE) as f:
             memberTimeZones = json.load(f)
@@ -2455,7 +2455,7 @@ class Schedule(commands.Cog):
 
 
 class ScheduleView(discord.ui.View):
-    def __init__(self, message: Optional[list[discord.Message]], *args, **kwargs):
+    def __init__(self, message: list[discord.Message] | None, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.message = message  # Message to reference when view has timeout
 
@@ -2470,7 +2470,7 @@ class ScheduleView(discord.ui.View):
 
 
 class ScheduleButton(discord.ui.Button):
-    def __init__(self, instance, message: Optional[discord.Message], *args, **kwargs):
+    def __init__(self, instance, message: discord.Message | None, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.instance = instance
         self.message = message

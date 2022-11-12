@@ -159,7 +159,7 @@ class WorkshopInterest(commands.Cog):
 
         interestedMembers = "-" if interestedMembers == "" else interestedMembers.strip()  # Indicate if empty
 
-        lenInterested = interestedMembers.count('\n')
+        lenInterested = interestedMembers.count('\n') + 1  # Last line has no new line
         embed.add_field(name=f"Interested People ({lenInterested})", value=interestedMembers)
         # 1 discord.Role
         if workshop[1]["role"] and isinstance(workshop[1]["role"], int):

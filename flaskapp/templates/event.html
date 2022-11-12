@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-Zenh87qX5JnK2Jl0vWa8Ck2rdkQ2Bzep5IDxbcnCeuOxjzrPF/et3URy9Bv1WTRi" crossorigin="anonymous">
+    <title>SSG - {{ title }}</title>
+</head>
+<body>
+    <div class="container">
+        <h1>{{ title }}</h1>
+        <form action="/event" method="post">
+            <input type="hidden" name="authorId" value="{{ authorId }}" />
+            <input type="hidden" name="eventId" value="{{ eventId }}" />
+            {% for field in fields %}
+                <div class="form-group">
+                    <label>
+                        {{ field['label'] }}:{{ "*" * field['isRequired'] }}
+                        {% if field['type'] == "select" %}
+                            <select class="form-select" name="{{ field['name'] }}" {{ "required" * field['isRequired'] }} {{ "readonly" * field['isReadOnly'] }}>
+                                {% for option in field['value'] %}
+                                    <option value="{{ option['value'] }}" {{ "selected" * option['isSelected'] }}>{{ option['text'] }}</option>
+                                {% endfor %}
+                            </select>
+
+                        {% elif field['type'] == "textarea" %}
+                            <!-- Add cols and rows? -->
+                            <textarea class="form-control" rows="4" cols="40" style="resize:both" name="{{ field['name'] }}" maxlength="{{ field['maxLen'] }}" placeholder="{{ field['placeholder'] }}" {{ "required" * field['isRequired'] }} {{ "readonly" * field['isReadOnly'] }}></textarea>
+
+                        {% else %}
+                            <input class="form-control" type="{{ field['type'] }}" name="{{ field['name'] }}" placeholder="{{ field['placeholder'] }}" value="{{ field['value'] }}" maxlength="{{ field['maxLen'] }}" {{ "required" * field['isRequired'] }} {{ "readonly" * field['isReadOnly'] }} />
+
+                        {% endif %}
+                    </label>
+                </div>
+            {% endfor %}
+
+            <button type="submit" class="btn btn-primary">Submit</button>
+        </form>
+    </div>
+</body>
+</html>

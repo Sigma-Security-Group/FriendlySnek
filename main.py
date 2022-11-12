@@ -1,5 +1,7 @@
 import os, re, pytz, asyncio
 
+from threading import Thread
+from functools import partial
 from datetime import datetime
 from logger import Logger
 log = Logger()
@@ -11,6 +13,8 @@ if platform.system() == "Windows":
 import discord
 from discord import Embed, Color
 from discord.ext import commands
+
+from flaskapp.schedule import app as flaskApp
 
 if not os.path.exists("./secret.py"):
     log.info("Creating a secret.py file!")
@@ -310,7 +314,18 @@ class MainButton(discord.ui.Button):
 
 if __name__ == "__main__":
     try:
+        # Launch Flask
+        flaskApp.botClient = client
+        partialRun = partial(flaskApp.run, host="0.0.0.0", port=5000, debug=False, use_reloader=False)
+        flaskThread = Thread(target=partialRun)
+        flaskThread.start()
+
+        # Start bot
         client.run(secret.TOKEN_DEV if secret.DEBUG else secret.TOKEN)
+
+        # Cleanup
+        flaskThread.join()
         log.info("Bot stopped!")
     except Exception as e:
-        log.exception(repr(e))
+        if not isinstance(e, KeyboardInterrupt):
+            log.exception(str(e))

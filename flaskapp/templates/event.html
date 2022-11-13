@@ -2,42 +2,75 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-Zenh87qX5JnK2Jl0vWa8Ck2rdkQ2Bzep5IDxbcnCeuOxjzrPF/et3URy9Bv1WTRi" crossorigin="anonymous">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-Zenh87qX5JnK2Jl0vWa8Ck2rdkQ2Bzep5IDxbcnCeuOxjzrPF/et3URy9Bv1WTRi" crossorigin="anonymous" />
+    <link rel="shortcut icon" href="{{ url_for('static', filename='FriendlySnek.png') }}" />
     <title>SSG - {{ title }}</title>
 </head>
 <body>
+
+    <!-- Macro (function) to generate inputs -->
+    {% macro formShit(fields) -%}
+        {% for field in fields %}
+            <div class="form-group">
+                <label>
+                    {{ field['label'] }}:{{ "*" * field['isRequired'] }}
+
+                    <!-- Selects -->
+                    {% if field['type'] == "select" %}
+                        <select class="form-select" name="{{ field['name'] }}" {{ "required" * field['isRequired'] }} {{ "readonly" * field['isReadOnly'] }}>
+                            {% for option in field['value'] %}
+                                <option value="{{ option['value'] }}" {{ "selected" * option['isSelected'] }}>{{ option['text'] }}</option>
+                            {% endfor %}
+                        </select>
+
+                    <!-- Text Areas -->
+                    {% elif field['type'] == "textarea" %}
+                        <!-- Add cols and rows? -->
+                        <textarea class="form-control" rows="4" cols="40" style="resize:both" name="{{ field['name'] }}" maxlength="{{ field['maxLen'] }}" placeholder="{{ field['placeholder'] }}" {{ "required" * field['isRequired'] }} {{ "readonly" * field['isReadOnly'] }}></textarea>
+
+                    <!-- Misc, like text -->
+                    {% else %}
+                        <input class="form-control" type="{{ field['type'] }}" name="{{ field['name'] }}" placeholder="{{ field['placeholder'] }}" value="{{ field['value'] }}" maxlength="{{ field['maxLen'] }}" {{ "required" * field['isRequired'] }} {{ "readonly" * field['isReadOnly'] }} />
+
+                    {% endif %}
+                </label>
+            </div>
+        {% endfor %}
+    {%- endmacro %}
+
+
     <div class="container">
         <h1>{{ title }}</h1>
-        <form action="/event" method="post">
-            <input type="hidden" name="authorId" value="{{ authorId }}" />
-            <input type="hidden" name="eventId" value="{{ eventId }}" />
-            {% for field in fields %}
-                <div class="form-group">
-                    <label>
-                        {{ field['label'] }}:{{ "*" * field['isRequired'] }}
-                        {% if field['type'] == "select" %}
-                            <select class="form-select" name="{{ field['name'] }}" {{ "required" * field['isRequired'] }} {{ "readonly" * field['isReadOnly'] }}>
-                                {% for option in field['value'] %}
-                                    <option value="{{ option['value'] }}" {{ "selected" * option['isSelected'] }}>{{ option['text'] }}</option>
-                                {% endfor %}
-                            </select>
 
-                        {% elif field['type'] == "textarea" %}
-                            <!-- Add cols and rows? -->
-                            <textarea class="form-control" rows="4" cols="40" style="resize:both" name="{{ field['name'] }}" maxlength="{{ field['maxLen'] }}" placeholder="{{ field['placeholder'] }}" {{ "required" * field['isRequired'] }} {{ "readonly" * field['isReadOnly'] }}></textarea>
+        <!-- Makes the different forms -->
+        {% for type, fields in evenTypeFields %}
 
-                        {% else %}
-                            <input class="form-control" type="{{ field['type'] }}" name="{{ field['name'] }}" placeholder="{{ field['placeholder'] }}" value="{{ field['value'] }}" maxlength="{{ field['maxLen'] }}" {{ "required" * field['isRequired'] }} {{ "readonly" * field['isReadOnly'] }} />
+            <!-- Common content -->
+            {% if type == "Common" %}
+                {{ formShit(fields) }}
 
-                        {% endif %}
-                    </label>
-                </div>
-            {% endfor %}
+            <!-- Type specific content -->
+            {% else %}
 
-            <button type="submit" class="btn btn-primary">Submit</button>
-        </form>
+                <form action="/event" method="post" id="form{{ type }}">
+                    <input type="hidden" name="authorId" value="{{ authorId }}" />
+                    <input type="hidden" name="eventId" value="{{ eventId }}" />
+                    <input type="hidden" name="eventType" value="{{ type }}" />
+
+                    <!-- Event type specific inputs -->
+                        {{ formShit(fields) }}
+
+                    <!-- Submit button -->
+                    <input type="submit" value="Submit" class="btn btn-primary" />
+                </form>
+            {% endif %}
+
+        {% endfor %}
     </div>
+
+    <!-- Add JavaScript -->
+    <script src="{{ url_for('static', filename='event.js') }}"></script>
 </body>
 </html>

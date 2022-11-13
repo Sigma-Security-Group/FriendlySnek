@@ -1,10 +1,25 @@
+"""TODO
+MVP
+    ✅ Create Events
+    ❌ Edit Events
+    ❌ Delete Events
+
+Switch between Op, WS, Event
+    Should we have a common input list? Like title, description, URL etc?
+
+Templates
+    Select menu
+    Javascript input.value = Template.shit.value
+"""
 import os, random, json, re, pytz, asyncio
 
 from discord import Embed, Color, utils
-from flask import Flask, render_template, request, redirect
+from flask import Flask, render_template, request, redirect, url_for
 from datetime import datetime, timedelta, time
 from dateutil.parser import parse as datetimeParse
 from constants import *
+from cryptography.fernet import Fernet
+from base64 import b64decode
 from logger import Logger
 log = Logger()
 
@@ -12,13 +27,14 @@ from secret import DEBUG
 if DEBUG:
     from constants.debug import *
 
+fileDirname = os.path.dirname(__file__)
+app = Flask(__name__, template_folder=f"{fileDirname}/templates", static_folder=f"{fileDirname}/static")
 
-app = Flask(__name__, template_folder=f"{os.path.dirname(__file__)}/templates")
-
+# TODO Move to constants?
 EVENTS_FILE = "data/events.json"
-TIME_FORMAT = "%Y-%m-%dT%H:%M"
+TIME_FORMAT_HTML = "%Y-%m-%dT%H:%M"
+KEY_FILE = "data/key.key"
 UTC = pytz.UTC
-
 TIMEOUT_EMBED = Embed(title=ERROR_TIMEOUT, color=Color.red())
 
 # Training map first, then the rest in alphabetical order
@@ -66,20 +82,55 @@ MAPS = [
     "Zargabad"
 ]
 
+mapsValue = [{"value": "", "text": "No Map", "isSelected": False}] + [{"value": map_, "text": map_, "isSelected": False} for map_ in MAPS]
+attendeesValue = [{"value": str(opt), "text": str(opt), "isSelected": False} for opt in ["No Limit", "Anonymous", "Hidden"] + list(range(1, 51))]
+timeValue = (datetime.now() + timedelta(hours=1)).strftime("%Y-%m-%dT%H:00:00")
+with open("data/workshopInterest.json") as f:
+    workshops = json.load(f).keys()
+
+
+# The commit hash that the bot is running on
 try:
     with open("./.git/logs/refs/heads/main") as f:
-        commitHash = f.readlines()[-1].split()[1][:7]  # The commit hash that the bot is running on (last line, second column, first 7 characters)
+        commitHash = f.readlines()[-1].split()[1][:7]  # last line, second column, first 7 characters
 except Exception:
     commitHash = "Nope"
+
+LIMITS = {
+    "title": 256,
+    "description": 4096,
+    "fieldValue": 1024
+}
+
+
+@app.route("/")
+def index():
+    # TODO Make this a dashboard instead of redirecting
+    return redirect("/event", code=302)
+
 
 @app.route("/event", methods=["GET", "POST"])
 def createEvent():
     if request.method == "GET":
         args = request.args
-        authorIdEncoded = args.get("authorIdEncoded")
-        authorId = (authorIdEncoded - 7) / 13 if authorIdEncoded else None
-        eventId = args.get("eventId")
-        eventType = args.get("eventType", "Operation")
+        authorIdEncoded = args.get("aide")  # AuthorIDEncoded (AIDE)
+
+        if authorIdEncoded is None:
+            authorId = None
+        else:
+            try:
+                # Get crypto key
+                with open(KEY_FILE, "rb") as keyFile:
+                    fe = Fernet(keyFile.read())
+
+                # Get author id
+                aide = fe.decrypt(authorIdEncoded.encode("utf-8"))
+                authorId = int(aide)
+            except Exception as e:  # User prob changed the arg - TODO redirect user to error page, tell em to execute /event again
+                print(e)
+                authorId = None
+
+        print(f"AuthorId{authorId}")
 
         with open("constants/opAdjectives.txt") as f:
             adjectives = f.readlines()
@@ -89,36 +140,34 @@ def createEvent():
             nouns = f.readlines()
             nou = random.choice(nouns).strip("\n")
 
-        titlePlaceholder = f"{adj.capitalize()} {nou.capitalize()}"
+        titlePlaceholder = f"Operation {adj.capitalize()} {nou.capitalize()}"
+        evenTypeFields = {}
 
-        limits = {
-            "title": 256,
-            "description": 4096,
-            "fieldValue": 1024
-        }
-
-        fields = [
+        # Common Fields
+        evenTypeFields["Common"] = [
             {
                 "label": "Event Type",
                 "type": "select",
                 "name": "eventType",
-                "placeholder": "",
                 "value": [
-                    {"value": "Operation", "text": "Operation", "isSelected": eventType == "Operation"},
-                    {"value": "Workshop", "text": "Workshop", "isSelected": eventType == "Workshop"},
-                    {"value": "Event", "text": "Event", "isSelected": eventType == "Event"},
+                    {"value": "Operation", "text": "Operation", "isSelected": True},
+                    {"value": "Workshop", "text": "Workshop", "isSelected": False},
+                    {"value": "Event", "text": "Event", "isSelected": False},
                 ],
-                "maxLen": limits["title"],
                 "isRequired": True,
                 "isReadOnly": False,
-            },
+            }
+        ]
+
+        # Operation Fields
+        evenTypeFields["Operation"] = [
             {
                 "label": "Title",
                 "type": "text",
                 "name": "title",
                 "placeholder": titlePlaceholder,
                 "value": "",
-                "maxLen": limits["title"],
+                "maxLen": LIMITS["title"],
                 "isRequired": True,
                 "isReadOnly": False,
             },
@@ -128,7 +177,7 @@ def createEvent():
                 "name": "description",
                 "placeholder": "Once upon a time...",
                 "value": "",
-                "maxLen": limits["description"],
+                "maxLen": LIMITS["description"],
                 "isRequired": True,
                 "isReadOnly": False,
             },
@@ -138,7 +187,7 @@ def createEvent():
                 "name": "externalUrl",
                 "placeholder": "https://example.com",
                 "value": "",
-                "maxLen": limits["fieldValue"],
+                "maxLen": LIMITS["fieldValue"],
                 "isRequired": False,
                 "isReadOnly": False,
             },
@@ -149,7 +198,7 @@ def createEvent():
                 "name": "reservableRoles",
                 "placeholder": "Actual\n2IC\nJTAC\nA-10C Pilot",
                 "value": "",
-                "maxLen": limits["fieldValue"],
+                "maxLen": LIMITS["fieldValue"],
                 "isRequired": False,
                 "isReadOnly": False,
             },
@@ -157,9 +206,7 @@ def createEvent():
                 "label": "Map",
                 "type": "select",
                 "name": "map",
-                "placeholder": "",
-                "value": [ {"value": map_.replace(" ", ""), "text": map_, "isSelected": False} for map_ in MAPS],
-                "maxLen": "",
+                "value": mapsValue,
                 "isRequired": False,
                 "isReadOnly": False,
             },
@@ -167,9 +214,7 @@ def createEvent():
                 "label": "Attendees",
                 "type": "select",
                 "name": "attendees",
-                "placeholder": "",
-                "value": [{"value": str(opt).replace(" ", ""), "text": str(opt), "isSelected": False} for opt in ["No Limit", "Anonymous", "Hidden"] + list(range(1, 51))],
-                "maxLen": "",
+                "value": attendeesValue,
                 "isRequired": True,
                 "isReadOnly": False,
             },
@@ -178,7 +223,7 @@ def createEvent():
                 "type": "datetime-local",
                 "name": "time",
                 "placeholder": "",
-                "value": (datetime.now() + timedelta(hours=1)).strftime("%Y-%m-%dT%H:00:00"),
+                "value": timeValue,
                 "maxLen": "",
                 "isRequired": True,
                 "isReadOnly": False,
@@ -195,41 +240,216 @@ def createEvent():
             },
         ]
 
-        return render_template("event.html", authorId=authorId, fields=fields)
+        # Workshop Fields
+        evenTypeFields["Workshop"] = [
+            {
+                "label": "Title",
+                "type": "text",
+                "name": "title",
+                "placeholder": "Fixed Wing Workshop",
+                "value": "",
+                "maxLen": LIMITS["title"],
+                "isRequired": True,
+                "isReadOnly": False,
+            },
+            {
+                "label": "Description",
+                "type": "textarea",
+                "name": "description",
+                "placeholder": "You'll learn how to bomb the shit out of...",
+                "value": "",
+                "maxLen": LIMITS["description"],
+                "isRequired": True,
+                "isReadOnly": False,
+            },
+            {
+                "label": "External URL",
+                "type": "text",
+                "name": "externalUrl",
+                "placeholder": "https://example.com",
+                "value": "",
+                "maxLen": LIMITS["fieldValue"],
+                "isRequired": False,
+                "isReadOnly": False,
+            },
+            # Future upgrade: Make JavaScript add a new input text box when the previous one has text in. So one role per box
+            {
+                "label": "Reservable Roles",
+                "type": "textarea",
+                "name": "reservableRoles",
+                "placeholder": "Actual\n2IC\nJTAC\nA-10C Pilot",
+                "value": "",
+                "maxLen": LIMITS["fieldValue"],
+                "isRequired": False,
+                "isReadOnly": False,
+            },
+            {
+                "label": "Map",
+                "type": "select",
+                "name": "map",
+                "value": mapsValue,
+                "isRequired": False,
+                "isReadOnly": False,
+            },
+            {
+                "label": "Attendees",
+                "type": "select",
+                "name": "attendees",
+                "value": attendeesValue,
+                "isRequired": True,
+                "isReadOnly": False,
+            },
+            {
+                "label": "Time",
+                "type": "datetime-local",
+                "name": "time",
+                "placeholder": "",
+                "value": timeValue,
+                "maxLen": "",
+                "isRequired": True,
+                "isReadOnly": False,
+            },
+            {
+                "label": "Duration",
+                "type": "time",
+                "name": "duration",
+                "placeholder": "",
+                "value": "02:00",
+                "maxLen": "",
+                "isRequired": True,
+                "isReadOnly": False,
+            },
+            {
+                "label": "Workshop Interest Linking",
+                "type": "select",
+                "name": "workshopInterest",
+                "value": [{"value": "NoWorkshop", "text": "No Workshop", "isSelected": True}] + [{"value": workshop, "text": workshop, "isSelected": False} for workshop in workshops],
+                "isRequired": False,
+                "isReadOnly": False,
+            },
+        ]
+
+        # Event Fields
+        evenTypeFields["Event"] = [
+            {
+                "label": "Title",
+                "type": "text",
+                "name": "title",
+                "placeholder": "Purge Day",
+                "value": "",
+                "maxLen": LIMITS["title"],
+                "isRequired": True,
+                "isReadOnly": False,
+            },
+            {
+                "label": "Description",
+                "type": "textarea",
+                "name": "description",
+                "placeholder": "S̸̲͝p̵̣̐ȯ̴̻ỏ̵̥̯k̸̮̩̐y̵̼̍͝ ̵̛̖̾t̶̩̹̏͂ì̴̳̼͠m̴̞̄͊͜ẽ̴͚͉",
+                "value": "",
+                "maxLen": LIMITS["description"],
+                "isRequired": True,
+                "isReadOnly": False,
+            },
+            {
+                "label": "External URL",
+                "type": "text",
+                "name": "externalUrl",
+                "placeholder": "https://example.com",
+                "value": "",
+                "maxLen": LIMITS["fieldValue"],
+                "isRequired": False,
+                "isReadOnly": False,
+            },
+            # Future upgrade: Make JavaScript add a new input text box when the previous one has text in. So one role per box
+            {
+                "label": "Reservable Roles",
+                "type": "textarea",
+                "name": "reservableRoles",
+                "placeholder": "Dead man\nFlying ghoul 1-1\nHumongous Moyai",
+                "value": "",
+                "maxLen": LIMITS["fieldValue"],
+                "isRequired": False,
+                "isReadOnly": False,
+            },
+            {
+                "label": "Map",
+                "type": "select",
+                "name": "map",
+                "value": mapsValue,
+                "isRequired": False,
+                "isReadOnly": False,
+            },
+            {
+                "label": "Attendees",
+                "type": "select",
+                "name": "attendees",
+                "value": attendeesValue,
+                "isRequired": True,
+                "isReadOnly": False,
+            },
+            {
+                "label": "Time",
+                "type": "datetime-local",
+                "name": "time",
+                "placeholder": "",
+                "value": timeValue,
+                "maxLen": "",
+                "isRequired": True,
+                "isReadOnly": False,
+            },
+            {
+                "label": "Duration",
+                "type": "time",
+                "name": "duration",
+                "placeholder": "",
+                "value": "02:00",
+                "maxLen": "",
+                "isRequired": True,
+                "isReadOnly": False,
+            },
+        ]
+
+
+        return render_template("event.html", authorId=authorId, title="Create An Event", evenTypeFields=evenTypeFields.items())
 
 
     with open("data/events.json") as f:
         events = json.load(f)
 
+    eventType = request.form.get("eventType", "Operation")
     durationStr = request.form.get("duration", "02:00")
     duration = time.fromisoformat(durationStr)
     duration = timedelta(hours=duration.hour, minutes=duration.minute)
     resRoles = {}
-    for role in reservableRoles.split("\r\n") if (reservableRoles := request.form.get("reservableRoles")) is not None else None:
+    for role in reservableRoles.split("\r\n") if (reservableRoles := request.form.get("reservableRoles")) is not None else []:
         resRoles[role] = None
 
     newEvent = {
         "authorId": request.form.get("authorId"),
+        "type": eventType,  # Operation, Workshop, Event
         "title": request.form.get("title", "Event Title"),
         "description": request.form.get("description", "Event Description"),
         "externalURL": request.form.get("externalURL"),
         "reservableRoles": resRoles,
+        "map": request.form.get("map"),
         "maxPlayers": attendees if (attendees := request.form.get("attendees")) != "NoLimit" else None,
-        "map": re.sub("(?<=[a-z])(?=[A-Z])", " ", map) if (map := request.form.get("map")) is not None else None,
         "time": (starttime := request.form.get("time", "2069-04-20T04:20")),
         "endTime": (datetimeParse(starttime) + duration).strftime("%Y-%m-%dT%H:%M"),
         "duration": durationStr,
-        "messageId": None,
         "accepted": [],
         "declined": [],
         "tentative": [],
-        "type": request.form["eventType"]  # Operation, Workshop, Event
+        "messageId": None
     }
+    if eventType == "Workshop":
+        newEvent["workshopInterest"] = workshopInterest if (workshopInterest := request.form.get("workshopInterest")) != "NoWorkshop" else None
 
     events.append(newEvent)
     with open("data/events.json", "w", encoding="utf-8") as f:
         json.dump(events, f, indent=4)
 
+    return "OK DEBUG - WITHOUT BOT"
     app.botClient.loop.create_task(updateSchedule())
 
     return "OK"
@@ -260,7 +480,7 @@ async def updateSchedule() -> None:
                 return
 
             newEvents: list[dict] = []
-            for event in sorted(events, key=lambda e: datetime.strptime(e["time"], TIME_FORMAT), reverse=True):
+            for event in sorted(events, key=lambda e: datetime.strptime(e["time"], TIME_FORMAT_HTML), reverse=True):
                 embed = getEventEmbed(event)
 
                 row = ScheduleView()
@@ -296,6 +516,7 @@ async def updateSchedule() -> None:
         with open(EVENTS_FILE, "w") as f:
             json.dump([], f, indent=4)
 
+
 def getEventEmbed(event: dict) -> Embed:
     """ Generates an embed from the given event.
 
@@ -320,7 +541,7 @@ def getEventEmbed(event: dict) -> Embed:
 
     durationHours = int(event["duration"].split(":")[0])
     embed.add_field(name="\u200B", value="\u200B", inline=False)
-    embed.add_field(name="Time", value=f"{utils.format_dt(UTC.localize(datetime.strptime(event['time'], TIME_FORMAT)), style='F')} - {utils.format_dt(UTC.localize(datetime.strptime(event['endTime'], TIME_FORMAT)), style='t' if durationHours < 24 else 'F')}", inline=(durationHours < 24))
+    embed.add_field(name="Time", value=f"{utils.format_dt(UTC.localize(datetime.strptime(event['time'], TIME_FORMAT_HTML)), style='F')} - {utils.format_dt(UTC.localize(datetime.strptime(event['endTime'], TIME_FORMAT_HTML)), style='t' if durationHours < 24 else 'F')}", inline=(durationHours < 24))
     embed.add_field(name="Duration", value=event["duration"], inline=True)
 
     if event["map"] is not None:
@@ -352,7 +573,7 @@ def getEventEmbed(event: dict) -> Embed:
 
     author = guild.get_member(event["authorId"])
     embed.set_footer(text=f"Created by {author.display_name}") if author else embed.set_footer(text="Created by Unknown User")
-    embed.timestamp = UTC.localize(datetime.strptime(event["time"], TIME_FORMAT))
+    embed.timestamp = UTC.localize(datetime.strptime(event["time"], TIME_FORMAT_HTML))
 
     return embed
 
@@ -484,7 +705,7 @@ async def buttonHandling(self, message: discord.Message | None, button: discord.
                 await interaction.user.dm_channel.send(embed=Embed(title=f"✅ {event['type']} deleted!", color=Color.green()))
 
                 utcNow = UTC.localize(datetime.utcnow())
-                startTime = UTC.localize(datetime.strptime(event["time"], TIME_FORMAT))
+                startTime = UTC.localize(datetime.strptime(event["time"], TIME_FORMAT_HTML))
                 if event["maxPlayers"] != "anonymous" and utcNow > startTime + timedelta(minutes=30):
                     await self.saveEventToHistory(event)
                 else:
@@ -492,7 +713,7 @@ async def buttonHandling(self, message: discord.Message | None, button: discord.
                     for memberId in event["accepted"] + event.get("declinedForTiming", []) + event["tentative"]:
                         member = guild.get_member(memberId)
                         if member is not None:
-                            embed = Embed(title=f"🗑 {event.get('type', 'Operation')} deleted: {event['title']}!", description=f"The {event.get('type', 'Operation').lower()} was scheduled to run:\n{utils.format_dt(UTC.localize(datetime.strptime(event['time'], TIME_FORMAT)), style='F')}", color=Color.red())
+                            embed = Embed(title=f"🗑 {event.get('type', 'Operation')} deleted: {event['title']}!", description=f"The {event.get('type', 'Operation').lower()} was scheduled to run:\n{utils.format_dt(UTC.localize(datetime.strptime(event['time'], TIME_FORMAT_HTML)), style='F')}", color=Color.red())
                             try:
                                 await member.send(embed=embed)
                             except Exception as e:

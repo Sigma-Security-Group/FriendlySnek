@@ -3,6 +3,7 @@ import os, re, pytz, asyncio
 from threading import Thread
 from functools import partial
 from datetime import datetime
+from cryptography.fernet import Fernet
 from logger import Logger
 log = Logger()
 
@@ -42,6 +43,13 @@ if not os.path.exists("./data"):
 if not os.path.exists("./tmp"):  # Mission missionUploader stuff- TODO maybe create it if it's needed?
     log.info("Creating a tmp directory!")
     os.mkdir("tmp")
+
+# Generate key
+with open("data/key.key", "wb") as keyFile:
+    key = Fernet.generate_key()
+    keyFile.write(key)
+    print(Fernet(key).encrypt(b"229212817448894464"))  # Testing purposes, paste into url
+
 
 COGS = [cog[:-3] for cog in os.listdir("cogs/") if cog.endswith(".py")]
 cogsReady = {cog: False for cog in COGS}
@@ -321,11 +329,11 @@ if __name__ == "__main__":
         flaskThread.start()
 
         # Start bot
-        client.run(secret.TOKEN_DEV if secret.DEBUG else secret.TOKEN)
+        #client.run(secret.TOKEN_DEV if secret.DEBUG else secret.TOKEN)
 
         # Cleanup
-        flaskThread.join()
         log.info("Bot stopped!")
     except Exception as e:
+        flaskThread.join()
         if not isinstance(e, KeyboardInterrupt):
             log.exception(str(e))

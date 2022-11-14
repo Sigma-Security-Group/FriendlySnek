@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-Zenh87qX5JnK2Jl0vWa8Ck2rdkQ2Bzep5IDxbcnCeuOxjzrPF/et3URy9Bv1WTRi" crossorigin="anonymous" />
     <link rel="shortcut icon" href="{{ url_for('static', filename='FriendlySnek.png') }}" />
-    <title>SSG - {{ title }}</title>
+    <title>SSG - {{ sendToTemplate["title"] }}</title>
 </head>
 <body>
 
@@ -42,10 +42,10 @@
 
 
     <div class="container">
-        <h1>{{ title }}</h1>
+        <h1>{{ sendToTemplate["title"] }}</h1>
 
         <!-- Makes the different forms -->
-        {% for type, fields in evenTypeFields %}
+        {% for type, fields in sendToTemplate["eventTypeFields"] %}
 
             <!-- Common content -->
             {% if type == "Common" %}
@@ -55,8 +55,8 @@
             {% else %}
 
                 <form action="/event" method="post" id="form{{ type }}">
-                    <input type="hidden" name="authorId" value="{{ authorId }}" />
-                    <input type="hidden" name="eventId" value="{{ eventId }}" />
+                    <input type="hidden" name="authorId" value="{{ sendToTemplate['authorId'] }}" />
+                    <input type="hidden" name="eventId" value="{{ sendToTemplate['eventId'] }}" />
                     <input type="hidden" name="eventType" value="{{ type }}" />
 
                     <!-- Event type specific inputs -->

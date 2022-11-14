@@ -141,8 +141,8 @@ class Schedule(commands.Cog):
         log.debug(LOG_COG_READY.format("Schedule"), flush=True)
         cogsReady["schedule"] = True
 
-        await self.updateSchedule()
-        try:
+        #await self.updateSchedule()
+        """try:
             self.autoDeleteEvents.start()
         except Exception:
             log.warning(LOG_COULDNT_START.format("autoDeleteEvents scheduler"))
@@ -150,7 +150,7 @@ class Schedule(commands.Cog):
         try:
             self.checkAcceptedReminder.start()
         except Exception:
-            log.warning(LOG_COULDNT_START.format("checkAcceptedReminder scheduler"))
+            log.warning(LOG_COULDNT_START.format("checkAcceptedReminder scheduler"))"""
 
         try:
             self.checkModUpdates.start()

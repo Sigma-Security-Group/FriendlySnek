@@ -4,6 +4,11 @@ MVP
     ❌ Edit Events
     ❌ Delete Events
 
+Little question mark info box next to some inputs
+    Reservable Roles -> Enter each role into a new line
+    Duration -> 24h clock where the...
+    !! Workshop Linking -> Linking pings the members interested and removes them after completing the ws!
+
 Switch between Op, WS, Event
     Should we have a common input list? Like title, description, URL etc?
 
@@ -19,7 +24,6 @@ from datetime import datetime, timedelta, time
 from dateutil.parser import parse as datetimeParse
 from constants import *
 from cryptography.fernet import Fernet
-from base64 import b64decode
 from logger import Logger
 log = Logger()
 
@@ -112,32 +116,15 @@ def index():
 @app.route("/event", methods=["GET", "POST"])
 def createEvent():
     if request.method == "GET":
-        args = request.args
-        authorIdEncoded = args.get("aide")  # AuthorIDEncoded (AIDE)
+        sendToTemplate = {}
+        sendToTemplate["title"] = "Create An Event"
 
-        if authorIdEncoded is None:
-            authorId = None
-        else:
-            try:
-                # Get crypto key
-                with open(KEY_FILE, "rb") as keyFile:
-                    fe = Fernet(keyFile.read())
-
-                # Get author id
-                aide = fe.decrypt(authorIdEncoded.encode("utf-8"))
-                authorId = int(aide)
-            except Exception as e:  # User prob changed the arg - TODO redirect user to error page, tell em to execute /event again
-                print(e)
-                authorId = None
-
-        print(f"AuthorId{authorId}")
-
-        with open("constants/opAdjectives.txt") as f:
-            adjectives = f.readlines()
+        with open("constants/opAdjectives.txt") as eventsFile:
+            adjectives = eventsFile.readlines()
             adj = random.choice(adjectives).strip("\n")
 
-        with open("constants/opNouns.txt") as f:
-            nouns = f.readlines()
+        with open("constants/opNouns.txt") as eventsFile:
+            nouns = eventsFile.readlines()
             nou = random.choice(nouns).strip("\n")
 
         titlePlaceholder = f"Operation {adj.capitalize()} {nou.capitalize()}"
@@ -176,7 +163,6 @@ def createEvent():
                 "type": "textarea",
                 "name": "description",
                 "placeholder": "Once upon a time...",
-                "value": "",
                 "maxLen": LIMITS["description"],
                 "isRequired": True,
                 "isReadOnly": False,
@@ -184,7 +170,7 @@ def createEvent():
             {
                 "label": "External URL",
                 "type": "text",
-                "name": "externalUrl",
+                "name": "externalURL",
                 "placeholder": "https://example.com",
                 "value": "",
                 "maxLen": LIMITS["fieldValue"],
@@ -197,7 +183,6 @@ def createEvent():
                 "type": "textarea",
                 "name": "reservableRoles",
                 "placeholder": "Actual\n2IC\nJTAC\nA-10C Pilot",
-                "value": "",
                 "maxLen": LIMITS["fieldValue"],
                 "isRequired": False,
                 "isReadOnly": False,
@@ -257,7 +242,6 @@ def createEvent():
                 "type": "textarea",
                 "name": "description",
                 "placeholder": "You'll learn how to bomb the shit out of...",
-                "value": "",
                 "maxLen": LIMITS["description"],
                 "isRequired": True,
                 "isReadOnly": False,
@@ -265,7 +249,7 @@ def createEvent():
             {
                 "label": "External URL",
                 "type": "text",
-                "name": "externalUrl",
+                "name": "externalURL",
                 "placeholder": "https://example.com",
                 "value": "",
                 "maxLen": LIMITS["fieldValue"],
@@ -278,7 +262,6 @@ def createEvent():
                 "type": "textarea",
                 "name": "reservableRoles",
                 "placeholder": "Actual\n2IC\nJTAC\nA-10C Pilot",
-                "value": "",
                 "maxLen": LIMITS["fieldValue"],
                 "isRequired": False,
                 "isReadOnly": False,
@@ -346,7 +329,6 @@ def createEvent():
                 "type": "textarea",
                 "name": "description",
                 "placeholder": "S̸̲͝p̵̣̐ȯ̴̻ỏ̵̥̯k̸̮̩̐y̵̼̍͝ ̵̛̖̾t̶̩̹̏͂ì̴̳̼͠m̴̞̄͊͜ẽ̴͚͉",
-                "value": "",
                 "maxLen": LIMITS["description"],
                 "isRequired": True,
                 "isReadOnly": False,
@@ -354,7 +336,7 @@ def createEvent():
             {
                 "label": "External URL",
                 "type": "text",
-                "name": "externalUrl",
+                "name": "externalURL",
                 "placeholder": "https://example.com",
                 "value": "",
                 "maxLen": LIMITS["fieldValue"],
@@ -367,7 +349,6 @@ def createEvent():
                 "type": "textarea",
                 "name": "reservableRoles",
                 "placeholder": "Dead man\nFlying ghoul 1-1\nHumongous Moyai",
-                "value": "",
                 "maxLen": LIMITS["fieldValue"],
                 "isRequired": False,
                 "isReadOnly": False,
@@ -411,12 +392,83 @@ def createEvent():
         ]
 
 
-        return render_template("event.html", authorId=authorId, title="Create An Event", evenTypeFields=evenTypeFields.items())
+
+        # Fetch URL args
+        args = request.args
+        # Get crypto key
+        with open(KEY_FILE, "rb") as keyFile:
+            fern = Fernet(keyFile.read())
+
+        # Fetch AuthorId
+        authorIdEncoded = args.get("aide")  # AuthorIDEncoded (AIDE)
+        if authorIdEncoded is None:
+            sendToTemplate["authorId"] = 0
+        else:
+            try:
+                # Get author id
+                aide = fern.decrypt(authorIdEncoded.encode("utf-8"))
+                sendToTemplate["authorId"] = int(aide)
+            except Exception as e:  # User prob changed the arg - TODO redirect user to error page, tell em to execute /event again + when aide is None
+                print(e)
+                sendToTemplate["authorId"] = 0
+        #print(f"AuthorId: {sendToTemplate['authorId']}")  # DEBUG
 
 
-    with open("data/events.json") as f:
-        events = json.load(f)
+        editEncoded = args.get("edit")
+        if editEncoded is not None:
+            try:
+                """ Example of edit :: ?edit=(messageId=123,eventType="ws") """
+                edit = fern.decrypt(editEncoded.encode("utf-8")).decode("utf-8")
+                #print(f"EDIT: {edit}")
 
+                sendToTemplate["title"] = "Edit An Event"
+                editStuff = {}
+                eventType = "Operation"
+                for item in edit.split("{/}"):  # TODO Make this another char instead / More secure
+                    if item.startswith("eventType"):
+                        eventType = item.split("=")[1]
+                    else:
+                        itemSplit = item.split("=")
+                        editStuff[itemSplit[0]] = itemSplit[1]
+
+                # Set select option Selected
+                for commonField in evenTypeFields["Common"]:
+                    if commonField["name"] == "eventType":
+                        for option in commonField["value"]:
+                            option["isSelected"] = (eventType == option["text"])
+                        break
+
+
+                # EventId
+                sendToTemplate["eventId"] = editStuff.pop("eventId")  # Remove eventId and send it to template directly
+
+                # Apply edit info to form (value)
+                for dic in evenTypeFields[eventType]:
+                    if dic["name"] in editStuff:
+
+                        if dic["type"] == "textarea":
+                            dic["placeholder"] = "JS_CHANGE_VALUE" + editStuff[dic["name"]]  # Textarea doesn't have value attr. Set it later with JS (identify it with pre-str)
+
+                        elif dic["type"] == "select":
+                            for option in dic["value"]:
+                                if option["text"] == editStuff[dic["name"]]:
+                                    option["isSelected"] = True
+
+                        else:
+                            dic["value"] = editStuff[dic["name"]]
+
+                #print(editStuff)
+            except Exception as e:
+                print(e)
+                ...  # Redirect to error page, refer to generate new link
+
+        sendToTemplate["eventTypeFields"] = evenTypeFields.items()
+        return render_template("event.html", sendToTemplate=sendToTemplate)
+
+
+    """ === RECIEVEING FORM === """
+
+    eventId = request.form.get("eventId")
     eventType = request.form.get("eventType", "Operation")
     durationStr = request.form.get("duration", "02:00")
     duration = time.fromisoformat(durationStr)
@@ -426,16 +478,18 @@ def createEvent():
         resRoles[role] = None
 
     newEvent = {
-        "authorId": request.form.get("authorId"),
+        "authorId": int(request.form.get("authorId")),
         "type": eventType,  # Operation, Workshop, Event
         "title": request.form.get("title", "Event Title"),
         "description": request.form.get("description", "Event Description"),
-        "externalURL": request.form.get("externalURL"),
+        "externalURL": externalURL if (externalURL := request.form.get("externalURL")) != "" else None,
         "reservableRoles": resRoles,
         "map": request.form.get("map"),
         "maxPlayers": attendees if (attendees := request.form.get("attendees")) != "NoLimit" else None,
-        "time": (starttime := request.form.get("time", "2069-04-20T04:20")),
-        "endTime": (datetimeParse(starttime) + duration).strftime("%Y-%m-%dT%H:%M"),
+        #"time": (starttime := request.form.get("time", "2069-04-20T04:20")),
+        #"endTime": (datetimeParse(starttime) + duration).strftime("%Y-%m-%dT%H:%M"),
+        "time": "2022-12-14 09:00 AM",
+        "endTime": "2022-12-14 12:00 PM",
         "duration": durationStr,
         "accepted": [],
         "declined": [],
@@ -445,15 +499,42 @@ def createEvent():
     if eventType == "Workshop":
         newEvent["workshopInterest"] = workshopInterest if (workshopInterest := request.form.get("workshopInterest")) != "NoWorkshop" else None
 
-    events.append(newEvent)
-    with open("data/events.json", "w", encoding="utf-8") as f:
-        json.dump(events, f, indent=4)
+    with open("data/events.json") as eventsFile:
+        events = json.load(eventsFile)
 
-    return "OK DEBUG - WITHOUT BOT"
-    app.botClient.loop.create_task(updateSchedule())
 
-    return "OK"
+    if eventId is None:  # Creating an event
+        events.append(newEvent)
+        with open("data/events.json", "w", encoding="utf-8") as eventsFile:
+            json.dump(events, eventsFile, indent=4)
 
+        #return "OK DEBUG - WITHOUT BOT"
+        app.botClient.loop.create_task(updateSchedule())
+
+        return "OK"
+
+    else:  # Editing an event
+        print(f"eventId: {eventId}")
+        for event in events:
+            if eventId == event["messageId"]:  # Finding the right event
+                if events["time"] != newEvent["time"]:  # If time differs (this can be more intelligent to prevent resending schedule as often)
+                    events.remove(event)
+                    events.append(newEvent)
+                    with open("data/events.json", "w", encoding="utf-8") as eventsFile:
+                        json.dump(events, eventsFile, indent=4)
+
+                else:
+                    event.update(newEvent)  # Set updated values
+                    with open("data/events.json", "w", encoding="utf-8") as eventsFile:
+                        json.dump(events, eventsFile, indent=4)
+                    app.botClient.loop.create_task(editMsg(SCHEDULE, eventId, getEventEmbed(newEvent)))
+                break
+
+        return "OK"
+
+
+async def editMsg(channel: int, msgId: int, embed: Embed):
+    await app.botClient.get_channel(channel).fetch_message(msgId).edit(embed=embed)
 
 async def updateSchedule() -> None:
     """ Updates the schedule channel with all messages. """
@@ -788,6 +869,11 @@ async def buttonHandling(self, message: discord.Message | None, button: discord.
 @app.route("/shutdown")
 def shutdown():
     os.system("taskkill /f /im python.exe")
+    return redirect("/event")
+
+@app.route("/test")
+def test():
+    app.botClient.loop.create_task(updateSchedule())
     return redirect("/event")
 
 

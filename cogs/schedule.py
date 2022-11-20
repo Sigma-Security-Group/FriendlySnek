@@ -144,18 +144,20 @@ class Schedule(commands.Cog):
         await self.updateSchedule()
         try:
             self.autoDeleteEvents.start()
-        except Exception:
+        except Exception as e:
             log.warning(LOG_COULDNT_START.format("autoDeleteEvents scheduler"))
-
+            log.exception(e)
         try:
             self.checkAcceptedReminder.start()
-        except Exception:
+        except Exception as e:
             log.warning(LOG_COULDNT_START.format("checkAcceptedReminder scheduler"))
+            log.exception(e)
 
         try:
             self.checkModUpdates.start()
-        except Exception:
+        except Exception as e:
             log.warning(LOG_COULDNT_START.format("checkModUpdates"))
+            log.exception(e)
 
     async def cancelCommand(self, channel: discord.DMChannel, abortText: str) -> None:
         """ Sends an abort response to the user.

@@ -1095,9 +1095,9 @@ class Schedule(commands.Cog):
             color = Color.gold()
             while not workshopInterestOk:
                 with open(WORKSHOP_INTEREST_FILE) as f:
-                    workshopInterestOptions = [{"name": name, "title": wsInterest["title"]} for name, wsInterest in json.load(f).items()]
+                    workshopInterestOptions = list(json.load(f).keys())
                 embed = Embed(title=":link: Which workshop waiting list is your workshop linked to?", description="When linking your workshop and finished scheduling it, it will automatically ping everyone interested in it.\nFurthermore, those that complete the workshop will be removed from the interest list!\nEnter `none` to not link it.", color=color)
-                embed.add_field(name="Workshop Lists", value="\n".join(f"**{idx}.** {wsInterest['title']}" for idx, wsInterest in enumerate(workshopInterestOptions, 1)))
+                embed.add_field(name="Workshop Lists", value="\n".join(f"**{idx}.** {wsName}" for idx, wsName in enumerate(workshopInterestOptions, 1)))
                 embed.set_footer(text=SCHEDULE_CANCEL)
                 color = Color.red()
                 await dmChannel.send(embed=embed)
@@ -1109,7 +1109,7 @@ class Schedule(commands.Cog):
                         return False
                     workshopInterestOk = True
                     if workshopInterest.isdigit() and int(workshopInterest) <= len(workshopInterestOptions) and int(workshopInterest) > 0:
-                        workshopInterest = workshopInterestOptions[int(workshopInterest) - 1]["name"]
+                        workshopInterest = workshopInterestOptions[int(workshopInterest) - 1]
                     elif workshopInterest.strip().lower() == "none":
                         workshopInterest = None
                     else:
@@ -1898,9 +1898,9 @@ class Schedule(commands.Cog):
             color = Color.gold()
             while not workshopInterestOk:
                 with open(WORKSHOP_INTEREST_FILE) as f:
-                    workshopInterestOptions = [{"name": name, "title": wsInterest["title"]} for name, wsInterest in json.load(f).items()]
+                    workshopInterestOptions = list(json.load(f).keys())
                 embed = Embed(title=":link: Which workshop waiting list is your workshop linked to?", description="When linking your workshop and finished scheduling it, it will automatically ping everyone interested in it.\nFurthermore, those that complete the workshop will be removed from the interest list!\nEnter `none` to not link it.", color=color)
-                embed.add_field(name="Workshop Lists", value="\n".join(f"**{idx}.** {wsInterest['title']}" for idx, wsInterest in enumerate(workshopInterestOptions, 1)))
+                embed.add_field(name="Workshop Lists", value="\n".join(f"**{idx}.** {wsName}" for idx, wsName in enumerate(workshopInterestOptions, 1)))
                 embed.set_footer(text=SCHEDULE_CANCEL)
                 color = Color.red()
                 await dmChannel.send(embed=embed)
@@ -1912,7 +1912,7 @@ class Schedule(commands.Cog):
                         return
                     workshopInterestOk = True
                     if workshopInterest.isdigit() and int(workshopInterest) <= len(workshopInterestOptions) and int(workshopInterest) > 0:
-                        workshopInterest = workshopInterestOptions[int(workshopInterest) - 1]["name"]
+                        workshopInterest = workshopInterestOptions[int(workshopInterest) - 1]
                     elif workshopInterest.strip().lower() == "none":
                         workshopInterest = None
                     else:
@@ -2040,7 +2040,7 @@ class Schedule(commands.Cog):
                 for memberId in workshopInterestItem["wsInterest"]["members"]:
                     message += f"{member.mention} " if (member := guild.get_member(memberId)) is not None else ""
                 if message != "":
-                    await guild.get_channel(ARMA_DISCUSSION).send(f"{message}\nA {workshopInterestItem['wsInterest']['title']} workshop is up on <#{SCHEDULE}> - which you are interested in.\nIf you're no longer interested, please remove yourself from the list in <#{WORKSHOP_INTEREST}>!")
+                    await guild.get_channel(ARMA_DISCUSSION).send(f"{message}\nA **{workshopInterestItem['name']} workshop** is up on <#{SCHEDULE}> - which you are interested in.\nIf you're no longer interested, please remove yourself from the list in <#{WORKSHOP_INTEREST}>!")
 
     @app_commands.command(name="event")
     @app_commands.guilds(GUILD)

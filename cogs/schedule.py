@@ -344,7 +344,7 @@ class Schedule(commands.Cog):
             now = pytz.UTC.localize(datetime.utcnow())
 
             # Check if update is new
-            if utcTime > (now - timedelta(minutes=29.0, seconds=30.0)):  # Relative time checking
+            if utcTime > (now - timedelta(minutes=29.0, seconds=59.0)):  # Relative time checking
                 output.append(
                     {
                         "modID": modID,

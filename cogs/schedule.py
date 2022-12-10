@@ -35,7 +35,6 @@ MAX_SERVER_ATTENDANCE = 50
 MAPS = [
     "Training Map",
     "Altis",
-    "Anizay",
     "Bukovina",
     "Bystrica",
     "Chernarus (Autumn)",
@@ -43,7 +42,6 @@ MAPS = [
     "Chernarus (Winter)",
     "Desert",
     "Dingor v3.82",
-    "Fapovo v1.8",
     "Hellanmaa",
     "Hellanmaa winter",
     "Isla Abramia v3.9",
@@ -61,7 +59,6 @@ MAPS = [
     "Rahmadi",
     "Sahrani",
     "Sanagasta, Pampa de la Viuda, I a",
-    "Sefrou-Ramal",
     "Shapur",
     "Southern Sahrani",
     "Stratis",

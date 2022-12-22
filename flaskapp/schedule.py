@@ -45,33 +45,29 @@ TIMEOUT_EMBED = Embed(title=ERROR_TIMEOUT, color=Color.red())
 MAPS = [
     "Training Map",
     "Altis",
-    "Anizay",
+    "Archipelago",
     "Bukovina",
     "Bystrica",
     "Chernarus (Autumn)",
     "Chefnarus (Summer)",
     "Chernarus (Winter)",
     "Desert",
-    "Dingor v3.82",
-    "Fapovo v1.8",
     "Hellanmaa",
     "Hellanmaa winter",
-    "Isla Abramia v3.9",
-    "Khoramshahr",
     "Kujari",
     "Kunduz, Afghanistan",
-    "Lingor v3.9.5",
     "Livonia",
+    "Lythium ,FFAA",
     "Malden 2035",
     "Mutambara",
     "Niakala",
+    "North Takistan",
     "Porto",
     "Proving Grounds",
     "Pulau",
     "Rahmadi",
     "Sahrani",
     "Sanagasta, Pampa de la Viuda, I a",
-    "Sefrou-Ramal",
     "Shapur",
     "Southern Sahrani",
     "Stratis",
@@ -80,12 +76,12 @@ MAPS = [
     "Tanoa",
     "United Sahrani",
     "Utes",
-    "Vinjesvingen",
     "Virolahti",
     "Virtual Reality",
     "Zargabad"
 ]
 
+timeZoneValue = [{"value": str(timeZone), "text": str(timeZone), "isSelected": False} for timeZone in pytz.common_timezones]
 mapsValue = [{"value": "", "text": "No Map", "isSelected": False}] + [{"value": map_, "text": map_, "isSelected": False} for map_ in MAPS]
 attendeesValue = [{"value": str(opt), "text": str(opt), "isSelected": False} for opt in ["No Limit", "Anonymous", "Hidden"] + list(range(1, 51))]
 timeValue = (datetime.now() + timedelta(hours=1)).strftime("%Y-%m-%dT%H:00:00")
@@ -141,6 +137,14 @@ def createEvent():
                     {"value": "Workshop", "text": "Workshop", "isSelected": False},
                     {"value": "Event", "text": "Event", "isSelected": False},
                 ],
+                "isRequired": True,
+                "isReadOnly": False,
+            },
+            {
+                "label": "Time Zone",
+                "type": "select",
+                "name": "timeZone",
+                "value": timeZoneValue,
                 "isRequired": True,
                 "isReadOnly": False,
             }

@@ -27,7 +27,7 @@ for (let i = 0; i < textareas.length; i++) {
 }
 
 // Event type
-eventType = document.getElementsByName("eventType")[0]
+const eventType = document.getElementsByName("eventType")[0]
 formVis(types[eventType.selectedIndex])
 eventType.addEventListener("change", () => {
     if (eventType.value == "Operation") {
@@ -39,4 +39,27 @@ eventType.addEventListener("change", () => {
     } else {  // Event
         formVis(typeEv)
     }
+})
+
+
+// Time zone
+let timeZone = document.getElementsByName("timeZone")
+// Find what index the main control time zone select is (the one the user controls)
+timeZoneMainIndex = 0
+for (let i = 0; i < timeZone.length; i++) {
+    if (timeZone.type != "hidden") {
+        timeZoneMainIndex = i
+        break
+    }
+}
+setHiddenTimeZoneValues(timeZone[timeZoneMainIndex].value)
+function setHiddenTimeZoneValues(value) {
+    // Find all time zone hidden fields and update value
+    for (let i = 0; i < timeZone.length; i++) {
+        if (timeZone[i].type == "hidden")
+            timeZone[i].value = value
+    }
+}
+timeZone[timeZoneMainIndex].addEventListener("change", (e) => {
+    setHiddenTimeZoneValues(e.target.value)
 })

@@ -1,8 +1,17 @@
 """TODO
 MVP
     ✅ Create Events
-    ❌ Edit Events
-    ❌ Delete Events
+    ✅ Edit Events
+    ❌ Delete Events (FIX WORKSHOP SAVE EVENT KEY ERROR)
+
+Time zone select box, link with JSON file
+
+GIF CSS small size
+
+Edit event increased intelligense
+    If only event: just edit it, regardless of time change
+    On attendence edit, don't forget to update buttons
+
 
 Little question mark info box next to some inputs
     Reservable Roles -> Enter each role into a new line
@@ -12,16 +21,20 @@ Little question mark info box next to some inputs
 Switch between Op, WS, Event
     Should we have a common input list? Like title, description, URL etc?
 
+updateSchedule() on startup
+
 Templates
     Select menu
     Javascript input.value = Template.shit.value
 """
-import os, random, json, re, pytz, asyncio
+import os, random, json, pytz, asyncio, datetime, time
 
 from discord import Embed, Color, utils
-from flask import Flask, render_template, request, redirect, url_for
-from datetime import datetime, timedelta, time
+from flask import Flask, render_template, request, redirect
+from copy import deepcopy
+from datetime import datetime, timedelta
 from dateutil.parser import parse as datetimeParse
+from dateutil import tz
 from constants import *
 from cryptography.fernet import Fernet
 from logger import Logger
@@ -40,6 +53,8 @@ TIME_FORMAT_HTML = "%Y-%m-%dT%H:%M"
 KEY_FILE = "data/key.key"
 UTC = pytz.UTC
 TIMEOUT_EMBED = Embed(title=ERROR_TIMEOUT, color=Color.red())
+WORKSHOP_INTEREST_FILE = "data/workshopInterest.json"
+EVENTS_HISTORY_FILE = "data/eventsHistory.json"
 
 # Training map first, then the rest in alphabetical order
 MAPS = [
@@ -83,7 +98,8 @@ MAPS = [
 
 timeZoneValue = [{"value": str(timeZone), "text": str(timeZone), "isSelected": False} for timeZone in pytz.common_timezones]
 mapsValue = [{"value": "", "text": "No Map", "isSelected": False}] + [{"value": map_, "text": map_, "isSelected": False} for map_ in MAPS]
-attendeesValue = [{"value": str(opt), "text": str(opt), "isSelected": False} for opt in ["No Limit", "Anonymous", "Hidden"] + list(range(1, 51))]
+maxPlayersSpecialOpt = ["No Limit", "Anonymous", "Hidden"]
+maxPlayersValue = [{"value": str(opt), "text": str(opt), "isSelected": False} for opt in maxPlayersSpecialOpt + list(range(1, 51))]
 timeValue = (datetime.now() + timedelta(hours=1)).strftime("%Y-%m-%dT%H:00:00")
 with open("data/workshopInterest.json") as f:
     workshops = json.load(f).keys()
@@ -108,10 +124,18 @@ def index():
     # TODO Make this a dashboard instead of redirecting
     return redirect("/event", code=302)
 
+def resetSelectMenus() -> None:
+    """ Resets select menus SELECTED attribute. Will otherwise fallthrough to other users """
+    # Find and set right time zone to selected
+    for selectMenu in (timeZoneValue, mapsValue):
+        for option in selectMenu:
+            option["isSelected"] = False
+
 
 @app.route("/event", methods=["GET", "POST"])
 def createEvent():
     if request.method == "GET":
+        resetSelectMenus()
         sendToTemplate = {}
         sendToTemplate["title"] = "Create An Event"
 
@@ -124,10 +148,10 @@ def createEvent():
             nou = random.choice(nouns).strip("\n")
 
         titlePlaceholder = f"Operation {adj.capitalize()} {nou.capitalize()}"
-        evenTypeFields = {}
+        eventTypeFields = {}
 
         # Common Fields
-        evenTypeFields["Common"] = [
+        eventTypeFields["Common"] = [
             {
                 "label": "Event Type",
                 "type": "select",
@@ -151,7 +175,7 @@ def createEvent():
         ]
 
         # Operation Fields
-        evenTypeFields["Operation"] = [
+        eventTypeFields["Operation"] = [
             {
                 "label": "Title",
                 "type": "text",
@@ -202,8 +226,8 @@ def createEvent():
             {
                 "label": "Attendees",
                 "type": "select",
-                "name": "attendees",
-                "value": attendeesValue,
+                "name": "maxPlayers",
+                "value": maxPlayersValue,
                 "isRequired": True,
                 "isReadOnly": False,
             },
@@ -211,9 +235,7 @@ def createEvent():
                 "label": "Time",
                 "type": "datetime-local",
                 "name": "time",
-                "placeholder": "",
                 "value": timeValue,
-                "maxLen": "",
                 "isRequired": True,
                 "isReadOnly": False,
             },
@@ -221,16 +243,14 @@ def createEvent():
                 "label": "Duration",
                 "type": "time",
                 "name": "duration",
-                "placeholder": "",
                 "value": "02:00",
-                "maxLen": "",
                 "isRequired": True,
                 "isReadOnly": False,
             },
         ]
 
         # Workshop Fields
-        evenTypeFields["Workshop"] = [
+        eventTypeFields["Workshop"] = [
             {
                 "label": "Title",
                 "type": "text",
@@ -281,8 +301,8 @@ def createEvent():
             {
                 "label": "Attendees",
                 "type": "select",
-                "name": "attendees",
-                "value": attendeesValue,
+                "name": "maxPlayers",
+                "value": maxPlayersValue,
                 "isRequired": True,
                 "isReadOnly": False,
             },
@@ -290,9 +310,7 @@ def createEvent():
                 "label": "Time",
                 "type": "datetime-local",
                 "name": "time",
-                "placeholder": "",
                 "value": timeValue,
-                "maxLen": "",
                 "isRequired": True,
                 "isReadOnly": False,
             },
@@ -300,9 +318,7 @@ def createEvent():
                 "label": "Duration",
                 "type": "time",
                 "name": "duration",
-                "placeholder": "",
                 "value": "02:00",
-                "maxLen": "",
                 "isRequired": True,
                 "isReadOnly": False,
             },
@@ -317,7 +333,7 @@ def createEvent():
         ]
 
         # Event Fields
-        evenTypeFields["Event"] = [
+        eventTypeFields["Event"] = [
             {
                 "label": "Title",
                 "type": "text",
@@ -368,8 +384,8 @@ def createEvent():
             {
                 "label": "Attendees",
                 "type": "select",
-                "name": "attendees",
-                "value": attendeesValue,
+                "name": "maxPlayers",
+                "value": maxPlayersValue,
                 "isRequired": True,
                 "isReadOnly": False,
             },
@@ -377,9 +393,7 @@ def createEvent():
                 "label": "Time",
                 "type": "datetime-local",
                 "name": "time",
-                "placeholder": "",
                 "value": timeValue,
-                "maxLen": "",
                 "isRequired": True,
                 "isReadOnly": False,
             },
@@ -387,9 +401,7 @@ def createEvent():
                 "label": "Duration",
                 "type": "time",
                 "name": "duration",
-                "placeholder": "",
                 "value": "02:00",
-                "maxLen": "",
                 "isRequired": True,
                 "isReadOnly": False,
             },
@@ -403,70 +415,89 @@ def createEvent():
         with open(KEY_FILE, "rb") as keyFile:
             fern = Fernet(keyFile.read())
 
-        # Fetch AuthorId
-        authorIdEncoded = args.get("aide")  # AuthorIDEncoded (AIDE)
-        if authorIdEncoded is None:
-            sendToTemplate["authorId"] = 0
+        # Fetch info
+        infoEncoded = args.get("info")
+
+        # User prob changed the arg - TODO redirect user to error page, tell em to execute /event again + when aide is None
+        if infoEncoded is None:
+            return 'NO 1<br /><br /><style>.tenor-gif-embed { height: 500px; width: auto; }</style><div class="tenor-gif-embed" data-postid="22339352" data-share-method="host" data-aspect-ratio="0.55" data-width="100%"><a href="https://tenor.com/view/asdf-gif-22339352">Asdf GIF</a>from <a href="https://tenor.com/search/asdf-gifs">Asdf GIFs</a></div> <script type="text/javascript" async src="https://tenor.com/embed.js"></script>'
+
         else:
             try:
-                # Get author id
-                aide = fern.decrypt(authorIdEncoded.encode("utf-8"))
-                sendToTemplate["authorId"] = int(aide)
-            except Exception as e:  # User prob changed the arg - TODO redirect user to error page, tell em to execute /event again + when aide is None
-                print(e)
-                sendToTemplate["authorId"] = 0
-        #print(f"AuthorId: {sendToTemplate['authorId']}")  # DEBUG
+                # Get decrypted info
+                # create: authorId=123456 // edit: eventId=123456
+                info = fern.decrypt(infoEncoded.encode("utf-8")).decode("utf-8")
+                infoPayload, infoValue = info.split("=", 1)
+            except Exception as e:
+                log.exception(e)
+                return 'NO 2<br /><br /><style>.tenor-gif-embed { height: 500px; width: auto; }</style><div class="tenor-gif-embed" data-postid="22339352" data-share-method="host" data-aspect-ratio="0.55" data-width="100%"><a href="https://tenor.com/view/asdf-gif-22339352">Asdf GIF</a>from <a href="https://tenor.com/search/asdf-gifs">Asdf GIFs</a></div> <script type="text/javascript" async src="https://tenor.com/embed.js"></script>'
 
 
-        editEncoded = args.get("edit")
-        if editEncoded is not None:
-            try:
-                """ Example of edit :: ?edit=(messageId=123,eventType="ws") """
-                edit = fern.decrypt(editEncoded.encode("utf-8")).decode("utf-8")
-                #print(f"EDIT: {edit}")
+        if infoPayload == "authorId":
+            sendToTemplate["authorId"] = int(infoValue)
 
-                sendToTemplate["title"] = "Edit An Event"
-                editStuff = {}
-                eventType = "Operation"
-                for item in edit.split("{/}"):  # TODO Make this another char instead / More secure
-                    if item.startswith("eventType"):
-                        eventType = item.split("=")[1]
-                    else:
-                        itemSplit = item.split("=")
-                        editStuff[itemSplit[0]] = itemSplit[1]
+            # Check if user has set time zone; apply to Time Zone select
+            with open("data/memberTimeZones.json", "r", encoding="utf-8") as f:
+                memberTimeZones = json.load(f)
 
-                # Set select option Selected
-                for commonField in evenTypeFields["Common"]:
-                    if commonField["name"] == "eventType":
-                        for option in commonField["value"]:
-                            option["isSelected"] = (eventType == option["text"])
+            # User has set time zone
+            if infoValue in memberTimeZones:
+
+                # Find time zone field
+                for field in eventTypeFields["Common"]:
+                    if field["name"] == "timeZone":
+
+                        # Find and set right time zone to selected
+                        for zone in field["value"]:
+                            if zone["value"] == memberTimeZones[infoValue]:
+                                zone["isSelected"] = True
+                                break
                         break
 
 
-                # EventId
-                sendToTemplate["eventId"] = editStuff.pop("eventId")  # Remove eventId and send it to template directly
 
-                # Apply edit info to form (value)
-                for dic in evenTypeFields[eventType]:
-                    if dic["name"] in editStuff:
+        elif infoPayload == "eventId":
+            try:
+                sendToTemplate["title"] = "Edit An Event"
+                sendToTemplate["eventId"] = int(infoValue)
 
-                        if dic["type"] == "textarea":
-                            dic["placeholder"] = "JS_CHANGE_VALUE" + editStuff[dic["name"]]  # Textarea doesn't have value attr. Set it later with JS (identify it with pre-str)
+                # Fetch info from JSON
+                with open(EVENTS_FILE, "r", encoding="utf-8") as events:
+                    discordEvent = None
+                    for event in json.load(events):
+                        if event["messageId"] == sendToTemplate["eventId"]:
+                            discordEvent = event
+                            break
+                sendToTemplate["authorId"] = discordEvent["authorId"]
 
-                        elif dic["type"] == "select":
-                            for option in dic["value"]:
-                                if option["text"] == editStuff[dic["name"]]:
-                                    option["isSelected"] = True
+                # Apply info as placeholder/selected
 
-                        else:
-                            dic["value"] = editStuff[dic["name"]]
+                for eventType in eventTypeFields.keys():  # Common, Operation...
+                    for field in eventTypeFields[eventType]:  # title, description...
+                        if field["name"] in discordEvent:  # Apply placeholder & value
 
-                #print(editStuff)
+                            # Select menu
+                            if field["type"] == "select":
+                                for option in field["value"]:
+                                    if option["text"] == str(discordEvent[field["name"]]):
+                                        option["isSelected"] = True
+                                        break
+
+                            # Textarea
+                            elif field["type"] == "textarea":
+                                field["placeholder"] = f"JS_CHANGE_VALUE{fieldName}" if (fieldName := discordEvent[field["name"]]) else " "  # Textarea doesn't have value attr. Set it later with JS (identify it with pre-str)
+
+                            else:
+                                out = name if (name := discordEvent[field["name"]]) else ""
+                                field["value"] = out
+                                if "placeholder" in field:
+                                    field["placeholder"] = out
+
             except Exception as e:
-                print(e)
+                log.exception(e)
                 ...  # Redirect to error page, refer to generate new link
 
-        sendToTemplate["eventTypeFields"] = evenTypeFields.items()
+        sendToTemplate["eventTypeFields"] = eventTypeFields.items()
         return render_template("event.html", sendToTemplate=sendToTemplate)
 
 
@@ -474,27 +505,30 @@ def createEvent():
 
     eventId = request.form.get("eventId")
     eventType = request.form.get("eventType", "Operation")
-    durationStr = request.form.get("duration", "02:00")
-    duration = time.fromisoformat(durationStr)
-    duration = timedelta(hours=duration.hour, minutes=duration.minute)
-    resRoles = {}
-    for role in reservableRoles.split("\r\n") if (reservableRoles := request.form.get("reservableRoles")) is not None else []:
-        resRoles[role] = None
+
+    durationSplit = request.form.get("duration", "02:00").split(":")
+    duration = timedelta(hours=int(durationSplit[0]), minutes=int(durationSplit[1]))
+
+    if (reservableRoles := request.form.get("reservableRoles", "")):
+        resRoles = {}
+        for role in reservableRoles.split("\r\n"):
+            resRoles[role] = None
+    else:
+        resRoles = None
+
 
     newEvent = {
-        "authorId": int(request.form.get("authorId")),
-        "type": eventType,  # Operation, Workshop, Event
-        "title": request.form.get("title", "Event Title"),
-        "description": request.form.get("description", "Event Description"),
-        "externalURL": externalURL if (externalURL := request.form.get("externalURL")) != "" else None,
-        "reservableRoles": resRoles,
-        "map": request.form.get("map"),
-        "maxPlayers": attendees if (attendees := request.form.get("attendees")) != "NoLimit" else None,
-        #"time": (starttime := request.form.get("time", "2069-04-20T04:20")),
-        #"endTime": (datetimeParse(starttime) + duration).strftime("%Y-%m-%dT%H:%M"),
-        "time": "2022-12-14 09:00 AM",
-        "endTime": "2022-12-14 12:00 PM",
-        "duration": durationStr,
+        "authorId": int(request.form.get("authorId")),  # Req
+        "type": eventType,  # Operation, Workshop, Event  # Req
+        "title": request.form.get("title", "Event Title"),  # Req
+        "description": request.form.get("description", "Event Description"),  # Req
+        "externalURL": externalURL if (externalURL := request.form.get("externalURL")) else None,  # Optional
+        "reservableRoles": resRoles,  # Optional
+        "map": map if (map := request.form.get("map")) else None,  # Optional
+        "maxPlayers": int(maxPlayers) if (maxPlayers := request.form.get("maxPlayers")).isdigit() else maxPlayers,  # Req
+        "time": (starttime := datetimeParse(request.form.get("time", "2069-04-20 04:20"), tzinfos={"CDT": tz.gettz(request.form.get("timeZone", "UTC"))})),  # Req
+        "endTime": (starttime + duration).strftime("%Y-%m-%d %H:%M"),  # Req
+        "duration": ":".join(durationSplit),  # Req
         "accepted": [],
         "declined": [],
         "tentative": [],
@@ -503,29 +537,34 @@ def createEvent():
     if eventType == "Workshop":
         newEvent["workshopInterest"] = workshopInterest if (workshopInterest := request.form.get("workshopInterest")) != "NoWorkshop" else None
 
-    with open("data/events.json") as eventsFile:
+    with open("data/events.json", encoding="utf-8") as eventsFile:
         events = json.load(eventsFile)
 
 
-    if eventId is None:  # Creating an event
+    if not eventId:  # Creating an event
         events.append(newEvent)
         with open("data/events.json", "w", encoding="utf-8") as eventsFile:
             json.dump(events, eventsFile, indent=4)
 
         #return "OK DEBUG - WITHOUT BOT"
+
+        # TODO this can be upgraded: if event is the most recent, dont refresh schedule but just send it
         app.botClient.loop.create_task(updateSchedule())
 
-        return "OK"
-
     else:  # Editing an event
-        print(f"eventId: {eventId}")
+        eventId = int(eventId)
         for event in events:
             if eventId == event["messageId"]:  # Finding the right event
-                if events["time"] != newEvent["time"]:  # If time differs (this can be more intelligent to prevent resending schedule as often)
+                newEvent["messageId"] = eventId
+
+                # TODO (this can be more intelligent to prevent resending schedule as often)
+                # TODO If event is only one in schedule, just edit it, even if time differs
+                if event["time"] != newEvent["time"]:  # If time differs
                     events.remove(event)
                     events.append(newEvent)
                     with open("data/events.json", "w", encoding="utf-8") as eventsFile:
                         json.dump(events, eventsFile, indent=4)
+                    app.botClient.loop.create_task(updateSchedule())
 
                 else:
                     event.update(newEvent)  # Set updated values
@@ -534,15 +573,34 @@ def createEvent():
                     app.botClient.loop.create_task(editMsg(SCHEDULE, eventId, getEventEmbed(newEvent)))
                 break
 
-        return "OK"
+
+    return 'OK<br /><br /><style>.tenor-gif-embed { height: 500px; width: auto; }</style><div class="tenor-gif-embed" data-postid="20790957" data-share-method="host" data-aspect-ratio="1" data-width="100%"><a href="https://tenor.com/view/okay-and-gif-20790957">Okay And GIF</a>from <a href="https://tenor.com/search/okay-gifs">Okay GIFs</a></div> <script type="text/javascript" async src="https://tenor.com/embed.js"></script>'
+
+
+async def cancelCommand(channel: discord.DMChannel, abortText: str) -> None:
+        """ Sends an abort response to the user.
+
+        Parameters:
+        channel (discord.DMChannel): The users DM channel where the message is sent.
+        abortText (str): The embed title - what is aborted.
+
+        Returns:
+        None.
+        """
+        await channel.send(embed=Embed(title=f"❌ {abortText} canceled!", color=Color.red()))
 
 
 async def editMsg(channel: int, msgId: int, embed: Embed):
-    await app.botClient.get_channel(channel).fetch_message(msgId).edit(embed=embed)
+    print("editMsg")
+    fetchChannel = app.botClient.get_channel(channel)
+    fetchMsg = await fetchChannel.fetch_message(msgId)
+    await fetchMsg.edit(embed=embed)
+
 
 async def updateSchedule() -> None:
     """ Updates the schedule channel with all messages. """
-
+    global guild
+    print(f"app.botClient: {app.botClient}")
     guild = app.botClient.get_guild(GUILD_ID)
     channel = guild.get_channel(SCHEDULE)
 
@@ -553,7 +611,7 @@ async def updateSchedule() -> None:
     issueButton = ScheduleButton(row=0, emoji="📩", label="Create Ticket", style=discord.ButtonStyle.secondary, custom_id="issues_and_suggestions")
     row.add_item(item=issueButton)
 
-    await channel.send(f"__Welcome to the schedule channel!__\nTo schedule an operation you can use the `/operation` command (or `/bop`) and follow the instructions in your DMs.\nFor a workshop use `/workshop` or `/ws`.\nLastly, for generic events use `/event`.\n\nIf you haven't set a preferred time zone yet you will be prompted to do so when you schedule any kind of event.\nIf you want to set, change or delete your time zone preference you may do so with the `/changetimezone` command.\n\nThe times you see on the schedule are based on __your local time zone__.\n\nThe event colors can be used to quickly identify what type of event it is:\n🟩 Operation `/operation` or `/bop`.\n🟦 Workshop `/workshop` or `/ws`.\n🟨 Event `/event`.\n\n**Github**: <https://github.com/Sigma-Security-Group/FriendlySnek> - Prod. hash `{commitHash}`.\n\nIf you have any suggestions for new features or encounter any bugs, please contact: {', '.join([f'**{channel.guild.get_member(name).display_name}**' for name in DEVELOPERS if channel.guild.get_member(name) is not None])} - or simply click the button below!", view=row)
+    await channel.send(f"__Welcome to the schedule channel!__\nTo schedule an event, run the `/event` command.\n\nThe times you see on the schedule are based on __your local time zone__.\n\nThe event colors can be used to quickly identify what type of event it is:\n🟩 Operation\n🟦 Workshop.\n🟨 Event.\n\n**Github**: <https://github.com/Sigma-Security-Group/FriendlySnek> - Prod. hash `{commitHash}`.\n\nIf you have any suggestions for new features or encounter any bugs, please contact: {', '.join([f'**{channel.guild.get_member(name).display_name}**' for name in DEVELOPERS if channel.guild.get_member(name) is not None])} - or simply click the button below!", view=row)
 
     if os.path.exists(EVENTS_FILE):
         try:
@@ -573,11 +631,10 @@ async def updateSchedule() -> None:
                 buttons = []
 
                 # Add attendance buttons if maxPlayers is not hidden
-                if event["maxPlayers"] != "hidden":
+                if event["maxPlayers"] != "Hidden":
                     buttons.extend([
                         ScheduleButton(row=0, label="Accept", style=discord.ButtonStyle.success, custom_id="accept"),
                         ScheduleButton(row=0, label="Decline", style=discord.ButtonStyle.danger, custom_id="decline"),
-                        ScheduleButton(row=0, label="Decline (Time)", style=discord.ButtonStyle.danger, custom_id="declineForTiming"),
                         ScheduleButton(row=0, label="Tentative", style=discord.ButtonStyle.primary, custom_id="tentative")
                     ])
                     if event["reservableRoles"] is not None:
@@ -611,8 +668,6 @@ def getEventEmbed(event: dict) -> Embed:
     Returns:
     Embed: The generated embed.
     """
-    guild = app.botClient.get_guild(GUILD_ID)
-
     colors = {
         "Operation": Color.green(),
         "Workshop": Color.blue(),
@@ -639,19 +694,19 @@ def getEventEmbed(event: dict) -> Embed:
 
     accepted = [member.display_name for memberId in event["accepted"] if (member := guild.get_member(memberId)) is not None]
     standby = []
-    if event["maxPlayers"] is not None and len(accepted) > event["maxPlayers"]:
+    if event["maxPlayers"] not in maxPlayersSpecialOpt and len(accepted) > event["maxPlayers"]:
         accepted, standby = accepted[:event["maxPlayers"]], accepted[event["maxPlayers"]:]
     declined = [member.display_name for memberId in event["declined"] if (member := guild.get_member(memberId)) is not None]
     tentative = [member.display_name for memberId in event["tentative"] if (member := guild.get_member(memberId)) is not None]
 
-    if event["maxPlayers"] is None or (event["maxPlayers"] is not None and event["maxPlayers"] > 0):
-        embed.add_field(name=f"Accepted ({len(accepted)}/{event['maxPlayers']}) ✅" if event["maxPlayers"] is not None else f"Accepted ({len(accepted)}) ✅", value="\n".join(name for name in accepted) if len(accepted) > 0 else "-", inline=True)
+    if event["maxPlayers"] == "No Limit" or (event["maxPlayers"] not in maxPlayersSpecialOpt and event["maxPlayers"] > 0):
+        embed.add_field(name=f"Accepted ({len(accepted)}/{event['maxPlayers']}) ✅" if event["maxPlayers"] != "No Limit" else f"Accepted ({len(accepted)}) ✅", value="\n".join(name for name in accepted) if len(accepted) > 0 else "-", inline=True)
         embed.add_field(name=f"Declined ❌ ({len(declined)})", value=("\n".join("\n".join("❌ " + name for name in declined)) if len(declined) > 0 else "-"), inline=True)
         embed.add_field(name=f"Tentative ({len(tentative)}) ❓", value="\n".join(name for name in tentative) if len(tentative) > 0 else "-", inline=True)
         if len(standby) > 0:
             embed.add_field(name=f"Standby ({len(standby)}) :clock3:", value="\n".join(name for name in standby), inline=False)
 
-    elif event["maxPlayers"] != "hidden":
+    elif event["maxPlayers"] != "Hidden":
         embed.add_field(name=f"Accepted ({len(accepted + standby)}) ✅", value="\u200B", inline=True)
         embed.add_field(name=f"Declined ❌ ({len(declined)})", value="\u200B", inline=True)
         embed.add_field(name=f"Tentative ({len(tentative)}) ❓", value="\u200B", inline=True)
@@ -661,6 +716,49 @@ def getEventEmbed(event: dict) -> Embed:
     embed.timestamp = UTC.localize(datetime.strptime(event["time"], TIME_FORMAT_HTML))
 
     return embed
+
+
+async def saveEventToHistory(self, event, autoDeleted=False) -> None:
+        """ Saves a specific event to history.
+
+        Parameters:
+        event: The specified event.
+        autoDeleted (bool): If the event was automatically deleted.
+
+        Returns:
+        None.
+        """
+        if event.get("type", "Operation") == "Workshop" and (workshopInterestName := event.get("workshopInterest")) is not None:
+            with open(WORKSHOP_INTEREST_FILE) as f:
+                workshopInterest = json.load(f)
+            if (workshop := workshopInterest.get(workshopInterestName)) is not None:
+                accepted = event["accepted"]
+                if event["maxPlayers"] is not None:
+                    accepted = accepted[:event["maxPlayers"]]
+                updateWorkshopInterest = False
+                for memberId in accepted:
+                    if memberId in workshop["members"]:
+                        updateWorkshopInterest = True
+                        workshop["members"].remove(memberId)
+                if updateWorkshopInterest:
+                    with open(WORKSHOP_INTEREST_FILE, "w") as f:
+                        json.dump(workshopInterest, f, indent=4)
+                    embed = app.botClient.get_cog("WorkshopInterest").getWorkshopEmbed(guild, workshop)
+                    workshopMessage = await app.botClient.get_channel(WORKSHOP_INTEREST).fetch_message(workshop["messageId"])
+                    await workshopMessage.edit(embed=embed)
+
+        with open(EVENTS_HISTORY_FILE) as f:
+            eventsHistory = json.load(f)
+        eventCopy = deepcopy(event)
+        eventCopy["autoDeleted"] = autoDeleted
+        eventCopy["authorName"] = member.display_name if (member := guild.get_member(eventCopy["authorId"])) is not None else "UNKNOWN"
+        eventCopy["acceptedNames"] = [member.display_name if (member := guild.get_member(memberId)) is not None else "UNKNOWN" for memberId in eventCopy["accepted"]]
+        eventCopy["declinedNames"] = [member.display_name if (member := guild.get_member(memberId)) is not None else "UNKNOWN" for memberId in eventCopy["declined"]]
+        eventCopy["tentativeNames"] = [member.display_name if (member := guild.get_member(memberId)) is not None else "UNKNOWN" for memberId in eventCopy["tentative"]]
+        eventCopy["reservableRolesNames"] = {role: ((member.display_name if (member := guild.get_member(memberId)) is not None else "UNKNOWN") if memberId is not None else "VACANT") for role, memberId in eventCopy["reservableRoles"].items()} if eventCopy["reservableRoles"] is not None else {}
+        eventsHistory.append(eventCopy)
+        with open(EVENTS_HISTORY_FILE, "w") as f:
+            json.dump(eventsHistory, f, indent=4)
 
 
 async def buttonHandling(self, message: discord.Message | None, button: discord.ui.Button, interaction: discord.Interaction) -> None:
@@ -708,19 +806,6 @@ async def buttonHandling(self, message: discord.Message | None, button: discord.
                     if event["reservableRoles"][roleName] == interaction.user.id:
                         event["reservableRoles"][roleName] = None
 
-        elif button.custom_id == "declineForTiming":
-            event = event_[0]
-            if interaction.user.id in event["accepted"]:
-                event["accepted"].remove(interaction.user.id)
-            if interaction.user.id in event["tentative"]:
-                event["tentative"].remove(interaction.user.id)
-            if interaction.user.id in event["declined"]:
-                event["declined"].remove(interaction.user.id)
-            if event["reservableRoles"] is not None:
-                for roleName in event["reservableRoles"]:
-                    if event["reservableRoles"][roleName] == interaction.user.id:
-                        event["reservableRoles"][roleName] = None
-
         elif button.custom_id == "tentative":
             event = event_[0]
             if interaction.user.id in event["accepted"]:
@@ -744,14 +829,16 @@ async def buttonHandling(self, message: discord.Message | None, button: discord.
 
         elif button.custom_id == "edit":
             event = event_[0]
-            if interaction.user.id == event["authorId"] or any(role.id == UNIT_STAFF or role.id == SERVER_HAMSTER for role in interaction.user.roles):
-                await interaction.response.send_message(RESPONSE_GOTO_DMS.format(interaction.user.dm_channel.jump_url), ephemeral=True)
-                reorderEvents = await self.editEvent(interaction.user, event, isTemplateEdit=False)
-                if reorderEvents:
-                    with open(EVENTS_FILE, "w") as f:
-                        json.dump(events, f, indent=4)
-                    await self.updateSchedule()
-                    return
+            if (interaction.user.id == event["authorId"]) or any(role.id == UNIT_STAFF or role.id == SERVER_HAMSTER for role in interaction.user.roles):
+                with open("data/key.key", "rb") as keyFile:
+                    infoValue = Fernet(keyFile.read()).encrypt(f"authorId={interaction.user.id}".encode("utf-8")).decode("utf-8")
+                await interaction.response.send_message(f"http://127.0.0.1:5000/event?info={infoValue}", ephemeral=True)
+                #reorderEvents = await self.editEvent(interaction.user, event, isTemplateEdit=False)
+                #if reorderEvents:
+                #    with open(EVENTS_FILE, "w") as f:
+                #        json.dump(events, f, indent=4)
+                #    await self.updateSchedule()
+                #    return
             else:
                 await interaction.response.send_message(RESPONSE_UNALLOWED.format("edit"), ephemeral=True)
                 return
@@ -759,7 +846,7 @@ async def buttonHandling(self, message: discord.Message | None, button: discord.
 
         elif button.custom_id == "delete":
             event = event_[0]
-            if interaction.user.id == event["authorId"] or any(role.id == UNIT_STAFF or role.id == SERVER_HAMSTER for role in interaction.user.roles):
+            if (interaction.user.id == event["authorId"]) or any(role.id == UNIT_STAFF or role.id == SERVER_HAMSTER for role in interaction.user.roles):
                 await interaction.response.send_message(RESPONSE_GOTO_DMS.format(interaction.user.dm_channel.jump_url), ephemeral=True)
                 embed = Embed(title=SCHEDULE_EVENT_CONFIRM_DELETE.format(f"{event['type'].lower()}: `{event['title']}`"), color=Color.orange())
                 deletePrompts = [discord.Message]
@@ -778,6 +865,7 @@ async def buttonHandling(self, message: discord.Message | None, button: discord.
                 return
             scheduleNeedsUpdate = False
 
+        # Delete buttons
         elif button.custom_id == "delete_event_confirm":
             scheduleNeedsUpdate = False
             for button in button.view.children:
@@ -791,10 +879,9 @@ async def buttonHandling(self, message: discord.Message | None, button: discord.
 
                 utcNow = UTC.localize(datetime.utcnow())
                 startTime = UTC.localize(datetime.strptime(event["time"], TIME_FORMAT_HTML))
-                if event["maxPlayers"] != "anonymous" and utcNow > startTime + timedelta(minutes=30):
-                    await self.saveEventToHistory(event)
+                if event["maxPlayers"] != "Anonymous" and utcNow > startTime + timedelta(minutes=30):
+                    await saveEventToHistory(event)
                 else:
-                    guild = self.bot.get_guild(GUILD_ID)
                     for memberId in event["accepted"] + event.get("declinedForTiming", []) + event["tentative"]:
                         member = guild.get_member(memberId)
                         if member is not None:
@@ -811,7 +898,7 @@ async def buttonHandling(self, message: discord.Message | None, button: discord.
             for button in button.view.children:
                 button.disabled = True
             await interaction.response.edit_message(view=button.view)
-            await self.cancelCommand(interaction.user.dm_channel, "Event deletion")
+            await cancelCommand(interaction.user.dm_channel, "Event deletion")
             return
 
         elif button.custom_id == "issues_and_suggestions":
@@ -828,10 +915,10 @@ async def buttonHandling(self, message: discord.Message | None, button: discord.
                 return
 
             try:
-                response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, author=interaction.user, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
+                response = await app.botClient.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, author=interaction.user, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
                 concern = response.content.strip()
                 if concern.lower() == "cancel":
-                    await self.cancelCommand(dmChannel, "Ticket")
+                    await cancelCommand(dmChannel, "Ticket")
                     return
             except asyncio.TimeoutError:
                 await dmChannel.send(embed=TIMEOUT_EMBED)
@@ -855,7 +942,7 @@ async def buttonHandling(self, message: discord.Message | None, button: discord.
 
         if scheduleNeedsUpdate:
             try:
-                embed = self.getEventEmbed(event)
+                embed = getEventEmbed(event)
                 if fetchMsg:  # Could be better - could be worse...
                     msg = await interaction.channel.fetch_message(originalMsgId)
                     await msg.edit(embed=embed)
@@ -907,3 +994,7 @@ class ScheduleButton(discord.ui.Button):
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", debug=True)
+
+#while not hasattr(app, "botClient"):
+#    time.sleep(1)
+#asyncio.run(updateSchedule())

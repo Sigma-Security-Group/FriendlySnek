@@ -326,12 +326,14 @@ class MainButton(discord.ui.Button):
 if __name__ == "__main__":
     try:
         # Launch Flask
+        log.info("Starting Flask...")
         flaskApp.botClient = client
         partialRun = partial(flaskApp.run, host="0.0.0.0", port=5000, debug=False, use_reloader=False)
         flaskThread = Thread(target=partialRun)
         flaskThread.start()
 
         # Start bot
+        log.info("Starting Bot...")
         client.run(secret.TOKEN_DEV if secret.DEBUG else secret.TOKEN)
 
         # Cleanup

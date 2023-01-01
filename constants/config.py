@@ -4,7 +4,7 @@
 
 ## Misc
 COMMAND_PREFIX = "-"
-TIME_FORMAT = "%Y-%m-%d %I:%M %p"
+TIME_FORMAT = "%Y-%m-%dT%H:%M"
 SCHEDULE_CANCEL = "Enter `cancel` to abort this command."
 SCHEDULE_NUMBER_FROM_TO_OR_NONE = "Enter `none` or a number from **{0}** - **{1}**."
 SCHEDULE_EVENT_TEMPLATE_SAVE_NAME_QUESTION = "Which name would you like to save the template as?"
@@ -37,7 +37,7 @@ SCHEDULE_EVENT_SELECTED_TIME_ZONE = "Your current time zone preference is `{0}`.
 RESPONSE_EVENT_PROGRESS = "Scheduling... Standby for {0}..."
 RESPONSE_EVENT_DONE = "`{0}` is now on [schedule](<https://discord.com/channels/{1}/{2}/{3}>)!"
 RESPONSE_GOTO_DMS = "Please follow the steps in [your DMs](<{0}>)!"
-RESPONSE_UNALLOWED = "Only the host and Unit Staff can {0} the event!"
+RESPONSE_UNALLOWED = "Only the host, Unit Staff and Server Hampters can {0} the event!"
 
 ## Errors
 SCHEDULE_EVENT_ERROR_DESCRIPTION = "Enter `edit` to input a new time.\nEnter `override` to override this warning."

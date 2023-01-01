@@ -13,36 +13,6 @@ if DEBUG:
 WORKSHOP_INTEREST_FILE = "data/workshopInterest.json"
 
 DEFAULT_WORKSHOP_INTEREST_LISTS = {
-    "Rotary Wing": {
-        "emoji": "🚁",
-        "role": SME_RW_PILOT,
-        "description": "Learn to fly helicopters and provide transport and close air support."
-    },
-    "Fixed Wing": {
-        "emoji": "✈️",
-        "role": SME_FW_PILOT,
-        "description": "Learn the dynamics of a fighter jet to drop enough ordnance to fund a school on a single guy with binoculars."
-    },
-    "JTAC": {
-        "emoji": "📡",
-        "role": SME_JTAC,
-        "description": "Learn how to direct close air support."
-    },
-    "Medic": {
-        "emoji": "💉",
-        "role": SME_MEDIC,
-        "description": "Learn how to administer combat aid to wounded personnel in a timely and effective manner."  # Unverifed description.
-    },
-    "Heavy Weapons": {
-        "emoji": "💣",
-        "role": SME_HEAVY_WEAPONS,
-        "description": "Learn how to efficiently operate as a machine gun crew, use grenade launchers, and shoot cretins out of shitboxes (AT & AA)."
-    },
-    "Marksman": {
-        "emoji": "🎯",
-        "role": SME_MARKSMAN,
-        "description": "Learn how to shoot big bullet far."
-    },
     "Breacher": {
         "emoji": "🚪",
         "role": SME_BREACHER,
@@ -58,10 +28,35 @@ DEFAULT_WORKSHOP_INTEREST_LISTS = {
         "role": SME_RPV_SO,
         "description": "Learn how to employ recon and attack Remote Piloted Vehicles (Drones)."
     },
-    "Team Leading": {
-        "emoji": "👨‍🏫",
-        "role": SME_MENTOR,
-        "description": "Learn how to effectively plan and maneuver your team on target."
+    "Rotary Wing": {
+        "emoji": "🚁",
+        "role": SME_RW_PILOT,
+        "description": "Learn to fly helicopters and provide transport and close air support."
+    },
+    "Fixed Wing": {
+        "emoji": "✈️",
+        "role": SME_FW_PILOT,
+        "description": "Learn how to fly high-speed fighter jets, and obliderate the enemy! 💥"
+    },
+    "JTAC": {
+        "emoji": "📡",
+        "role": SME_JTAC,
+        "description": "Learn how to direct close air support."
+    },
+    "Medic": {
+        "emoji": "💉",
+        "role": SME_MEDIC,
+        "description": "Learn how to administer combat aid to wounded personnel in a timely and effective manner."  # Unverifed description.
+    },
+    "Marksman": {
+        "emoji": "🎯",
+        "role": SME_MARKSMAN,
+        "description": "Learn how to shoot big bullet far."
+    },
+    "Heavy Weapons": {
+        "emoji": "💣",
+        "role": SME_HEAVY_WEAPONS,
+        "description": "Learn how to efficiently operate as a machine gun crew, use grenade launchers, and shoot cretins out of shitboxes (AT & AA)."
     },
     "Newcomer": {
         "emoji": "🐣",

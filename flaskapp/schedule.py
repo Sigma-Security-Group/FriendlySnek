@@ -3,6 +3,7 @@ MVP
     ✅ Create Events
     ✅ Edit Events
     ❌ Delete Events (FIX WORKSHOP SAVE EVENT KEY ERROR)
+    ❌ Reserve Roles (check button handling)
 
 Time zone select box, link with JSON file
 
@@ -432,29 +433,10 @@ def createEvent():
                 log.exception(e)
                 return 'NO 2<br /><br /><style>.tenor-gif-embed { height: 500px; width: auto; }</style><div class="tenor-gif-embed" data-postid="22339352" data-share-method="host" data-aspect-ratio="0.55" data-width="100%"><a href="https://tenor.com/view/asdf-gif-22339352">Asdf GIF</a>from <a href="https://tenor.com/search/asdf-gifs">Asdf GIFs</a></div> <script type="text/javascript" async src="https://tenor.com/embed.js"></script>'
 
+        authorId = 0
 
         if infoPayload == "authorId":
-            sendToTemplate["authorId"] = int(infoValue)
-
-            # Check if user has set time zone; apply to Time Zone select
-            with open("data/memberTimeZones.json", "r", encoding="utf-8") as f:
-                memberTimeZones = json.load(f)
-
-            # User has set time zone
-            if infoValue in memberTimeZones:
-
-                # Find time zone field
-                for field in eventTypeFields["Common"]:
-                    if field["name"] == "timeZone":
-
-                        # Find and set right time zone to selected
-                        for zone in field["value"]:
-                            if zone["value"] == memberTimeZones[infoValue]:
-                                zone["isSelected"] = True
-                                break
-                        break
-
-
+            sendToTemplate["authorId"] = authorId = int(infoValue)
 
         elif infoPayload == "eventId":
             try:
@@ -468,7 +450,7 @@ def createEvent():
                         if event["messageId"] == sendToTemplate["eventId"]:
                             discordEvent = event
                             break
-                sendToTemplate["authorId"] = discordEvent["authorId"]
+                sendToTemplate["authorId"] = authorId = discordEvent["authorId"]
 
                 # Apply info as placeholder/selected
 
@@ -496,6 +478,24 @@ def createEvent():
             except Exception as e:
                 log.exception(e)
                 ...  # Redirect to error page, refer to generate new link
+
+        # Check if user has set time zone; apply to Time Zone select
+        with open("data/memberTimeZones.json", "r") as f:
+            memberTimeZones = json.load(f)
+
+        # User has set time zone
+        if str(authorId) in memberTimeZones:
+
+            # Find time zone field
+            for field in eventTypeFields["Common"]:
+                if field["name"] == "timeZone":
+
+                    # Find and set right time zone to selected
+                    for zone in field["value"]:
+                        if zone["value"] == memberTimeZones[str(authorId)]:
+                            zone["isSelected"] = True
+                            break
+                    break
 
         sendToTemplate["eventTypeFields"] = eventTypeFields.items()
         return render_template("event.html", sendToTemplate=sendToTemplate)
@@ -526,8 +526,8 @@ def createEvent():
         "reservableRoles": resRoles,  # Optional
         "map": map if (map := request.form.get("map")) else None,  # Optional
         "maxPlayers": int(maxPlayers) if (maxPlayers := request.form.get("maxPlayers")).isdigit() else maxPlayers,  # Req
-        "time": (starttime := datetimeParse(request.form.get("time", "2069-04-20 04:20"), tzinfos={"CDT": tz.gettz(request.form.get("timeZone", "UTC"))})),  # Req
-        "endTime": (starttime + duration).strftime("%Y-%m-%d %H:%M"),  # Req
+        "time": (starttime := datetimeParse(request.form.get("time", "2069-04-20T04:20"), tzinfos={"CDT": tz.gettz(request.form.get("timeZone", "UTC"))})).strftime(TIME_FORMAT_HTML),  # Req
+        "endTime": (starttime + duration).strftime(TIME_FORMAT_HTML),  # Req
         "duration": ":".join(durationSplit),  # Req
         "accepted": [],
         "declined": [],
@@ -549,7 +549,7 @@ def createEvent():
         #return "OK DEBUG - WITHOUT BOT"
 
         # TODO this can be upgraded: if event is the most recent, dont refresh schedule but just send it
-        app.botClient.loop.create_task(updateSchedule())
+        asyncio.run(updateSchedule())
 
     else:  # Editing an event
         eventId = int(eventId)
@@ -570,7 +570,8 @@ def createEvent():
                     event.update(newEvent)  # Set updated values
                     with open("data/events.json", "w", encoding="utf-8") as eventsFile:
                         json.dump(events, eventsFile, indent=4)
-                    app.botClient.loop.create_task(editMsg(SCHEDULE, eventId, getEventEmbed(newEvent)))
+                    print(app.botClient.loop)
+                    app.botClient.loop.create_task(editMsg(SCHEDULE, eventId, getEventEmbed(newEvent), getEventView(newEvent)))
                 break
 
 
@@ -590,11 +591,11 @@ async def cancelCommand(channel: discord.DMChannel, abortText: str) -> None:
         await channel.send(embed=Embed(title=f"❌ {abortText} canceled!", color=Color.red()))
 
 
-async def editMsg(channel: int, msgId: int, embed: Embed):
+async def editMsg(channel: int, msgId: int, embed: Embed, view: discord.ui.View):
     print("editMsg")
     fetchChannel = app.botClient.get_channel(channel)
     fetchMsg = await fetchChannel.fetch_message(msgId)
-    await fetchMsg.edit(embed=embed)
+    await fetchMsg.edit(embed=embed, view=view)
 
 
 async def updateSchedule() -> None:
@@ -625,29 +626,9 @@ async def updateSchedule() -> None:
             newEvents: list[dict] = []
             for event in sorted(events, key=lambda e: datetime.strptime(e["time"], TIME_FORMAT_HTML), reverse=True):
                 embed = getEventEmbed(event)
+                view = getEventView(event)
 
-                row = ScheduleView()
-                row.timeout = None
-                buttons = []
-
-                # Add attendance buttons if maxPlayers is not hidden
-                if event["maxPlayers"] != "Hidden":
-                    buttons.extend([
-                        ScheduleButton(row=0, label="Accept", style=discord.ButtonStyle.success, custom_id="accept"),
-                        ScheduleButton(row=0, label="Decline", style=discord.ButtonStyle.danger, custom_id="decline"),
-                        ScheduleButton(row=0, label="Tentative", style=discord.ButtonStyle.primary, custom_id="tentative")
-                    ])
-                    if event["reservableRoles"] is not None:
-                        buttons.append(ScheduleButton(row=0, label="Reserve", style=discord.ButtonStyle.secondary, custom_id="reserve"))
-
-                buttons.extend([
-                    ScheduleButton(row=1, label="Edit", style=discord.ButtonStyle.secondary, custom_id="edit"),
-                    ScheduleButton(row=1, label="Delete", style=discord.ButtonStyle.secondary, custom_id="delete")
-                ])
-                for button in buttons:
-                    row.add_item(item=button)
-
-                msg = await channel.send(embed=embed, view=row)
+                msg = await channel.send(embed=embed, view=view)
                 event["messageId"] = msg.id
                 newEvents.append(event)
             with open(EVENTS_FILE, "w") as f:
@@ -711,14 +692,41 @@ def getEventEmbed(event: dict) -> Embed:
         embed.add_field(name=f"Declined ❌ ({len(declined)})", value="\u200B", inline=True)
         embed.add_field(name=f"Tentative ({len(tentative)}) ❓", value="\u200B", inline=True)
 
-    author = guild.get_member(event["authorId"])
-    embed.set_footer(text=f"Created by {author.display_name}") if author else embed.set_footer(text="Created by Unknown User")
+    #author = guild.get_member(event["authorId"])
+    #embed.set_footer(text=f"Created by {author.display_name}") if author else embed.set_footer(text="Created by Unknown User")
     embed.timestamp = UTC.localize(datetime.strptime(event["time"], TIME_FORMAT_HTML))
 
     return embed
 
 
-async def saveEventToHistory(self, event, autoDeleted=False) -> None:
+def getEventView(event: dict) -> discord.ui.View:
+    """  """
+    asyncio.set_event_loop(app.botClient.loop)
+    row = ScheduleView()
+    row.timeout = None
+    buttons = []
+
+    # Add attendance buttons if maxPlayers is not hidden
+    if event["maxPlayers"] != "Hidden":
+        buttons.extend([
+            ScheduleButton(row=0, label="Accept", style=discord.ButtonStyle.success, custom_id="accept"),
+            ScheduleButton(row=0, label="Decline", style=discord.ButtonStyle.danger, custom_id="decline"),
+            ScheduleButton(row=0, label="Tentative", style=discord.ButtonStyle.primary, custom_id="tentative")
+        ])
+        if event["reservableRoles"] is not None:
+            buttons.append(ScheduleButton(row=0, label="Reserve", style=discord.ButtonStyle.secondary, custom_id="reserve"))
+
+    buttons.extend([
+        ScheduleButton(row=1, label="Edit", style=discord.ButtonStyle.secondary, custom_id="edit"),
+        ScheduleButton(row=1, label="Delete", style=discord.ButtonStyle.secondary, custom_id="delete")
+    ])
+    for button in buttons:
+        row.add_item(item=button)
+
+    return row
+
+
+async def saveEventToHistory(event, autoDeleted=False) -> None:
         """ Saves a specific event to history.
 
         Parameters:
@@ -761,7 +769,7 @@ async def saveEventToHistory(self, event, autoDeleted=False) -> None:
             json.dump(eventsHistory, f, indent=4)
 
 
-async def buttonHandling(self, message: discord.Message | None, button: discord.ui.Button, interaction: discord.Interaction) -> None:
+async def buttonHandling(message: discord.Message | None, button: discord.ui.Button, interaction: discord.Interaction) -> None:
     """ Handling all schedule button interactions.
 
     Parameters:
@@ -821,23 +829,25 @@ async def buttonHandling(self, message: discord.Message | None, button: discord.
 
         elif button.custom_id == "reserve":
             event = event_[0]
+            scheduleNeedsUpdate = False
             await interaction.response.send_message(RESPONSE_GOTO_DMS.format(interaction.user.dm_channel.jump_url), ephemeral=True)
-            reservingOutput = await self.reserveRole(interaction.user, event)
-            if not reservingOutput:
-                return
+            # reservingOutput = await reserveRole(interaction.user, event)
+            # if not reservingOutput:
+            #     return
             fetchMsg = True
 
         elif button.custom_id == "edit":
             event = event_[0]
+            scheduleNeedsUpdate = False
             if (interaction.user.id == event["authorId"]) or any(role.id == UNIT_STAFF or role.id == SERVER_HAMSTER for role in interaction.user.roles):
                 with open("data/key.key", "rb") as keyFile:
-                    infoValue = Fernet(keyFile.read()).encrypt(f"authorId={interaction.user.id}".encode("utf-8")).decode("utf-8")
-                await interaction.response.send_message(f"http://127.0.0.1:5000/event?info={infoValue}", ephemeral=True)
-                #reorderEvents = await self.editEvent(interaction.user, event, isTemplateEdit=False)
+                    infoValue = Fernet(keyFile.read()).encrypt(f"eventId={event['messageId']}".encode("utf-8")).decode("utf-8")
+                await interaction.response.send_message(f"[Edit {event['title']}](http://127.0.0.1:5000/event?info={infoValue})", ephemeral=True)
+                #reorderEvents = await editEvent(interaction.user, event, isTemplateEdit=False)
                 #if reorderEvents:
                 #    with open(EVENTS_FILE, "w") as f:
                 #        json.dump(events, f, indent=4)
-                #    await self.updateSchedule()
+                #    await updateSchedule()
                 #    return
             else:
                 await interaction.response.send_message(RESPONSE_UNALLOWED.format("edit"), ephemeral=True)
@@ -853,8 +863,8 @@ async def buttonHandling(self, message: discord.Message | None, button: discord.
                 row = ScheduleView(deletePrompts)
                 row.timeout = TIME_ONE_MIN
                 buttons = [
-                    ScheduleButton(self, interaction.message, row=0, label="Delete", style=discord.ButtonStyle.success, custom_id="delete_event_confirm"),
-                    ScheduleButton(self, interaction.message, row=0, label="Cancel", style=discord.ButtonStyle.danger, custom_id="delete_event_cancel"),
+                    ScheduleButton(interaction.message, row=0, label="Delete", style=discord.ButtonStyle.success, custom_id="delete_event_confirm"),
+                    ScheduleButton(interaction.message, row=0, label="Cancel", style=discord.ButtonStyle.danger, custom_id="delete_event_cancel"),
                 ]
                 for button in buttons:
                     row.add_item(item=button)
@@ -895,6 +905,7 @@ async def buttonHandling(self, message: discord.Message | None, button: discord.
             events.remove(event)
 
         elif button.custom_id == "delete_event_cancel":
+            scheduleNeedsUpdate = False
             for button in button.view.children:
                 button.disabled = True
             await interaction.response.edit_message(view=button.view)
@@ -957,6 +968,13 @@ async def buttonHandling(self, message: discord.Message | None, button: discord.
         log.exception(f"{interaction.user} | {e}")
 
 
+async def onReady() -> None:
+    try:
+        await updateSchedule()
+    except Exception as e:
+        log.exception(e)
+
+
 @app.route("/shutdown")
 def shutdown():
     os.system("taskkill /f /im python.exe")
@@ -995,6 +1013,24 @@ class ScheduleButton(discord.ui.Button):
 if __name__ == "__main__":
     app.run(host="0.0.0.0", debug=True)
 
-#while not hasattr(app, "botClient"):
-#    time.sleep(1)
-#asyncio.run(updateSchedule())
+
+#newEvent = {
+#    "authorId": 229212817448894464,  # Req
+#    "type": "Operation",  # Operation, Workshop, Event  # Req
+#    "title": "Event Title",  # Req
+#    "description": "Event Description",  # Req
+#    "externalURL": None,  # Optional
+#    "reservableRoles": None,  # Optional
+#    "map": None,  # Optional
+#    "maxPlayers": 7,  # Req
+#    "time": "2069-04-20T04:20",  # Req
+#    "endTime": "2069-04-20T06:20",  # Req
+#    "duration": "02:00",  # Req
+#    "accepted": [],
+#    "declined": [],
+#    "tentative": [],
+#    "messageId": None
+#}
+
+#print(getEventEmbed(newEvent))
+#print(getEventView(newEvent))

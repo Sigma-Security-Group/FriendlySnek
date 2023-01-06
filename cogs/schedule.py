@@ -108,6 +108,10 @@ if not os.path.exists(MEMBER_TIME_ZONES_FILE):
     with open(MEMBER_TIME_ZONES_FILE, "w") as f:
         json.dump({}, f, indent=4)
 
+if not os.path.exists(EVENTS_FILE):
+    with open(EVENTS_FILE, "w") as f:
+        json.dump([], f, indent=4)
+
 if not os.path.exists(EVENTS_HISTORY_FILE):
     with open(EVENTS_HISTORY_FILE, "w") as f:
         json.dump([], f, indent=4)
@@ -439,7 +443,7 @@ class Schedule(commands.Cog):
                     buttons = []
 
                     # Add attendance buttons if maxPlayers is not hidden
-                    if event["maxPlayers"] != -1:
+                    if event["maxPlayers"] != "Hidden":
                         buttons.extend([
                             ScheduleButton(self, None, row=0, label="Accept", style=discord.ButtonStyle.success, custom_id="accept"),
                             ScheduleButton(self, None, row=0, label="Decline", style=discord.ButtonStyle.danger, custom_id="decline"),
@@ -504,7 +508,7 @@ class Schedule(commands.Cog):
 
         accepted = [member.display_name for memberId in event["accepted"] if (member := guild.get_member(memberId)) is not None]
         standby = []
-        if event["maxPlayers"] is not None and len(accepted) > event["maxPlayers"]:
+        if isinstance(event["maxPlayers"], int) and len(accepted) > event["maxPlayers"]:
             accepted, standby = accepted[:event["maxPlayers"]], accepted[event["maxPlayers"]:]
         declined = [member.display_name for memberId in event["declined"] if (member := guild.get_member(memberId)) is not None]
         declinedForTiming = [member.display_name for memberId in event.get("declinedForTiming", []) if (member := guild.get_member(memberId)) is not None]

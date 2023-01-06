@@ -13,11 +13,6 @@ if DEBUG:
 WORKSHOP_INTEREST_FILE = "data/workshopInterest.json"
 
 DEFAULT_WORKSHOP_INTEREST_LISTS = {
-    "Team Leading": {
-        "emoji": "👨‍🏫",
-        "role": SME_MENTOR,
-        "description": "Learn how to effectively plan and maneuver your team on target."
-    },
     "Breacher": {
         "emoji": "🚪",
         "role": SME_BREACHER,

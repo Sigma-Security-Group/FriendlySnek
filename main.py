@@ -16,6 +16,7 @@ from discord import Embed, Color
 from discord.ext import commands
 
 from flaskapp.schedule import app as flaskApp
+from flaskapp import schedule
 
 if not os.path.exists("./secret.py"):
     log.info("Creating a secret.py file!")
@@ -50,11 +51,11 @@ with open("data/key.key", "wb") as keyFile:
     keyFile.write(key)
     print(Fernet(key).encrypt(b"229212817448894464"))  # Testing purposes, paste into url
     print("\n")
-    print("http://127.0.0.1:5000/event?edit=" + (Fernet(key).encrypt(b"eventId=1041384984201678911{/}eventType=Operation{/}title=New Operation{/}description=once upon a great time...{/}externalURL=https://duckduckgo.com{/}reservableRoles=A-10C Pilot\nActual ffs{/}map=Altis{/}attendees=Hidden{/}time=2022-12-14T09:00{/}duration=03:00")).decode("utf-8"))  # Testing purposes, paste into url
+    print("http://127.0.0.1:5000/event?edit=" + (Fernet(key).encrypt(b"eventId=1041384984201678911")).decode("utf-8"))  # Testing purposes, paste into url
     print("\n")
     #{/}workshopInterest=Fixed Wing
 
-COGS = [cog[:-3] for cog in os.listdir("cogs/") if cog.endswith(".py")]
+COGS = [cog[:-3] for cog in os.listdir("cogs/") if cog.endswith(".py") and (cog.startswith("schedule") or cog.startswith("workshopInterest"))]
 cogsReady = {cog: False for cog in COGS}
 
 INTENTS = discord.Intents.all()
@@ -88,6 +89,7 @@ async def on_ready() -> None:
         await asyncio.sleep(1)
     client.ready = True
     log.info(f"Bot Ready! Logged in as {client.user}.")
+    await schedule.onReady()
 
 @client.event
 async def on_message(message: discord.Message) -> None:

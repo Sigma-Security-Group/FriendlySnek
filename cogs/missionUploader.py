@@ -24,12 +24,6 @@ SERVERS = [
         "Directory": "euc-ogs7.armahosts.com_2482/mpmissions",
         "Host": "euc-ogs7.armahosts.com",
         "Port": 8822
-    },
-    {
-        "Name": "SSG - Training & Testing Server",
-        "Directory": "euc-ogs11.armahosts.com_2492/mpmissions",
-        "Host": "euc-ogs11.armahosts.com",
-        "Port": 8822
     }
 ]
 
@@ -212,12 +206,14 @@ class MissionUploader(commands.Cog):
 
         try:
             msg = await ctx.send("Gotcha mate. Standby while I threat some rats who got the answer...")
+            """ For multiple servers
             for term in ("test", "train", "second", "back"):
                 if term in server.lower():
                     host = SERVERS[1]
                     break
             else:
-                host = SERVERS[0]
+                host = SERVERS[0]"""
+            host = SERVERS[0]
 
             cnopts = pysftp.CnOpts()
             cnopts.hostkeys = None

@@ -152,9 +152,12 @@ class WorkshopInterest(commands.Cog):
             with open(WORKSHOP_INTEREST_FILE, "w", encoding="utf-8") as f:
                 json.dump(workshopInterest, f, indent=4)
 
-        interestedMembers = "-" if interestedMembers == "" else interestedMembers.strip()  # Indicate if empty
+        if interestedMembers == "":
+            interestedMembers = "-"
+            lenInterested = 0
+        else:
+            lenInterested = len(interestedMembers.strip().split('\n'))
 
-        lenInterested = interestedMembers.count('\n') + 1
         embed.add_field(name=f"Interested People ({lenInterested})", value=interestedMembers)
         # 1 discord.Role
         if workshop[1]["role"] and isinstance(workshop[1]["role"], int):

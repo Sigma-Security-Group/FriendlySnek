@@ -172,7 +172,7 @@ async def on_member_join(member: discord.Member) -> None:
             log.debug(f"Newcomer ping reminder: {updatedMember}")
             unitStaff = guild.get_role(UNIT_STAFF)
             advisor = guild.get_role(ADVISOR)
-            await client.get_channel(WELCOME).send(f"{updatedMember.mention} Don't forget to ping{' @​' + unitStaff.name if unitStaff is not None else ''}{' or' if unitStaff and advisor else ''}{' @​' + advisor.name if advisor is not None else ''} when you are ready!")
+            await client.get_channel(WELCOME).send(f"{updatedMember.mention} Don't forget to ping{' @​' + unitStaff.name if unitStaff is not None else ''}{' and' if unitStaff and advisor else ''}{' @​' + advisor.name if advisor is not None else ''} when you are ready!")
         else:
             log.debug(f"Newcomer is no longer in need of an interview: {updatedMember.display_name} ({updatedMember})")
     else:

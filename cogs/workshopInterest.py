@@ -13,11 +13,6 @@ if DEBUG:
 WORKSHOP_INTEREST_FILE = "data/workshopInterest.json"
 
 DEFAULT_WORKSHOP_INTEREST_LISTS = {
-    "Breacher": {
-        "emoji": "🚪",
-        "role": SME_BREACHER,
-        "description": "Become an expert in close-quarters battle (CQB)."  # Unverifed description.
-    },
     "Mechanised": {
         "emoji": "🛡️",
         "role": SME_MECHANISED,

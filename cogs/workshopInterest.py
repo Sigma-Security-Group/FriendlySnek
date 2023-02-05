@@ -97,7 +97,6 @@ class WorkshopInterest(commands.Cog):
 
         channel = self.bot.get_channel(WORKSHOP_INTEREST)
         await channel.purge(limit=None, check=lambda message: message.author.id in FRIENDLY_SNEKS)
-        await channel.send("Welcome to the Workshop Interest Channel! Here you can show interest for different workshops!\nYou'll be pinged when a workshop you are interested in is scheduled!")
 
         guild = self.bot.get_guild(GUILD_ID)
 

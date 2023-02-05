@@ -986,14 +986,12 @@ class Schedule(commands.Cog):
                     [embed.add_field(name=f"**{index}**. {name}", value=value, inline=False) for index, (name, value) in enumerate(eventEditDisplay.items(), start=1)]
                     choiceNumbers:list = [str(num + 1) for num in range(len(eventEditDisplay.keys()))]
                     dictItems = eventEditDisplay.items()
-                else:
-                    with open("./data/workshopInterest.json") as f:
-                        wsInt = json.load(f)
 
+                else:  # isTemplateEdit
                     templateEditDisplay = {
                         "Template Name": f"```txt\n{event['name']}\n```",
                         "Title": f"```txt\n{event['title']}\n```",
-                        "Linking": f"```txt\n{wsInt[event['workshopInterest']]['title'] if event['workshopInterest'] is not None else 'No linking'}\n```",
+                        "Linking": f"```txt\n{event['title'] if event['workshopInterest'] is not None else 'No linking'}\n```",
                         "Description": f"```txt\n{event['description'] if len(event['description']) < 500 else event['description'][:500] + ' [...]'}\n```",
                         "External URL": f"```txt\n{event['externalURL']}\n```",
                         "Reservable Roles": "```txt\n" + "\n".join(event["reservableRoles"].keys()) + "\n```" if event["reservableRoles"] is not None else "```txt\nNone\n```",

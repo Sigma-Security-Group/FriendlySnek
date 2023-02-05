@@ -10,7 +10,7 @@ SCHEDULE_NUMBER_FROM_TO_OR_NONE = "Enter `none` or a number from **{0}** - **{1}
 SCHEDULE_EVENT_TEMPLATE_SAVE_NAME_QUESTION = "Which name would you like to save the template as?"
 
 ## Error
-ERROR_TIMEOUT = ":clock3: You were too slow, try again!"
+ERROR_TIMEOUT = ":clock3: You were too slow, aborting!"
 
 ## Logging
 LOG_COG_READY = "{0} cog is ready!"

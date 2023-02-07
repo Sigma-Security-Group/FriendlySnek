@@ -12,7 +12,7 @@ if DEBUG:
 
 WORKSHOP_INTEREST_FILE = "data/workshopInterest.json"
 
-DEFAULT_WORKSHOP_INTEREST_LISTS = {
+WORKSHOP_INTEREST_LIST = {
     "Mechanised": {
         "emoji": "🛡️",
         "role": SME_MECHANISED,
@@ -73,7 +73,7 @@ class WorkshopInterest(commands.Cog):
         if not os.path.exists(WORKSHOP_INTEREST_FILE):
             # JSON dump template
             workshopInterest = {}
-            for name in DEFAULT_WORKSHOP_INTEREST_LISTS.keys():
+            for name in WORKSHOP_INTEREST_LIST.keys():
                 workshopInterest[name] = {
                     "members": []
                 }
@@ -100,9 +100,9 @@ class WorkshopInterest(commands.Cog):
 
         guild = self.bot.get_guild(GUILD_ID)
 
-        for workshop in DEFAULT_WORKSHOP_INTEREST_LISTS.items():
+        for workshopName in WORKSHOP_INTEREST_LIST.keys():
             # Fetch embed
-            embed = self.getWorkshopEmbed(guild, workshop)
+            embed = self.getWorkshopEmbed(guild, workshopName)
 
             # Do button stuff
             row = discord.ui.View()
@@ -116,17 +116,17 @@ class WorkshopInterest(commands.Cog):
 
             await channel.send(embed=embed, view=row)
 
-    def getWorkshopEmbed(self, guild: discord.Guild, workshop: tuple) -> Embed:
+    def getWorkshopEmbed(self, guild: discord.Guild, workshopName: str) -> Embed:
         """ Generates an embed from the given workshop.
 
         Parameters:
         guild (discord.Guild): The target guild.
-        workshop (tuple): The workshop event. [0] Name. [1] emoji, role, desc.
+        workshopName (str): The workshop name.
 
         Returns:
         discord.Embed: The generated embed.
         """
-        embed = Embed(title=f"{workshop[1]['emoji']} {workshop[0]}", description=workshop[1]["description"], color=Color.dark_blue())
+        embed = Embed(title=f"{WORKSHOP_INTEREST_LIST[workshopName]['emoji']} {workshopName}", description=WORKSHOP_INTEREST_LIST[workshopName]["description"], color=Color.dark_blue())
 
         with open(WORKSHOP_INTEREST_FILE) as f:
             workshopInterest = json.load(f)
@@ -134,12 +134,12 @@ class WorkshopInterest(commands.Cog):
 
         # Get the interested member's name. If they aren't found, remove them
         interestedMembers = ""
-        for memberID in workshopInterest[workshop[0]]["members"]:
+        for memberID in workshopInterest[workshopName]["members"]:
             member = guild.get_member(memberID)
             if member is not None:
                 interestedMembers += member.display_name + "\n"
             else:
-                workshopInterest[workshop[0]]["members"].remove(memberID)
+                workshopInterest[workshopName]["members"].remove(memberID)
                 removedMember = True
 
         if removedMember:
@@ -154,14 +154,14 @@ class WorkshopInterest(commands.Cog):
 
         embed.add_field(name=f"Interested People ({lenInterested})", value=interestedMembers)
         # 1 discord.Role
-        if workshop[1]["role"] and isinstance(workshop[1]["role"], int):
-            smes = [sme.display_name for sme in guild.get_role(workshop[1]["role"]).members]
+        if WORKSHOP_INTEREST_LIST[workshopName]["role"] and isinstance(WORKSHOP_INTEREST_LIST[workshopName]["role"], int):
+            smes = [sme.display_name for sme in guild.get_role(WORKSHOP_INTEREST_LIST[workshopName]["role"]).members]
             if smes:
                 embed.set_footer(text=f"SME{'s' * (len(smes) > 1)}: {', '.join(smes)}")
 
         # >1 discord.Role
-        elif workshop[1]["role"] and isinstance(workshop[1]["role"], tuple):
-            smeroles = [guild.get_role(role).name for role in workshop[1]["role"]]
+        elif WORKSHOP_INTEREST_LIST[workshopName]["role"] and isinstance(WORKSHOP_INTEREST_LIST[workshopName]["role"], tuple):
+            smeroles = [guild.get_role(role).name for role in WORKSHOP_INTEREST_LIST[workshopName]["role"]]
             embed.set_footer(text=f"SME roles: {', '.join(smeroles)}")
 
         return embed
@@ -183,7 +183,7 @@ class WorkshopInterest(commands.Cog):
 
             # Brute force emoji removal, produces title
             for i in range(len(wsTitle)):
-                if wsTitle[i:] in DEFAULT_WORKSHOP_INTEREST_LISTS:
+                if wsTitle[i:] in WORKSHOP_INTEREST_LIST:
                     wsTitle = wsTitle[i:]
                     break
             wsMembers = workshopInterest[wsTitle]["members"]
@@ -206,7 +206,7 @@ class WorkshopInterest(commands.Cog):
                 json.dump(workshopInterest, f, indent=4)
 
             try:
-                await interaction.response.edit_message(embed=self.getWorkshopEmbed(interaction.guild, (wsTitle, DEFAULT_WORKSHOP_INTEREST_LISTS[wsTitle])))
+                await interaction.response.edit_message(embed=self.getWorkshopEmbed(interaction.guild, wsTitle))
             except Exception as e:
                 log.exception(f"{interaction.user} | {e}")
 

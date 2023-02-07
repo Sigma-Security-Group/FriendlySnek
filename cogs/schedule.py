@@ -184,7 +184,7 @@ class Schedule(commands.Cog):
                 if updateWorkshopInterest:
                     with open(WORKSHOP_INTEREST_FILE, "w") as f:
                         json.dump(workshopInterest, f, indent=4)
-                    embed = self.bot.get_cog("WorkshopInterest").getWorkshopEmbed(guild, (workshopInterestName, workshop))
+                    embed = self.bot.get_cog("WorkshopInterest").getWorkshopEmbed(guild, workshopInterestName)
                     workshopMessage = await self.bot.get_channel(WORKSHOP_INTEREST).fetch_message(workshop["messageId"])
                     await workshopMessage.edit(embed=embed)
 

@@ -30,6 +30,7 @@ OPERATION_NAME_ADJECTIVES = "constants/opAdjectives.txt"
 OPERATION_NAME_NOUNS = "constants/opNouns.txt"
 
 MAX_SERVER_ATTENDANCE = 50
+MAX_PLAYERS_STR_OPTIONS = ("anonymous", "hidden")
 
 # Training map first, then the rest in alphabetical order
 MAPS = [
@@ -174,7 +175,7 @@ class Schedule(commands.Cog):
                 workshopInterest = json.load(f)
             if (workshop := workshopInterest.get(workshopInterestName)) is not None:
                 accepted = event["accepted"]
-                if event["maxPlayers"] is not None:
+                if isinstance(event["maxPlayers"], int):  # If int: maxPlayer limit
                     accepted = accepted[:event["maxPlayers"]]
                 updateWorkshopInterest = False
                 for memberId in accepted:
@@ -222,7 +223,7 @@ class Schedule(commands.Cog):
             for event in events:
                 endTime = UTC.localize(datetime.strptime(event["endTime"], TIME_FORMAT))
                 if utcNow > endTime + timedelta(minutes=69):
-                    if event["maxPlayers"] != -1:  # Save events that does not have hidden attendance
+                    if event["maxPlayers"] != "hidden":  # Save events that does not have hidden attendance
                         await self.saveEventToHistory(event, autoDeleted=True)
                     log.debug(f"Auto deleting event: {event['title']}")
                     deletedEvents.append(event)
@@ -432,11 +433,11 @@ class Schedule(commands.Cog):
                     buttons = []
 
                     # Add attendance buttons if maxPlayers is not hidden
-                    if event["maxPlayers"] != -1:
+                    if event["maxPlayers"] != "hidden":
                         buttons.extend([
-                            ScheduleButton(self, None, row=0, label="Accept", style=discord.ButtonStyle.success, custom_id="accept"),
-                            ScheduleButton(self, None, row=0, label="Decline", style=discord.ButtonStyle.danger, custom_id="decline"),
-                            ScheduleButton(self, None, row=0, label="Decline (Time)", style=discord.ButtonStyle.danger, custom_id="declineForTiming"),
+                            ScheduleButton(self, None, row=0, label="Accept", style=discord.ButtonStyle.success, custom_id="accepted"),
+                            ScheduleButton(self, None, row=0, label="Decline", style=discord.ButtonStyle.danger, custom_id="declined"),
+                            ScheduleButton(self, None, row=0, label="Decline (Time)", style=discord.ButtonStyle.danger, custom_id="declinedForTiming"),
                             ScheduleButton(self, None, row=0, label="Tentative", style=discord.ButtonStyle.primary, custom_id="tentative")
                         ])
                         if event["reservableRoles"] is not None:
@@ -497,19 +498,22 @@ class Schedule(commands.Cog):
 
         accepted = [member.display_name for memberId in event["accepted"] if (member := guild.get_member(memberId)) is not None]
         standby = []
-        if event["maxPlayers"] is not None and len(accepted) > event["maxPlayers"]:
+        if isinstance(event["maxPlayers"], int) and len(accepted) > event["maxPlayers"]:
             accepted, standby = accepted[:event["maxPlayers"]], accepted[event["maxPlayers"]:]
         declined = [member.display_name for memberId in event["declined"] if (member := guild.get_member(memberId)) is not None]
         declinedForTiming = [member.display_name for memberId in event.get("declinedForTiming", []) if (member := guild.get_member(memberId)) is not None]
         tentative = [member.display_name for memberId in event["tentative"] if (member := guild.get_member(memberId)) is not None]
 
-        if event["maxPlayers"] is None or (event["maxPlayers"] is not None and event["maxPlayers"] > 0):
-            embed.add_field(name=f"Accepted ({len(accepted)}/{event['maxPlayers']}) ✅" if event["maxPlayers"] is not None else f"Accepted ({len(accepted)}) ✅", value="\n".join(name for name in accepted) if len(accepted) > 0 else "-", inline=True)
+        # No limit || limit
+        if event["maxPlayers"] is None or isinstance(event["maxPlayers"], int):
+            embed.add_field(name=f"Accepted ({len(accepted)}) ✅" if event["maxPlayers"] is None else f"Accepted ({len(accepted)}/{event['maxPlayers']}) ✅", value="\n".join(name for name in accepted) if len(accepted) > 0 else "-", inline=True)
             embed.add_field(name=f"Declined ({len(declinedForTiming)}) ⏱/❌ ({len(declined)})", value=("\n".join("⏱ " + name for name in declinedForTiming) + "\n" * (len(declinedForTiming) > 0 and len(declined) > 0) + "\n".join("❌ " + name for name in declined)) if len(declined) + len(declinedForTiming) > 0 else "-", inline=True)
             embed.add_field(name=f"Tentative ({len(tentative)}) ❓", value="\n".join(name for name in tentative) if len(tentative) > 0 else "-", inline=True)
             if len(standby) > 0:
                 embed.add_field(name=f"Standby ({len(standby)}) :clock3:", value="\n".join(name for name in standby), inline=False)
-        elif event["maxPlayers"] != -1:
+
+        # Anonymous
+        elif event["maxPlayers"] == "anonymous":
             embed.add_field(name=f"Accepted ({len(accepted + standby)}) ✅", value="\u200B", inline=True)
             embed.add_field(name=f"Declined ({len(declinedForTiming)}) ⏱/❌ ({len(declined)})", value="\u200B", inline=True)
             embed.add_field(name=f"Tentative ({len(tentative)}) ❓", value="\u200B", inline=True)
@@ -542,65 +546,31 @@ class Schedule(commands.Cog):
             scheduleNeedsUpdate = True
             originalMsgId = interaction.message.id
             fetchMsg = False
-            event_: list[dict] = [event for event in events if event["messageId"] == interaction.message.id]
-            if button.custom_id == "accept":
-                event = event_[0]
-                if interaction.user.id in event["declined"]:
-                    event["declined"].remove(interaction.user.id)
-                if interaction.user.id in event["declinedForTiming"]:
-                    event["declinedForTiming"].remove(interaction.user.id)
-                if interaction.user.id in event["tentative"]:
-                    event["tentative"].remove(interaction.user.id)
-                if interaction.user.id not in event["accepted"]:
-                    event["accepted"].append(interaction.user.id)
+            eventList: list[dict] = [event for event in events if event["messageId"] == interaction.message.id]
 
-            elif button.custom_id == "decline":
-                event = event_[0]
-                if interaction.user.id in event["accepted"]:
-                    event["accepted"].remove(interaction.user.id)
-                if interaction.user.id in event["declinedForTiming"]:
-                    event["declinedForTiming"].remove(interaction.user.id)
-                if interaction.user.id in event["tentative"]:
-                    event["tentative"].remove(interaction.user.id)
-                if interaction.user.id not in event["declined"]:
-                    event["declined"].append(interaction.user.id)
-                if event["reservableRoles"] is not None:
-                    for roleName in event["reservableRoles"]:
-                        if event["reservableRoles"][roleName] == interaction.user.id:
-                            event["reservableRoles"][roleName] = None
+            rsvpOptions = ("accepted", "declined", "declinedForTiming", "tentative")
+            if button.custom_id in rsvpOptions:
+                event = eventList[0]
 
-            elif button.custom_id == "declineForTiming":
-                event = event_[0]
-                if interaction.user.id in event["accepted"]:
-                    event["accepted"].remove(interaction.user.id)
-                if interaction.user.id in event["tentative"]:
-                    event["tentative"].remove(interaction.user.id)
-                if interaction.user.id in event["declined"]:
-                    event["declined"].remove(interaction.user.id)
-                if interaction.user.id not in event["declinedForTiming"]:
-                    event["declinedForTiming"].append(interaction.user.id)
-                if event["reservableRoles"] is not None:
-                    for roleName in event["reservableRoles"]:
-                        if event["reservableRoles"][roleName] == interaction.user.id:
-                            event["reservableRoles"][roleName] = None
+                # User click on button twice - remove
+                if interaction.user.id in event[button.custom_id]:
+                    event[button.custom_id].remove(interaction.user.id)
 
-            elif button.custom_id == "tentative":
-                event = event_[0]
-                if interaction.user.id in event["accepted"]:
-                    event["accepted"].remove(interaction.user.id)
-                if interaction.user.id in event["declined"]:
-                    event["declined"].remove(interaction.user.id)
-                if interaction.user.id in event["declinedForTiming"]:
-                    event["declinedForTiming"].remove(interaction.user.id)
-                if interaction.user.id not in event["tentative"]:
-                    event["tentative"].append(interaction.user.id)
+                # "New" button
+                else:
+                    for option in rsvpOptions:
+                        if interaction.user.id in event[option]:
+                            event[option].remove(interaction.user.id)
+                    event[button.custom_id].append(interaction.user.id)
+
+                # Remove player from reservable role
                 if event["reservableRoles"] is not None:
                     for roleName in event["reservableRoles"]:
                         if event["reservableRoles"][roleName] == interaction.user.id:
                             event["reservableRoles"][roleName] = None
 
             elif button.custom_id == "reserve":
-                event = event_[0]
+                event = eventList[0]
                 await interaction.response.send_message(RESPONSE_GOTO_DMS.format(interaction.user.dm_channel.jump_url), ephemeral=True)
                 reservingOutput = await self.reserveRole(interaction.user, event)
                 if not reservingOutput:
@@ -608,7 +578,7 @@ class Schedule(commands.Cog):
                 fetchMsg = True
 
             elif button.custom_id == "edit":
-                event = event_[0]
+                event = eventList[0]
                 if interaction.user.id == event["authorId"] or any(role.id == UNIT_STAFF or role.id == SERVER_HAMSTER for role in interaction.user.roles):
                     await interaction.response.send_message(RESPONSE_GOTO_DMS.format(interaction.user.dm_channel.jump_url), ephemeral=True)
                     reorderEvents = await self.editEvent(interaction.user, event, isTemplateEdit=False)
@@ -623,7 +593,7 @@ class Schedule(commands.Cog):
                 fetchMsg = True
 
             elif button.custom_id == "delete":
-                event = event_[0]
+                event = eventList[0]
                 if interaction.user.id == event["authorId"] or any(role.id == UNIT_STAFF or role.id == SERVER_HAMSTER for role in interaction.user.roles):
                     await interaction.response.send_message(RESPONSE_GOTO_DMS.format(interaction.user.dm_channel.jump_url), ephemeral=True)
                     embed = Embed(title=SCHEDULE_EVENT_CONFIRM_DELETE.format(f"{event['type'].lower()}: `{event['title']}`"), color=Color.orange())
@@ -656,7 +626,7 @@ class Schedule(commands.Cog):
 
                     utcNow = UTC.localize(datetime.utcnow())
                     startTime = UTC.localize(datetime.strptime(event["time"], TIME_FORMAT))
-                    if event["maxPlayers"] != 0 and utcNow > startTime + timedelta(minutes=30):
+                    if event["maxPlayers"] != "hidden" and utcNow > startTime + timedelta(minutes=30):
                         await self.saveEventToHistory(event)
                     else:
                         guild = self.bot.get_guild(GUILD_ID)
@@ -746,7 +716,7 @@ class Schedule(commands.Cog):
         """
         reservationTime = datetime.utcnow()
 
-        if event["maxPlayers"] is not None and len(event["accepted"]) >= event["maxPlayers"] and (member.id not in event["accepted"] or event["accepted"].index(member.id) >= event["maxPlayers"]):
+        if isinstance(event["maxPlayers"], int) and len(event["accepted"]) >= event["maxPlayers"] and (member.id not in event["accepted"] or event["accepted"].index(member.id) >= event["maxPlayers"]):
             try:
                 await member.send(embed=Embed(title="❌ Sorry, seems like there's no space left in the :b:op!", color=Color.red()))
             except Exception as e:
@@ -957,12 +927,6 @@ class Schedule(commands.Cog):
         Returns:
         bool: If function executed successfully.
         """
-        maxPlayersUser = event["maxPlayers"]
-        if maxPlayersUser == 0:
-            maxPlayersUser = "Anonymous"
-        elif maxPlayersUser == -1:
-            maxPlayersUser = "Hidden"
-
         editingTime = datetime.utcnow()
         editOk = False
         color = Color.gold()
@@ -977,7 +941,7 @@ class Schedule(commands.Cog):
                     "External URL": f"```txt\n{event['externalURL']}\n```",
                     "Reservable Roles": "```txt\n" + "\n".join(event["reservableRoles"].keys()) + "\n```" if event["reservableRoles"] is not None else "None",
                     "Map": f"```txt\n{event['map']}\n```",
-                    "Max Players": f"```txt\n{maxPlayersUser}\n```",
+                    "Max Players": f"```txt\n{event['maxPlayers'] if isinstance(event['maxPlayers'], int) else event['maxPlayers'].capitalize()}\n```",
                     "Time": utils.format_dt(UTC.localize(datetime.strptime(event["time"], TIME_FORMAT)), style="F"),
                     "Duration": f"```txt\n{event['duration']}\n```"
                 }
@@ -995,7 +959,7 @@ class Schedule(commands.Cog):
                     "External URL": f"```txt\n{event['externalURL']}\n```",
                     "Reservable Roles": "```txt\n" + "\n".join(event["reservableRoles"].keys()) + "\n```" if event["reservableRoles"] is not None else "```txt\nNone\n```",
                     "Map": f"```txt\n{event['map']}\n```",
-                    "Max Players": f"```txt\n{maxPlayersUser}\n```",
+                    "Max Players": f"```txt\n{event['maxPlayers'] if isinstance(event['maxPlayers'], int) else event['maxPlayers'].capitalize()}\n```",
                     "Duration": f"```txt\n{event['duration']}\n```"
                 }
                 [embed.add_field(name=f"**{index}**. {name}", value=value, inline=False) for index, (name, value) in enumerate(templateEditDisplay.items(), start=1)]
@@ -1202,19 +1166,20 @@ class Schedule(commands.Cog):
                     response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
                     maxPlayers = response.content.strip().lower()
                     attendanceOk = True
+
                     if maxPlayers == "cancel":
-                        await self.cancelCommand(dmChannel, "Operation scheduling")
-                        return False
-                    elif maxPlayers == "none" or maxPlayers.isdigit() and int(maxPlayers) == 0:
+                        await self.cancelCommand(dmChannel, "Workshop scheduling")
+                        return
+
+                    # Correct input
+                    elif maxPlayers == "none" or (maxPlayers.isdigit() and (int(maxPlayers) == 0 or int(maxPlayers) > MAX_SERVER_ATTENDANCE)):
                         maxPlayers = None
-                    elif maxPlayers == "anonymous":
-                        maxPlayers = 0
-                    elif maxPlayers == "hidden":
-                        maxPlayers = -1
-                    elif maxPlayers.isdigit() and int(maxPlayers) <= MAX_SERVER_ATTENDANCE:
+                    elif maxPlayers.isdigit():
                         maxPlayers = int(maxPlayers)
-                    elif maxPlayers.isdigit() and int(maxPlayers) > MAX_SERVER_ATTENDANCE:
-                        maxPlayers = None
+                    elif maxPlayers in MAX_PLAYERS_STR_OPTIONS:
+                        pass
+
+                    # Invalid input
                     else:
                         attendanceOk = False
                 except asyncio.TimeoutError:
@@ -1511,19 +1476,20 @@ class Schedule(commands.Cog):
                 response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, interaction=interaction, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == interaction.user)
                 maxPlayers = response.content.strip().lower()
                 attendanceOk = True
+
                 if maxPlayers == "cancel":
                     await self.cancelCommand(dmChannel, "Operation scheduling")
                     return
-                elif maxPlayers == "none" or maxPlayers.isdigit() and int(maxPlayers) == 0:
+
+                # Correct input
+                elif maxPlayers == "none" or (maxPlayers.isdigit() and (int(maxPlayers) == 0 or int(maxPlayers) > MAX_SERVER_ATTENDANCE)):
                     maxPlayers = None
-                elif maxPlayers == "anonymous":
-                    maxPlayers = 0
-                elif maxPlayers == "hidden":
-                    maxPlayers = -1
-                elif maxPlayers.isdigit() and int(maxPlayers) <= MAX_SERVER_ATTENDANCE:
+                elif maxPlayers.isdigit():
                     maxPlayers = int(maxPlayers)
-                elif maxPlayers.isdigit() and int(maxPlayers) > MAX_SERVER_ATTENDANCE:
-                    maxPlayers = None
+                elif maxPlayers in MAX_PLAYERS_STR_OPTIONS:
+                    pass
+
+                # Invalid input
                 else:
                     attendanceOk = False
             except asyncio.TimeoutError:
@@ -1578,7 +1544,7 @@ class Schedule(commands.Cog):
                 "description": description,
                 "externalURL": externalURL,
                 "reservableRoles": reservableRoles,
-                "maxPlayers": maxPlayers,
+                "maxPlayers": maxPlayers,  # int, None, str (MAX_PLAYERS_STR_OPTIONS)
                 "map": eventMap,
                 "time": eventTimes[0].strftime(TIME_FORMAT),
                 "endTime": eventTimes[1].strftime(TIME_FORMAT),
@@ -1831,19 +1797,20 @@ class Schedule(commands.Cog):
                     response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, interaction=interaction, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == interaction.user)
                     maxPlayers = response.content.strip().lower()
                     attendanceOk = True
+
                     if maxPlayers == "cancel":
-                        await self.cancelCommand(dmChannel, "Operation scheduling")
+                        await self.cancelCommand(dmChannel, "Workshop scheduling")
                         return
-                    elif maxPlayers == "none" or maxPlayers.isdigit() and int(maxPlayers) == 0:
+
+                    # Correct input
+                    elif maxPlayers == "none" or (maxPlayers.isdigit() and (int(maxPlayers) == 0 or int(maxPlayers) > MAX_SERVER_ATTENDANCE)):
                         maxPlayers = None
-                    elif maxPlayers == "anonymous":
-                        maxPlayers = 0
-                    elif maxPlayers == "hidden":
-                        maxPlayers = -1
-                    elif maxPlayers.isdigit() and int(maxPlayers) <= MAX_SERVER_ATTENDANCE:
+                    elif maxPlayers.isdigit():
                         maxPlayers = int(maxPlayers)
-                    elif maxPlayers.isdigit() and int(maxPlayers) > MAX_SERVER_ATTENDANCE:
-                        maxPlayers = None
+                    elif maxPlayers in MAX_PLAYERS_STR_OPTIONS:
+                        pass
+
+                    # Invalid input
                     else:
                         attendanceOk = False
                 except asyncio.TimeoutError:
@@ -1957,7 +1924,7 @@ class Schedule(commands.Cog):
                     "description": description,
                     "externalURL": externalURL,
                     "reservableRoles": reservableRoles,
-                    "maxPlayers": maxPlayers,
+                    "maxPlayers": maxPlayers,  # int, None, str (MAX_PLAYERS_STR_OPTIONS)
                     "map": eventMap,
                     "duration": f"{(str(hours) + 'h')*(hours != 0)}{' '*(hours != 0 and minutes !=0)}{(str(minutes) + 'm')*(minutes != 0)}",
                     "workshopInterest": workshopInterest
@@ -1986,7 +1953,7 @@ class Schedule(commands.Cog):
                 "description": description,
                 "externalURL": externalURL,
                 "reservableRoles": reservableRoles,
-                "maxPlayers": maxPlayers,
+                "maxPlayers": maxPlayers,  # int, None, str (MAX_PLAYERS_STR_OPTIONS)
                 "map": eventMap,
                 "time": eventTimes[0].strftime(TIME_FORMAT),
                 "endTime": eventTimes[1].strftime(TIME_FORMAT),
@@ -2153,19 +2120,20 @@ class Schedule(commands.Cog):
                 response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, interaction=interaction, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == interaction.user)
                 maxPlayers = response.content.strip().lower()
                 attendanceOk = True
+
                 if maxPlayers == "cancel":
-                    await self.cancelCommand(dmChannel, "Operation scheduling")
+                    await self.cancelCommand(dmChannel, "Event scheduling")
                     return
-                elif maxPlayers == "none" or maxPlayers.isdigit() and int(maxPlayers) == 0:
+
+                # Correct input
+                elif maxPlayers == "none" or (maxPlayers.isdigit() and (int(maxPlayers) == 0 or int(maxPlayers) > MAX_SERVER_ATTENDANCE)):
                     maxPlayers = None
-                elif maxPlayers == "anonymous":
-                    maxPlayers = 0
-                elif maxPlayers == "hidden":
-                    maxPlayers = -1
-                elif maxPlayers.isdigit() and int(maxPlayers) <= MAX_SERVER_ATTENDANCE:
+                elif maxPlayers.isdigit():
                     maxPlayers = int(maxPlayers)
-                elif maxPlayers.isdigit() and int(maxPlayers) > MAX_SERVER_ATTENDANCE:
-                    maxPlayers = None
+                elif maxPlayers in MAX_PLAYERS_STR_OPTIONS:
+                    pass
+
+                # Invalid input
                 else:
                     attendanceOk = False
             except asyncio.TimeoutError:
@@ -2278,7 +2246,7 @@ class Schedule(commands.Cog):
                 "description": description,
                 "externalURL": externalURL,
                 "reservableRoles": reservableRoles,
-                "maxPlayers": maxPlayers,
+                "maxPlayers": maxPlayers,  # int, None, str (MAX_PLAYERS_STR_OPTIONS)
                 "map": eventMap,
                 "time": startTime.strftime(TIME_FORMAT),
                 "endTime": endTime.strftime(TIME_FORMAT),

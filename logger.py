@@ -1,6 +1,6 @@
-import sys, traceback
+import sys, traceback, pytz
 
-from datetime import datetime, timedelta, timezone
+from datetime import datetime
 from colorama import Fore, Style
 
 LOG_FILE = "./bot.log"
@@ -23,7 +23,7 @@ class Logger:
         skipFileSwitchCheck (bool, optional): Whether or not to skip check for switching log file. Defaults to False.
         flush (bool, optional): Whether or not to flush buffers after writing the message. Defaults to False.
         """
-        now = datetime.now(tz=timezone(timedelta(hours=2))).strftime("%Y-%m-%d %H:%M:%S")
+        now = datetime.now().astimezone(pytz.timezone("Europe/Paris")).strftime("%Y-%m-%d %H:%M:%S")
         levelColors = {
             "DEBUG": Fore.CYAN,
             "INFO": Fore.GREEN,

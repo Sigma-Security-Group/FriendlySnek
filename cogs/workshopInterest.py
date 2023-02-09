@@ -41,7 +41,7 @@ WORKSHOP_INTEREST_LIST = {
     "Medic": {
         "emoji": "💉",
         "role": SME_MEDIC,
-        "description": "Learn how to administer combat aid to wounded personnel in a timely and effective manner."  # Unverifed description.
+        "description": "Learn how to administer combat aid to wounded personnel in a timely and effective manner."
     },
     "Marksman": {
         "emoji": "🎯",

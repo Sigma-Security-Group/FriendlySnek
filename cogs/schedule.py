@@ -893,7 +893,7 @@ class Schedule(commands.Cog):
                     "External URL": f"```txt\n{event['externalURL']}\n```",
                     "Reservable Roles": "```txt\n" + "\n".join(event["reservableRoles"].keys()) + "\n```" if event["reservableRoles"] is not None else "None",
                     "Map": f"```txt\n{event['map']}\n```",
-                    "Max Players": f"```txt\n{event['maxPlayers'] if isinstance(event['maxPlayers'], int) else event['maxPlayers'].capitalize()}\n```",
+                    "Max Players": f"```txt\n{event['maxPlayers'].capitalize() if isinstance(event['maxPlayers'], str) else event['maxPlayers']}\n```",
                     "Time": utils.format_dt(UTC.localize(datetime.strptime(event["time"], TIME_FORMAT)), style="F"),
                     "Duration": f"```txt\n{event['duration']}\n```"
                 }
@@ -911,7 +911,7 @@ class Schedule(commands.Cog):
                     "External URL": f"```txt\n{event['externalURL']}\n```",
                     "Reservable Roles": "```txt\n" + "\n".join(event["reservableRoles"].keys()) + "\n```" if event["reservableRoles"] is not None else "```txt\nNone\n```",
                     "Map": f"```txt\n{event['map']}\n```",
-                    "Max Players": f"```txt\n{event['maxPlayers'] if isinstance(event['maxPlayers'], int) else event['maxPlayers'].capitalize()}\n```",
+                    "Max Players": f"```txt\n{event['maxPlayers'].capitalize() if isinstance(event['maxPlayers'], str) else event['maxPlayers']}\n```",
                     "Duration": f"```txt\n{event['duration']}\n```"
                 }
                 [embed.add_field(name=f"**{index}**. {name}", value=value, inline=False) for index, (name, value) in enumerate(templateEditDisplay.items(), start=1)]

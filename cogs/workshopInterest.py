@@ -75,7 +75,8 @@ class WorkshopInterest(commands.Cog):
             workshopInterest = {}
             for name in WORKSHOP_INTEREST_LIST.keys():
                 workshopInterest[name] = {
-                    "members": []
+                    "members": [],
+                    "messageId": 0
                 }
 
             # Write to file
@@ -99,6 +100,8 @@ class WorkshopInterest(commands.Cog):
         await channel.purge(limit=None, check=lambda message: message.author.id in FRIENDLY_SNEKS)
 
         guild = self.bot.get_guild(GUILD_ID)
+        with open(WORKSHOP_INTEREST_FILE) as f:
+            wsInt = json.load(f)
 
         for workshopName in WORKSHOP_INTEREST_LIST.keys():
             # Fetch embed
@@ -114,7 +117,13 @@ class WorkshopInterest(commands.Cog):
             for button in buttons:
                 row.add_item(item=button)
 
-            await channel.send(embed=embed, view=row)
+            msg = await channel.send(embed=embed, view=row)
+
+            # Set embed messageId - used for removing people once workshop is done
+            wsInt[workshopName]["messageId"] = msg.id
+
+        with open(WORKSHOP_INTEREST_FILE, "w", encoding="utf-8") as f:
+            json.dump(wsInt, f, indent=4)
 
     def getWorkshopEmbed(self, guild: discord.Guild, workshopName: str) -> Embed:
         """ Generates an embed from the given workshop.

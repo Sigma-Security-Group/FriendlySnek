@@ -405,12 +405,7 @@ class Schedule(commands.Cog):
         channel = self.bot.get_channel(SCHEDULE)
         await channel.purge(limit=None, check=lambda m: m.author.id in FRIENDLY_SNEKS)
 
-        row = ScheduleView(None)
-        row.timeout = None
-        issueButton = ScheduleButton(self, None, row=0, emoji="📩", label="Create Ticket", style=discord.ButtonStyle.secondary, custom_id="issues_and_suggestions")
-        row.add_item(item=issueButton)
-
-        await channel.send(f"__Welcome to the schedule channel!__\nTo schedule an operation you can use the `/operation` command (or `/bop`) and follow the instructions in your DMs.\nFor a workshop use `/workshop` or `/ws`.\nLastly, for generic events use `/event`.\n\nIf you haven't set a preferred time zone yet you will be prompted to do so when you schedule any kind of event.\nIf you want to set, change or delete your time zone preference you may do so with the `/changetimezone` command.\n\nThe times you see on the schedule are based on __your local time zone__.\n\nThe event colors can be used to quickly identify what type of event it is:\n🟩 Operation `/operation` or `/bop`.\n🟦 Workshop `/workshop` or `/ws`.\n🟨 Event `/event`.\n\n**Github**: <https://github.com/Sigma-Security-Group/FriendlySnek> - Prod. hash `{commitHash}`.\n\nIf you have any suggestions for new features or encounter any bugs, please contact: {', '.join([f'**{channel.guild.get_member(name).display_name}**' for name in DEVELOPERS if channel.guild.get_member(name) is not None])} - or simply click the button below!", view=row)
+        await channel.send(f"__Welcome to the schedule channel!__\nTo schedule an operation you can use the `/operation` command (or `/bop`) and follow the instructions in your DMs.\nFor a workshop use `/workshop` or `/ws`.\nLastly, for generic events use `/event`.\n\nIf you haven't set a preferred time zone yet you will be prompted to do so when you schedule any kind of event.\nIf you want to set, change or delete your time zone preference you may do so with the `/changetimezone` command.\n\nThe times you see on the schedule are based on __your local time zone__.\n\nThe event colors can be used to quickly identify what type of event it is:\n🟩 Operation `/operation` or `/bop`.\n🟦 Workshop `/workshop` or `/ws`.\n🟨 Event `/event`.\n\n**Github**: <https://github.com/Sigma-Security-Group/FriendlySnek> - Prod. hash `{commitHash}`.\n\nIf you have any suggestions for new features or encounter any bugs, please contact: {', '.join([f'**{channel.guild.get_member(name).display_name}**' for name in DEVELOPERS if channel.guild.get_member(name) is not None])}")
 
         if os.path.exists(EVENTS_FILE):
             try:
@@ -646,44 +641,6 @@ class Schedule(commands.Cog):
                 await self.cancelCommand(interaction.user.dm_channel, "Event deletion")
                 return
 
-            elif button.custom_id == "issues_and_suggestions":
-                log.info(f"{interaction.user.display_name} ({interaction.user}) created a ticket!")
-                try:
-                    scheduleNeedsUpdate = False
-                    await interaction.response.send_message(RESPONSE_GOTO_DMS.format(interaction.user.dm_channel.jump_url), ephemeral=True)
-                    embed = Embed(title="Ticket", description="Thank you for reaching out to us!\nPlease tell us what's on your mind in **one** message below!\nInclude screenshot(s) if suitable!", color=Color.orange())
-                    embed.set_footer(text=SCHEDULE_CANCEL)
-                    msg = await interaction.user.send(embed=embed)
-                    dmChannel = msg.channel
-                except Exception as e:
-                    log.exception(f"{interaction.user} | {e}")
-                    return
-
-                try:
-                    response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, author=interaction.user, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
-                    concern = response.content.strip()
-                    if concern.lower() == "cancel":
-                        await self.cancelCommand(dmChannel, "Ticket")
-                        return
-                except asyncio.TimeoutError:
-                    await dmChannel.send(embed=TIMEOUT_EMBED)
-                    return
-
-                try:
-                    embed = Embed(title="✅ Ticket sent", description="Thank you for contacting us!\nWe will respond as soon as possible.", color=Color.green())
-                    devs = [interaction.guild.get_member(developer) for developer in DEVELOPERS if interaction.guild.get_member(developer) is not None]
-                    embed.set_footer(text=f"Developers: {', '.join([dev.display_name for dev in devs])}")
-                    msg = await interaction.user.send(embed=embed)
-                except Exception as e:
-                    log.exception(f"{interaction.user} | {e}")
-                    return
-
-                try:
-                    embed = Embed(title="Incoming Ticket", description=f"Reporter: {interaction.user.mention} - {interaction.user}\n**Message:**\n{concern}", color=0xFF69B4, timestamp=datetime.now())
-                    embed.set_footer(text=f"Reporter ID: {interaction.user.id}")
-                    [await dev.send(embed=embed, files=([await attachment.to_file() for attachment in response.attachments] if len(response.attachments) > 0 else None)) for dev in devs]
-                except Exception as e:
-                    log.exception(f"{interaction.user} | {e}")
 
             if scheduleNeedsUpdate:
                 try:

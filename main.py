@@ -136,13 +136,7 @@ async def analyzeChannel(client, message: discord.Message, channelID: int, attac
         log.warning(f"Removed message in #{client.get_channel(channelID)} from {message.author.display_name} ({message.author}). Message content: {message.content}")
         DEVS = ", ".join([f"**{message.guild.get_member(name)}**" for name in DEVELOPERS if message.guild is not None and message.guild.get_member(name) is not None])
 
-        issueButtonMessageId: list = [discord.Message]
-        row = MainView(issueButtonMessageId)
-        row.timeout = TIME_TEN_MIN
-        issueButton = MainButton(row=0, emoji="📩", label="Create Ticket", style=discord.ButtonStyle.secondary, custom_id="issue")
-        row.add_item(item=issueButton)
-        msg = await message.author.send(embed=Embed(title="❌ Message removed", description=f"The message you just posted in <#{channelID}> was deleted because no {attachmentContentType} was detected in it.\n\nIf this is an error, then please ask **staff** to post the {attachmentContentType} for you, and inform: {DEVS} - or simply raise a ticket below!", color=Color.red()), view=row)
-        issueButtonMessageId[0] = msg
+        await message.author.send(embed=Embed(title="❌ Message removed", description=f"The message you just posted in <#{channelID}> was deleted because no {attachmentContentType} was detected in it.\n\nIf this is an error, then please ask **staff** to post the {attachmentContentType} for you, and inform: {DEVS}", color=Color.red()))
     except Exception as e:
         log.exception(f"{message.author} | {e}")
 
@@ -237,52 +231,6 @@ if secret.DEBUG:
     async def stop(ctx: commands.context) -> None:
         """ Stops bot - Devs only. """
         await client.close()
-
-async def buttonHandling(button: discord.ui.Button, interaction: discord.Interaction) -> None:
-    log.info(f"{interaction.user.display_name} ({interaction.user}) created a ticket!")
-    try:
-        if button.view is not None:
-            for btn in button.view.children:
-                btn.disabled = True
-            await interaction.response.edit_message(view=button.view)
-    except Exception as e:
-        log.exception(repr(e))
-
-    try:
-        embed = Embed(title="Ticket", description="Thank you for reaching out to us!\nPlease tell us what your issue is in **one** message below!\nInclude screenshot(s) if suitable!", color=Color.orange())
-        embed.set_footer(text=SCHEDULE_CANCEL)
-        msg = await interaction.user.send(embed=embed)
-        dmChannel = msg.channel
-    except Exception as e:
-        log.exception(f"{interaction.user} | {e}")
-        return
-
-    try:
-        response = await client.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, author=interaction.user, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
-        concern = response.content.strip()
-        if concern.lower() == "cancel":
-            await dmChannel.send(embed=Embed(title="❌ Ticket canceled!", color=Color.red()))
-            return
-    except asyncio.TimeoutError:
-        await dmChannel.send(embed=Embed(title=ERROR_TIMEOUT, color=Color.red()))
-        return
-
-    try:
-        embed = Embed(title="✅ Ticket sent", description="Thank you for contacting us!\nWe will respond as soon as possible.", color=Color.green())
-        guild = client.get_guild(GUILD_ID)
-        devs = [guild.get_member(developer) for developer in DEVELOPERS if guild.get_member(developer) is not None]
-        embed.set_footer(text=f"Developers: {', '.join([dev.display_name for dev in devs])}")
-        msg = await interaction.user.send(embed=embed)
-    except Exception as e:
-        log.exception(f"{interaction.user} | {e}")
-        return
-
-    try:
-        embed = Embed(title="Incoming Ticket (Msg removal)", description=f"Reporter: {interaction.user.mention} - {interaction.user}\n**Message:**\n{concern}", color=0xFF69B4, timestamp=datetime.now())
-        embed.set_footer(text=f"Reporter ID: {interaction.user.id}")
-        [await dev.send(embed=embed, files=([await attachment.to_file() for attachment in response.attachments] if len(response.attachments) > 0 else None)) for dev in devs]
-    except Exception as e:
-        log.exception(f"{interaction.user} | {e}")
 
 
 class MainView(discord.ui.View):

@@ -1,7 +1,6 @@
 discord.py
 urllib3
 pytz
-anvil-uplink
 colorama
 requests
 python-dateutil

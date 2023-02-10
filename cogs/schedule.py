@@ -1627,6 +1627,8 @@ class Schedule(commands.Cog):
             except asyncio.TimeoutError:
                 await dmChannel.send(embed=TIMEOUT_EMBED)
                 return
+            except Exception as e:
+                log.exception(str(e))
 
         # Workshop title
         if template is None:

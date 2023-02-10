@@ -196,7 +196,6 @@ class Schedule(commands.Cog):
         eventCopy["authorName"] = member.display_name if (member := guild.get_member(eventCopy["authorId"])) is not None else "UNKNOWN"
         eventCopy["acceptedNames"] = [member.display_name if (member := guild.get_member(memberId)) is not None else "UNKNOWN" for memberId in eventCopy["accepted"]]
         eventCopy["declinedNames"] = [member.display_name if (member := guild.get_member(memberId)) is not None else "UNKNOWN" for memberId in eventCopy["declined"]]
-        eventCopy["declinedForTimingNames"] = [member.display_name if (member := guild.get_member(memberId)) is not None else "UNKNOWN" for memberId in eventCopy.get("declinedForTiming", [])]
         eventCopy["tentativeNames"] = [member.display_name if (member := guild.get_member(memberId)) is not None else "UNKNOWN" for memberId in eventCopy["tentative"]]
         eventCopy["reservableRolesNames"] = {role: ((member.display_name if (member := guild.get_member(memberId)) is not None else "UNKNOWN") if memberId is not None else "VACANT") for role, memberId in eventCopy["reservableRoles"].items()} if eventCopy["reservableRoles"] is not None else {}
         eventsHistory.append(eventCopy)
@@ -437,7 +436,6 @@ class Schedule(commands.Cog):
                         buttons.extend([
                             ScheduleButton(self, None, row=0, label="Accept", style=discord.ButtonStyle.success, custom_id="accepted"),
                             ScheduleButton(self, None, row=0, label="Decline", style=discord.ButtonStyle.danger, custom_id="declined"),
-                            ScheduleButton(self, None, row=0, label="Decline (Time)", style=discord.ButtonStyle.danger, custom_id="declinedForTiming"),
                             ScheduleButton(self, None, row=0, label="Tentative", style=discord.ButtonStyle.primary, custom_id="tentative")
                         ])
                         if event["reservableRoles"] is not None:
@@ -501,13 +499,12 @@ class Schedule(commands.Cog):
         if isinstance(event["maxPlayers"], int) and len(accepted) > event["maxPlayers"]:
             accepted, standby = accepted[:event["maxPlayers"]], accepted[event["maxPlayers"]:]
         declined = [member.display_name for memberId in event["declined"] if (member := guild.get_member(memberId)) is not None]
-        declinedForTiming = [member.display_name for memberId in event.get("declinedForTiming", []) if (member := guild.get_member(memberId)) is not None]
         tentative = [member.display_name for memberId in event["tentative"] if (member := guild.get_member(memberId)) is not None]
 
         # No limit || limit
         if event["maxPlayers"] is None or isinstance(event["maxPlayers"], int):
             embed.add_field(name=f"Accepted ({len(accepted)}) ✅" if event["maxPlayers"] is None else f"Accepted ({len(accepted)}/{event['maxPlayers']}) ✅", value="\n".join(name for name in accepted) if len(accepted) > 0 else "-", inline=True)
-            embed.add_field(name=f"Declined ({len(declinedForTiming)}) ⏱/❌ ({len(declined)})", value=("\n".join("⏱ " + name for name in declinedForTiming) + "\n" * (len(declinedForTiming) > 0 and len(declined) > 0) + "\n".join("❌ " + name for name in declined)) if len(declined) + len(declinedForTiming) > 0 else "-", inline=True)
+            embed.add_field(name=f"Declined ({len(declined)}) ❌", value=("\n".join("❌ " + name for name in declined)) if len(declined) > 0 else "-", inline=True)
             embed.add_field(name=f"Tentative ({len(tentative)}) ❓", value="\n".join(name for name in tentative) if len(tentative) > 0 else "-", inline=True)
             if len(standby) > 0:
                 embed.add_field(name=f"Standby ({len(standby)}) :clock3:", value="\n".join(name for name in standby), inline=False)
@@ -515,7 +512,7 @@ class Schedule(commands.Cog):
         # Anonymous
         elif event["maxPlayers"] == "anonymous":
             embed.add_field(name=f"Accepted ({len(accepted + standby)}) ✅", value="\u200B", inline=True)
-            embed.add_field(name=f"Declined ({len(declinedForTiming)}) ⏱/❌ ({len(declined)})", value="\u200B", inline=True)
+            embed.add_field(name=f"Declined ({len(declined)}) ❌", value="\u200B", inline=True)
             embed.add_field(name=f"Tentative ({len(tentative)}) ❓", value="\u200B", inline=True)
 
         author = guild.get_member(event["authorId"])
@@ -548,7 +545,7 @@ class Schedule(commands.Cog):
             fetchMsg = False
             eventList: list[dict] = [event for event in events if event["messageId"] == interaction.message.id]
 
-            rsvpOptions = ("accepted", "declined", "declinedForTiming", "tentative")
+            rsvpOptions = ("accepted", "declined", "tentative")
             if button.custom_id in rsvpOptions:
                 event = eventList[0]
 
@@ -630,7 +627,7 @@ class Schedule(commands.Cog):
                         await self.saveEventToHistory(event)
                     else:
                         guild = self.bot.get_guild(GUILD_ID)
-                        for memberId in event["accepted"] + event.get("declinedForTiming", []) + event["tentative"]:
+                        for memberId in event["accepted"] + event["declined"] + event["tentative"]:
                             member = guild.get_member(memberId)
                             if member is not None:
                                 embed = Embed(title=f"🗑 {event.get('type', 'Operation')} deleted: {event['title']}!", description=f"The {event.get('type', 'Operation').lower()} was scheduled to run:\n{utils.format_dt(UTC.localize(datetime.strptime(event['time'], TIME_FORMAT)), style='F')}", color=Color.red())
@@ -768,8 +765,6 @@ class Schedule(commands.Cog):
                     # Put the user in accepted
                     if member.id in event["declined"]:
                         event["declined"].remove(member.id)
-                    if member.id in event["declinedForTiming"]:
-                        event["declinedForTiming"].remove(member.id)
                     if member.id in event["tentative"]:
                         event["tentative"].remove(member.id)
                     if member.id not in event["accepted"]:
@@ -1269,7 +1264,7 @@ class Schedule(commands.Cog):
             reorderEvents = True
             guild = self.bot.get_guild(GUILD_ID)
             embed = Embed(title=f":clock3: The starting time has changed for: {event['title']}!", description=f"From: {utils.format_dt(UTC.localize(datetime.strptime(oldStartTime, TIME_FORMAT)), style='F')}\n\u2000\u2000To: {utils.format_dt(UTC.localize(datetime.strptime(event['time'], TIME_FORMAT)), style='F')}", color=Color.orange())
-            for memberId in event["accepted"] + event.get("declinedForTiming", []) + event["tentative"]:
+            for memberId in event["accepted"] + event["declined"] + event["tentative"]:
                 member = guild.get_member(memberId)
                 if member is not None:
                     try:
@@ -1552,7 +1547,6 @@ class Schedule(commands.Cog):
                 "messageId": None,
                 "accepted": [],
                 "declined": [],
-                "declinedForTiming": [],
                 "tentative": [],
                 "type": "Operation"  # Operation, Workshop, Event
             }
@@ -1961,7 +1955,6 @@ class Schedule(commands.Cog):
                 "messageId": None,
                 "accepted": [],
                 "declined": [],
-                "declinedForTiming": [],
                 "tentative": [],
                 "workshopInterest": workshopInterest,
                 "type": "Workshop"  # Operation, Workshop, Event
@@ -2254,7 +2247,6 @@ class Schedule(commands.Cog):
                 "messageId": None,
                 "accepted": [],
                 "declined": [],
-                "declinedForTiming": [],
                 "tentative": [],
                 "type": "Event"  # Operation, Workshop, Event
             }

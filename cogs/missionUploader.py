@@ -125,7 +125,7 @@ class MissionUploader(commands.Cog):
 
                 cnopts = pysftp.CnOpts()
                 cnopts.hostkeys = None
-                with pysftp.Connection(server["Host"], port=server["Port"], username=secret.FTP_USERNAME, password=secret.FTP_PASSWORD, cnopts=cnopts, default_path=server["Directory"]) as sftp:
+                with pysftp.Connection(server["Host"], port=server["Port"], username=secret.SFTP["username"], password=secret.SFTP["password"], cnopts=cnopts, default_path=server["Directory"]) as sftp:
                     missionFilesOnServer = [file.filename for file in sftp.listdir_attr()]
 
                     if len(attachments) == 1 and attachment.filename in missionFilesOnServer:
@@ -218,7 +218,7 @@ class MissionUploader(commands.Cog):
             cnopts = pysftp.CnOpts()
             cnopts.hostkeys = None
             assert isinstance(host["Directory"], str)
-            with pysftp.Connection(host["Host"], port=host["Port"], username=secret.FTP_USERNAME, password=secret.FTP_PASSWORD, cnopts=cnopts, default_path=host["Directory"].split("/")[0]) as sftp:
+            with pysftp.Connection(host["Host"], port=host["Port"], username=secret.SFTP["username"], password=secret.SFTP["password"], cnopts=cnopts, default_path=host["Directory"].split("/")[0]) as sftp:
                 modList = [file for file in sftp.listdir() if file.startswith("@")]
 
             modList.sort(key=lambda x: x.upper())

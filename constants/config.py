@@ -8,6 +8,7 @@ TIME_FORMAT = "%Y-%m-%d %I:%M %p"
 SCHEDULE_CANCEL = "Enter `cancel` to abort this command."
 SCHEDULE_NUMBER_FROM_TO_OR_NONE = "Enter `none` or a number from **{0}** - **{1}**."
 SCHEDULE_EVENT_TEMPLATE_SAVE_NAME_QUESTION = "Which name would you like to save the template as?"
+CHANGELOG_URL = "https://steamcommunity.com/sharedfiles/filedetails/changelog/{0}"
 
 ## Error
 ERROR_TIMEOUT = ":clock3: You were too slow, aborting!"

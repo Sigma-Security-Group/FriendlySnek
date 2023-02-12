@@ -16,12 +16,20 @@ if not os.path.exists("./secret.py"):
     log.info("Creating a secret.py file!")
     with open("secret.py", "w") as f:
         f.write(  # Write secret.py template
-            "TOKEN:str = \"\""
-            "\nTOKEN_DEV:str = \"\""
-            "\nFTP_USERNAME:str = \"\""
-            "\nFTP_PASSWORD:str = \"\""
-            "\nDEBUG:bool = True"
-            "\n"
+            """TOKEN:str = ""
+TOKEN_DEV:str = ""
+DEBUG:bool = True
+
+SFTP = {
+    "username": "",
+    "password": ""
+}
+
+REDDIT = {
+    "client_id": "",
+    "client_secret": "",
+    "password": ""
+}"""
         )
     exit()
 
@@ -133,7 +141,7 @@ async def analyzeChannel(client, message: discord.Message, channelID: int, attac
         log.exception(f"{message.author} | {e}")
 
     try:
-        log.warning(f"Removed message in #{client.get_channel(channelID)} from {message.author.display_name} ({message.author}). Message content: {message.content}")
+        log.info(f"Removed message in #{client.get_channel(channelID)} from {message.author.display_name} ({message.author}). Message content: {message.content}")
         DEVS = ", ".join([f"**{message.guild.get_member(name)}**" for name in DEVELOPERS if message.guild is not None and message.guild.get_member(name) is not None])
 
         await message.author.send(embed=Embed(title="❌ Message removed", description=f"The message you just posted in <#{channelID}> was deleted because no {attachmentContentType} was detected in it.\n\nIf this is an error, then please ask **staff** to post the {attachmentContentType} for you, and inform: {DEVS}", color=Color.red()))
@@ -231,29 +239,6 @@ if secret.DEBUG:
     async def stop(ctx: commands.context) -> None:
         """ Stops bot - Devs only. """
         await client.close()
-
-
-class MainView(discord.ui.View):
-    def __init__(self, message: list, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.message = message  # Message to reference when view has timeout
-
-    async def on_timeout(self):
-        try:
-            for button in self.children:
-                button.disabled = True
-            message = self.message[0]
-            await message.edit(view=self)
-        except Exception as e:
-            log.exception(e)
-
-
-class MainButton(discord.ui.Button):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-    async def callback(self, interaction: discord.Interaction):
-        await buttonHandling(self, interaction)
 
 
 if __name__ == "__main__":

@@ -1,5 +1,5 @@
 from secret import DEBUG
-import os, re, json, asyncio, pytz, random, requests
+import os, re, json, asyncio, pytz, random
 
 from typing import Optional
 from copy import deepcopy
@@ -97,12 +97,6 @@ TIMESTAMP_STYLES = {
     "R": "Relative Time"
 }
 
-# checkModUpdates()
-CHANGELOG_URL = "https://steamcommunity.com/sharedfiles/filedetails/changelog/{0}"
-
-MOD_IDS = [450814997, 843425103, 843577117, 463939057, 520618345, 843632231, 773125288, 843593391, 583496184, 773131200, 1779063631, 2397360831, 2522638637, 909547724, 2020940806, 1673456286, 623475643, 884966711, 2174495332, 1376867375, 751965892, 2372036642, 1314910827, 2242548109, 837729515, 897295039, 2447965207, 1643720957, 1375890861, 583544987, 2264863911, 1638341685, 686802825, 2467590475, 333310405, 2811760677, 1284600102, 1224892496, 1291778160, 1883956552, 1188303655, 2140288272, 1858075458, 1858070328, 1808238502, 1862208264, 929396506, 1845100804, 930903722, 2814015609, 2801060088, 2585749287, 1770265310, 1423583812, 1397683809, 2466229756, 2013446344, 2892020195, 1187306764, 2811886291, 1623498241, 2397371875, 2397376046, 2377329491, 1703187116, 1926513010, 1963617777, 1251859358, 2018593688, 1726184748, 2829330653, 1726494027]  # Just take it from the modpack HTML, ez clap
-
-
 
 if not os.path.exists(MEMBER_TIME_ZONES_FILE):
     with open(MEMBER_TIME_ZONES_FILE, "w") as f:
@@ -143,9 +137,6 @@ class Schedule(commands.Cog):
 
         if not self.checkAcceptedReminder.is_running():
             self.checkAcceptedReminder.start()
-
-        if not self.checkModUpdates.is_running():
-            self.checkModUpdates.start()
 
     async def cancelCommand(self, channel: discord.DMChannel, abortText: str) -> None:
         """ Sends an abort response to the user.
@@ -285,80 +276,6 @@ class Schedule(commands.Cog):
                         await channel.send(" ".join(member.mention for member in onlineMembersNotAccepted) + f" If you are in-game, please hit accept ✅ on the <#{SCHEDULE}>.")
         except Exception as e:
             log.exception(e)
-
-    @tasks.loop(minutes=30.0)
-    async def checkModUpdates(self) -> None:
-        output = []
-
-        for modID in MOD_IDS:
-            # Fetch mod
-            response = requests.get(url=CHANGELOG_URL.format(modID))
-
-            # Parse HTML
-            soup = BS(response.text, "html.parser")
-
-            # Mod Title
-            name = soup.find("div", class_="workshopItemTitle").string
-
-            # Find latest update
-            update = soup.find("div", class_="detailBox workshopAnnouncement noFooter")
-
-
-            # Loop paragraphs in latest update
-            for paragraph in update.descendants:
-                stripTxt = str(paragraph).strip()
-                if not stripTxt:  # Ignore empty shit
-                    continue
-
-                # Find update time
-                elif stripTxt.startswith("Update: "):
-                    date = stripTxt
-                    break  # dw bout shit after this
-
-                # Find update changelog
-                #elif stripTxt.startswith("<p id=\""):  # THE changelog, dw bout shit after it
-                #    chl = stripTxt
-                #    break
-
-
-            # Parse time to datetime
-            dateTimeParse = datetimeParse(date[len("Update: "):].replace("@ ", ""))
-
-            # Convert it into UTC (shitty arbitrary code)
-            utcTime = pytz.UTC.localize(dateTimeParse + timedelta(hours=8))
-
-            # Current time
-            now = pytz.UTC.localize(datetime.utcnow())
-
-            # Check if update is new
-            if utcTime > (now - timedelta(minutes=29.0, seconds=59.0)):  # Relative time checking
-                output.append(
-                    {
-                        "modID": modID,
-                        "name": name,
-                        "datetime": utcTime
-                    }
-                )
-
-
-        if len(output) > 0:
-            # Create message
-            guild = self.bot.get_guild(GUILD_ID)
-            c = await guild.fetch_channel(CHANGELOG)
-            message = f"{guild.get_role(SERVER_HAMSTER).mention} ({len(output)})\n\n"  # Ping for first message
-            for mod in output:
-                # Title + Date
-                message += f"{mod['name']}\n"
-
-                # Timestamp
-                message += utils.format_dt(mod["datetime"], style="F") + "\n"
-
-                # Link
-                message += f"<{CHANGELOG_URL.format(mod['modID'])}>"
-
-                # Each new mod update will be sent in a separate message
-                await c.send(message)
-                message = ""
 
     @app_commands.command(name="refreshschedule")
     @app_commands.guilds(GUILD)
@@ -1593,7 +1510,7 @@ class Schedule(commands.Cog):
                             except asyncio.TimeoutError:
                                 await interaction.user.send(embed=TIMEOUT_EMBED)
                                 return
-                            log.warning(f"{interaction.user.display_name} ({interaction.user}) deleted the workshop template: {workshopTemplate['name']}!")
+                            log.info(f"{interaction.user.display_name} ({interaction.user}) deleted the workshop template: {workshopTemplate['name']}!")
 
                             with open(WORKSHOP_TEMPLATES_DELETED_FILE) as f:
                                 workshopTempaltesDeleted = json.load(f)

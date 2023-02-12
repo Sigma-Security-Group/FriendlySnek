@@ -109,6 +109,7 @@ class BotTasks(commands.Cog):
     @tasks.loop(hours=1.0)
     async def redditRecruitmentPosts(self) -> None:
         log.debug("redditRecruitmentPosts()")
+        return
         reddit = asyncpraw.Reddit(
             client_id=secret.REDDIT["client_id"],
             client_secret=secret.REDDIT["client_secret"],

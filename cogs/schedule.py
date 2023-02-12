@@ -2276,7 +2276,7 @@ class Schedule(commands.Cog):
                 return
 
         # Output timestamp
-        time = timeZone.localize(time).astimezone(UTC)
+        time = timeZone.localize(time)
         await interaction.edit_original_response(content = f"{message} {utils.format_dt(time, 'F')}")
         if not informative == "No":
             embed = Embed(color=Color.green())

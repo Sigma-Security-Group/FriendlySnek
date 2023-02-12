@@ -162,13 +162,16 @@ class WorkshopInterest(commands.Cog):
             lenInterested = len(interestedMembers.strip().split('\n'))
 
         embed.add_field(name=f"Interested People ({lenInterested})", value=interestedMembers)
-        # 1 discord.Role
+        # 1 discord.Role as SME
         if WORKSHOP_INTEREST_LIST[workshopName]["role"] and isinstance(WORKSHOP_INTEREST_LIST[workshopName]["role"], int):
             smes = [sme.display_name for sme in guild.get_role(WORKSHOP_INTEREST_LIST[workshopName]["role"]).members]
             if smes:
                 embed.set_footer(text=f"SME{'s' * (len(smes) > 1)}: {', '.join(smes)}")
 
-        # >1 discord.Role
+            else:  # No SME
+                embed.set_footer(text=f"No SMEs")
+
+        # >1 discord.Role as SME
         elif WORKSHOP_INTEREST_LIST[workshopName]["role"] and isinstance(WORKSHOP_INTEREST_LIST[workshopName]["role"], tuple):
             smeroles = [guild.get_role(role).name for role in WORKSHOP_INTEREST_LIST[workshopName]["role"]]
             embed.set_footer(text=f"SME roles: {', '.join(smeroles)}")

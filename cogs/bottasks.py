@@ -173,8 +173,11 @@ Join Us:
 - Would you like to know more? Join the **[Discord Server](https://discord.gg/KtcVtfjAYj)** for more information."""
         }
 
-        await sub.submit(post["Title"], flair_id=post["FlairID"], inline_media=post["Media"], selftext=post["Description"])
+        submission = await sub.submit(post["Title"], flair_id=post["FlairID"], inline_media=post["Media"], selftext=post["Description"])
         log.info("Reddit recruitment posted!")
+
+        channel = self.bot.get_channel(ARMA_DISCUSSION)
+        await channel.send(f"Reddit recruitment post published, go upvote it!\n{submission.url}")
 
 async def setup(bot: commands.Bot) -> None:
     await bot.add_cog(BotTasks(bot))

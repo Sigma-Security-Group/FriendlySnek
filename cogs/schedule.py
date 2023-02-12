@@ -5,7 +5,6 @@ from typing import Optional
 from copy import deepcopy
 from datetime import datetime, timedelta
 from dateutil.parser import parse as datetimeParse
-from bs4 import BeautifulSoup as BS
 
 import discord
 from discord import app_commands, Embed, Color, utils

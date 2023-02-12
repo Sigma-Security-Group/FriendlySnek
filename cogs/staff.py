@@ -1,7 +1,7 @@
 from secret import DEBUG
 import re
-from datetime import datetime, timezone
 
+from datetime import datetime, timezone
 from discord import utils, Embed, Color
 from discord.ext import commands
 
@@ -272,7 +272,7 @@ class Staff(commands.Cog):
     @commands.command(name="searchmodlogs")
     @commands.has_any_role(UNIT_STAFF)
     async def searchModLogs(self, ctx: commands.context, *, member: str) -> None:
-        """ Search through the moderation logs. """
+        """ Fetch all occurrences ances in the moderation log related to a member. """
 
         targetMember = self._getMember(member)
         if targetMember is None:
@@ -323,6 +323,30 @@ class Staff(commands.Cog):
                 await self.bot.get_channel(STAFF_CHAT).send(f"Moderation Logs related to {targetMember.display_name} ({targetMember}):\n{messageLinks}")
             else:
                 await self.bot.get_channel(STAFF_CHAT).send(f"No Moderation Logs related to {targetMember.display_name} ({targetMember})")
+
+
+    # Hampter command
+    @commands.command(name="gibcmdline")
+    @commands.has_any_role(UNIT_STAFF, SERVER_HAMSTER)
+    async def gibcmdline(self, ctx: commands.context) -> None:
+        """ Generates commandline from attached HTML modpack file """
+
+        # No modpack / no HTML
+        if len(ctx.message.attachments) == 0 or not ctx.message.attachments[0].content_type.startswith("text/html"):
+            await ctx.send(":moyai: I need a modpack file to generate the cmdline :moyai:")
+            return
+
+        # Modpack provided
+        msg = await ctx.send("https://tenor.com/view/rat-rodent-vermintide-vermintide2-skaven-gif-20147931")
+        html = await ctx.message.attachments[0].read()  # Returns bytes
+        html = html.decode("utf-8")  # Convert to str
+
+        mods = re.findall(r'(?<=<td data-type="DisplayName">).+(?=<\/td>)', html)
+
+        alphanumerics = re.compile(r"[\W_]+", re.UNICODE)
+        cmdline = ";".join(sorted(["@" + re.sub(alphanumerics, "", mod) for mod in mods], key=str.casefold))  # Casefold = caseinsensitive
+
+        await msg.edit(content=f"```{cmdline}```")
 
 async def setup(bot: commands.Bot) -> None:
     await bot.add_cog(Staff(bot))

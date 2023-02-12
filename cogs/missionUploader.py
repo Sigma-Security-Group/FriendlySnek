@@ -199,52 +199,5 @@ class MissionUploader(commands.Cog):
             await interaction.response.send_message(embed=embed)
 
 
-    @commands.command(name="installedmods")
-    @commands.has_any_role(UNIT_STAFF, SERVER_HAMSTER)
-    async def installedmods(self, ctx: commands.context, *, server: str = "Operations Server") -> None:
-        """ Fetch all installed mods on a server. Specific server can be chosen - defaults to Operation """
-
-        try:
-            msg = await ctx.send("Gotcha mate. Standby while I threat some rats who got the answer...")
-            """ For multiple servers
-            for term in ("test", "train", "second", "back"):
-                if term in server.lower():
-                    host = SERVERS[1]
-                    break
-            else:
-                host = SERVERS[0]"""
-            host = SERVERS[0]
-
-            cnopts = pysftp.CnOpts()
-            cnopts.hostkeys = None
-            assert isinstance(host["Directory"], str)
-            with pysftp.Connection(host["Host"], port=host["Port"], username=secret.SFTP["username"], password=secret.SFTP["password"], cnopts=cnopts, default_path=host["Directory"].split("/")[0]) as sftp:
-                modList = [file for file in sftp.listdir() if file.startswith("@")]
-
-            modList.sort(key=lambda x: x.upper())
-
-            modListServer: list[str] = []
-            SERVER_MODS = ("SSG_REP", )
-            for mod in SERVER_MODS:
-                mod = f"@{mod}"
-                try:
-                    if mod in modList:
-                        modPos = modList.index(mod)
-                        modListServer.append(modList[modPos])
-                        modList.remove(mod)
-                except ValueError:
-                    pass
-
-            fileContent = f"{host['Name']}\n\nClient Mods: {';'.join(modList)}\nAmount: {len(modList)}\n\nServer Mods: {';'.join(modListServer)}\nAmount: {len(modListServer)}"
-
-            tempFile = "tmp/installedmods.txt"
-            with open(tempFile, "w", encoding="UTF-8") as f:
-                f.write(fileContent)
-            await msg.edit(content=None, attachments=[discord.File(tempFile)])
-            osRemove(tempFile)
-
-        except Exception as e:
-            log.exception(e)
-
 async def setup(bot: commands.Bot) -> None:
     await bot.add_cog(MissionUploader(bot))

@@ -1,6 +1,6 @@
-import secret, requests, pytz, asyncpraw
+import secret, requests, pytz#, asyncpraw
 
-from asyncpraw.models import InlineImage
+#from asyncpraw.models import InlineImage
 from datetime import datetime, timezone, timedelta
 from dateutil.parser import parse as datetimeParse
 from bs4 import BeautifulSoup as BS

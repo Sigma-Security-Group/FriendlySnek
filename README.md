@@ -16,11 +16,20 @@ The bot needs the file `secret.py` in the project's root folder in order to run.
 The file needs to declare the following variables:
 
 ```py
-TOKEN:str
-TOKEN_DEV:str
-FTP_USERNAME:str
-FTP_PASSWORD:str
-DEBUG:bool
+TOKEN = ""
+TOKEN_DEV = ""
+DEBUG = True
+
+SFTP = {
+    "username": "",
+    "password": ""
+}
+
+REDDIT = {
+    "client_id": "",
+    "client_secret": "",
+    "password": ""
+}
 ```
 
 You can easily toggle the bot's debug mode by changing the DEBUG variable in `secret.py`. On debug mode, the bot will use the debug server (`debug.py` constants).

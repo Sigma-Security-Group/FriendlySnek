@@ -34,7 +34,6 @@ class BotTasks(commands.Cog):
 
     @tasks.loop(minutes=30.0)
     async def checkModUpdates(self) -> None:
-        log.debug("checkModUpdates()")
         output = []
 
         for modID in MOD_IDS:
@@ -108,8 +107,8 @@ class BotTasks(commands.Cog):
 
     @tasks.loop(hours=1.0)
     async def redditRecruitmentPosts(self) -> None:
+        return  # temp
         log.debug("redditRecruitmentPosts()")
-        return
         reddit = asyncpraw.Reddit(
             client_id=secret.REDDIT["client_id"],
             client_secret=secret.REDDIT["client_secret"],

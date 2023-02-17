@@ -149,13 +149,11 @@ About Us:
 
 - **Flexibility**: Sigma has no formal sign-up process, no commitments, and offers instruction on request. Certification in specialty roles is available and run by professionals in the field.
 
-- **Activity**: We regularly host operations, and aim to provide content with a rich story and balanced flow/combat in order to keep our players interested.
+- **Activity**: We regularly host quality operations, and aim to provide content with a rich story and balanced flow/combat in order to keep our players interested.
 
 - **Professionalism**: Operations are cooperative Zeus curated events, built and run by dedicated community members. Roleplay is encouraged, tactics are refined, and immersion is achieved.
 
 - **Immersion**: Mods we use on the server are focused on expanding the default feature set and enhancing immersion. Our entire mod collection is found on the Arma 3 Steam Workshop.
-
-- **Quality**: We are currently bouncing back from structure issues, and are working on a quality over quantity model for our operations.
 
 Requirements:
 

@@ -3,10 +3,9 @@ import re
 
 from datetime import datetime, timezone
 from discord import utils, Embed, Color
-from discord.ext import commands
+from discord.ext import commands  # type: ignore
 
 from constants import *
-
 from __main__ import log, cogsReady
 if DEBUG:
     from constants.debug import *

@@ -1,12 +1,9 @@
-import secret
-import asyncio, pytz
+import secret, asyncio, pytz
 import pysftp  # type: ignore
 
-from os import remove as osRemove
 from datetime import datetime
-
 from discord import app_commands, Embed, Color, utils
-from discord.ext import commands
+from discord.ext import commands  # type: ignore
 
 from constants import *
 from __main__ import log, cogsReady
@@ -26,7 +23,7 @@ SERVERS = [
         "Port": 8822
     }
 ]
-
+server = SERVERS[0]
 
 class MissionUploader(commands.Cog):
     def __init__(self, bot: commands.Bot) -> None:
@@ -62,29 +59,7 @@ class MissionUploader(commands.Cog):
         None.
         """
         await interaction.response.send_message("Upload mission file in DMs...")
-        log.info(f"{interaction.user.display_name} ({interaction.user}) is uploading a mission file...")
-
-        # Server
-        serverSelectOk = False
-        color = Color.gold()
-        while not serverSelectOk:
-            embed = Embed(title="Which server would you like to upload to?", description="\n".join([f"{index}. {server['Name']}" for index, server in enumerate(SERVERS, start=1)]), color=color)
-            embed.set_footer(text=SCHEDULE_CANCEL)
-            color = Color.red()
-            msg = await interaction.user.send(embed=embed)
-            dmChannel = msg.channel
-            try:
-                response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, interaction=interaction, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == interaction.user)
-                serverNumber = response.content.strip().lower()
-                if serverNumber == "cancel":
-                    await self.cancelCommand(dmChannel, "Mission uploading")
-                    return
-                elif serverNumber in [str(index[0]) for index in enumerate(SERVERS, start=1)]:
-                    serverSelectOk = True
-                    server = SERVERS[int(serverNumber) - 1]
-            except asyncio.TimeoutError:
-                await dmChannel.send(embed=TIMEOUT_EMBED)
-                return
+        log.debug(f"{interaction.user.display_name} ({interaction.user}) is uploading a mission file...")
 
         # Mission file
         color = Color.gold()

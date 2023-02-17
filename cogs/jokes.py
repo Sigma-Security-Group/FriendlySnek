@@ -2,7 +2,7 @@ from secret import DEBUG
 import requests
 
 from discord import app_commands
-from discord.ext import commands
+from discord.ext import commands  # type: ignore
 
 from constants import *
 from __main__ import log, cogsReady

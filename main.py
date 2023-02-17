@@ -1,6 +1,5 @@
-import os, re, pytz, asyncio
+import os, re, pytz, asyncio, discord
 
-from datetime import datetime
 from logger import Logger
 log = Logger()
 
@@ -8,17 +7,16 @@ import platform  # Set appropriate event loop policy to avoid runtime errors on 
 if platform.system() == "Windows":
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
-import discord
 from discord import Embed, Color
-from discord.ext import commands
+from discord.ext import commands  # type: ignore
 
 if not os.path.exists("./secret.py"):
     log.info("Creating a secret.py file!")
     with open("secret.py", "w") as f:
         f.write(  # Write secret.py template
-            """TOKEN:str = ""
-TOKEN_DEV:str = ""
-DEBUG:bool = True
+            """TOKEN = ""
+TOKEN_DEV = ""
+DEBUG = True
 
 SFTP = {
     "username": "",
@@ -201,21 +199,21 @@ async def on_error(event, *args, **kwargs) -> None:
     log.exception(f"An error occured! {event}")
 
 @client.event
-async def on_command_error(ctx: discord.ext.commands.Context, error: discord.ext.commands.errors) -> None:
+async def on_command_error(ctx: commands.Context, error: commands.errors) -> None:
     errorType = type(error)
-    if errorType is discord.ext.commands.errors.MissingRequiredArgument:
+    if errorType is commands.errors.MissingRequiredArgument:
         await ctx.send_help(ctx.command)
-    elif not errorType is discord.ext.commands.CommandNotFound:
+    elif not errorType is commands.CommandNotFound:
         log.exception(f"{ctx.author} | {error}")
 
-def devCheck() -> discord.ext.commands.check:
+def devCheck() -> commands.check:
     """ A permissions check for the reload command.
 
     Parameters:
     None.
 
     Returns:
-    discord.ext.commands.check.
+    commands.check
     """
     def predict(ctx: commands.context) -> bool:
         return ctx.author.id in DEVELOPERS
@@ -246,4 +244,4 @@ if __name__ == "__main__":
         client.run(secret.TOKEN_DEV if secret.DEBUG else secret.TOKEN)
         log.info("Bot stopped!")
     except Exception as e:
-        log.exception(repr(e))
+        log.exception(str(e))

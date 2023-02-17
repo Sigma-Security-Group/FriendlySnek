@@ -1,7 +1,7 @@
 import sys, traceback, pytz
 
 from datetime import datetime
-from colorama import Fore, Style
+from colorama import Fore, Style  # type: ignore
 
 LOG_FILE = "./bot.log"
 STD_OUT = sys.stdout

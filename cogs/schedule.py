@@ -1,12 +1,11 @@
 from secret import DEBUG
-import os, re, json, asyncio, pytz, random
+import os, re, json, asyncio, pytz, random, discord
 
 from typing import Optional
 from copy import deepcopy
 from datetime import datetime, timedelta
 from dateutil.parser import parse as datetimeParse
 
-import discord
 from discord import app_commands, Embed, Color, utils
 from discord.ext import commands, tasks  # type: ignore
 

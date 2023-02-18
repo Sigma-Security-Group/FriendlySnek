@@ -1,4 +1,4 @@
-import secret, requests, pytz
+import secret, requests, pytz, os, random
 import asyncpraw  # type: ignore
 
 from asyncpraw.models import InlineImage  # type: ignore
@@ -138,14 +138,12 @@ class BotTasks(commands.Cog):
         else:
             log.warning("No Recruiting flair found!")
 
+        # Submission details
         post = {
             "Title": "[A3][18+][Recruiting][Worldwide] | Casual-Attendance, PMC Themed Unit | Sigma Security Group is now Recruiting!",
             "FlairID": flairID,
-            "Media": {"banner": InlineImage(path="constants/SSG_Banner.jpeg", caption="SSG strategizing")},
 
-            "Description": """{banner}
-
-About Us:
+            "Description": """About Us:
 
 - **Flexibility**: Sigma has no formal sign-up process, no commitments, and offers instruction on request. Certification in specialty roles is available and run by professionals in the field.
 
@@ -170,7 +168,10 @@ Join Us:
 - Would you like to know more? Join the **[Discord Server](https://discord.gg/KtcVtfjAYj)** for more information."""
         }
 
-        submission = await sub.submit(post["Title"], flair_id=post["FlairID"], inline_media=post["Media"], selftext=post["Description"])
+        # Send submission with random image
+        propagandaPath = r"constants/SSG_Propaganda"
+        submission = await sub.submit_image(title=post["Title"], image_path=f"{propagandaPath}/{random.choice(os.listdir(propagandaPath))}", flair_id=post["FlairID"])
+        await submission.reply(post["Description"])
         log.info("Reddit recruitment posted!")
 
         channel = self.bot.get_channel(ARMA_DISCUSSION)

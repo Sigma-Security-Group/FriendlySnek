@@ -1,7 +1,7 @@
 import secret, requests, pytz
-#import asyncpraw  # type: ignore
+import asyncpraw  # type: ignore
 
-#from asyncpraw.models import InlineImage  # type: ignore
+from asyncpraw.models import InlineImage  # type: ignore
 from datetime import datetime, timezone, timedelta
 from dateutil.parser import parse as datetimeParse
 from bs4 import BeautifulSoup as BS  # type: ignore
@@ -108,7 +108,6 @@ class BotTasks(commands.Cog):
 
     @tasks.loop(hours=1.0)
     async def redditRecruitmentPosts(self) -> None:
-        return  # temp
         log.debug("redditRecruitmentPosts()")  # temp
         reddit = asyncpraw.Reddit(
             client_id=secret.REDDIT["client_id"],

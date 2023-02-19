@@ -108,42 +108,43 @@ class BotTasks(commands.Cog):
 
     @tasks.loop(hours=1.0)
     async def redditRecruitmentPosts(self) -> None:
-        log.debug("redditRecruitmentPosts()")  # temp
-        reddit = asyncpraw.Reddit(
-            client_id=secret.REDDIT["client_id"],
-            client_secret=secret.REDDIT["client_secret"],
-            password=secret.REDDIT["password"],
-            user_agent="Sigma Security Group by /u/SigmaSecurityGroup",
-            username="SigmaSecurityGroup",
-        )
+        try:
+            log.debug("redditRecruitmentPosts()")  # temp
+            reddit = asyncpraw.Reddit(
+                client_id=secret.REDDIT["client_id"],
+                client_secret=secret.REDDIT["client_secret"],
+                password=secret.REDDIT["password"],
+                user_agent="Sigma Security Group by /u/SigmaSecurityGroup",
+                username="SigmaSecurityGroup",
+            )
 
-        account = await reddit.redditor(str(await reddit.user.me()))  # Fetch our account
-        submissions = account.submissions.new(limit=1)  # Get account submissions sorted by latest
-        async for submission in submissions:  # Check the latest submission [break]
-            subCreated = datetime.fromtimestamp(submission.created_utc).replace(tzinfo=timezone.utc)  # Latest post timestamp
-            break
-
-        if datetime.now().replace(tzinfo=timezone.utc) < (subCreated + timedelta(weeks=1.0, minutes=30.0)):  # Dont post if now is less than ~1 week than last post
-            return
-
-        # 1 week has passed, post new
-        sub = await reddit.subreddit("FindAUnit")
-
-        # Find Recruiting flair UUID
-        flairID = None
-        async for flair in sub.flair.link_templates.user_selectable():
-            if flair["flair_text"] == "Recruiting":
-                flairID = flair["flair_template_id"]
+            account = await reddit.redditor(str(await reddit.user.me()))  # Fetch our account
+            submissions = account.submissions.new(limit=1)  # Get account submissions sorted by latest
+            async for submission in submissions:  # Check the latest submission [break]
+                subCreated = datetime.fromtimestamp(submission.created_utc).replace(tzinfo=timezone.utc)  # Latest post timestamp
                 break
-        else:
-            log.warning("No Recruiting flair found!")
 
-        # Submission details
-        post = {
-            "Title": "[A3][18+][Recruiting][Worldwide] | Casual-Attendance, PMC Themed Unit | Sigma Security Group is now Recruiting!",
-            "FlairID": flairID,
+            if datetime.now().replace(tzinfo=timezone.utc) < (subCreated + timedelta(weeks=1.0, minutes=30.0)):  # Dont post if now is less than ~1 week than last post
+                return
 
-            "Description": """About Us:
+            # 1 week has passed, post new
+            sub = await reddit.subreddit("FindAUnit")
+
+            # Find Recruiting flair UUID
+            flairID = None
+            async for flair in sub.flair.link_templates.user_selectable():
+                if flair["flair_text"] == "Recruiting":
+                    flairID = flair["flair_template_id"]
+                    break
+            else:
+                log.warning("No Recruiting flair found!")
+
+            # Submission details
+            post = {
+                "Title": "[A3][18+][Recruiting][Worldwide] | Casual-Attendance, PMC Themed Unit | Sigma Security Group is now Recruiting!",
+                "FlairID": flairID,
+
+                "Description": """About Us:
 
 - **Flexibility**: Sigma has no formal sign-up process, no commitments, and offers instruction on request. Certification in specialty roles is available and run by professionals in the field.
 
@@ -166,16 +167,18 @@ Requirements:
 Join Us:
 
 - Would you like to know more? Join the **[Discord Server](https://discord.gg/KtcVtfjAYj)** for more information."""
-        }
+            }
 
-        # Send submission with random image
-        propagandaPath = r"constants/SSG_Propaganda"
-        submission = await sub.submit_image(title=post["Title"], image_path=f"{propagandaPath}/{random.choice(os.listdir(propagandaPath))}", flair_id=post["FlairID"])
-        await submission.reply(post["Description"])
-        log.info("Reddit recruitment posted!")
+            # Send submission with random image
+            propagandaPath = r"constants/SSG_Propaganda"
+            submission = await sub.submit_image(title=post["Title"], image_path=f"{propagandaPath}/{random.choice(os.listdir(propagandaPath))}", flair_id=post["FlairID"])
+            await submission.reply(post["Description"])
+            log.info("Reddit recruitment posted!")
 
-        channel = self.bot.get_channel(ARMA_DISCUSSION)
-        await channel.send(f"Reddit recruitment post published, go upvote it!\n{submission.url}")
+            channel = self.bot.get_channel(ARMA_DISCUSSION)
+            await channel.send(f"Reddit recruitment post published, go upvote it!\n{submission.url}")
+        except Exception as e:
+            log.exception(str(e))
 
 async def setup(bot: commands.Bot) -> None:
     await bot.add_cog(BotTasks(bot))

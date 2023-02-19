@@ -110,15 +110,16 @@ class BotTasks(commands.Cog):
     async def redditRecruitmentPosts(self) -> None:
         try:
             log.debug("redditRecruitmentPosts()")  # temp
+            username = "SigmaSecurityGroup"
             reddit = asyncpraw.Reddit(
                 client_id=secret.REDDIT["client_id"],
                 client_secret=secret.REDDIT["client_secret"],
                 password=secret.REDDIT["password"],
-                user_agent="Sigma Security Group by /u/SigmaSecurityGroup",
-                username="SigmaSecurityGroup",
+                user_agent=f"Sigma Security Group by /u/{username}",
+                username=username,
             )
 
-            account = await reddit.redditor(str(await reddit.user.me()))  # Fetch our account
+            account = await reddit.redditor(username)  # Fetch our account
             submissions = account.submissions.new(limit=1)  # Get account submissions sorted by latest
             async for submission in submissions:  # Check the latest submission [break]
                 subCreated = datetime.fromtimestamp(submission.created_utc).replace(tzinfo=timezone.utc)  # Latest post timestamp
@@ -171,7 +172,9 @@ Join Us:
 
             # Send submission with random image
             propagandaPath = r"constants/SSG_Propaganda"
-            submission = await sub.submit_image(title=post["Title"], image_path=f"{propagandaPath}/{random.choice(os.listdir(propagandaPath))}", flair_id=post["FlairID"])
+            log.debug(f"{propagandaPath}/{random.choice(os.listdir(propagandaPath))}")
+            log.debug(os.path.abspath(f"{propagandaPath}/{random.choice(os.listdir(propagandaPath))}"))
+            submission = await sub.submit_image(title=post["Title"], image_path=os.path.abspath(f"{propagandaPath}/{random.choice(os.listdir(propagandaPath))}"), flair_id=post["FlairID"])
             await submission.reply(post["Description"])
             log.info("Reddit recruitment posted!")
 

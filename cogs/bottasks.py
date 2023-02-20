@@ -29,8 +29,8 @@ class BotTasks(commands.Cog):
         if not self.checkModUpdates.is_running():
             self.checkModUpdates.start()
 
-        if not self.redditRecruitmentPosts.is_running():
-            self.redditRecruitmentPosts.start()
+        #if not self.redditRecruitmentPosts.is_running():
+        #    self.redditRecruitmentPosts.start()
 
 
     @tasks.loop(minutes=30.0)

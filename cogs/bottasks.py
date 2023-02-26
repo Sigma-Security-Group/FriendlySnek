@@ -29,8 +29,8 @@ class BotTasks(commands.Cog):
         if not self.checkModUpdates.is_running():
             self.checkModUpdates.start()
 
-        #if not self.redditRecruitmentPosts.is_running():
-        #    self.redditRecruitmentPosts.start()
+        if not self.redditRecruitmentPosts.is_running():
+            self.redditRecruitmentPosts.start()
 
 
     @tasks.loop(minutes=30.0)
@@ -145,10 +145,8 @@ class BotTasks(commands.Cog):
             post = {
                 "Title": "[A3][18+][Recruiting][Worldwide] | Casual-Attendance, PMC Themed Unit | Sigma Security Group is now Recruiting!",
                 "FlairID": flairID,
-                "Media": {"banner": InlineImage(path=f"{propagandaPath}/{random.choice(os.listdir(propagandaPath))}", caption="SSG")},
-                "Description": """{banner}
-
-About Us:
+                #"Media": {"banner": InlineImage(path=f"{propagandaPath}/{random.choice(os.listdir(propagandaPath))}", caption="SSG")},
+                "Description": """About Us:
 
 - **Flexibility**: Sigma has no formal sign-up process, no commitments, and offers instruction on request. Certification in specialty roles is available and run by professionals in the field.
 
@@ -174,11 +172,11 @@ Join Us:
             }
 
             """ submit_image disabled temp cuz devs haven't released new version which fixes image_path error """
-            #submission = await sub.submit_image(title=post["Title"], image_path=f"{propagandaPath}/{random.choice(os.listdir(propagandaPath))}", flair_id=post["FlairID"])
-            #await submission.reply(post["Description"])
-
             # Send submission with random image
-            submission = await sub.submit(post["Title"], flair_id=post["FlairID"], inline_media=post["Media"], selftext=post["Description"])
+            submission = await sub.submit_image(title=post["Title"], image_path=f"{propagandaPath}/{random.choice(os.listdir(propagandaPath))}", flair_id=post["FlairID"])
+            await submission.reply(post["Description"])
+
+            #submission = await sub.submit(post["Title"], flair_id=post["FlairID"], inline_media=post["Media"], selftext=post["Description"])
             log.info("Reddit recruitment posted!")
 
             channel = self.bot.get_channel(ARMA_DISCUSSION)

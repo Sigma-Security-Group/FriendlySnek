@@ -176,11 +176,10 @@ Join Us:
             submission = await sub.submit_image(title=post["Title"], image_path=f"{propagandaPath}/{random.choice(os.listdir(propagandaPath))}", flair_id=post["FlairID"])
             await submission.reply(post["Description"])
 
-            #submission = await sub.submit(post["Title"], flair_id=post["FlairID"], inline_media=post["Media"], selftext=post["Description"])
             log.info("Reddit recruitment posted!")
 
             channel = self.bot.get_channel(ARMA_DISCUSSION)
-            await channel.send(f"Reddit recruitment post published!\n{submission.permalink}")
+            await channel.send(f"Reddit recruitment post published!\nhttps://www.reddit.com{submission.permalink}")
         except Exception as e:
             log.exception(str(e))
 

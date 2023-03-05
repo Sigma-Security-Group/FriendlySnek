@@ -326,7 +326,7 @@ class Staff(commands.Cog):
 
     # Hampter command
     @commands.command(name="gibcmdline")
-    @commands.has_any_role(UNIT_STAFF, SERVER_HAMSTER)
+    @commands.has_any_role(UNIT_STAFF, SERVER_HAMSTER, GUINEA_PIG)
     async def gibcmdline(self, ctx: commands.context) -> None:
         """ Generates commandline from attached HTML modpack file """
 

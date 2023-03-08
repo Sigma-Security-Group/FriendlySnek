@@ -35,81 +35,85 @@ class BotTasks(commands.Cog):
 
     @tasks.loop(minutes=30.0)
     async def checkModUpdates(self) -> None:
-        output = []
+        try:
+            output = []
 
-        for modID in MOD_IDS:
-            # Fetch mod
-            response = requests.get(url=CHANGELOG_URL.format(modID))
+            for modID in MOD_IDS:
+                # Fetch mod
+                response = requests.get(url=CHANGELOG_URL.format(modID))
 
-            # Parse HTML
-            soup = BS(response.text, "html.parser")
+                # Parse HTML
+                soup = BS(response.text, "html.parser")
 
-            # Mod Title
-            name = soup.find("div", class_="workshopItemTitle").string
+                # Mod Title
+                name = soup.find("div", class_="workshopItemTitle").string
 
-            # Find latest update
-            update = soup.find("div", class_="detailBox workshopAnnouncement noFooter")
-
-
-            # Loop paragraphs in latest update
-            for paragraph in update.descendants:
-                stripTxt = str(paragraph).strip()
-                if not stripTxt:  # Ignore empty shit
-                    continue
-
-                # Find update time
-                elif stripTxt.startswith("Update: "):
-                    date = stripTxt
-                    break  # dw bout shit after this
-
-                # Find update changelog
-                #elif stripTxt.startswith("<p id=\""):  # THE changelog, dw bout shit after it
-                #    chl = stripTxt
-                #    break
+                # Find latest update
+                update = soup.find("div", class_="detailBox workshopAnnouncement noFooter")
 
 
-            # Parse time to datetime
-            dateTimeParse = datetimeParse(date[len("Update: "):].replace("@ ", ""))
+                # Loop paragraphs in latest update
+                for paragraph in update.descendants:
+                    stripTxt = str(paragraph).strip()
+                    if not stripTxt:  # Ignore empty shit
+                        continue
 
-            # Convert it into UTC (shitty arbitrary code)
-            utcTime = pytz.UTC.localize(dateTimeParse + timedelta(hours=8))
+                    # Find update time
+                    elif stripTxt.startswith("Update: "):
+                        date = stripTxt
+                        break  # dw bout shit after this
 
-            # Current time
-            now = pytz.UTC.localize(datetime.utcnow())
-
-            # Check if update is new
-            if utcTime > (now - timedelta(minutes=29.0, seconds=59.0)):  # Relative time checking
-                output.append({
-                    "modID": modID,
-                    "name": name,
-                    "datetime": utcTime
-                })
+                    # Find update changelog
+                    #elif stripTxt.startswith("<p id=\""):  # THE changelog, dw bout shit after it
+                    #    chl = stripTxt
+                    #    break
 
 
-        if len(output) > 0:
-            # Create message
-            guild = self.bot.get_guild(GUILD_ID)
-            c = await guild.fetch_channel(CHANGELOG)
-            message = f"{guild.get_role(SERVER_HAMSTER).mention} ({len(output)})\n\n"  # Ping for first message
-            for mod in output:
-                # Title + Date
-                message += f"{mod['name']}\n"
+                # Parse time to datetime
+                dateTimeParse = datetimeParse(date[len("Update: "):].replace("@ ", ""))
 
-                # Timestamp
-                message += utils.format_dt(mod["datetime"], style="F") + "\n"
+                # Convert it into UTC (shitty arbitrary code)
+                utcTime = pytz.UTC.localize(dateTimeParse + timedelta(hours=8))
 
-                # Link
-                message += f"<{CHANGELOG_URL.format(mod['modID'])}>"
+                # Current time
+                now = pytz.UTC.localize(datetime.utcnow())
 
-                # Each new mod update will be sent in a separate message
-                await c.send(message)
-                message = ""
+                # Check if update is new
+                if utcTime > (now - timedelta(minutes=29.0, seconds=59.0)):  # Relative time checking
+                    log.debug(f"Arma mod update: {name}")
+                    output.append({
+                        "modID": modID,
+                        "name": name,
+                        "datetime": utcTime
+                    })
+
+
+            if len(output) > 0:
+                # Create message
+                guild = self.bot.get_guild(GUILD_ID)
+                c = await guild.fetch_channel(CHANGELOG)
+                message = f"{guild.get_role(SERVER_HAMSTER).mention} ({len(output)})\n\n"  # Ping for first message
+                for mod in output:
+                    # Title + Date
+                    message += f"{mod['name']}\n"
+
+                    # Timestamp
+                    message += utils.format_dt(mod["datetime"], style="F") + "\n"
+
+                    # Link
+                    message += f"<{CHANGELOG_URL.format(mod['modID'])}>"
+
+                    # Each new mod update will be sent in a separate message
+                    await c.send(message)
+                    message = ""
+
+        except Exception as e:
+            log.exception(str(e))
 
 
     @tasks.loop(hours=1.0)
     async def redditRecruitmentPosts(self) -> None:
         try:
-            log.debug("redditRecruitmentPosts()")  # temp
             username = "SigmaSecurityGroup"
             reddit = asyncpraw.Reddit(
                 client_id=secret.REDDIT["client_id"],

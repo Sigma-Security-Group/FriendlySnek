@@ -73,7 +73,7 @@ class BotTasks(commands.Cog):
                 dateTimeParse = datetimeParse(date[len("Update: "):].replace("@ ", ""))
 
                 # Convert it into UTC (shitty arbitrary code)
-                utcTime = pytz.UTC.localize(dateTimeParse + timedelta(hours=8))
+                utcTime = pytz.UTC.localize(dateTimeParse + timedelta(hours=7))  # Change this if output time is wrong: will cause double ping
 
                 # Current time
                 now = pytz.UTC.localize(datetime.utcnow())

@@ -183,7 +183,7 @@ Join Us:
             log.info("Reddit recruitment posted!")
 
             channel = self.bot.get_channel(ARMA_DISCUSSION)
-            await channel.send(f"Reddit recruitment post published!\nhttps://www.reddit.com{submission.permalink}")
+            await channel.send(f"Reddit recruitment post published, go upvote it!\nhttps://www.reddit.com{submission.permalink}")
         except Exception as e:
             log.exception(str(e))
 

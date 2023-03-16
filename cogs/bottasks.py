@@ -92,7 +92,7 @@ class BotTasks(commands.Cog):
                 # Create message
                 guild = self.bot.get_guild(GUILD_ID)
                 c = await guild.fetch_channel(CHANGELOG)
-                message = guild.get_role(SERVER_HAMSTER).mention + (f"({len(output)})" if len(output) > 1 else "") + "\n\n"  # Ping for first message
+                message = guild.get_role(SERVER_HAMSTER).mention + (f" ({len(output)})" if len(output) > 1 else "") + "\n\n"  # Ping for first message
                 for mod in output:
                     # Title + Date
                     message += f"{mod['name']}\n"

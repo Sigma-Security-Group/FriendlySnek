@@ -324,6 +324,37 @@ class Staff(commands.Cog):
                 await self.bot.get_channel(STAFF_CHAT).send(f"No Moderation Logs related to {targetMember.display_name} ({targetMember})")
 
 
+
+    # Advisor command
+    @commands.command(name="verify")
+    @commands.has_any_role(UNIT_STAFF, SERVER_HAMSTER, ADVISOR)
+    async def verify(self, ctx: commands.context, *, member: str) -> None:
+        """ Verifies a Prospect (passed interview) """
+
+        targetMember = self._getMember(member)
+        if targetMember is None:
+            log.info(f"No member found for search term: {member}")
+            await ctx.send(embed=Embed(title="❌ No member found", description=f"Searched for: `{member}`", color=Color.red()))
+            return
+        guild = self.bot.get_guild(GUILD_ID)
+        roleProspect = guild.get_role(PROSPECT)
+        roleVerified = guild.get_role(VERIFIED)
+        roleMember = guild.get_role(MEMBER)
+        if roleProspect not in targetMember.roles:
+            await ctx.send(embed=Embed(title="❌ Failed to verify", description=f"{targetMember.mention} not a {roleProspect.mention}", color=Color.red()))
+            return
+
+        reason = "User verified"
+        await targetMember.remove_roles(roleProspect, reason=reason)
+        await targetMember.add_roles(roleVerified, reason=reason)
+        await targetMember.add_roles(roleMember, reason=reason)
+        embed = Embed(title="✅ Member verified", description=f"{targetMember.mention} verified!", color=Color.green())
+        embed.set_footer(text=f"ID: {targetMember.id}")
+        embed.timestamp = datetime.now()
+        await ctx.send(embed=embed)
+
+
+
     # Hampter command
     @commands.command(name="gibcmdline")
     @commands.has_any_role(UNIT_STAFF, SERVER_HAMSTER, GUINEA_PIG)

@@ -68,6 +68,7 @@ DEPLOYED = 355512941816053770  # Voice
 # SSG RANKS
 ####################
 
+MEMBER = 848316306599706626  # After interview
 PROSPECT = 949865539684151338  # Received upon joining
 VERIFIED = 622935992281726976  # After interview
 ASSOCIATE = 527354143199854593  # Newcomer workshop

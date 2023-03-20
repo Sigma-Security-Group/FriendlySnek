@@ -47,6 +47,7 @@ DEPLOYED = 864487710545674320  # Voice
 # BTR RANKS
 ####################
 
+MEMBER = 977542795881504769  # After interview
 PROSPECT = 977544142341165106  # Received upon joining
 VERIFIED = 864443957625618463  # After interview
 ASSOCIATE = 864443914668474399  # Newcomer workshop

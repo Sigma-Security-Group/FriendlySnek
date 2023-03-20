@@ -46,7 +46,10 @@ class BotTasks(commands.Cog):
                 soup = BS(response.text, "html.parser")
 
                 # Mod Title
-                name = soup.find("div", class_="workshopItemTitle").string
+                name = soup.find("div", class_="workshopItemTitle")
+                if name is None:
+                    continue
+                name = name.string
 
                 # Find latest update
                 update = soup.find("div", class_="detailBox workshopAnnouncement noFooter")

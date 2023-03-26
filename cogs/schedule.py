@@ -530,7 +530,7 @@ class Schedule(commands.Cog):
                 await message.delete()
                 try:
                     log.info(f"{interaction.user.display_name} ({interaction.user}) deleted the event: {event['title']}")
-                    await interaction.followup.send(embed=Embed(title=f"✅ {event['type']} deleted!", color=Color.green()))
+                    await interaction.followup.send(embed=Embed(title=f"✅ {event['type']} deleted!", color=Color.green()), ephemeral=True)
 
                     # Notify attendees
                     utcNow = UTC.localize(datetime.utcnow())
@@ -555,7 +555,7 @@ class Schedule(commands.Cog):
                 for button in button.view.children:
                     button.disabled = True
                 await interaction.response.edit_message(view=button.view)
-                await interaction.followup.send(embed=Embed(title=f"❌ Event deletion canceled!", color=Color.red()))
+                await interaction.followup.send(embed=Embed(title=f"❌ Event deletion canceled!", color=Color.red()), ephemeral=True)
                 return
 
 

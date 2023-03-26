@@ -1284,24 +1284,35 @@ class Schedule(commands.Cog):
         embed = Embed(title=SCHEDULE_EVENT_RESERVABLE, description=SCHEDULE_EVENT_RESERVABLE_DIALOG, color=Color.gold())
         embed.set_footer(text=SCHEDULE_CANCEL)
         await dmChannel.send(embed=embed)
-        try:
-            response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, interaction=interaction, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == interaction.user)
-            reservables = response.content.strip()
-            if reservables.lower() == "cancel":
-                await self.cancelCommand(dmChannel, "Operation scheduling")
-                return
-            reservableRolesNo = reservables.lower() in ("none", "n")
-        except asyncio.TimeoutError:
-            await dmChannel.send(embed=TIMEOUT_EMBED)
-            return
-        if not reservableRolesNo:
+        rolesOk = False
+        color = Color.gold()
+        while not rolesOk:
             try:
-                reservableRoles = {role.strip(): None for role in reservables.split("\n") if len(role.strip()) > 0}
+                response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, interaction=interaction, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == interaction.user)
+                reservables = response.content.strip()
+                if reservables.lower() == "cancel":
+                    await self.cancelCommand(dmChannel, "Operation scheduling")
+                    return
+                reservableRolesNo = reservables.lower() in ("none", "n")
             except asyncio.TimeoutError:
                 await dmChannel.send(embed=TIMEOUT_EMBED)
                 return
-        else:
+
             reservableRoles = None
+            if not reservableRolesNo:
+                try:
+                    reservableRoles = (role.strip() for role in reservables.split("\n") if len(role.strip()) > 0)
+                    if 0 < len(reservableRoles) <= 25:
+                        reservableRoles = {role: None for role in reservableRoles}
+                        rolesOk = True
+                    else:
+                        await dmChannel.send(embed=Embed(description=SCHEDULE_EVENT_RESERVABLE_OVERFLOW, color=Color.red()))
+
+                except asyncio.TimeoutError:
+                    await dmChannel.send(embed=TIMEOUT_EMBED)
+                    return
+            else:
+                rolesOk = True
 
         # Operation map
         mapOK = False
@@ -1601,24 +1612,35 @@ class Schedule(commands.Cog):
             embed = Embed(title=SCHEDULE_EVENT_RESERVABLE, description=SCHEDULE_EVENT_RESERVABLE_DIALOG, color=Color.gold())
             embed.set_footer(text=SCHEDULE_CANCEL)
             await dmChannel.send(embed=embed)
-            try:
-                response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, interaction=interaction, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == interaction.user)
-                reservables = response.content.strip()
-                if reservables.lower() == "cancel":
-                    await self.cancelCommand(dmChannel, "Workshop scheduling")
-                    return
-                reservableRolesNo = reservables.lower() in ("none", "n")
-            except asyncio.TimeoutError:
-                await dmChannel.send(embed=TIMEOUT_EMBED)
-                return
-            if not reservableRolesNo:
+            rolesOk = False
+            color = Color.gold()
+            while not rolesOk:
                 try:
-                    reservableRoles = {role.strip(): None for role in reservables.split("\n") if len(role.strip()) > 0}
+                    response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, interaction=interaction, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == interaction.user)
+                    reservables = response.content.strip()
+                    if reservables.lower() == "cancel":
+                        await self.cancelCommand(dmChannel, "Workshop scheduling")
+                        return
+                    reservableRolesNo = reservables.lower() in ("none", "n")
                 except asyncio.TimeoutError:
                     await dmChannel.send(embed=TIMEOUT_EMBED)
                     return
-            else:
+
                 reservableRoles = None
+                if not reservableRolesNo:
+                    try:
+                        reservableRoles = (role.strip() for role in reservables.split("\n") if len(role.strip()) > 0)
+                        if 0 < len(reservableRoles) <= 25:
+                            reservableRoles = {role: None for role in reservableRoles}
+                            rolesOk = True
+                        else:
+                            await dmChannel.send(embed=Embed(description=SCHEDULE_EVENT_RESERVABLE_OVERFLOW, color=Color.red()))
+
+                    except asyncio.TimeoutError:
+                        await dmChannel.send(embed=TIMEOUT_EMBED)
+                        return
+                else:
+                    rolesOk = True
         else:
             reservableRoles = template["reservableRoles"]
 
@@ -1928,24 +1950,35 @@ class Schedule(commands.Cog):
         embed = Embed(title=SCHEDULE_EVENT_RESERVABLE, description=SCHEDULE_EVENT_RESERVABLE_DIALOG, color=Color.gold())
         embed.set_footer(text=SCHEDULE_CANCEL)
         await dmChannel.send(embed=embed)
-        try:
-            response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, interaction=interaction, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == interaction.user)
-            reservables = response.content.strip()
-            if reservables.lower() == "cancel":
-                await self.cancelCommand(dmChannel, "Event scheduling")
-                return
-            reservableRolesNo = reservables.lower() in ("none", "n")
-        except asyncio.TimeoutError:
-            await dmChannel.send(embed=TIMEOUT_EMBED)
-            return
-        if not reservableRolesNo:
+        rolesOk = False
+        color = Color.gold()
+        while not rolesOk:
             try:
-                reservableRoles = {role.strip(): None for role in reservables.split("\n") if len(role.strip()) > 0}
+                response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, interaction=interaction, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == interaction.user)
+                reservables = response.content.strip()
+                if reservables.lower() == "cancel":
+                    await self.cancelCommand(dmChannel, "Event scheduling")
+                    return
+                reservableRolesNo = reservables.lower() in ("none", "n")
             except asyncio.TimeoutError:
                 await dmChannel.send(embed=TIMEOUT_EMBED)
                 return
-        else:
+
             reservableRoles = None
+            if not reservableRolesNo:
+                try:
+                    reservableRoles = (role.strip() for role in reservables.split("\n") if len(role.strip()) > 0)
+                    if 0 < len(reservableRoles) <= 25:
+                        reservableRoles = {role: None for role in reservableRoles}
+                        rolesOk = True
+                    else:
+                        await dmChannel.send(embed=Embed(description=SCHEDULE_EVENT_RESERVABLE_OVERFLOW, color=Color.red()))
+
+                except asyncio.TimeoutError:
+                    await dmChannel.send(embed=TIMEOUT_EMBED)
+                    return
+            else:
+                rolesOk = True
 
         # Event map
         mapOK = False

@@ -499,36 +499,40 @@ class Schedule(commands.Cog):
 
             elif button.custom_id == "delete":
                 event = eventList[0]
-                if interaction.user.id == event["authorId"] or any(role.id == UNIT_STAFF or role.id == SERVER_HAMSTER for role in interaction.user.roles):
-                    await interaction.response.send_message(RESPONSE_GOTO_DMS.format(interaction.user.dm_channel.jump_url), ephemeral=True)
-                    embed = Embed(title=SCHEDULE_EVENT_CONFIRM_DELETE.format(f"{event['type'].lower()}: `{event['title']}`"), color=Color.orange())
-                    deletePrompts = [discord.Message]
-                    row = ScheduleView(deletePrompts)
-                    row.timeout = TIME_ONE_MIN
-                    buttons = [
-                        ScheduleButton(self, interaction.message, row=0, label="Delete", style=discord.ButtonStyle.success, custom_id="delete_event_confirm"),
-                        ScheduleButton(self, interaction.message, row=0, label="Cancel", style=discord.ButtonStyle.danger, custom_id="delete_event_cancel"),
-                    ]
-                    for button in buttons:
-                        row.add_item(item=button)
-                    message = await interaction.user.send(embed=embed, view=row)
-                    deletePrompts[0] = message
-                else:
+                scheduleNeedsUpdate = False
+                if interaction.user.id != event["authorId"] or not any(role.id == UNIT_STAFF or role.id == SERVER_HAMSTER for role in interaction.user.roles):
                     await interaction.response.send_message(RESPONSE_UNALLOWED.format("delete"), ephemeral=True)
                     return
-                scheduleNeedsUpdate = False
+
+                embed = Embed(title=SCHEDULE_EVENT_CONFIRM_DELETE.format(f"{event['type'].lower()}: `{event['title']}`"), color=Color.orange())
+                deletePrompts = [discord.Message]
+                row = ScheduleView(deletePrompts)
+                row.timeout = TIME_ONE_MIN
+                buttons = [
+                    ScheduleButton(self, interaction.message, row=0, label="Delete", style=discord.ButtonStyle.success, custom_id="delete_event_confirm"),
+                    ScheduleButton(self, interaction.message, row=0, label="Cancel", style=discord.ButtonStyle.danger, custom_id="delete_event_cancel"),
+                ]
+                for button in buttons:
+                    row.add_item(item=button)
+                message = await interaction.response.send_message(embed=embed, view=row, ephemeral=True)
+                deletePrompts[0] = message
 
             elif button.custom_id == "delete_event_confirm":
                 scheduleNeedsUpdate = False
+
+                # Disable buttons
                 for button in button.view.children:
                     button.disabled = True
                 await interaction.response.edit_message(view=button.view)
+
+                # Delete event
                 event = [event for event in events if event["messageId"] == message.id][0]
                 await message.delete()
                 try:
                     log.info(f"{interaction.user.display_name} ({interaction.user}) deleted the event: {event['title']}")
-                    await interaction.user.dm_channel.send(embed=Embed(title=f"✅ {event['type']} deleted!", color=Color.green()))
+                    await interaction.followup.send(embed=Embed(title=f"✅ {event['type']} deleted!", color=Color.green()))
 
+                    # Notify attendees
                     utcNow = UTC.localize(datetime.utcnow())
                     startTime = UTC.localize(datetime.strptime(event["time"], TIME_FORMAT))
                     if event["maxPlayers"] != "hidden" and utcNow > startTime + timedelta(minutes=30):
@@ -551,7 +555,7 @@ class Schedule(commands.Cog):
                 for button in button.view.children:
                     button.disabled = True
                 await interaction.response.edit_message(view=button.view)
-                await self.cancelCommand(interaction.user.dm_channel, "Event deletion")
+                await interaction.followup.send(embed=Embed(title=f"❌ Event deletion canceled!", color=Color.red()))
                 return
 
 

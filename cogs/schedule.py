@@ -2287,7 +2287,8 @@ class ScheduleView(discord.ui.View):
             for button in self.children:
                 button.disabled = True
             message = self.message[0]
-            await message.edit(view=self)
+            if message is not None:  # Can be None if user removed message
+                await message.edit(view=self)
         except Exception as e:
             log.exception(e)
 

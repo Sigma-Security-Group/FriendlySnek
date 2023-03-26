@@ -336,7 +336,6 @@ class Schedule(commands.Cog):
                     embed = self.getEventEmbed(event)
 
                     row = ScheduleView()
-                    row.timeout = None
                     buttons = []
 
                     # Add attendance buttons if maxPlayers is not hidden
@@ -506,7 +505,6 @@ class Schedule(commands.Cog):
 
                 embed = Embed(title=SCHEDULE_EVENT_CONFIRM_DELETE.format(f"{event['type'].lower()}: `{event['title']}`"), color=Color.orange())
                 row = ScheduleView()
-                row.timeout = TIME_ONE_MIN
                 buttons = [
                     ScheduleButton(self, interaction.message, row=0, label="Delete", style=discord.ButtonStyle.success, custom_id="delete_event_confirm"),
                     ScheduleButton(self, interaction.message, row=0, label="Cancel", style=discord.ButtonStyle.danger, custom_id="delete_event_cancel"),

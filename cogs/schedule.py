@@ -335,7 +335,7 @@ class Schedule(commands.Cog):
                 for event in sorted(events, key=lambda e: datetime.strptime(e["time"], TIME_FORMAT), reverse=True):
                     embed = self.getEventEmbed(event)
 
-                    row = ScheduleView(None)
+                    row = ScheduleView()
                     row.timeout = None
                     buttons = []
 
@@ -501,12 +501,11 @@ class Schedule(commands.Cog):
                 event = eventList[0]
                 scheduleNeedsUpdate = False
                 if interaction.user.id != event["authorId"] or not any(role.id == UNIT_STAFF or role.id == SERVER_HAMSTER for role in interaction.user.roles):
-                    await interaction.response.send_message(RESPONSE_UNALLOWED.format("delete"), ephemeral=True)
+                    await interaction.response.send_message(RESPONSE_UNALLOWED.format("delete"), ephemeral=True, delete_after=60.0)
                     return
 
                 embed = Embed(title=SCHEDULE_EVENT_CONFIRM_DELETE.format(f"{event['type'].lower()}: `{event['title']}`"), color=Color.orange())
-                deletePrompts = [discord.Message]
-                row = ScheduleView(deletePrompts)
+                row = ScheduleView()
                 row.timeout = TIME_ONE_MIN
                 buttons = [
                     ScheduleButton(self, interaction.message, row=0, label="Delete", style=discord.ButtonStyle.success, custom_id="delete_event_confirm"),
@@ -514,8 +513,7 @@ class Schedule(commands.Cog):
                 ]
                 for button in buttons:
                     row.add_item(item=button)
-                message = await interaction.response.send_message(embed=embed, view=row, ephemeral=True)
-                deletePrompts[0] = message
+                await interaction.response.send_message(embed=embed, view=row, ephemeral=True, delete_after=60.0)
 
             elif button.custom_id == "delete_event_confirm":
                 scheduleNeedsUpdate = False
@@ -2278,19 +2276,8 @@ class Schedule(commands.Cog):
 
 
 class ScheduleView(discord.ui.View):
-    def __init__(self, message: Optional[list[discord.Message]], *args, **kwargs):
+    def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.message = message  # Message to reference when view has timeout
-
-    async def on_timeout(self):
-        try:
-            for button in self.children:
-                button.disabled = True
-            message = self.message[0]
-            if message is not None:  # Can be None if user removed message
-                await message.edit(view=self)
-        except Exception as e:
-            log.exception(e)
 
 
 class ScheduleButton(discord.ui.Button):

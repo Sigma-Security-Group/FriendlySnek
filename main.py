@@ -244,4 +244,4 @@ if __name__ == "__main__":
         client.run(secret.TOKEN_DEV if secret.DEBUG else secret.TOKEN)
         log.info("Bot stopped!")
     except Exception as e:
-        log.exception(str(e))
+        log.exception(e)

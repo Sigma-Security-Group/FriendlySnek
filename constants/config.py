@@ -57,7 +57,6 @@ SCHEDULE_EVENT_URL_DESCRIPTION = "E.g. Signup sheet, Briefing, OPORD, etc."
 ### Reservable Roles
 SCHEDULE_EVENT_RESERVABLE = "Reservable Roles"
 SCHEDULE_EVENT_RESERVABLE_DIALOG = "Enter `none`, or `n` if there are none.\n\nOtherwise, type each reservable role in a new line (Shift + Enter)."
-SCHEDULE_EVENT_RESERVABLE_OVERFLOW = "bruh, tf u gonna do with that many roles? Up to 25 roles are supported."
 
 ### Map
 SCHEDULE_EVENT_MAP_PROMPT = ":globe_with_meridians: Choose a map"

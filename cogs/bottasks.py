@@ -111,7 +111,7 @@ class BotTasks(commands.Cog):
                     message = ""
 
         except Exception as e:
-            log.exception(str(e))
+            log.exception(e)
 
 
     @tasks.loop(hours=1.0)
@@ -188,7 +188,7 @@ Join Us:
             channel = self.bot.get_channel(ARMA_DISCUSSION)
             await channel.send(f"Reddit recruitment post published, go upvote it!\nhttps://www.reddit.com{submission.permalink}")
         except Exception as e:
-            log.exception(str(e))
+            log.exception(e)
 
 async def setup(bot: commands.Bot) -> None:
     await bot.add_cog(BotTasks(bot))

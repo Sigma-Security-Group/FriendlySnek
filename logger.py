@@ -58,6 +58,6 @@ class Logger:
         """ Log critical message """
         self._log("CRITICAL", message, flush)
 
-    def exception(self, message: str, flush=False) -> None:
+    def exception(self, message: str | Exception, flush=False) -> None:
         """ Log error message followed by traceback """
         self._log("ERROR", f"{message}\n{traceback.format_exc()}", flush)

@@ -144,7 +144,7 @@ class Schedule(commands.Cog):
         """
         await channel.send(embed=Embed(title=f"❌ {abortText} canceled!", color=Color.red()))
 
-    async def checkDMChannel(self, user: discord.User) -> discord.channel.DMChannel:
+    async def checkDMChannel(self, user: discord.User | discord.Member) -> discord.channel.DMChannel:
         return await user.create_dm() if user.dm_channel is None else user.dm_channel
 
     async def saveEventToHistory(self, event, autoDeleted=False) -> None:
@@ -672,9 +672,9 @@ class Schedule(commands.Cog):
         Returns:
         None | str: None if error, str if description.
         """
-        if not isinstance(interaction.user, discord.User):
-            log.exception("interaction.user is not discord.User")
-            return None
+        #if not isinstance(interaction.user, discord.User):
+        #    log.exception("interaction.user is not discord.User")
+        #    return None
 
         dmChannel = await self.checkDMChannel(interaction.user)
         embed = Embed(title=SCHEDULE_EVENT_DESCRIPTION_QUESTION, color=Color.gold())
@@ -693,6 +693,38 @@ class Schedule(commands.Cog):
 
         return description
 
+    async def eventURL(self, interaction: discord.Interaction, eventType: str) -> None | bool | str:
+        """ Handles the URL part of scheduling an event.
+
+        Parameters:
+        interaction (discord.Interaction): The Discord interaction.
+        eventType (str): The type of event, e.g. Operation.
+
+        Returns:
+        None | bool | str: False if error, None if no URL, str if URL.
+        """
+        #if not isinstance(interaction.user, discord.User):
+        #    log.exception("interaction.user is not discord.User")
+        #    return False
+
+        dmChannel = await self.checkDMChannel(interaction.user)
+        embed = Embed(title=SCHEDULE_EVENT_URL_TITLE, description=SCHEDULE_EVENT_URL_DESCRIPTION, color=Color.gold())
+        embed.set_footer(text=SCHEDULE_CANCEL)
+        await dmChannel.send(embed=embed)
+        try:
+            response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, interaction=interaction, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == interaction.user)
+            externalURL = response.content.strip()
+            if externalURL.lower() == "cancel":
+                await self.cancelCommand(dmChannel, f"{eventType} scheduling")
+                return False
+            if externalURL.lower() == "none" or externalURL == "":
+                return None
+        except asyncio.TimeoutError:
+            await dmChannel.send(embed=TIMEOUT_EMBED)
+            return False
+
+        return externalURL
+
     async def eventReserveRole(self, interaction: discord.Interaction, eventType: str) -> None | bool | dict:
         """ Handles the reservable roles part of scheduling an event.
 
@@ -703,9 +735,9 @@ class Schedule(commands.Cog):
         Returns:
         None | bool | dict: False if error, None if no roles, dict if roles (role names as keys).
         """
-        if not isinstance(interaction.user, discord.User):
-            log.exception("interaction.user is not discord.User")
-            return False
+        #if not isinstance(interaction.user, discord.User):
+        #    log.exception("interaction.user is not discord.User")
+        #    return False
 
         dmChannel = await self.checkDMChannel(interaction.user)
         color = Color.gold()
@@ -726,7 +758,7 @@ class Schedule(commands.Cog):
                 return False
 
             reservableRoles = None
-            if reservables.lower() == "none":
+            if reservables.lower() == "none" or reservables == "":
                 return None
 
             reservableRoles = [role.strip() for role in reservables.split("\n") if len(role.strip()) > 0]
@@ -1343,19 +1375,8 @@ class Schedule(commands.Cog):
             return
 
         # Operation URL
-        embed = Embed(title=SCHEDULE_EVENT_URL_TITLE, description=SCHEDULE_EVENT_URL_DESCRIPTION, color=Color.gold())
-        embed.set_footer(text=SCHEDULE_CANCEL)
-        await dmChannel.send(embed=embed)
-        try:
-            response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, interaction=interaction, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == interaction.user)
-            externalURL = response.content.strip()
-            if externalURL.lower() == "cancel":
-                await self.cancelCommand(dmChannel, "Operation scheduling")
-                return
-            if externalURL.lower() == "none" or externalURL.lower() == "" or (len(externalURL) == 4 and "n" in externalURL.lower()):
-                externalURL = None
-        except asyncio.TimeoutError:
-            await dmChannel.send(embed=TIMEOUT_EMBED)
+        externalURL = await self.eventURL(interaction, "Operation")
+        if externalURL is False:
             return
 
         # Operation reservable roles
@@ -1635,19 +1656,8 @@ class Schedule(commands.Cog):
 
         # Workshop URL
         if template is None:
-            embed = Embed(title=SCHEDULE_EVENT_URL_TITLE, description=SCHEDULE_EVENT_URL_DESCRIPTION, color=Color.gold())
-            embed.set_footer(text=SCHEDULE_CANCEL)
-            await dmChannel.send(embed=embed)
-            try:
-                response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, interaction=interaction, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == interaction.user)
-                externalURL = response.content.strip()
-                if externalURL.lower() == "cancel":
-                    await self.cancelCommand(dmChannel, "Workshop scheduling")
-                    return
-                elif externalURL.lower() == "none" or externalURL.lower() == "" or (len(externalURL) == 4 and "n" in externalURL.lower()):
-                    externalURL = None
-            except asyncio.TimeoutError:
-                await dmChannel.send(embed=TIMEOUT_EMBED)
+            externalURL = await self.eventURL(interaction, "Workshop")
+            if externalURL is False:
                 return
         else:
             externalURL = template["externalURL"]
@@ -1943,19 +1953,8 @@ class Schedule(commands.Cog):
             return
 
         # Event URL
-        embed = Embed(title=SCHEDULE_EVENT_URL_TITLE, description=SCHEDULE_EVENT_URL_DESCRIPTION, color=Color.gold())
-        embed.set_footer(text=SCHEDULE_CANCEL)
-        await dmChannel.send(embed=embed)
-        try:
-            response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, interaction=interaction, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == interaction.user)
-            externalURL = response.content.strip()
-            if externalURL.lower() == "cancel":
-                await self.cancelCommand(dmChannel, "Event scheduling")
-                return
-            elif externalURL.lower() == "none" or externalURL.lower() == "" or (len(externalURL) == 4 and "n" in externalURL.lower()):
-                externalURL = None
-        except asyncio.TimeoutError:
-            await dmChannel.send(embed=TIMEOUT_EMBED)
+        externalURL = await self.eventURL(interaction, "Event")
+        if externalURL is False:
             return
 
         # Event reservable roles

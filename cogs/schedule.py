@@ -661,6 +661,50 @@ class Schedule(commands.Cog):
             log.debug(f"{member.display_name} ({member}) was reserving a role but schedule was updated!")
         return True
 
+    async def eventTitle(self, interaction: discord.Interaction, eventType: str, isOperation:bool = False) -> str | None:
+        """ Handles the title part of scheduling an event.
+
+        Parameters:
+        interaction (discord.Interaction): The Discord interaction.
+        eventType (str): The type of event, e.g. Operation.
+        isOperation (bool): If it's an operation (add description & name generation).
+
+        Returns:
+        str | None: str if title, None if error.
+        """
+
+        dmChannel = await self.checkDMChannel(interaction.user)
+        color = Color.gold()
+        while True:
+            embed = Embed(title=SCHEDULE_EVENT_TITLE.format(eventType), description=None if isOperation is False else "Operation names should start with the word `Operation`\nE.g. Operation Red Tide.\n\nEnter `regenerate` to renew the generated operation names.", color=color)
+            embed.set_footer(text=SCHEDULE_CANCEL)
+
+            # Add generated operation names
+            if isOperation is True:
+                with open(OPERATION_NAME_ADJECTIVES) as f:
+                    adj = [random.choice(f.readlines()).strip("\n") for _ in range(10)]
+
+                with open(OPERATION_NAME_NOUNS) as f:
+                    nou = [random.choice(f.readlines()).strip("\n") for _ in range(10)]
+
+                titles = [f"{adj[i].capitalize()} {nou[i].capitalize()}" for i in range(10)]
+                embed.add_field(name="Generated Operation Names", value="\n".join(titles))
+
+            await dmChannel.send(embed=embed)
+            color = Color.orange()
+            try:
+                response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, interaction=interaction, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == interaction.user)
+                title = response.content.strip()
+                if title.lower() == "cancel" or title == "":
+                    await self.cancelCommand(dmChannel, f"{eventType} scheduling")
+                    return None
+            except asyncio.TimeoutError:
+                await dmChannel.send(embed=TIMEOUT_EMBED)
+                return None
+
+            if isOperation is False or title.lower() != "regenerate":
+                return title
+
     async def eventDescription(self, interaction: discord.Interaction, eventType: str) -> str | None:
         """ Handles the description part of scheduling an event.
 
@@ -1492,43 +1536,9 @@ class Schedule(commands.Cog):
         authorId = interaction.user.id
 
         # Operation title
-        titleOk = False
-        color = Color.gold()
-        while not titleOk:
-            embed = Embed(title=SCHEDULE_EVENT_TITLE.format("operation"), description="Remeber, operation names should start with the word `Operation`\nE.g. Operation Red Tide.\n\nEnter `regenerate` to renew the generated operation names.", color=color)
-            color = Color.orange()
-
-            with open(OPERATION_NAME_ADJECTIVES) as f:
-                adjectives = f.readlines()
-                adj = [random.choice(adjectives).strip("\n") for _ in range(10)]
-
-            with open(OPERATION_NAME_NOUNS) as f:
-                nouns = f.readlines()
-                nou = [random.choice(nouns).strip("\n") for _ in range(10)]
-
-            titles = [f"{adj[x].capitalize()} {nou[x].capitalize()}" for x in range(10)]
-            embed.add_field(name="Generated Operation Names", value="\n".join(titles))
-            embed.set_footer(text=SCHEDULE_CANCEL)
-            try:
-                msg = await interaction.user.send(embed=embed)
-            except Exception as e:
-                log.exception(f"{interaction.user} | {e}")
-                return
-            dmChannel = msg.channel
-            try:
-                response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, interaction=interaction, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == interaction.user)
-                title = response.content.strip()
-                if title.lower() == "cancel":
-                    await self.cancelCommand(dmChannel, "Operation scheduling")
-                    return
-                elif title.lower() == "regenerate":
-                    titleOk = False
-                else:
-                    titleOk = True
-
-            except asyncio.TimeoutError:
-                await dmChannel.send(embed=TIMEOUT_EMBED)
-                return
+        title = await self.eventTitle(interaction, "Operation", isOperation=True)
+        if title is None:
+            return
 
         # Operation description
         description = await self.eventDescription(interaction, "Operation")
@@ -1701,17 +1711,8 @@ class Schedule(commands.Cog):
 
         # Workshop title
         if template is None:
-            embed = Embed(title=SCHEDULE_EVENT_TITLE.format("workshop"), color=Color.gold())
-            embed.set_footer(text=SCHEDULE_CANCEL)
-            await dmChannel.send(embed=embed)
-            try:
-                response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, interaction=interaction, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == interaction.user)
-                title = response.content.strip()
-                if title.lower() == "cancel":
-                    await self.cancelCommand(dmChannel, "Workshop scheduling")
-                    return
-            except asyncio.TimeoutError:
-                await dmChannel.send(embed=TIMEOUT_EMBED)
+            title = await self.eventTitle(interaction, "Workshop")
+            if title is None:
                 return
         else:
             title = template["title"]
@@ -1915,22 +1916,8 @@ class Schedule(commands.Cog):
         authorId = interaction.user.id
 
         # Event title
-        embed = Embed(title=SCHEDULE_EVENT_TITLE.format("event"), color=Color.gold())
-        embed.set_footer(text=SCHEDULE_CANCEL)
-        try:
-            msg = await interaction.user.send(embed=embed)
-        except Exception as e:
-            log.exception(f"{interaction.user} | {e}")
-            return
-        dmChannel = msg.channel
-        try:
-            response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, interaction=interaction, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == interaction.user)
-            title = response.content.strip()
-            if title.lower() == "cancel":
-                await self.cancelCommand(dmChannel, "Event scheduling")
-                return
-        except asyncio.TimeoutError:
-            await dmChannel.send(embed=TIMEOUT_EMBED)
+        title = await self.eventTitle(interaction, "Event")
+        if title is None:
             return
 
         # Event description

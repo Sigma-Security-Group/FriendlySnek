@@ -1015,6 +1015,46 @@ class Schedule(commands.Cog):
 
         return (startTime, endTime)
 
+    async def eventFinalizing(self, interaction: discord.Interaction, newEvent: dict) -> bool:
+        """ Handles the finalizing part of scheduling an event.
+
+        Parameters:
+        interaction (discord.Interaction): The Discord interaction.
+        newEvent (dict): The new event.
+
+        Returns:
+        bool: Function success
+        """
+
+        dmChannel = await self.checkDMChannel(interaction.user)
+
+        # Update events file
+        try:
+            jsonCreateNoExist(EVENTS_FILE, [])
+            with open(EVENTS_FILE) as f:
+                events = json.load(f)
+            events.append(newEvent)
+            with open(EVENTS_FILE, "w") as f:
+                json.dump(events, f, indent=4)
+        except Exception as e:
+            log.exception(f"{interaction.user} | {e}")
+            return False
+
+        # Send verification to user
+        embed = Embed(title=f"✅ {newEvent['type']} created!", color=Color.green())
+        await dmChannel.send(embed=embed)
+        log.info(f"{interaction.user.display_name} ({interaction.user}) created the operation: {newEvent['title']}")
+
+        await self.updateSchedule()
+
+        # Announce new bop
+        for event in events:
+            if event["title"] == newEvent["title"]:
+                msgId = event["messageId"]
+        await interaction.followup.send(RESPONSE_EVENT_DONE.format(newEvent["title"], GUILD_ID, SCHEDULE, msgId))
+        return True
+
+
     async def editEvent(self, author: discord.User | discord.Member, event: dict, isTemplateEdit: bool) -> bool:
         """ Edits a preexisting event.
 
@@ -1528,46 +1568,26 @@ class Schedule(commands.Cog):
         startTime, endTime = eventTimes
 
         # Operation finalizing
-        try:
-            if os.path.exists(EVENTS_FILE):
-                with open(EVENTS_FILE) as f:
-                    events = json.load(f)
-            else:
-                events = []
-            newEvent = {
-                "authorId": authorId,
-                "title": title,
-                "description": description,
-                "externalURL": externalURL,
-                "reservableRoles": reservableRoles,
-                "maxPlayers": maxPlayers,  # int, None, str (MAX_PLAYERS_STR_OPTIONS)
-                "map": eventMap,
-                "time": startTime.strftime(TIME_FORMAT),
-                "endTime": endTime.strftime(TIME_FORMAT),
-                "duration": f"{(str(hours) + 'h')*(hours != 0)}{' '*(hours != 0 and minutes !=0)}{(str(minutes) + 'm')*(minutes != 0)}",
-                "messageId": None,
-                "accepted": [],
-                "declined": [],
-                "tentative": [],
-                "type": "Operation"  # Operation, Workshop, Event
-            }
-            events.append(newEvent)
-            with open(EVENTS_FILE, "w") as f:
-                json.dump(events, f, indent=4)
-        except Exception as e:
-            log.exception(f"{interaction.user} | {e}")
-            newEvent = None
-
-        embed = Embed(title="✅ Operation created!", color=Color.green())
-        await dmChannel.send(embed=embed)
-        log.info(f"{interaction.user.display_name} ({interaction.user}) created the operation: {title}")
-
-        await self.updateSchedule()
-
-        if newEvent is not None:
-            with open(EVENTS_FILE) as f:
-                events = json.load(f)
-            await interaction.followup.send(RESPONSE_EVENT_DONE.format(newEvent["title"], GUILD_ID, SCHEDULE, events[-1]["messageId"]))
+        newEvent = {
+            "authorId": authorId,
+            "title": title,
+            "description": description,
+            "externalURL": externalURL,
+            "reservableRoles": reservableRoles,
+            "maxPlayers": maxPlayers,  # int, None, str (MAX_PLAYERS_STR_OPTIONS)
+            "map": eventMap,
+            "time": startTime.strftime(TIME_FORMAT),
+            "endTime": endTime.strftime(TIME_FORMAT),
+            "duration": f"{(str(hours) + 'h')*(hours != 0)}{' '*(hours != 0 and minutes !=0)}{(str(minutes) + 'm')*(minutes != 0)}",
+            "messageId": None,
+            "accepted": [],
+            "declined": [],
+            "tentative": [],
+            "type": "Operation"  # Operation, Workshop, Event
+        }
+        finalization = await self.eventFinalizing(interaction, newEvent)
+        if finalization is False:
+            return
 
 # ===== </Operation> =====
 
@@ -1840,57 +1860,38 @@ class Schedule(commands.Cog):
                 await dmChannel.send(embed=embed)
 
         # Workshop finalizing
-        try:
-            if os.path.exists(EVENTS_FILE):
-                with open(EVENTS_FILE) as f:
-                    events = json.load(f)
-            else:
-                events = []
-            newEvent = {
-                "authorId": authorId,
-                "title": title,
-                "description": description,
-                "externalURL": externalURL,
-                "reservableRoles": reservableRoles,
-                "maxPlayers": maxPlayers,  # int, None, str (MAX_PLAYERS_STR_OPTIONS)
-                "map": eventMap,
-                "time": startTime.strftime(TIME_FORMAT),
-                "endTime": endTime.strftime(TIME_FORMAT),
-                "duration": f"{(str(hours) + 'h')*(hours != 0)}{' '*(hours != 0 and minutes !=0)}{(str(minutes) + 'm')*(minutes != 0)}",
-                "messageId": None,
-                "accepted": [],
-                "declined": [],
-                "tentative": [],
-                "workshopInterest": workshopInterest,
-                "type": "Workshop"  # Operation, Workshop, Event
-            }
-            events.append(newEvent)
-            with open(EVENTS_FILE, "w") as f:
-                json.dump(events, f, indent=4)
-        except Exception as e:
-            log.exception(f"{interaction.user} | {e}")
-            newEvent = None
+        newEvent = {
+            "authorId": authorId,
+            "title": title,
+            "description": description,
+            "externalURL": externalURL,
+            "reservableRoles": reservableRoles,
+            "maxPlayers": maxPlayers,  # int, None, str (MAX_PLAYERS_STR_OPTIONS)
+            "map": eventMap,
+            "time": startTime.strftime(TIME_FORMAT),
+            "endTime": endTime.strftime(TIME_FORMAT),
+            "duration": f"{(str(hours) + 'h')*(hours != 0)}{' '*(hours != 0 and minutes !=0)}{(str(minutes) + 'm')*(minutes != 0)}",
+            "messageId": None,
+            "accepted": [],
+            "declined": [],
+            "tentative": [],
+            "workshopInterest": workshopInterest,
+            "type": "Workshop"  # Operation, Workshop, Event
+        }
+        finalization = await self.eventFinalizing(interaction, newEvent)
+        if finalization is False:
+            return
 
-        embed = Embed(title="✅ Workshop created!", color=Color.green())
-        await dmChannel.send(embed=embed)
-        log.info(f"{interaction.user.display_name} ({interaction.user}) created the workshop: {title}")
-
-        await self.updateSchedule()
-
-        if newEvent is not None:
-            with open(EVENTS_FILE) as f:
-                events = json.load(f)
-            await interaction.followup.send(RESPONSE_EVENT_DONE.format(newEvent["title"], GUILD_ID, SCHEDULE, events[-1]["messageId"]))
-
-            if workshopInterest is not None:
-                with open(WORKSHOP_INTEREST_FILE) as f:
-                    workshopInterestItem = [{"name": name, "wsInterest": wsInterest} for name, wsInterest in json.load(f).items() if name == workshopInterest][0]
-                guild = self.bot.get_guild(GUILD_ID)
-                message = ""
-                for memberId in workshopInterestItem["wsInterest"]["members"]:
-                    message += f"{member.mention} " if (member := guild.get_member(memberId)) is not None else ""
-                if message != "":
-                    await guild.get_channel(ARMA_DISCUSSION).send(f"{message}\nA **{workshopInterestItem['name']} workshop** is up on <#{SCHEDULE}> - which you are interested in.\nIf you're no longer interested, please remove yourself from the list in <#{WORKSHOP_INTEREST}>!")
+        # Send workshop interest pings
+        if workshopInterest is not None:
+            with open(WORKSHOP_INTEREST_FILE) as f:
+                workshopInterestItem = [{"name": name, "wsInterest": wsInterest} for name, wsInterest in json.load(f).items() if name == workshopInterest][0]
+            guild = self.bot.get_guild(GUILD_ID)
+            message = ""
+            for memberId in workshopInterestItem["wsInterest"]["members"]:
+                message += f"{member.mention} " if (member := guild.get_member(memberId)) is not None else ""
+            if message != "":
+                await guild.get_channel(ARMA_DISCUSSION).send(f"{message}\nA **{workshopInterestItem['name']} workshop** is up on <#{SCHEDULE}> - which you are interested in.\nIf you're no longer interested, please remove yourself from the list in <#{WORKSHOP_INTEREST}>!")
 
 # ===== </Workshop> =====
 
@@ -1970,46 +1971,26 @@ class Schedule(commands.Cog):
         startTime, endTime = eventTimes
 
         # Event finalizing
-        try:
-            if os.path.exists(EVENTS_FILE):
-                with open(EVENTS_FILE) as f:
-                    events = json.load(f)
-            else:
-                events = []
-            newEvent = {
-                "authorId": authorId,
-                "title": title,
-                "description": description,
-                "externalURL": externalURL,
-                "reservableRoles": reservableRoles,
-                "maxPlayers": maxPlayers,  # int, None, str (MAX_PLAYERS_STR_OPTIONS)
-                "map": eventMap,
-                "time": startTime.strftime(TIME_FORMAT),
-                "endTime": endTime.strftime(TIME_FORMAT),
-                "duration": f"{(str(hours) + 'h')*(hours != 0)}{' '*(hours != 0 and minutes !=0)}{(str(minutes) + 'm')*(minutes != 0)}",
-                "messageId": None,
-                "accepted": [],
-                "declined": [],
-                "tentative": [],
-                "type": "Event"  # Operation, Workshop, Event
-            }
-            events.append(newEvent)
-            with open(EVENTS_FILE, "w") as f:
-                json.dump(events, f, indent=4)
-        except Exception as e:
-            log.exception(f"{interaction.user} | {e}")
-            newEvent = None
-
-        embed = Embed(title="✅ Event created!", color=Color.green())
-        await dmChannel.send(embed=embed)
-        log.info(f"{interaction.user.display_name} ({interaction.user}) created the event: {title}")
-
-        await self.updateSchedule()
-
-        if newEvent is not None:
-            with open(EVENTS_FILE) as f:
-                events = json.load(f)
-            await interaction.followup.send(RESPONSE_EVENT_DONE.format(newEvent["title"], GUILD_ID, SCHEDULE, events[-1]["messageId"]))
+        newEvent = {
+            "authorId": authorId,
+            "title": title,
+            "description": description,
+            "externalURL": externalURL,
+            "reservableRoles": reservableRoles,
+            "maxPlayers": maxPlayers,  # int, None, str (MAX_PLAYERS_STR_OPTIONS)
+            "map": eventMap,
+            "time": startTime.strftime(TIME_FORMAT),
+            "endTime": endTime.strftime(TIME_FORMAT),
+            "duration": f"{(str(hours) + 'h')*(hours != 0)}{' '*(hours != 0 and minutes !=0)}{(str(minutes) + 'm')*(minutes != 0)}",
+            "messageId": None,
+            "accepted": [],
+            "declined": [],
+            "tentative": [],
+            "type": "Event"  # Operation, Workshop, Event
+        }
+        finalization = await self.eventFinalizing(interaction, newEvent)
+        if finalization is False:
+            return
 
 # ===== </Event> =====
 

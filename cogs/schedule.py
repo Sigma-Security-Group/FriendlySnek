@@ -499,7 +499,7 @@ class Schedule(commands.Cog):
             elif button.custom_id == "delete":
                 event = eventList[0]
                 scheduleNeedsUpdate = False
-                if interaction.user.id != event["authorId"] or not any(role.id == UNIT_STAFF or role.id == SERVER_HAMSTER for role in interaction.user.roles):
+                if interaction.user.id != event["authorId"] and not any(role.id == UNIT_STAFF or role.id == SERVER_HAMSTER for role in interaction.user.roles):
                     await interaction.response.send_message(RESPONSE_UNALLOWED.format("delete"), ephemeral=True, delete_after=60.0)
                     return
 

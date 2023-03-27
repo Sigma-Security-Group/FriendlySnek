@@ -1281,12 +1281,13 @@ class Schedule(commands.Cog):
             return
 
         # Operation reservable roles
-        embed = Embed(title=SCHEDULE_EVENT_RESERVABLE, description=SCHEDULE_EVENT_RESERVABLE_DIALOG, color=Color.gold())
-        embed.set_footer(text=SCHEDULE_CANCEL)
-        await dmChannel.send(embed=embed)
         rolesOk = False
         color = Color.gold()
         while not rolesOk:
+            embed = Embed(title=SCHEDULE_EVENT_RESERVABLE, description=SCHEDULE_EVENT_RESERVABLE_DIALOG, color=color)
+            embed.set_footer(text=SCHEDULE_CANCEL)
+            color = Color.red()
+            await dmChannel.send(embed=embed)
             try:
                 response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, interaction=interaction, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == interaction.user)
                 reservables = response.content.strip()
@@ -1609,12 +1610,13 @@ class Schedule(commands.Cog):
 
         # Workshop reservable roles
         if template is None:
-            embed = Embed(title=SCHEDULE_EVENT_RESERVABLE, description=SCHEDULE_EVENT_RESERVABLE_DIALOG, color=Color.gold())
-            embed.set_footer(text=SCHEDULE_CANCEL)
-            await dmChannel.send(embed=embed)
             rolesOk = False
             color = Color.gold()
             while not rolesOk:
+                embed = Embed(title=SCHEDULE_EVENT_RESERVABLE, description=SCHEDULE_EVENT_RESERVABLE_DIALOG, color=color)
+                embed.set_footer(text=SCHEDULE_CANCEL)
+                color = Color.red()
+                await dmChannel.send(embed=embed)
                 try:
                     response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, interaction=interaction, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == interaction.user)
                     reservables = response.content.strip()
@@ -1947,12 +1949,13 @@ class Schedule(commands.Cog):
             return
 
         # Event reservable roles
-        embed = Embed(title=SCHEDULE_EVENT_RESERVABLE, description=SCHEDULE_EVENT_RESERVABLE_DIALOG, color=Color.gold())
-        embed.set_footer(text=SCHEDULE_CANCEL)
-        await dmChannel.send(embed=embed)
         rolesOk = False
         color = Color.gold()
         while not rolesOk:
+            embed = Embed(title=SCHEDULE_EVENT_RESERVABLE, description=SCHEDULE_EVENT_RESERVABLE_DIALOG, color=color)
+            embed.set_footer(text=SCHEDULE_CANCEL)
+            color = Color.red()
+            await dmChannel.send(embed=embed)
             try:
                 response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, interaction=interaction, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == interaction.user)
                 reservables = response.content.strip()

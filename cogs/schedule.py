@@ -514,7 +514,7 @@ class Schedule(commands.Cog):
 
                 view.add_item(btn)
 
-                await interaction.response.send_message(view=view, ephemeral=True, delete_after=60.0)
+                await interaction.response.send_message(content=interaction.user.mention, view=view, ephemeral=True, delete_after=60.0)
 
             elif button.custom_id == "reserve_role_unreserve":
                 scheduleNeedsUpdate = False

@@ -1,10 +1,13 @@
+# Projects
 __pycache__
-.VSCodeCounter
 secret.py
-tmp
-tmp/*
-data
-data/*
-anvilController.json
-update.sh
 bot.log
+data/
+tmp/
+
+# Env
+update.sh
+venv/
+.mypy_cache/
+anvilController.json
+.VSCodeCounter

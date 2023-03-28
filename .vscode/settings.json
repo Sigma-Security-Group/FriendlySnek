@@ -1,7 +1,8 @@
 {
-	"kvlang.pythonPath": "python3.10",
     "editor.insertSpaces": true,
     "editor.wordWrap": "on",
     "files.trimTrailingWhitespace": true,
-    "diffEditor.ignoreTrimWhitespace": false
+    "diffEditor.ignoreTrimWhitespace": false,
+    "python.linting.mypyEnabled": true,
+    "python.linting.enabled": true
 }

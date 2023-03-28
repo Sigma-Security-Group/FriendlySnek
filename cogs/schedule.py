@@ -500,7 +500,7 @@ class Schedule(commands.Cog):
                 view = ScheduleView()
                 options = []
                 for role in vacantRoles:
-                    options.append(discord.SelectOption(label=role, emoji='🗿'))
+                    options.append(discord.SelectOption(label=role))
 
                 view.add_item(ScheduleSelect(instance=self, eventMsg=interaction.message, placeholder="Select a role.", minValues=1, maxValues=1, customId="reserve_role_select", row=0, options=options))
                 btn = ScheduleButton(self, interaction.message, row=1, label="Unreserve", style=discord.ButtonStyle.danger, custom_id="reserve_role_unreserve")

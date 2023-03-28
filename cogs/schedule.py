@@ -445,11 +445,11 @@ class Schedule(commands.Cog):
         None.
         """
         if isinstance(interaction.user, discord.User):
+            log.exception("ButtonHandling user not discord.Member")
             return
 
         try:
-            if not interaction.user.dm_channel:
-                await interaction.user.create_dm()
+            dmChannel = await self.checkDMChannel(interaction.user)
 
             with open(EVENTS_FILE) as f:
                 events = json.load(f)
@@ -481,7 +481,7 @@ class Schedule(commands.Cog):
 
             elif button.custom_id == "reserve":
                 event = eventList[0]
-                await interaction.response.send_message(RESPONSE_GOTO_DMS.format(interaction.user.dm_channel.jump_url), ephemeral=True)
+                await interaction.response.send_message(RESPONSE_GOTO_DMS.format(dmChannel.jump_url), ephemeral=True)
                 reservingOutput = await self.reserveRole(interaction.user, event)
                 if not reservingOutput:
                     return
@@ -490,7 +490,7 @@ class Schedule(commands.Cog):
             elif button.custom_id == "edit":
                 event = eventList[0]
                 if interaction.user.id == event["authorId"] or any(role.id == UNIT_STAFF or role.id == SERVER_HAMSTER for role in interaction.user.roles):
-                    await interaction.response.send_message(RESPONSE_GOTO_DMS.format(interaction.user.dm_channel.jump_url), ephemeral=True)
+                    await interaction.response.send_message(RESPONSE_GOTO_DMS.format(dmChannel.jump_url), ephemeral=True)
                     reorderEvents = await self.editEvent(interaction.user, event, isTemplateEdit=False)
                     if reorderEvents:
                         with open(EVENTS_FILE, "w") as f:
@@ -676,16 +676,18 @@ class Schedule(commands.Cog):
         dmChannel = await self.checkDMChannel(interaction.user)
         color = Color.gold()
         while True:
-            embed = Embed(title=SCHEDULE_EVENT_TITLE.format(eventType), description=None if isOperation is False else "Operation names should start with the word `Operation`\nE.g. Operation Red Tide.\n\nEnter `regenerate` to renew the generated operation names.", color=color)
+            embed = Embed(title=SCHEDULE_EVENT_TITLE.format(eventType), description=None if isOperation is False else "Operation names should start with the word `Operation`.\nE.g. Operation Red Tide.\n\nEnter `regenerate` to renew the generated operation names.", color=color)
             embed.set_footer(text=SCHEDULE_CANCEL)
 
             # Add generated operation names
             if isOperation is True:
                 with open(OPERATION_NAME_ADJECTIVES) as f:
-                    adj = [random.choice(f.readlines()).strip("\n") for _ in range(10)]
+                    adjectives = f.readlines()
+                    adj = [random.choice(adjectives).strip("\n") for _ in range(10)]
 
                 with open(OPERATION_NAME_NOUNS) as f:
-                    nou = [random.choice(f.readlines()).strip("\n") for _ in range(10)]
+                    nouns = f.readlines()
+                    nou = [random.choice(nouns).strip("\n") for _ in range(10)]
 
                 titles = [f"{adj[i].capitalize()} {nou[i].capitalize()}" for i in range(10)]
                 embed.add_field(name="Generated Operation Names", value="\n".join(titles))
@@ -1110,6 +1112,8 @@ class Schedule(commands.Cog):
         Returns:
         bool: If function executed successfully.
         """
+
+        # Editing Prompt
         editingTime = datetime.utcnow()
         editOk = False
         color = Color.gold()
@@ -1122,7 +1126,7 @@ class Schedule(commands.Cog):
                     "Title": f"```txt\n{event['title']}\n```",
                     "Description": f"```txt\n{event['description'] if len(event['description']) < 500 else event['description'][:500] + ' [...]'}\n```",
                     "External URL": f"```txt\n{event['externalURL']}\n```",
-                    "Reservable Roles": "```txt\n" + "\n".join(event["reservableRoles"].keys()) + "\n```" if event["reservableRoles"] is not None else "None",
+                    "Reservable Roles": "```txt\n" + "\n".join(event["reservableRoles"].keys()) + "\n```" if event["reservableRoles"] is not None else "```txt\nNone\n```",
                     "Map": f"```txt\n{event['map']}\n```",
                     "Max Players": f"```txt\n{event['maxPlayers'].capitalize() if isinstance(event['maxPlayers'], str) else event['maxPlayers']}\n```",
                     "Time": utils.format_dt(UTC.localize(datetime.strptime(event["time"], TIME_FORMAT)), style="F"),
@@ -1173,11 +1177,13 @@ class Schedule(commands.Cog):
             except asyncio.TimeoutError:
                 await dmChannel.send(embed=TIMEOUT_EMBED)
                 return False
-        reorderEvents = False
 
+        reorderEvents = False
         editOption = dictItems[int(choice) - 1][0]
+
+        # Editing Type
         if editOption == "Type":
-            eventTypeNum = None
+            eventTypeNum = "INVALID INPUT"
             color = Color.gold()
             while eventTypeNum not in ("1", "2", "3"):
                 embed = Embed(title=":pencil2: What is the type of your event?", color=color)
@@ -1196,6 +1202,7 @@ class Schedule(commands.Cog):
                     return False
             event["type"] = {"1": "Operation", "2": "Workshop", "3": "Event"}.get(eventTypeNum, "Operation")
 
+        # Editing Template Name
         elif editOption == "Template Name":
             embed = Embed(title=SCHEDULE_EVENT_TEMPLATE_SAVE_NAME_QUESTION, color=Color.gold())
             embed.set_footer(text=SCHEDULE_CANCEL)
@@ -1211,6 +1218,7 @@ class Schedule(commands.Cog):
                 return False
             event["name"] = templateName
 
+        # Editing Title
         elif editOption == "Title":
             embed = Embed(title=SCHEDULE_EVENT_TITLE.format(event.get("type", "operation").lower()), color=Color.gold())
             embed.set_footer(text=SCHEDULE_CANCEL)
@@ -1226,6 +1234,7 @@ class Schedule(commands.Cog):
                 return False
             event["title"] = title
 
+        # Editing Linking
         elif editOption == "Linking":
             workshopInterestOk = False
             color = Color.gold()
@@ -1256,6 +1265,7 @@ class Schedule(commands.Cog):
 
             event["workshopInterest"] = workshopInterest
 
+        # Editing Description
         elif editOption == "Description":
             embed = Embed(title=SCHEDULE_EVENT_DESCRIPTION_QUESTION, description=SCHEDULE_EVENT_DESCRIPTION.format(event["description"]), color=Color.gold())
             embed.set_footer(text=SCHEDULE_CANCEL)
@@ -1271,6 +1281,7 @@ class Schedule(commands.Cog):
                 return False
             event["description"] = description
 
+        # Editing URL
         elif editOption == "External URL":
             embed = Embed(title=SCHEDULE_EVENT_URL_TITLE, description=SCHEDULE_EVENT_URL_DESCRIPTION, color=Color.gold())
             embed.set_footer(text=SCHEDULE_CANCEL)
@@ -1288,6 +1299,7 @@ class Schedule(commands.Cog):
                 return False
             event["externalURL"] = externalURL
 
+        # Editing Reservable Roles
         elif editOption == "Reservable Roles":
             embed = Embed(title=SCHEDULE_EVENT_RESERVABLE, description=SCHEDULE_EVENT_RESERVABLE_DIALOG + "\n(Editing the name of a role will make it vacant, but roles which keep their exact names will keep their reservations).", color=Color.gold())
             embed.add_field(name="Current reservable roles", value=("```txt\n" + "\n".join(event["reservableRoles"].keys()) + "```") if event["reservableRoles"] is not None else "None")
@@ -1313,6 +1325,7 @@ class Schedule(commands.Cog):
             event["reservableRoles"] = reservableRoles
             reorderEvents = True
 
+        # Editing Map
         elif editOption == "Map":
             mapOK = False
             color = Color.gold()
@@ -1340,6 +1353,7 @@ class Schedule(commands.Cog):
                     return False
             event["map"] = eventMap
 
+        # Editing Attendence
         elif editOption == "Max Players":
             attendanceOk = False
             color = Color.gold()
@@ -1374,6 +1388,7 @@ class Schedule(commands.Cog):
             event["maxPlayers"] = maxPlayers
             reorderEvents = True
 
+        # Editing Time
         elif editOption == "Time":
             with open(MEMBER_TIME_ZONES_FILE) as f:
                 memberTimeZones = json.load(f)
@@ -1461,6 +1476,7 @@ class Schedule(commands.Cog):
                     except Exception as e:
                         log.exception(f"{member} | {e}")
 
+        # Editing Duration
         elif editOption == "Duration":
             color = Color.gold()
             duration = "INVALID INPUT"
@@ -1988,7 +2004,7 @@ class Schedule(commands.Cog):
     @app_commands.guilds(GUILD)
     @app_commands.describe(time = "Your local time, e.g. 9:00 PM", message = "Add a message before the timestamp", timezone = "Convert the time from a different time zone other than your personal, e.g. EST & Europe/London", informative = "Displays all formats, raw text, etc.")
     @app_commands.choices(informative = [app_commands.Choice(name="Yes plz", value="Yes")])
-    async def timestamp(self, interaction: discord.Interaction, time: str, message: str = "", timezone: str = "", informative: app_commands.Choice[str] = "No") -> None:
+    async def timestamp(self, interaction: discord.Interaction, time: str, message: str = "", timezone: str = "", informative: app_commands.Choice[str] | None = None) -> None:
         """ Convert your local time to a dynamic Discord timestamp.
 
         Parameters:
@@ -2005,7 +2021,7 @@ class Schedule(commands.Cog):
 
         # Get the inputted time
         try:
-            time = datetimeParse(time)
+            timeParsed = datetimeParse(time)
         except ValueError:
             await interaction.edit_original_response(embed=Embed(title="❌ Invalid time", description="Provide a valid time!", color=Color.red()))
             return
@@ -2018,7 +2034,7 @@ class Schedule(commands.Cog):
             if not str(interaction.user.id) in memberTimeZones:
                 timeZoneOutput = await self.changeTimeZone(interaction.user, isCommand=False)
                 if not timeZoneOutput:
-                    await self.cancelCommand(interaction.user.dm_channel, "Timestamp creation")
+                    await self.cancelCommand(await self.checkDMChannel(interaction.user), "Timestamp creation")
                     await interaction.edit_original_response(embed=Embed(title="❌ Timestamp creation canceled", description="You must provide a time zone in your DMs!", color=Color.red()))
                     return
                 with open(MEMBER_TIME_ZONES_FILE) as f:
@@ -2033,12 +2049,12 @@ class Schedule(commands.Cog):
                 return
 
         # Output timestamp
-        time = timeZone.localize(time)
-        await interaction.edit_original_response(content = f"{message} {utils.format_dt(time, 'F')}")
-        if not informative == "No":
+        timeParsed = timeZone.localize(timeParsed)
+        await interaction.edit_original_response(content = f"{message} {utils.format_dt(timeParsed, 'F')}")
+        if informative is not None:
             embed = Embed(color=Color.green())
-            embed.set_footer(text=f"Local time: {time.strftime(TIME_FORMAT)}\nTime zone: {memberTimeZones[str(interaction.user.id)] if not timezone else timeZone}")
-            timestamps = [utils.format_dt(time, style=timestampStyle[0]) for timestampStyle in TIMESTAMP_STYLES.items()]
+            embed.set_footer(text=f"Local time: {timeParsed.strftime(TIME_FORMAT)}\nTime zone: {memberTimeZones[str(interaction.user.id)] if not timezone else timeZone}")
+            timestamps = [utils.format_dt(timeParsed, style=timestampStyle[0]) for timestampStyle in TIMESTAMP_STYLES.items()]
             embed.add_field(name="Timestamp", value="\n".join(timestamps), inline=True)
             embed.add_field(name="Copy this", value="\n".join([f"`{stamp}`" for stamp in timestamps]), inline=True)
             embed.add_field(name="Description", value="\n".join([f"`{timestampStyle[1]}`" for timestampStyle in TIMESTAMP_STYLES.items()]), inline=True)
@@ -2056,7 +2072,7 @@ class Schedule(commands.Cog):
         await interaction.response.send_message("Changing time zone preferences...")
         timeZoneOutput = await self.changeTimeZone(interaction.user, isCommand=True)
         if not timeZoneOutput:
-            await self.cancelCommand(interaction.user, "Time zone preferences")
+            await self.cancelCommand(await self.checkDMChannel(interaction.user), "Time zone preferences")
 
     async def changeTimeZone(self, author: discord.User | discord.Member, isCommand: bool = True) -> bool:
         """ Changing a personal time zone.

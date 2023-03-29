@@ -694,7 +694,7 @@ class Schedule(commands.Cog):
         dmChannel = await self.checkDMChannel(interaction.user)
         color = Color.gold()
         while True:
-            embed = Embed(title=SCHEDULE_EVENT_TITLE.format(eventType), description=None if isOperation is False else "Operation names should start with the word `Operation`.\nE.g. Operation Red Tide.\n\nEnter `regenerate` to renew the generated operation names.", color=color)
+            embed = Embed(title=f":pencil2: What is the title of your {eventType}?", description=None if isOperation is False else "Operation names should start with the word `Operation`.\nE.g. Operation Red Tide.\n\nEnter `regenerate` to renew the generated operation names.", color=color)
             embed.set_footer(text=SCHEDULE_CANCEL)
 
             # Add generated operation names
@@ -738,7 +738,7 @@ class Schedule(commands.Cog):
         """
 
         dmChannel = await self.checkDMChannel(interaction.user)
-        embed = Embed(title=SCHEDULE_EVENT_DESCRIPTION_QUESTION, description=None if currentDesc == "" else f"Current description:\n```{currentDesc[:4000]}\n```", color=Color.gold())
+        embed = Embed(title=":notepad_spiral: What is the description?", description=None if currentDesc == "" else f"Current description:\n```{currentDesc[:4000]}\n```", color=Color.gold())
         embed.set_footer(text=SCHEDULE_CANCEL)
         await dmChannel.send(embed=embed)
 
@@ -766,7 +766,7 @@ class Schedule(commands.Cog):
         """
 
         dmChannel = await self.checkDMChannel(interaction.user)
-        embed = Embed(title=SCHEDULE_EVENT_URL_TITLE, description=SCHEDULE_EVENT_URL_DESCRIPTION, color=Color.gold())
+        embed = Embed(title=":notebook_with_decorative_cover: Enter `none` or a URL", description="E.g. Signup sheet, Briefing, OPORD, etc.", color=Color.gold())
         embed.set_footer(text=SCHEDULE_CANCEL)
         await dmChannel.send(embed=embed)
         try:
@@ -799,7 +799,7 @@ class Schedule(commands.Cog):
         dmChannel = await self.checkDMChannel(interaction.user)
         color = Color.gold()
         while True:
-            embed = Embed(title=SCHEDULE_EVENT_RESERVABLE, description=SCHEDULE_EVENT_RESERVABLE_DIALOG + "" if currentRoles is None else "\n(Editing the name of a role will make it vacant, but roles which keep their exact names will keep their reservations).", color=color)
+            embed = Embed(title="Reservable Roles", description="Enter `none` if there are none.\n\nOtherwise, type each reservable role in a new line (Shift + Enter)." + ("" if currentRoles is None else "\n(Editing the name of a role will make it vacant, but roles which keep their exact names will keep their reservations)."), color=color)
             if currentRoles is not None:
                 embed.add_field(name="Current reservable roles", value=f"```txt\n{currentRoles}\n```")
 
@@ -854,7 +854,7 @@ class Schedule(commands.Cog):
         dmChannel = await self.checkDMChannel(interaction.user)
         color = Color.gold()
         while True:
-            embed = Embed(title=SCHEDULE_EVENT_MAP_PROMPT, description=SCHEDULE_NUMBER_FROM_TO_OR_NONE.format(1, len(MAPS)), color=color)
+            embed = Embed(title=":globe_with_meridians: Choose a map", description=SCHEDULE_NUMBER_FROM_TO_OR_NONE.format(1, len(MAPS)), color=color)
             color = Color.red()
             embed.add_field(name="Map", value="\n".join(f"**{idx}.** {mapName}" for idx, mapName in enumerate(MAPS, 1)))
             embed.set_footer(text=SCHEDULE_CANCEL)
@@ -888,7 +888,7 @@ class Schedule(commands.Cog):
         dmChannel = await self.checkDMChannel(interaction.user)
         color = Color.gold()
         while True:
-            embed = Embed(title=SCHEDULE_EVENT_MAX_PLAYERS, description=SCHEDULE_EVENT_MAX_PLAYERS_DESCRIPTION, color=color)
+            embed = Embed(title=":family_man_boy_boy: What is the maximum number of attendees?", description="Enter a number to set a limit.\nEnter `none` to set no limit.\nEnter `anonymous` to count attendance anonymously.\nEnter `hidden` to not count attendance.", color=color)
             embed.set_footer(text=SCHEDULE_CANCEL)
             color = Color.red()
             await dmChannel.send(embed=embed)
@@ -939,8 +939,8 @@ class Schedule(commands.Cog):
         dmChannel = await self.checkDMChannel(interaction.user)
         color = Color.gold()
         duration = "INVALID INPUT"
-        while not re.match(SCHEDULE_EVENT_DURATION_REGEX, duration):
-            embed = Embed(title=SCHEDULE_EVENT_DURATION_QUESTION.format("event"), description=SCHEDULE_EVENT_DURATION_PROMPT, color=color)
+        while not re.match(r"^\s*((([1-9]\d*)?\d\s*h(\s*([0-5])?\d\s*m?)?)|(([0-5])?\d\s*m))\s*$", duration):
+            embed = Embed(title=f"What is the duration of the {eventType}?", description="E.g.\n`30m`\n`2h`\n`4h 30m`\n`2h30`", color=color)
             embed.set_footer(text=SCHEDULE_CANCEL)
             color = Color.red()
             await dmChannel.send(embed=embed)
@@ -997,7 +997,7 @@ class Schedule(commands.Cog):
                 # Gets starttime of event
                 color = Color.gold()
                 while True:
-                    embed = Embed(title=SCHEDULE_EVENT_TIME.format(eventType.lower()), description=SCHEDULE_EVENT_SELECTED_TIME_ZONE.format(timeZone.zone), color=color)
+                    embed = Embed(title=f"What is the time of the {eventType.lower()}?", description=SCHEDULE_EVENT_SELECTED_TIME_ZONE.format(timeZone.zone), color=color)
                     utcNow = datetime.utcnow()
                     nextHalfHour = utcNow + (datetime.min - utcNow) % timedelta(minutes=30)
                     embed.add_field(name="Example", value=UTC.localize(nextHalfHour).astimezone(timeZone).strftime(TIME_FORMAT))
@@ -1026,12 +1026,12 @@ class Schedule(commands.Cog):
                 # Set time is in the past
                 if (delta := UTC.localize(utcNow) - startTime) > timedelta(hours=1) and delta < timedelta(days=1):  # Set time in the past 24 hours
                     newStartTime = startTime + timedelta(days=1)
-                    embed = Embed(title=SCHEDULE_EVENT_TIME_TOMORROW, description=SCHEDULE_EVENT_TIME_TOMORROW_PREVIEW.format(utils.format_dt(startTime, style="F"), utils.format_dt(newStartTime, style="F")), color=Color.orange())
+                    embed = Embed(title="Time was detected to be in the past 24h and was set to tomorrow.", description=f"Input time: {utils.format_dt(startTime, style='F')}.\nSelected time: {utils.format_dt(newStartTime, style='F')}.", color=Color.orange())
                     await dmChannel.send(embed=embed)
                     startTime = newStartTime
                     break
                 else:  # Set time older than 24 hours
-                    embed = Embed(title=SCHEDULE_EVENT_TIME_PAST_QUESTION, description=SCHEDULE_EVENT_TIME_PAST_PROMPT, color=Color.orange())
+                    embed = Embed(title="It appears that the selected time is in the past. Are you sure you want to set it to this?", description="Enter `yes` or `y` to keep this time.\nEnter anything else to change it to another time.", color=Color.orange())
                     embed.set_footer(text=SCHEDULE_CANCEL)
                     await dmChannel.send(embed=embed)
                     try:
@@ -1152,9 +1152,8 @@ class Schedule(commands.Cog):
 
         # Editing Prompt
         editingTime = datetime.utcnow()
-        editOk = False
         color = Color.gold()
-        while not editOk:
+        while True:
             embed = Embed(title="✏️ What would you like to edit?", color=color)
 
             if not isTemplateEdit:
@@ -1215,7 +1214,7 @@ class Schedule(commands.Cog):
                 await self.cancelCommand(dmChannel, "Event editing")
                 return False
             elif choice in choiceNumbers:
-                editOk = True
+                break
 
         reorderEvents = False
         editOption = dictItems[int(choice) - 1][0]
@@ -1548,7 +1547,7 @@ class Schedule(commands.Cog):
                 elif templateAction.lower() == "none":
                     templateActionRepeat = False
                     template = None
-                elif re.search(SCHEDULE_EVENT_TEMPLATE_ACTION_REGEX, templateAction, re.IGNORECASE):
+                elif re.search(r"(edit |delete )?\d+", templateAction, re.IGNORECASE):
                     if templateAction.lower().startswith("delete"):
                         templateNumber = templateAction.split(" ")[-1]
                         if templateNumber.isdigit() and int(templateNumber) <= len(workshopTemplates) and int(templateNumber) > 0:

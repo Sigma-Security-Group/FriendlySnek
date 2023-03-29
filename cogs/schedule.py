@@ -370,7 +370,7 @@ class Schedule(commands.Cog):
                         items.extend([
                             ScheduleButton(self, None, row=0, label="Accept", style=discord.ButtonStyle.success, custom_id="accepted"),
                             ScheduleButton(self, None, row=0, label="Decline", style=discord.ButtonStyle.danger, custom_id="declined"),
-                            ScheduleButton(self, None, row=0, label="Tentative", style=discord.ButtonStyle.primary, custom_id="tentative")
+                            ScheduleButton(self, None, row=0, label="Tentative", style=discord.ButtonStyle.secondary, custom_id="tentative")
                         ])
                         if event["reservableRoles"] is not None:
                             items.append(ScheduleButton(self, None, row=0, label="Reserve", style=discord.ButtonStyle.secondary, custom_id="reserve"))
@@ -566,6 +566,9 @@ class Schedule(commands.Cog):
                         break
 
             elif button.custom_id == "config":
+                event = eventList[0]
+                scheduleNeedsUpdate = False
+
                 if interaction.user.id != event["authorId"] and not any(role.id == UNIT_STAFF or role.id == SERVER_HAMSTER for role in interaction.user.roles):
                     await interaction.response.send_message(RESPONSE_UNALLOWED.format("configure"), ephemeral=True, delete_after=60.0)
                     return
@@ -580,7 +583,11 @@ class Schedule(commands.Cog):
                 await interaction.response.send_message(content=f"{interaction.user.mention} What would you like to configure?", view=view, ephemeral=True, delete_after=60.0)
 
             elif button.custom_id == "edit":
-                event = eventList[0]
+                if message is None:
+                    log.exception("buttonHandling delete: edit message is None")
+                    return
+
+                event = [event for event in events if event["messageId"] == message.id][0]
                 await interaction.response.send_message(RESPONSE_GOTO_DMS.format(dmChannel.jump_url), ephemeral=True, delete_after=10.0)
                 reorderEvents = await self.editEvent(interaction, event, isTemplateEdit=False)
                 if reorderEvents:
@@ -592,7 +599,11 @@ class Schedule(commands.Cog):
                 fetchMsg = True
 
             elif button.custom_id == "delete":
-                event = eventList[0]
+                if message is None:
+                    log.exception("buttonHandling delete: button message is None")
+                    return
+
+                event = [event for event in events if event["messageId"] == message.id][0]
                 scheduleNeedsUpdate = False
 
                 if message is None:
@@ -607,7 +618,7 @@ class Schedule(commands.Cog):
                 ]
                 for item in items:
                     view.add_item(item)
-                await interaction.response.send_message(content=interaction.user.mention, embed=embed, view=view, ephemeral=True, delete_after=60.0)
+                await interaction.response.send_message(embed=embed, view=view, ephemeral=True, delete_after=60.0)
 
             elif button.custom_id == "delete_event_confirm":
                 scheduleNeedsUpdate = False
@@ -884,7 +895,7 @@ class Schedule(commands.Cog):
                 return False
 
             # Values all None
-            if currentRoles is not None:
+            if currentRoles is None:
                 return {role: None for role in reservableRoles}
 
             # Check event
@@ -1367,7 +1378,12 @@ class Schedule(commands.Cog):
 
         # Editing Reservable Roles
         elif editOption == "Reservable Roles":
-            reservableRoles = await self.eventReserveRole(interaction, eventType, event["reservableRoles"], event)
+            reservableRoles = await self.eventReserveRole(
+                interaction,
+                eventType,
+                None if event["reservableRoles"] is None else "\n".join(event["reservableRoles"].keys()),
+                event
+            )
             if reservableRoles is False:
                 return False
             event["reservableRoles"] = reservableRoles

@@ -1,8 +1,8 @@
-import secret, asyncio, pytz
-import pysftp  # type: ignore
+import secret, asyncio
+import pysftp, pytz  # type: ignore
 
 from datetime import datetime
-from discord import app_commands, Embed, Color, utils
+from discord import Embed, Color
 from discord.ext import commands  # type: ignore
 
 from constants import *
@@ -34,21 +34,9 @@ class MissionUploader(commands.Cog):
         log.debug(LOG_COG_READY.format("MissionUploader"), flush=True)
         cogsReady["missionUploader"] = True
 
-    async def cancelCommand(self, channel: discord.DMChannel, abortText:str) -> None:
-        """ Sends an abort response to the user.
-
-        Parameters:
-        channel (discord.DMChannel): The users DM channel where the message is sent.
-        abortText (str): The embed title - what is aborted.
-
-        Returns:
-        None.
-        """
-        await channel.send(embed=Embed(title=f"❌ {abortText} canceled!", color=Color.red()))
-
-    @app_commands.command(name="uploadmission")
-    @app_commands.guilds(GUILD)
-    @app_commands.checks.has_any_role(UNIT_STAFF, SERVER_HAMSTER, MISSION_BUILDER, CURATOR)
+    @discord.app_commands.command(name="uploadmission")
+    @discord.app_commands.guilds(GUILD)
+    @discord.app_commands.checks.has_any_role(UNIT_STAFF, SERVER_HAMSTER, MISSION_BUILDER, CURATOR)
     async def uploadMission(self, interaction: discord.Interaction) -> None:
         """ Upload a mission PBO file to the server.
 
@@ -70,11 +58,12 @@ class MissionUploader(commands.Cog):
             color = Color.red()
             msg = await interaction.user.send(embed=embed)
             dmChannel = msg.channel
+
             try:
                 response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, interaction=interaction, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == interaction.user)
                 file = response.content.strip().lower()
                 if file.lower() == "cancel":
-                    await self.cancelCommand(dmChannel, "Mission uploading")
+                    await dmChannel.send(embed=Embed(title=f"❌ Mission uploading canceled!", color=Color.red()))
                     return
             except asyncio.TimeoutError:
                 await dmChannel.send(embed=TIMEOUT_EMBED)
@@ -144,11 +133,17 @@ class MissionUploader(commands.Cog):
         embed = Embed(title="Uploaded mission file" + (" (Debug)" if secret.DEBUG else ""), color=Color.blue())
         embed.add_field(name="Filename", value=f"`{filename}`")
         embed.add_field(name="Server", value=f"`{server['Name']}`")
-        embed.add_field(name="Time", value=utils.format_dt(pytz.timezone("UTC").localize(datetime.utcnow()).astimezone(UTC), style="F"))
+        embed.add_field(name="Time", value=discord.utils.format_dt(pytz.timezone("UTC").localize(datetime.utcnow()).astimezone(UTC), style="F"))
         embed.add_field(name="Member", value=interaction.user.mention)
         embed.set_footer(text=f"Member ID: {interaction.user.id}")
 
-        await self.bot.get_channel(BOT).send(embed=embed)  # Send the log message in the BOT channel
+        # Send the log message in the Bot channel
+        botChannel = self.bot.get_channel(BOT)
+        if not isinstance(botChannel, discord.channel.TextChannel):
+            log.exception("UploadMission: botChanel is not discord.channel.TextChannel")
+            return
+
+        await botChannel.send(embed=embed)
 
         log.info(f"{interaction.user.display_name} ({interaction.user}) uploaded the mission file: {filename}!")
         if not secret.DEBUG:
@@ -158,19 +153,23 @@ class MissionUploader(commands.Cog):
         await dmChannel.send(embed=embed)
 
     @uploadMission.error
-    async def onUploadMissionError(self, interaction: discord.Interaction, error: app_commands.AppCommandError) -> None:
+    async def onUploadMissionError(self, interaction: discord.Interaction, error: discord.app_commands.AppCommandError) -> None:
         """ uploadMission errors - dedicated for the discord.app_commands.errors.MissingAnyRole error.
 
         Parameters:
         interaction (discord.Interaction): The Discor interaction.
-        error (app_commands.AppCommandError): The end user error.
+        error (discord.app_commands.AppCommandError): The end user error.
 
         Returns:
         None.
         """
         if type(error) == discord.app_commands.errors.MissingAnyRole:
             guild = self.bot.get_guild(GUILD_ID)
-            embed = Embed(title="❌ Missing permissions", description=f"You do not have the permissions to upload a mission file!\nThe permitted roles are: {', '.join([guild.get_role(role).name for role in (UNIT_STAFF, SERVER_HAMSTER, MISSION_BUILDER, CURATOR)])}.", color=Color.red())
+            if guild is None:
+                log.exception("onUploadMissionError: guild is None")
+                return
+
+            embed = Embed(title="❌ Missing permissions", description=f"You do not have the permissions to upload a mission file!\nThe permitted roles are: {', '.join([role.name for allowedRole in (UNIT_STAFF, SERVER_HAMSTER, MISSION_BUILDER, CURATOR) if (role := guild.get_role(allowedRole)) is not None])}.", color=Color.red())
             await interaction.response.send_message(embed=embed)
 
 

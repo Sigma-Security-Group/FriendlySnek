@@ -1,9 +1,9 @@
-from secret import DEBUG
 import os, json
 
 from discord import Embed, Color
 from discord.ext import commands  # type: ignore
 
+from secret import DEBUG
 from constants import *
 from __main__ import log, cogsReady
 if DEBUG:
@@ -12,7 +12,7 @@ if DEBUG:
 
 WORKSHOP_INTEREST_FILE = "data/workshopInterest.json"
 
-WORKSHOP_INTEREST_LIST = {
+WORKSHOP_INTEREST_LIST: dict[str, dict[str, str | int | tuple]] = {
     "Mechanised": {
         "emoji": "🛡️",
         "role": SME_MECHANISED,
@@ -96,12 +96,20 @@ class WorkshopInterest(commands.Cog):
         """
         # TODO Goddamnit I hate this fucking resend shit. Please implement persistent views
 
-        channel = self.bot.get_channel(WORKSHOP_INTEREST)
-        await channel.purge(limit=None, check=lambda message: message.author.id in FRIENDLY_SNEKS)
+        wsIntChannel = self.bot.get_channel(WORKSHOP_INTEREST)
+        if not isinstance(wsIntChannel, discord.channel.TextChannel):
+            log.exception("WSINT updateChannel: wsInt is not discord.channel.TextChannel")
+            return
+
+        await wsIntChannel.purge(limit=None, check=lambda message: message.author.id in FRIENDLY_SNEKS)
 
         guild = self.bot.get_guild(GUILD_ID)
+        if guild is None:
+            log.exception("WSINT updateChannel: guild is None")
+            return
+
         with open(WORKSHOP_INTEREST_FILE) as f:
-            wsInt = json.load(f)
+            wsIntFile = json.load(f)
 
         for workshopName in WORKSHOP_INTEREST_LIST.keys():
             # Fetch embed
@@ -117,13 +125,13 @@ class WorkshopInterest(commands.Cog):
             for button in buttons:
                 row.add_item(item=button)
 
-            msg = await channel.send(embed=embed, view=row)
+            msg = await wsIntChannel.send(embed=embed, view=row)
 
             # Set embed messageId - used for removing people once workshop is done
-            wsInt[workshopName]["messageId"] = msg.id
+            wsIntFile[workshopName]["messageId"] = msg.id
 
         with open(WORKSHOP_INTEREST_FILE, "w", encoding="utf-8") as f:
-            json.dump(wsInt, f, indent=4)
+            json.dump(wsIntFile, f, indent=4)
 
     def getWorkshopEmbed(self, guild: discord.Guild, workshopName: str) -> Embed:
         """ Generates an embed from the given workshop.
@@ -163,8 +171,12 @@ class WorkshopInterest(commands.Cog):
 
         embed.add_field(name=f"Interested People ({lenInterested})", value=interestedMembers)
         # 1 discord.Role as SME
-        if WORKSHOP_INTEREST_LIST[workshopName]["role"] and isinstance(WORKSHOP_INTEREST_LIST[workshopName]["role"], int):
-            smes = [sme.display_name for sme in guild.get_role(WORKSHOP_INTEREST_LIST[workshopName]["role"]).members]
+        if (wsRole := WORKSHOP_INTEREST_LIST[workshopName]["role"]) and isinstance(wsRole, int):
+            wsIntRole = guild.get_role(wsRole)
+            if wsIntRole is None:
+                raise ValueError("WSINT getWorkshopEmbed: wsIntRole is None")
+
+            smes = [sme.display_name for sme in wsIntRole.members]
             if smes:
                 embed.set_footer(text=f"SME{'s' * (len(smes) > 1)}: {', '.join(smes)}")
 
@@ -172,8 +184,8 @@ class WorkshopInterest(commands.Cog):
                 embed.set_footer(text=f"No SMEs")
 
         # >1 discord.Role as SME
-        elif WORKSHOP_INTEREST_LIST[workshopName]["role"] and isinstance(WORKSHOP_INTEREST_LIST[workshopName]["role"], tuple):
-            smeroles = [guild.get_role(role).name for role in WORKSHOP_INTEREST_LIST[workshopName]["role"]]
+        elif isinstance(wsRole, tuple):
+            smeroles = [sme.name for role in wsRole if (sme := guild.get_role(role)) is not None]
             embed.set_footer(text=f"SME roles: {', '.join(smeroles)}")
 
         return embed
@@ -191,7 +203,15 @@ class WorkshopInterest(commands.Cog):
         try:
             with open(WORKSHOP_INTEREST_FILE) as f:
                 workshopInterest = json.load(f)
+
+            if interaction.message is None:
+                log.exception("WSINT UpdateInterestList: interaction.message is None")
+                return
+
             wsTitle = interaction.message.embeds[0].title
+            if wsTitle is None:
+                log.exception("WSINT UpdateInterestList: wsTitle is None")
+                return
 
             # Brute force emoji removal, produces title
             for i in range(len(wsTitle)):
@@ -217,6 +237,9 @@ class WorkshopInterest(commands.Cog):
             with open(WORKSHOP_INTEREST_FILE, "w") as f:
                 json.dump(workshopInterest, f, indent=4)
 
+            if interaction.guild is None:
+                log.exception("WSINT updateInterestList: interaction.guild is None")
+                return
             try:
                 await interaction.response.edit_message(embed=self.getWorkshopEmbed(interaction.guild, wsTitle))
             except Exception as e:

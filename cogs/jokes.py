@@ -1,9 +1,9 @@
-from secret import DEBUG
-import requests
+import requests  # type: ignore
 
 from discord import app_commands
 from discord.ext import commands  # type: ignore
 
+from secret import DEBUG
 from constants import *
 from __main__ import log, cogsReady
 if DEBUG:

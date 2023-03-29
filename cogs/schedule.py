@@ -1,13 +1,14 @@
-from secret import DEBUG
-import os, re, json, asyncio, pytz, random, discord
+import os, re, json, asyncio, random, discord
+import pytz  # type: ignore
 
 from copy import deepcopy
 from datetime import datetime, timedelta
-from dateutil.parser import parse as datetimeParse
+from dateutil.parser import parse as datetimeParse  # type: ignore
 
-from discord import app_commands, Embed, Color, utils
+from discord import Embed, Color
 from discord.ext import commands, tasks  # type: ignore
 
+from secret import DEBUG
 from constants import *
 from __main__ import log, cogsReady
 if DEBUG:
@@ -157,6 +158,10 @@ class Schedule(commands.Cog):
         None.
         """
         guild = self.bot.get_guild(GUILD_ID)
+        if guild is None:
+            log.exception("saveEventToHistory: guild is None")
+            return
+
         if event.get("type", "Operation") == "Workshop" and (workshopInterestName := event.get("workshopInterest")) is not None:
             with open(WORKSHOP_INTEREST_FILE) as f:
                 workshopInterest = json.load(f)
@@ -233,11 +238,20 @@ class Schedule(commands.Cog):
 
         # === Checks if players have accepted the event and joined the voice channel. ===
         guild = self.bot.get_guild(GUILD_ID)
+        if guild is None:
+            log.exception("tenMinTask: guild is None")
+            return
+
         try:
             with open(EVENTS_FILE) as f:
                 events = json.load(f)
             utcNow = UTC.localize(datetime.utcnow())
+
             channel = self.bot.get_channel(ARMA_DISCUSSION)
+            if channel is None or not isinstance(channel, discord.channel.TextChannel):
+                log.exception("tenMinTask: channel is invalid type")
+                return
+
             for event in events:
                 if event.get("checkedAcceptedReminders", False):
                     continue
@@ -273,9 +287,9 @@ class Schedule(commands.Cog):
 
 # ===== <Refresh Schedule> =====
 
-    @app_commands.command(name="refreshschedule")
-    @app_commands.guilds(GUILD)
-    @app_commands.checks.has_any_role(UNIT_STAFF, SERVER_HAMSTER, CURATOR)
+    @discord.app_commands.command(name="refreshschedule")
+    @discord.app_commands.guilds(GUILD)
+    @discord.app_commands.checks.has_any_role(UNIT_STAFF, SERVER_HAMSTER, CURATOR)
     async def refreshSchedule(self, interaction: discord.Interaction) -> None:
         """ Refreshes the schedule - Use if an event was deleted without using the reaction.
 
@@ -290,18 +304,22 @@ class Schedule(commands.Cog):
         await self.updateSchedule()
 
     @refreshSchedule.error
-    async def onRefreshScheduleError(self, interaction: discord.Interaction, error: app_commands.AppCommandError) -> None:
+    async def onRefreshScheduleError(self, interaction: discord.Interaction, error: discord.app_commands.AppCommandError) -> None:
         """ refreshSchedule errors - dedicated for the discord.app_commands.errors.MissingAnyRole error.
 
         Parameters:
         interaction (discord.Interaction): The Discord interaction.
-        error (app_commands.AppCommandError): The end user error.
+        error (discord.app_commands.AppCommandError): The end user error.
 
         Returns:
         None.
         """
         if type(error) == discord.app_commands.errors.MissingAnyRole:
             guild = self.bot.get_guild(GUILD_ID)
+            if guild is None:
+                log.exception("OnRefreshScheduleError: guild is None")
+                return
+
             embed = Embed(title="❌ Missing permissions", description=f"You do not have the permissions to refresh the schedule!\nThe permitted roles are: {', '.join([guild.get_role(role).name for role in (UNIT_STAFF, SERVER_HAMSTER, CURATOR)])}.", color=Color.red())
             await interaction.response.send_message(embed=embed)
 
@@ -321,6 +339,10 @@ class Schedule(commands.Cog):
         """
         self.lastUpdate = datetime.utcnow()
         channel = self.bot.get_channel(SCHEDULE)
+        if channel is None or not isinstance(channel, discord.channel.TextChannel):
+            log.exception("updateSchedule: channel invalid type")
+            return
+
         await channel.purge(limit=None, check=lambda m: m.author.id in FRIENDLY_SNEKS)
 
         await channel.send(f"__Welcome to the schedule channel!__\n🟩 Schedule operations: `/operation` (`/bop`)\n🟦 Workshops: `/workshop` (`/ws`)\n🟨 Generic events: `/event`\n\nThe datetime you see in here are based on __your local time zone__.\nChange timezone when scheduling events with `/changetimezone`.\n\nSuggestions/bugs contact: {', '.join([f'**{channel.guild.get_member(name).display_name}**' for name in DEVELOPERS if channel.guild.get_member(name) is not None])} -- <https://github.com/Sigma-Security-Group/FriendlySnek> `{commitHash}`")
@@ -340,27 +362,26 @@ class Schedule(commands.Cog):
                 for event in sorted(events, key=lambda e: datetime.strptime(e["time"], TIME_FORMAT), reverse=True):
                     embed = self.getEventEmbed(event)
 
-                    row = ScheduleView()
-                    buttons = []
+                    view = ScheduleView()
+                    items = []
 
                     # Add attendance buttons if maxPlayers is not hidden
                     if event["maxPlayers"] != "hidden":
-                        buttons.extend([
+                        items.extend([
                             ScheduleButton(self, None, row=0, label="Accept", style=discord.ButtonStyle.success, custom_id="accepted"),
                             ScheduleButton(self, None, row=0, label="Decline", style=discord.ButtonStyle.danger, custom_id="declined"),
                             ScheduleButton(self, None, row=0, label="Tentative", style=discord.ButtonStyle.primary, custom_id="tentative")
                         ])
                         if event["reservableRoles"] is not None:
-                            buttons.append(ScheduleButton(self, None, row=0, label="Reserve", style=discord.ButtonStyle.secondary, custom_id="reserve"))
+                            items.append(ScheduleButton(self, None, row=0, label="Reserve", style=discord.ButtonStyle.secondary, custom_id="reserve"))
 
-                    buttons.extend([
-                        ScheduleButton(self, None, row=1, label="Edit", style=discord.ButtonStyle.secondary, custom_id="edit"),
-                        ScheduleButton(self, None, row=1, label="Delete", style=discord.ButtonStyle.secondary, custom_id="delete")
+                    items.extend([
+                        ScheduleButton(self, None, row=0, emoji="⚙️", style=discord.ButtonStyle.secondary, custom_id="config")
                     ])
-                    for button in buttons:
-                        row.add_item(item=button)
+                    for item in items:
+                        view.add_item(item)
 
-                    msg = await channel.send(embed=embed, view=row)
+                    msg = await channel.send(embed=embed, view=view)
                     event["messageId"] = msg.id
                     newEvents.append(event)
                     with open(EVENTS_FILE, "w") as f:
@@ -395,7 +416,7 @@ class Schedule(commands.Cog):
 
         durationHours = int(event["duration"].split("h")[0].strip()) if "h" in event["duration"] else 0
         embed.add_field(name="\u200B", value="\u200B", inline=False)
-        embed.add_field(name="Time", value=f"{utils.format_dt(UTC.localize(datetime.strptime(event['time'], TIME_FORMAT)), style='F')} - {utils.format_dt(UTC.localize(datetime.strptime(event['endTime'], TIME_FORMAT)), style='t' if durationHours < 24 else 'F')}", inline=(durationHours < 24))
+        embed.add_field(name="Time", value=f"{discord.utils.format_dt(UTC.localize(datetime.strptime(event['time'], TIME_FORMAT)), style='F')} - {discord.utils.format_dt(UTC.localize(datetime.strptime(event['endTime'], TIME_FORMAT)), style='t' if durationHours < 24 else 'F')}", inline=(durationHours < 24))
         embed.add_field(name="Duration", value=event["duration"], inline=True)
 
         if event["map"] is not None:
@@ -445,7 +466,11 @@ class Schedule(commands.Cog):
         None.
         """
         if isinstance(interaction.user, discord.User):
-            log.exception("ButtonHandling user not discord.Member")
+            log.exception("ButtonHandling: user not discord.Member")
+            return
+
+        if interaction.message is None:
+            log.exception("ButtonHandling: interaction.message is None")
             return
 
         try:
@@ -540,41 +565,60 @@ class Schedule(commands.Cog):
                         await message.edit(embed=self.getEventEmbed(event))
                         break
 
+            elif button.custom_id == "config":
+                if interaction.user.id != event["authorId"] and not any(role.id == UNIT_STAFF or role.id == SERVER_HAMSTER for role in interaction.user.roles):
+                    await interaction.response.send_message(RESPONSE_UNALLOWED.format("configure"), ephemeral=True, delete_after=60.0)
+                    return
+
+                view = ScheduleView()
+                items = [
+                    ScheduleButton(self, interaction.message, row=0, label="Edit", style=discord.ButtonStyle.primary, custom_id="edit"),
+                    ScheduleButton(self, interaction.message, row=0, label="Delete", style=discord.ButtonStyle.danger, custom_id="delete")
+                ]
+                for item in items:
+                    view.add_item(item)
+                await interaction.response.send_message(content=f"{interaction.user.mention} What would you like to configure?", view=view, ephemeral=True, delete_after=60.0)
+
             elif button.custom_id == "edit":
                 event = eventList[0]
-                if interaction.user.id == event["authorId"] or any(role.id == UNIT_STAFF or role.id == SERVER_HAMSTER for role in interaction.user.roles):
-                    await interaction.response.send_message(RESPONSE_GOTO_DMS.format(dmChannel.jump_url), ephemeral=True, delete_after=60.0)
-                    reorderEvents = await self.editEvent(interaction, event, isTemplateEdit=False)
-                    if reorderEvents:
-                        with open(EVENTS_FILE, "w") as f:
-                            json.dump(events, f, indent=4)
-                        await self.updateSchedule()
-                        return
-                else:
-                    await interaction.response.send_message(RESPONSE_UNALLOWED.format("edit"), ephemeral=True, delete_after=60.0)
+                await interaction.response.send_message(RESPONSE_GOTO_DMS.format(dmChannel.jump_url), ephemeral=True, delete_after=10.0)
+                reorderEvents = await self.editEvent(interaction, event, isTemplateEdit=False)
+                if reorderEvents:
+                    with open(EVENTS_FILE, "w") as f:
+                        json.dump(events, f, indent=4)
+                    await self.updateSchedule()
                     return
+
                 fetchMsg = True
 
             elif button.custom_id == "delete":
                 event = eventList[0]
                 scheduleNeedsUpdate = False
 
-                if interaction.user.id != event["authorId"] and not any(role.id == UNIT_STAFF or role.id == SERVER_HAMSTER for role in interaction.user.roles):
-                    await interaction.response.send_message(RESPONSE_UNALLOWED.format("delete"), ephemeral=True, delete_after=60.0)
+                if message is None:
+                    log.exception("buttonHandling delete: button message is None")
                     return
 
                 embed = Embed(title=SCHEDULE_EVENT_CONFIRM_DELETE.format(f"{event['type'].lower()}: `{event['title']}`"), color=Color.orange())
-                row = ScheduleView()
-                buttons = [
-                    ScheduleButton(self, interaction.message, row=0, label="Delete", style=discord.ButtonStyle.success, custom_id="delete_event_confirm"),
-                    ScheduleButton(self, interaction.message, row=0, label="Cancel", style=discord.ButtonStyle.danger, custom_id="delete_event_cancel"),
+                view = ScheduleView()
+                items = [
+                    ScheduleButton(self, message, row=0, label="Delete", style=discord.ButtonStyle.success, custom_id="delete_event_confirm"),
+                    ScheduleButton(self, message, row=0, label="Cancel", style=discord.ButtonStyle.danger, custom_id="delete_event_cancel"),
                 ]
-                for button in buttons:
-                    row.add_item(item=button)
-                await interaction.response.send_message(content=interaction.user.mention, embed=embed, view=row, ephemeral=True, delete_after=60.0)
+                for item in items:
+                    view.add_item(item)
+                await interaction.response.send_message(content=interaction.user.mention, embed=embed, view=view, ephemeral=True, delete_after=60.0)
 
             elif button.custom_id == "delete_event_confirm":
                 scheduleNeedsUpdate = False
+
+                if button.view is None:
+                    log.exception("buttonHandling delete_event_confim: button.view is None")
+                    return
+
+                if message is None:
+                    log.exception("buttonHandling delete_event_confim: button message is None")
+                    return
 
                 # Disable buttons
                 for button in button.view.children:
@@ -595,10 +639,14 @@ class Schedule(commands.Cog):
                         await self.saveEventToHistory(event)
                     else:
                         guild = self.bot.get_guild(GUILD_ID)
+                        if guild is None:
+                            log.exception("buttonHandling delete_event_confim: guild is None")
+                            return
+
                         for memberId in event["accepted"] + event["declined"] + event["tentative"]:
                             member = guild.get_member(memberId)
                             if member is not None:
-                                embed = Embed(title=f"🗑 {event.get('type', 'Operation')} deleted: {event['title']}!", description=f"The {event.get('type', 'Operation').lower()} was scheduled to run:\n{utils.format_dt(UTC.localize(datetime.strptime(event['time'], TIME_FORMAT)), style='F')}", color=Color.red())
+                                embed = Embed(title=f"🗑 {event.get('type', 'Operation')} deleted: {event['title']}!", description=f"The {event.get('type', 'Operation').lower()} was scheduled to run:\n{discord.utils.format_dt(UTC.localize(datetime.strptime(event['time'], TIME_FORMAT)), style='F')}", color=Color.red())
                                 try:
                                     await member.send(embed=embed)
                                 except Exception as e:
@@ -608,8 +656,12 @@ class Schedule(commands.Cog):
                 events.remove(event)
 
             elif button.custom_id == "delete_event_cancel":
-                for button in button.view.children:
-                    button.disabled = True
+                if button.view is None:
+                    log.exception("ButtonHandling delete_event_cancel: button.view is None")
+                    return
+
+                for item in button.view.children:
+                    item.disabled = True
                 await interaction.response.edit_message(view=button.view)
                 await interaction.followup.send(embed=Embed(title=f"❌ Event deletion canceled!", color=Color.red()), ephemeral=True)
                 return
@@ -619,6 +671,10 @@ class Schedule(commands.Cog):
                 try:
                     embed = self.getEventEmbed(event)
                     if fetchMsg:  # Could be better - could be worse...
+                        if interaction.channel is None or isinstance(interaction.channel, discord.channel.ForumChannel) or isinstance(interaction.channel, discord.channel.CategoryChannel):
+                            log.exception("ButtonHandling scheduleNeedsUpdate: interaction.channel is invalid type")
+                            return
+
                         originalMsgId = interaction.message.id
                         msg = await interaction.channel.fetch_message(originalMsgId)
                         await msg.edit(embed=embed)
@@ -1026,7 +1082,7 @@ class Schedule(commands.Cog):
                 # Set time is in the past
                 if (delta := UTC.localize(utcNow) - startTime) > timedelta(hours=1) and delta < timedelta(days=1):  # Set time in the past 24 hours
                     newStartTime = startTime + timedelta(days=1)
-                    embed = Embed(title="Time was detected to be in the past 24h and was set to tomorrow.", description=f"Input time: {utils.format_dt(startTime, style='F')}.\nSelected time: {utils.format_dt(newStartTime, style='F')}.", color=Color.orange())
+                    embed = Embed(title="Time was detected to be in the past 24h and was set to tomorrow.", description=f"Input time: {discord.utils.format_dt(startTime, style='F')}.\nSelected time: {discord.utils.format_dt(newStartTime, style='F')}.", color=Color.orange())
                     await dmChannel.send(embed=embed)
                     startTime = newStartTime
                     break
@@ -1166,7 +1222,7 @@ class Schedule(commands.Cog):
                     "Map": f"```txt\n{event['map']}\n```",
                     "Max Players": f"```txt\n{event['maxPlayers'].capitalize() if isinstance(event['maxPlayers'], str) else event['maxPlayers']}\n```",
                     "Duration": f"```txt\n{event['duration']}\n```",
-                    "Time": utils.format_dt(UTC.localize(datetime.strptime(event["time"], TIME_FORMAT)), style="F")
+                    "Time": discord.utils.format_dt(UTC.localize(datetime.strptime(event["time"], TIME_FORMAT)), style="F")
                 }
                 log.info(f"{interaction.user.display_name} ({interaction.user}) is editing the event: {event['title']}")
                 [embed.add_field(name=f"**{index}**. {name}", value=value, inline=False) for index, (name, value) in enumerate(eventEditDisplay.items(), start=1)]
@@ -1366,7 +1422,7 @@ class Schedule(commands.Cog):
                 log.exception("editEvent: guild is None")
                 return False
 
-            embed = Embed(title=f":clock3: The starting time has changed for: {event['title']}!", description=f"From: {utils.format_dt(UTC.localize(datetime.strptime(startTimeOld, TIME_FORMAT)), style='F')}\n\u2000\u2000To: {utils.format_dt(UTC.localize(datetime.strptime(event['time'], TIME_FORMAT)), style='F')}", color=Color.orange())
+            embed = Embed(title=f":clock3: The starting time has changed for: {event['title']}!", description=f"From: {discord.utils.format_dt(UTC.localize(datetime.strptime(startTimeOld, TIME_FORMAT)), style='F')}\n\u2000\u2000To: {discord.utils.format_dt(UTC.localize(datetime.strptime(event['time'], TIME_FORMAT)), style='F')}", color=Color.orange())
             for memberId in event["accepted"] + event["declined"] + event["tentative"]:
                 member = guild.get_member(memberId)
                 if member is not None:
@@ -1400,14 +1456,14 @@ class Schedule(commands.Cog):
 
 # ===== <Operation> =====
 
-    @app_commands.command(name="bop")
-    @app_commands.guilds(GUILD)
+    @discord.app_commands.command(name="bop")
+    @discord.app_commands.guilds(GUILD)
     async def bop(self, interaction: discord.Interaction) -> None:
         """ Create an operation to add to the schedule. """
         await self.scheduleOperation(interaction)
 
-    @app_commands.command(name="operation")
-    @app_commands.guilds(GUILD)
+    @discord.app_commands.command(name="operation")
+    @discord.app_commands.guilds(GUILD)
     async def operation(self, interaction: discord.Interaction) -> None:
         """ Create an operation to add to the schedule. """
         await self.scheduleOperation(interaction)
@@ -1495,14 +1551,14 @@ class Schedule(commands.Cog):
 
 # ===== <Workshop> =====
 
-    @app_commands.command(name="ws")
-    @app_commands.guilds(GUILD)
+    @discord.app_commands.command(name="ws")
+    @discord.app_commands.guilds(GUILD)
     async def ws(self, interaction: discord.Interaction) -> None:
         """ Create a workshop to add to the schedule. """
         await self.scheduleWorkshop(interaction)
 
-    @app_commands.command(name="workshop")
-    @app_commands.guilds(GUILD)
+    @discord.app_commands.command(name="workshop")
+    @discord.app_commands.guilds(GUILD)
     async def workshop(self, interaction: discord.Interaction) -> None:
         """ Create a workshop to add to the schedule. """
         await self.scheduleWorkshop(interaction)
@@ -1521,9 +1577,8 @@ class Schedule(commands.Cog):
 
         authorId = interaction.user.id
 
-        templateActionRepeat: bool = True
         color = Color.gold()
-        while templateActionRepeat:
+        while True:
             with open(WORKSHOP_TEMPLATES_FILE) as f:
                 workshopTemplates = json.load(f)
             embed = Embed(title=":clipboard: Templates", description="Enter a template number.\nEnter `none` to make a workshop from scratch.\n\nEdit template: `edit` + template number. E.g. `edit 2`.\nDelete template: `delete` + template number. E.g. `delete 4`. **IRREVERSIBLE!**", color=color)
@@ -1536,6 +1591,9 @@ class Schedule(commands.Cog):
                 log.exception(f"{interaction.user} | {e}")
                 return
             dmChannel = msg.channel
+            if not isinstance(dmChannel, discord.channel.DMChannel):
+                log.exception("ScheduleWorkshop: dmChannel not discord.channel.DMChannel")
+                return
 
             try:
                 response = await self.bot.wait_for("message", timeout=TIME_ONE_MIN, check=lambda msg, interaction=interaction, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == interaction.user)
@@ -1544,9 +1602,11 @@ class Schedule(commands.Cog):
                 if templateAction.lower() == "cancel":
                     await self.cancelCommand(dmChannel, "Workshop scheduling")
                     return
+
                 elif templateAction.lower() == "none":
-                    templateActionRepeat = False
                     template = None
+                    break
+
                 elif re.search(r"(edit |delete )?\d+", templateAction, re.IGNORECASE):
                     if templateAction.lower().startswith("delete"):
                         templateNumber = templateAction.split(" ")[-1]
@@ -1592,7 +1652,7 @@ class Schedule(commands.Cog):
                     else: # Select template
                         if templateAction.isdigit() and int(templateAction) <= len(workshopTemplates) and int(templateAction) > 0:
                             template = workshopTemplates[int(templateAction) - 1]
-                            templateActionRepeat = False
+                            break
 
             except asyncio.TimeoutError:
                 await dmChannel.send(embed=TIMEOUT_EMBED)
@@ -1778,7 +1838,12 @@ class Schedule(commands.Cog):
         if workshopInterest is not None:
             with open(WORKSHOP_INTEREST_FILE) as f:
                 workshopInterestItem = [{"name": name, "wsInterest": wsInterest} for name, wsInterest in json.load(f).items() if name == workshopInterest][0]
+
             guild = self.bot.get_guild(GUILD_ID)
+            if guild is None:
+                log.exception("ScheduleWorkshop: guild is None")
+                return
+
             message = ""
             for memberId in workshopInterestItem["wsInterest"]["members"]:
                 message += f"{member.mention} " if (member := guild.get_member(memberId)) is not None else ""
@@ -1790,8 +1855,8 @@ class Schedule(commands.Cog):
 
 # ===== <Event> =====
 
-    @app_commands.command(name="event")
-    @app_commands.guilds(GUILD)
+    @discord.app_commands.command(name="event")
+    @discord.app_commands.guilds(GUILD)
     async def scheduleEvent(self, interaction: discord.Interaction) -> None:
         """ Create an event to add to the schedule.
 
@@ -1875,11 +1940,11 @@ class Schedule(commands.Cog):
 
 # ===== <Timestamp> =====
 
-    @app_commands.command(name="timestamp")
-    @app_commands.guilds(GUILD)
-    @app_commands.describe(time = "Your local time, e.g. 9:00 PM", message = "Add a message before the timestamp", timezone = "Convert the time from a different time zone other than your personal, e.g. EST & Europe/London", informative = "Displays all formats, raw text, etc.")
-    @app_commands.choices(informative = [app_commands.Choice(name="Yes plz", value="Yes")])
-    async def timestamp(self, interaction: discord.Interaction, time: str, message: str = "", timezone: str = "", informative: app_commands.Choice[str] | None = None) -> None:
+    @discord.app_commands.command(name="timestamp")
+    @discord.app_commands.guilds(GUILD)
+    @discord.app_commands.describe(time = "Your local time, e.g. 9:00 PM", message = "Add a message before the timestamp", timezone = "Convert the time from a different time zone other than your personal, e.g. EST & Europe/London", informative = "Displays all formats, raw text, etc.")
+    @discord.app_commands.choices(informative = [discord.app_commands.Choice(name="Yes plz", value="Yes")])
+    async def timestamp(self, interaction: discord.Interaction, time: str, message: str = "", timezone: str = "", informative: discord.app_commands.Choice[str] | None = None) -> None:
         """ Convert your local time to a dynamic Discord timestamp.
 
         Parameters:
@@ -1887,7 +1952,7 @@ class Schedule(commands.Cog):
         time (str): Inputted time to be converted.
         message (str): Optionally adding a message before the timestamp.
         timezone (str): Optional custom time zone, which is separate from the user set preferred time zone.
-        informative (app_commands.Choice[str]): If the user want's the informative embed - displaying all timestamps with desc, etc.
+        informative (discord.app_commands.Choice[str]): If the user want's the informative embed - displaying all timestamps with desc, etc.
 
         Returns:
         None.
@@ -1925,11 +1990,11 @@ class Schedule(commands.Cog):
 
         # Output timestamp
         timeParsed = timeZone.localize(timeParsed)
-        await interaction.edit_original_response(content = f"{message} {utils.format_dt(timeParsed, 'F')}")
+        await interaction.edit_original_response(content = f"{message} {discord.utils.format_dt(timeParsed, 'F')}")
         if informative is not None:
             embed = Embed(color=Color.green())
             embed.set_footer(text=f"Local time: {timeParsed.strftime(TIME_FORMAT)}\nTime zone: {memberTimeZones[str(interaction.user.id)] if not timezone else timeZone}")
-            timestamps = [utils.format_dt(timeParsed, style=timestampStyle[0]) for timestampStyle in TIMESTAMP_STYLES.items()]
+            timestamps = [discord.utils.format_dt(timeParsed, style=timestampStyle[0]) for timestampStyle in TIMESTAMP_STYLES.items()]
             embed.add_field(name="Timestamp", value="\n".join(timestamps), inline=True)
             embed.add_field(name="Copy this", value="\n".join([f"`{stamp}`" for stamp in timestamps]), inline=True)
             embed.add_field(name="Description", value="\n".join([f"`{timestampStyle[1]}`" for timestampStyle in TIMESTAMP_STYLES.items()]), inline=True)
@@ -1940,8 +2005,8 @@ class Schedule(commands.Cog):
 
 # ===== <Change Time Zone> =====
 
-    @app_commands.command(name="changetimezone")
-    @app_commands.guilds(GUILD)
+    @discord.app_commands.command(name="changetimezone")
+    @discord.app_commands.guilds(GUILD)
     async def timeZoneCmd(self, interaction: discord.Interaction) -> None:
         """ Change your time zone preferences for your next scheduled event. """
         await interaction.response.send_message("Changing time zone preferences...")

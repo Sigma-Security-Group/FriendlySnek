@@ -1,9 +1,8 @@
-import secret, requests, pytz, os, random
-import asyncpraw  # type: ignore
+import secret, os, random
+import asyncpraw, requests, pytz  # type: ignore
 
-from asyncpraw.models import InlineImage  # type: ignore
 from datetime import datetime, timezone, timedelta
-from dateutil.parser import parse as datetimeParse
+from dateutil.parser import parse as datetimeParse  # type: ignore
 from bs4 import BeautifulSoup as BS  # type: ignore
 
 from discord import utils
@@ -94,8 +93,21 @@ class BotTasks(commands.Cog):
             if len(output) > 0:
                 # Create message
                 guild = self.bot.get_guild(GUILD_ID)
-                c = await guild.fetch_channel(CHANGELOG)
-                message = guild.get_role(SERVER_HAMSTER).mention + (f" ({len(output)})" if len(output) > 1 else "") + "\n\n"  # Ping for first message
+                if guild is None:
+                    log.exception("checkModUpdates: guild is None")
+                    return
+
+                changelog = await guild.fetch_channel(CHANGELOG)
+                if not isinstance(changelog, discord.channel.TextChannel):
+                    log.exception("checkModUpdates: changelog channel is not discord.channel.TextChannel")
+                    return
+
+                hampter = guild.get_role(SERVER_HAMSTER)
+                if hampter is None:
+                    log.exception("checkModUpdates: Hampter role is None")
+                    return
+
+                message = hampter.mention + (f" ({len(output)})" if len(output) > 1 else "") + "\n\n"  # Ping for first message
                 for mod in output:
                     # Title + Date
                     message += f"{mod['name']}\n"
@@ -107,7 +119,7 @@ class BotTasks(commands.Cog):
                     message += f"<{CHANGELOG_URL.format(mod['modID'])}>"
 
                     # Each new mod update will be sent in a separate message
-                    await c.send(message)
+                    await changelog.send(message)
                     message = ""
 
         except Exception as e:
@@ -152,7 +164,6 @@ class BotTasks(commands.Cog):
             post = {
                 "Title": "[A3][18+][Recruiting][Worldwide] | Casual-Attendance, PMC Themed Unit | Sigma Security Group is now Recruiting!",
                 "FlairID": flairID,
-                #"Media": {"banner": InlineImage(path=f"{propagandaPath}/{random.choice(os.listdir(propagandaPath))}", caption="SSG")},
                 "Description": """About Us:
 
 - **Flexibility**: Sigma has no formal sign-up process, no commitments, and offers instruction on request. Certification in specialty roles is available and run by professionals in the field.
@@ -185,8 +196,12 @@ Join Us:
 
             log.info("Reddit recruitment posted!")
 
-            channel = self.bot.get_channel(ARMA_DISCUSSION)
-            await channel.send(f"Reddit recruitment post published, go upvote it!\nhttps://www.reddit.com{submission.permalink}")
+            armaDisc = self.bot.get_channel(ARMA_DISCUSSION)
+            if not isinstance(armaDisc, discord.channel.TextChannel):
+                log.exception("checkModUpdates: Arma Discussion channel is not discord.channel.TextChannel")
+                return
+
+            await armaDisc.send(f"Reddit recruitment post published, go upvote it!\nhttps://www.reddit.com{submission.permalink}")
         except Exception as e:
             log.exception(e)
 

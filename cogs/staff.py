@@ -1,10 +1,10 @@
-from secret import DEBUG
 import re
 
 from datetime import datetime, timezone
 from discord import utils, Embed, Color
 from discord.ext import commands  # type: ignore
 
+from secret import DEBUG
 from constants import *
 from __main__ import log, cogsReady
 if DEBUG:

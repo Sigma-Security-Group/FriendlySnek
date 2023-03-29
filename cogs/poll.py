@@ -1,10 +1,10 @@
-from secret import DEBUG
 import re
 
 from datetime import datetime
-from discord import app_commands, Embed, Color
+from discord import Embed, Color
 from discord.ext import commands  # type: ignore
 
+from secret import DEBUG
 from constants import *
 from __main__ import log, cogsReady
 if DEBUG:
@@ -22,9 +22,9 @@ class Poll(commands.Cog):
         log.debug(LOG_COG_READY.format("Poll"), flush=True)
         cogsReady["poll"] = True
 
-    @app_commands.command(name="poll")
-    @app_commands.guilds(GUILD)
-    @app_commands.describe(
+    @discord.app_commands.command(name="poll")
+    @discord.app_commands.guilds(GUILD)
+    @discord.app_commands.describe(
         multivote = "If you're able to vote for multiple options.",
         title = "Title",
         option1 = "Option 1",
@@ -39,13 +39,13 @@ class Poll(commands.Cog):
         option9 = "Option 9",
         option10 = "Option 10"
     )
-    @app_commands.choices(multivote = [app_commands.Choice(name="Multiple votes", value="Yes"), app_commands.Choice(name="One vote", value="No")])
-    async def poll(self, interaction: discord.Interaction, multivote: app_commands.Choice[str], title: str, option1: str, description: str = "", option2: str = None, option3: str = None, option4: str = None, option5: str = None, option6: str = None, option7: str = None, option8: str = None, option9: str = None, option10: str = None) -> None:
+    @discord.app_commands.choices(multivote = [discord.app_commands.Choice(name="Multiple votes", value="Yes"), discord.app_commands.Choice(name="One vote", value="No")])
+    async def poll(self, interaction: discord.Interaction, multivote: discord.app_commands.Choice[str], title: str, option1: str, description: str = "", option2: str = "", option3: str = "", option4: str = "", option5: str = "", option6: str = "", option7: str = "", option8: str = "", option9: str = "", option10: str = "") -> None:
         """ Create a poll with up to 10 options.
 
         Parameters:
         interaction (discord.Interaction): The Discord interaction.
-        multivote (app_commands.Choice[str]): If a user is able to cast their votes on multiple options.
+        multivote (discord.app_commands.Choice[str]): If a user is able to cast their votes on multiple options.
         title (str): Poll title.
         option1 (str): Poll option 1.
         description (str): Poll description.
@@ -70,13 +70,15 @@ class Poll(commands.Cog):
         embed = Embed(title=title, description=f"{description}\n\n", color=Color.gold())
         embed.set_footer(text=f"Poll by {interaction.user.display_name}")
         embed.timestamp = datetime.utcnow()
+        if embed.description is None:
+            log.exception("Poll: embed.description is None")
+            return
 
         options = [option1, option2, option3, option4, option5, option6, option7, option8, option9, option10]
         isOneOption = any(options[1:])
-        optionCount: int = 0
+        optionCount = 0
         for optionInp in options:
-            if optionInp is not None:
-                assert embed.description is not None
+            if optionInp != "":
                 embed.description += f"{emojiNumbers[optionCount]}{' **(0%)**' * isOneOption} {optionInp}\n"
                 group[f"poll_vote_{optionCount}"] = []
                 optionCount += 1
@@ -115,9 +117,25 @@ class Poll(commands.Cog):
             return
 
         try:
+            if interaction.channel is None or isinstance(interaction.channel, discord.channel.ForumChannel) or isinstance(interaction.channel, discord.channel.CategoryChannel):
+                log.exception("Poll ButtonHandling: interaction.channel is invalid type")
+                return
+            if interaction.message is None:
+                log.exception("Poll ButtonHandling: interaction.message is None")
+                return
+
             msg = await interaction.channel.fetch_message(interaction.message.id)
+
             embed = msg.embeds[0]
+            if embed.description is None:
+                log.exception("Poll ButtonHandling: embed.description is None")
+                return
+
             optionRows = (emojiNumbers[0] + embed.description.split(emojiNumbers[0])[1]).split("\n")
+
+            if button.view is None:
+                log.exception("Poll ButtonHandling: button.view is None")
+                return
             row = button.view
 
             for num in range(len(optionRows)):  # Loop through the amount of buttons

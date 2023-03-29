@@ -583,6 +583,7 @@ class Schedule(commands.Cog):
                 await interaction.response.send_message(content=f"{interaction.user.mention} What would you like to configure?", view=view, ephemeral=True, delete_after=60.0)
 
             elif button.custom_id == "edit":
+                scheduleNeedsUpdate = False
                 if message is None:
                     log.exception("buttonHandling delete: edit message is None")
                     return
@@ -595,8 +596,8 @@ class Schedule(commands.Cog):
                         json.dump(events, f, indent=4)
                     await self.updateSchedule()
                     return
-
-                fetchMsg = True
+                else:
+                    await message.edit(embed=self.getEventEmbed(event))
 
             elif button.custom_id == "delete":
                 if message is None:

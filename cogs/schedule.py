@@ -747,6 +747,191 @@ class Schedule(commands.Cog):
             with open(EVENTS_FILE, "w") as f:
                 json.dump(events, f, indent=4)
 
+        elif select.custom_id == "edit_select":
+            editOption = select.values[0]
+
+            reorderEvents = False
+            # eventType = event.get("type", "operation")
+
+            # Editing Type
+            if editOption == "Type":
+                eventTypeNum = "INVALID INPUT"
+                color = Color.gold()
+                while eventTypeNum not in ("1", "2", "3"):
+                    embed = Embed(title=":pencil2: What is the type of your event?", color=color)
+                    embed.add_field(name="Type", value="**1** 🟩 Operation\n**2** 🟦 Workshop\n**3** 🟨 Event")
+                    embed.set_footer(text=SCHEDULE_CANCEL)
+                    color = Color.red()
+                    await interaction.user.send(embed=embed)
+                    try:
+                        response = await self.bot.wait_for("message", timeout=TIME_ONE_MIN, check=lambda msg, author=interaction.user, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
+                        eventTypeNum = response.content.strip()
+                        if eventTypeNum.lower() == "cancel":
+                            await self.cancelCommand(interaction.user.dm_channel, "Event editing")
+                            return None
+                    except asyncio.TimeoutError:
+                        await interaction.user.send(embed=TIMEOUT_EMBED)
+                        return None
+                event["type"] = {"1": "Operation", "2": "Workshop", "3": "Event"}.get(eventTypeNum, "Operation")
+
+            # Editing Template Name
+            elif editOption == "Template Name":
+                embed = Embed(title=SCHEDULE_EVENT_TEMPLATE_SAVE_NAME_QUESTION, color=Color.gold())
+                embed.set_footer(text=SCHEDULE_CANCEL)
+                await dmChannel.send(embed=embed)
+                try:
+                    response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, author=interaction.user, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
+                    templateName = response.content.strip()
+                    if templateName.lower() == "cancel":
+                        await self.cancelCommand(dmChannel, "Event editing")
+                        return None
+                except asyncio.TimeoutError:
+                    await dmChannel.send(embed=TIMEOUT_EMBED)
+                    return None
+                event["name"] = templateName
+
+            # Editing Title
+            elif editOption == "Title":
+                title = await self.eventTitle(interaction, eventType)
+                if title is None:
+                    return None
+                event["title"] = title
+
+            # Editing Linking
+            elif editOption == "Linking":
+                workshopInterestOk = False
+                color = Color.gold()
+                while not workshopInterestOk:
+                    with open(WORKSHOP_INTEREST_FILE) as f:
+                        workshopInterestOptions = list(json.load(f).keys())
+                    embed = Embed(title=":link: Which workshop waiting list is your workshop linked to?", description="When linking your workshop and finished scheduling it, it will automatically ping everyone interested in it.\nFurthermore, those that complete the workshop will be removed from the interest list!\nEnter `none` to not link it.", color=color)
+                    embed.add_field(name="Workshop Lists", value="\n".join(f"**{idx}.** {wsName}" for idx, wsName in enumerate(workshopInterestOptions, 1)))
+                    embed.set_footer(text=SCHEDULE_CANCEL)
+                    color = Color.red()
+                    await dmChannel.send(embed=embed)
+                    try:
+                        response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, author=interaction.user, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
+                        workshopInterest = response.content.strip()
+                        if workshopInterest.lower() == "cancel":
+                            await self.cancelCommand(dmChannel, "Event editing")
+                            return None
+                        workshopInterestOk = True
+                        if workshopInterest.isdigit() and int(workshopInterest) <= len(workshopInterestOptions) and int(workshopInterest) > 0:
+                            workshopInterest = workshopInterestOptions[int(workshopInterest) - 1]
+                        elif workshopInterest.strip().lower() == "none":
+                            workshopInterest = None
+                        else:
+                            workshopInterestOk = False
+                    except asyncio.TimeoutError:
+                        await dmChannel.send(embed=TIMEOUT_EMBED)
+                        return None
+
+                event["workshopInterest"] = workshopInterest
+
+            # Editing Description
+            elif editOption == "Description":
+                description = await self.eventDescription(interaction, eventType, currentDesc=event["description"])
+                if description is None:
+                    return None
+                event["description"] = description
+
+            # Editing URL
+            elif editOption == "External URL":
+                externalURL = await self.eventURL(interaction, eventType)
+                if externalURL is False:
+                    return None
+                event["externalURL"] = externalURL
+
+            # Editing Reservable Roles
+            elif editOption == "Reservable Roles":
+                reservableRoles = await self.eventReserveRole(
+                    interaction,
+                    eventType,
+                    None if event["reservableRoles"] is None else "\n".join(event["reservableRoles"].keys()),
+                    event
+                )
+                if reservableRoles is False:
+                    return None
+                event["reservableRoles"] = reservableRoles
+                reorderEvents = True
+
+            # Editing Map
+            elif editOption == "Map":
+                eventMap = await self.eventMap(interaction, eventType)
+                if eventMap is False:
+                    return None
+                event["map"] = eventMap
+
+            # Editing Attendence
+            elif editOption == "Max Players":
+                maxPlayers = await self.eventAttendance(interaction, eventType)
+                if maxPlayers is False:
+                    return None
+
+                event["maxPlayers"] = maxPlayers
+                reorderEvents = True
+
+            # Editing Duration
+            elif editOption == "Duration":
+                duration = await self.eventDuration(interaction, eventType)
+                if duration is None:
+                    return None
+                hours, minutes, delta = duration
+                event["duration"] = f"{(str(hours) + 'h')*(hours != 0)}{' '*(hours != 0 and minutes !=0)}{(str(minutes) + 'm')*(minutes != 0)}"
+
+                # Update event endTime if no template
+                if not isTemplateEdit:
+                    startTime = UTC.localize(datetime.strptime(event["time"], TIME_FORMAT))
+                    endTime = startTime + delta
+                    event["endTime"] = endTime.strftime(TIME_FORMAT)
+
+            # Editing Time
+            elif editOption == "Time":
+                startTimeOld = event["time"]
+                hours, minutes, delta = self.getDetailsFromDuration(event["duration"])
+                eventTime = await self.eventTime(interaction, eventType, (), delta)
+                if eventTime is None:
+                    return None
+
+                startTime, endTime = eventTime
+                event["time"] = startTime.strftime(TIME_FORMAT)
+                event["endTime"] = endTime.strftime(TIME_FORMAT)
+                reorderEvents = True
+
+                # Notify attendees of time change
+                guild = self.bot.get_guild(GUILD_ID)
+                if guild is None:
+                    log.exception("editEvent: guild is None")
+                    return None
+
+                embed = Embed(title=f":clock3: The starting time has changed for: {event['title']}!", description=f"From: {discord.utils.format_dt(UTC.localize(datetime.strptime(startTimeOld, TIME_FORMAT)), style='F')}\n\u2000\u2000To: {discord.utils.format_dt(UTC.localize(datetime.strptime(event['time'], TIME_FORMAT)), style='F')}", color=Color.orange())
+                for memberId in event["accepted"] + event["declined"] + event["tentative"]:
+                    member = guild.get_member(memberId)
+                    if member is not None:
+                        try:
+                            await member.send(embed=embed)
+                        except Exception as e:
+                            log.exception(f"{member} | {e}")
+
+
+            if isTemplateEdit:
+                embed = Embed(title=f"✅ Template edited!", color=Color.green())
+                await dmChannel.send(embed=embed)
+                log.info(f"{interaction.user.display_name} ({interaction.user}) edited the template: {event['name']}!")
+                return True
+
+            else: # Not template
+                if editingTime > self.lastUpdate:
+                    embed = Embed(title=f"✅ {event['type']} edited!", color=Color.green())
+                    await dmChannel.send(embed=embed)
+                    log.info(f"{interaction.user.display_name} ({interaction.user}) edited the event: {event['title']}.")
+                    return reorderEvents
+                else:
+                    embed = Embed(title="❌ Schedule was updated while you were editing your operation. Try again!", color=Color.red())
+                    await dmChannel.send(embed=embed)
+                    log.info(f"{interaction.user.display_name} ({interaction.user}) was editing an event but schedule was updated!")
+                    return None
+
     async def eventTitle(self, interaction: discord.Interaction, eventType: str, isOperation:bool = False) -> str | None:
         """ Handles the title part of scheduling an event.
 
@@ -1206,7 +1391,7 @@ class Schedule(commands.Cog):
         return True
 
 
-    async def editEvent(self, interaction: discord.Interaction, event: dict, isTemplateEdit: bool) -> bool:
+    async def editEvent(self, interaction: discord.Interaction, event: dict, isTemplateEdit: bool) -> bool | None:
         """ Edits a preexisting event.
 
         Parameters:
@@ -1215,258 +1400,48 @@ class Schedule(commands.Cog):
         isTemplateEdit (bool): A boolean to check if the user is editing a template or not.
 
         Returns:
-        bool: If function executed successfully.
+        bool | None: True if reorder events, None if fail.
         """
 
-        # Editing Prompt
-        editingTime = datetime.utcnow()
-        color = Color.gold()
-        while True:
-            embed = Embed(title="✏️ What would you like to edit?", color=color)
+        if interaction.message is None:
+            log.exceptio
+        options = []
 
-            if not isTemplateEdit:
-                eventEditDisplay = {
-                    "Type": f"```txt\n{event['type']}\n```",
-                    "Title": f"```txt\n{event['title']}\n```",
-                    "Description": f"```txt\n{event['description'] if len(event['description']) < 500 else event['description'][:500] + ' [...]'}\n```",
-                    "External URL": f"```txt\n{event['externalURL']}\n```",
-                    "Reservable Roles": "```txt\n" + "\n".join(event["reservableRoles"].keys()) + "\n```" if event["reservableRoles"] is not None else "```txt\nNone\n```",
-                    "Map": f"```txt\n{event['map']}\n```",
-                    "Max Players": f"```txt\n{event['maxPlayers'].capitalize() if isinstance(event['maxPlayers'], str) else event['maxPlayers']}\n```",
-                    "Duration": f"```txt\n{event['duration']}\n```",
-                    "Time": discord.utils.format_dt(UTC.localize(datetime.strptime(event["time"], TIME_FORMAT)), style="F")
-                }
-                log.info(f"{interaction.user.display_name} ({interaction.user}) is editing the event: {event['title']}")
-                [embed.add_field(name=f"**{index}**. {name}", value=value, inline=False) for index, (name, value) in enumerate(eventEditDisplay.items(), start=1)]
-                choiceNumbers = [str(num + 1) for num in range(len(eventEditDisplay.keys()))]
-                dictItems = list(eventEditDisplay.items())
-
-            else:  # isTemplateEdit
-                templateEditDisplay = {
-                    "Template Name": f"```txt\n{event['name']}\n```",
-                    "Title": f"```txt\n{event['title']}\n```",
-                    "Linking": f"```txt\n{event['title'] if event['workshopInterest'] is not None else 'No linking'}\n```",
-                    "Description": f"```txt\n{event['description'] if len(event['description']) < 500 else event['description'][:500] + ' [...]'}\n```",
-                    "External URL": f"```txt\n{event['externalURL']}\n```",
-                    "Reservable Roles": "```txt\n" + "\n".join(event["reservableRoles"].keys()) + "\n```" if event["reservableRoles"] is not None else "```txt\nNone\n```",
-                    "Map": f"```txt\n{event['map']}\n```",
-                    "Max Players": f"```txt\n{event['maxPlayers'].capitalize() if isinstance(event['maxPlayers'], str) else event['maxPlayers']}\n```",
-                    "Duration": f"```txt\n{event['duration']}\n```"
-                }
-                [embed.add_field(name=f"**{index}**. {name}", value=value, inline=False) for index, (name, value) in enumerate(templateEditDisplay.items(), start=1)]
-                choiceNumbers = [str(num + 1) for num in range(len(templateEditDisplay.keys()))]
-                dictItems = list(templateEditDisplay.items())
-
-            embed.set_footer(text=SCHEDULE_CANCEL)
-            color = Color.red()
-
-            try:
-                msg = await interaction.user.send(embed=embed)
-            except Exception as e:
-                log.exception(f"{interaction.user} | {e}")
-                return False
-
-            dmChannel = msg.channel
-            if not isinstance(dmChannel, discord.channel.DMChannel):
-                log.exception("editEvent: dmChannel not DMChannel")
-                return False
-
-            try:
-                response = await self.bot.wait_for("message", timeout=TIME_ONE_MIN, check=lambda msg, author=interaction.user, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
-                choice = response.content.strip()
-            except asyncio.TimeoutError:
-                await dmChannel.send(embed=TIMEOUT_EMBED)
-                return False
-
-            if choice.lower() == "cancel":
-                await self.cancelCommand(dmChannel, "Event editing")
-                return False
-            elif choice in choiceNumbers:
-                break
-
-        reorderEvents = False
-        editOption = dictItems[int(choice) - 1][0]
-        eventType = event.get("type", "operation")
-
-        # Editing Type
-        if editOption == "Type":
-            eventTypeNum = "INVALID INPUT"
-            color = Color.gold()
-            while eventTypeNum not in ("1", "2", "3"):
-                embed = Embed(title=":pencil2: What is the type of your event?", color=color)
-                embed.add_field(name="Type", value="**1** 🟩 Operation\n**2** 🟦 Workshop\n**3** 🟨 Event")
-                embed.set_footer(text=SCHEDULE_CANCEL)
-                color = Color.red()
-                await dmChannel.send(embed=embed)
-                try:
-                    response = await self.bot.wait_for("message", timeout=TIME_ONE_MIN, check=lambda msg, author=interaction.user, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
-                    eventTypeNum = response.content.strip()
-                    if eventTypeNum.lower() == "cancel":
-                        await self.cancelCommand(dmChannel, "Event editing")
-                        return False
-                except asyncio.TimeoutError:
-                    await dmChannel.send(embed=TIMEOUT_EMBED)
-                    return False
-            event["type"] = {"1": "Operation", "2": "Workshop", "3": "Event"}.get(eventTypeNum, "Operation")
-
-        # Editing Template Name
-        elif editOption == "Template Name":
-            embed = Embed(title=SCHEDULE_EVENT_TEMPLATE_SAVE_NAME_QUESTION, color=Color.gold())
-            embed.set_footer(text=SCHEDULE_CANCEL)
-            await dmChannel.send(embed=embed)
-            try:
-                response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, author=interaction.user, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
-                templateName = response.content.strip()
-                if templateName.lower() == "cancel":
-                    await self.cancelCommand(dmChannel, "Event editing")
-                    return False
-            except asyncio.TimeoutError:
-                await dmChannel.send(embed=TIMEOUT_EMBED)
-                return False
-            event["name"] = templateName
-
-        # Editing Title
-        elif editOption == "Title":
-            title = await self.eventTitle(interaction, eventType)
-            if title is None:
-                return False
-            event["title"] = title
-
-        # Editing Linking
-        elif editOption == "Linking":
-            workshopInterestOk = False
-            color = Color.gold()
-            while not workshopInterestOk:
-                with open(WORKSHOP_INTEREST_FILE) as f:
-                    workshopInterestOptions = list(json.load(f).keys())
-                embed = Embed(title=":link: Which workshop waiting list is your workshop linked to?", description="When linking your workshop and finished scheduling it, it will automatically ping everyone interested in it.\nFurthermore, those that complete the workshop will be removed from the interest list!\nEnter `none` to not link it.", color=color)
-                embed.add_field(name="Workshop Lists", value="\n".join(f"**{idx}.** {wsName}" for idx, wsName in enumerate(workshopInterestOptions, 1)))
-                embed.set_footer(text=SCHEDULE_CANCEL)
-                color = Color.red()
-                await dmChannel.send(embed=embed)
-                try:
-                    response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, author=interaction.user, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
-                    workshopInterest = response.content.strip()
-                    if workshopInterest.lower() == "cancel":
-                        await self.cancelCommand(dmChannel, "Event editing")
-                        return False
-                    workshopInterestOk = True
-                    if workshopInterest.isdigit() and int(workshopInterest) <= len(workshopInterestOptions) and int(workshopInterest) > 0:
-                        workshopInterest = workshopInterestOptions[int(workshopInterest) - 1]
-                    elif workshopInterest.strip().lower() == "none":
-                        workshopInterest = None
-                    else:
-                        workshopInterestOk = False
-                except asyncio.TimeoutError:
-                    await dmChannel.send(embed=TIMEOUT_EMBED)
-                    return False
-
-            event["workshopInterest"] = workshopInterest
-
-        # Editing Description
-        elif editOption == "Description":
-            description = await self.eventDescription(interaction, eventType, currentDesc=event["description"])
-            if description is None:
-                return False
-            event["description"] = description
-
-        # Editing URL
-        elif editOption == "External URL":
-            externalURL = await self.eventURL(interaction, eventType)
-            if externalURL is False:
-                return False
-            event["externalURL"] = externalURL
-
-        # Editing Reservable Roles
-        elif editOption == "Reservable Roles":
-            reservableRoles = await self.eventReserveRole(
-                interaction,
-                eventType,
-                None if event["reservableRoles"] is None else "\n".join(event["reservableRoles"].keys()),
-                event
+        if not isTemplateEdit:
+            eventEditDisplay = (
+                "Type",
+                "Title",
+                "Description",
+                "External URL",
+                "Reservable Roles",
+                "Map",
+                "Max Players",
+                "Duration",
+                "Time"
             )
-            if reservableRoles is False:
-                return False
-            event["reservableRoles"] = reservableRoles
-            reorderEvents = True
+            log.info(f"{interaction.user.display_name} ({interaction.user}) is editing the event: {event['title']}")
+            for editOption in eventEditDisplay:
+                options.append(discord.SelectOption(label=editOption))
 
-        # Editing Map
-        elif editOption == "Map":
-            eventMap = await self.eventMap(interaction, eventType)
-            if eventMap is False:
-                return False
-            event["map"] = eventMap
+        else:  # isTemplateEdit
+            templateEditDisplay = (
+                "Template Name",
+                "Title",
+                "Linking",
+                "Description",
+                "External URL",
+                "Reservable Roles",
+                "Map",
+                "Max Players",
+                "Duration"
+            )
+            for editOption in templateEditDisplay:
+                options.append(discord.SelectOption(label=editOption))
 
-        # Editing Attendence
-        elif editOption == "Max Players":
-            maxPlayers = await self.eventAttendance(interaction, eventType)
-            if maxPlayers is False:
-                return False
+        view = ScheduleView()
+        view.add_item(ScheduleSelect(instance=self, eventMsg=interaction.message, placeholder="Select what to edit.", minValues=1, maxValues=1, customId="edit_select", row=0, options=options))
 
-            event["maxPlayers"] = maxPlayers
-            reorderEvents = True
-
-        # Editing Duration
-        elif editOption == "Duration":
-            duration = await self.eventDuration(interaction, eventType)
-            if duration is None:
-                return False
-            hours, minutes, delta = duration
-            event["duration"] = f"{(str(hours) + 'h')*(hours != 0)}{' '*(hours != 0 and minutes !=0)}{(str(minutes) + 'm')*(minutes != 0)}"
-
-            # Update event endTime if no template
-            if not isTemplateEdit:
-                startTime = UTC.localize(datetime.strptime(event["time"], TIME_FORMAT))
-                endTime = startTime + delta
-                event["endTime"] = endTime.strftime(TIME_FORMAT)
-
-        # Editing Time
-        elif editOption == "Time":
-            startTimeOld = event["time"]
-            hours, minutes, delta = self.getDetailsFromDuration(event["duration"])
-            eventTime = await self.eventTime(interaction, eventType, (), delta)
-            if eventTime is None:
-                return False
-
-            startTime, endTime = eventTime
-            event["time"] = startTime.strftime(TIME_FORMAT)
-            event["endTime"] = endTime.strftime(TIME_FORMAT)
-            reorderEvents = True
-
-            # Notify attendees of time change
-            guild = self.bot.get_guild(GUILD_ID)
-            if guild is None:
-                log.exception("editEvent: guild is None")
-                return False
-
-            embed = Embed(title=f":clock3: The starting time has changed for: {event['title']}!", description=f"From: {discord.utils.format_dt(UTC.localize(datetime.strptime(startTimeOld, TIME_FORMAT)), style='F')}\n\u2000\u2000To: {discord.utils.format_dt(UTC.localize(datetime.strptime(event['time'], TIME_FORMAT)), style='F')}", color=Color.orange())
-            for memberId in event["accepted"] + event["declined"] + event["tentative"]:
-                member = guild.get_member(memberId)
-                if member is not None:
-                    try:
-                        await member.send(embed=embed)
-                    except Exception as e:
-                        log.exception(f"{member} | {e}")
-
-
-        if isTemplateEdit:
-            embed = Embed(title=f"✅ Template edited!", color=Color.green())
-            await dmChannel.send(embed=embed)
-            log.info(f"{interaction.user.display_name} ({interaction.user}) edited the template: {event['name']}!")
-            return True
-
-        else: # Not template
-            if editingTime > self.lastUpdate:
-                embed = Embed(title=f"✅ {event['type']} edited!", color=Color.green())
-                await dmChannel.send(embed=embed)
-                log.info(f"{interaction.user.display_name} ({interaction.user}) edited the event: {event['title']}.")
-                return reorderEvents
-            else:
-                embed = Embed(title="❌ Schedule was updated while you were editing your operation. Try again!", color=Color.red())
-                await dmChannel.send(embed=embed)
-                log.info(f"{interaction.user.display_name} ({interaction.user}) was editing an event but schedule was updated!")
-                return False
-
+        await interaction.response.send_message(content=interaction.user.mention, view=view, ephemeral=True, delete_after=60.0)
 
 # ===== </Schedule Functions> =====
 

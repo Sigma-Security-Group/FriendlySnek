@@ -1,4 +1,5 @@
-import os, re, pytz, asyncio, discord
+import os, re, asyncio, discord
+import pytz # type: ignore
 
 from logger import Logger
 log = Logger()

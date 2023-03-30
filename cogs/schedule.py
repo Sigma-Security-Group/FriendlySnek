@@ -517,10 +517,6 @@ class Schedule(commands.Cog):
                     log.exception("reserveRole interaction.user not discord.Member")
                     return
 
-                if interaction.message is None:
-                    log.exception("reserveRole interaction.message is None")
-                    return
-
                 vacantRoles = [btnRoleName for btnRoleName, memberId in event["reservableRoles"].items() if memberId is None or interaction.user.guild.get_member(memberId) is None]
 
                 view = ScheduleView()
@@ -590,15 +586,14 @@ class Schedule(commands.Cog):
                     return
 
                 event = [event for event in events if event["messageId"] == message.id][0]
-                await interaction.response.send_message(RESPONSE_GOTO_DMS.format(dmChannel.jump_url), ephemeral=True, delete_after=10.0)
-                reorderEvents = await self.editEvent(interaction, event, isTemplateEdit=False)
-                if reorderEvents:
-                    with open(EVENTS_FILE, "w") as f:
-                        json.dump(events, f, indent=4)
-                    await self.updateSchedule()
-                    return
-                else:
-                    await message.edit(embed=self.getEventEmbed(event))
+                await self.editEvent(interaction, event, isTemplateEdit=False, eventMsg=message)
+                #if reorderEvents:
+                #    with open(EVENTS_FILE, "w") as f:
+                #        json.dump(events, f, indent=4)
+                #    await self.updateSchedule()
+                #    return
+                #else:
+                #    await message.edit(embed=self.getEventEmbed(event))
 
             elif button.custom_id == "delete":
                 if message is None:
@@ -701,7 +696,7 @@ class Schedule(commands.Cog):
         except Exception as e:
             log.exception(f"{interaction.user} | {e}")
 
-    def generateSelectView(self, options: list[discord.SelectOption], setOptionLabel: str, eventMsg: discord.Message, placeholder: str, customId: str):
+    def generateSelectView(self, options: list[discord.SelectOption], noneOption: bool, setOptionLabel: str, eventMsg: discord.Message, placeholder: str, customId: str):
         """ Generates good select menu view - ceil(len(options)/25) dropdowns.
 
         Parameters:
@@ -720,6 +715,9 @@ class Schedule(commands.Cog):
             if option.label == setOptionLabel:
                 options.pop(idx)
                 break
+
+        if noneOption is True:
+            options.insert(0, discord.SelectOption(label="None", emoji="🚫"))
 
         # Generate view
         view = ScheduleView()
@@ -778,7 +776,6 @@ class Schedule(commands.Cog):
 
 
         elif select.custom_id == "edit_select":
-            reorderEvents = False
             with open(EVENTS_FILE) as f:
                 events = json.load(f)
             event = [event for event in events if event["messageId"] == eventMsg.id][0]
@@ -797,12 +794,11 @@ class Schedule(commands.Cog):
                     discord.SelectOption(emoji="🟦", label="Workshop"),
                     discord.SelectOption(emoji="🟨", label="Event")
                 ]
-                view = self.generateSelectView(options, eventType, eventMsg, "Select event type.", "edit_select_type")
+                view = self.generateSelectView(options, False, eventType, eventMsg, "Select event type.", "edit_select_type")
 
                 await interaction.response.send_message(view=view, ephemeral=True, delete_after=60.0)
-                return
 
-            # Editing Template Name
+            # TODO Editing Template Name
             elif editOption == "Template Name":
                 embed = Embed(title=SCHEDULE_EVENT_TEMPLATE_SAVE_NAME_QUESTION, color=Color.gold())
                 embed.set_footer(text=SCHEDULE_CANCEL)
@@ -820,10 +816,9 @@ class Schedule(commands.Cog):
 
             # Editing Title
             elif editOption == "Title":
-                title = await self.eventTitle(interaction, eventType)
-                if title is None:
-                    return None
-                event["title"] = title
+                modal = ScheduleModal(self, "Title", "modal_title", eventMsg)
+                modal.add_item(discord.ui.TextInput(label="Title", default=event["title"], placeholder="Operation Honda Civic", min_length=1, max_length=256))
+                await interaction.response.send_modal(modal)
 
             # Editing Linking
             elif editOption == "Linking":
@@ -831,116 +826,53 @@ class Schedule(commands.Cog):
                     wsIntOptions = json.load(f).keys()
 
                 options = [discord.SelectOption(label=wsName) for wsName in wsIntOptions]
-                options.insert(0, discord.SelectOption(label="None"))
-                view = self.generateSelectView(options, event["map"], eventMsg, "Select a map.", "edit_select_map")
-
+                view = self.generateSelectView(options, True, event["map"], eventMsg, "Select a map.", "edit_select_map")
                 await interaction.response.send_message(view=view, ephemeral=True, delete_after=60.0)
-                return
 
             # Editing Description
             elif editOption == "Description":
-                description = await self.eventDescription(interaction, eventType, currentDesc=event["description"])
-                if description is None:
-                    return None
-                event["description"] = description
+                modal = ScheduleModal(self, "Description", "modal_description", eventMsg)
+                modal.add_item(discord.ui.TextInput(style=discord.TextStyle.long, label="Description", default=event["description"], placeholder="Bomb oogaboogas", min_length=1, max_length=4000))
+                await interaction.response.send_modal(modal)
 
             # Editing URL
             elif editOption == "External URL":
-                externalURL = await self.eventURL(interaction, eventType)
-                if externalURL is False:
-                    return None
-                event["externalURL"] = externalURL
+                modal = ScheduleModal(self, "External URL", "modal_externalURL", eventMsg)
+                modal.add_item(discord.ui.TextInput(style=discord.TextStyle.long, label="URL", default=event["externalURL"], placeholder="OPORD: https://www.gnu.org/", max_length=1024, required=False))
+                await interaction.response.send_modal(modal)
 
             # Editing Reservable Roles
             elif editOption == "Reservable Roles":
-                reservableRoles = await self.eventReserveRole(
-                    interaction,
-                    eventType,
-                    None if event["reservableRoles"] is None else "\n".join(event["reservableRoles"].keys()),
-                    event
-                )
-                if reservableRoles is False:
-                    return None
-                event["reservableRoles"] = reservableRoles
-                reorderEvents = True
+                modal = ScheduleModal(self, "Reservable Roles", "modal_reservableRoles", eventMsg)
+                modal.add_item(discord.ui.TextInput(style=discord.TextStyle.long, label="Reservable Roles", default=(None if event["reservableRoles"] is None else "\n".join(event["reservableRoles"].keys())), placeholder="Co-Zeus\nActual\nJTAC\nF-35A Pilot", max_length=500, required=False))
+                await interaction.response.send_modal(modal)
 
             # Editing Map
             elif editOption == "Map":
                 options = [discord.SelectOption(label=mapName) for mapName in MAPS]
-                options.insert(0, discord.SelectOption(label="None"))
-                view = self.generateSelectView(options, event["map"], eventMsg, "Select a map.", "edit_select_map")
-
+                view = self.generateSelectView(options, True, event["map"], eventMsg, "Select a map.", "edit_select_map")
                 await interaction.response.send_message(view=view, ephemeral=True, delete_after=60.0)
-                return
 
             # Editing Attendence
             elif editOption == "Max Players":
-                maxPlayers = await self.eventAttendance(interaction, eventType)
-                if maxPlayers is False:
-                    return None
-
-                event["maxPlayers"] = maxPlayers
-                reorderEvents = True
+                modal = ScheduleModal(self, "Attendees", "modal_maxPlayers", eventMsg)
+                modal.add_item(discord.ui.TextInput(label="Attendees", default=event["maxPlayers"], placeholder="Number / None / Anonymous / Hidden", min_length=1, max_length=9))
+                await interaction.response.send_modal(modal)
 
             # Editing Duration
             elif editOption == "Duration":
-                duration = await self.eventDuration(interaction, eventType)
-                if duration is None:
-                    return None
-                hours, minutes, delta = duration
-                event["duration"] = f"{(str(hours) + 'h')*(hours != 0)}{' '*(hours != 0 and minutes !=0)}{(str(minutes) + 'm')*(minutes != 0)}"
-
-                # Update event endTime if no template
-                if not isTemplateEdit:
-                    startTime = UTC.localize(datetime.strptime(event["time"], TIME_FORMAT))
-                    endTime = startTime + delta
-                    event["endTime"] = endTime.strftime(TIME_FORMAT)
+                modal = ScheduleModal(self, "Duration", "modal_duration", eventMsg)
+                modal.add_item(discord.ui.TextInput(label="Duration", default=event["duration"], placeholder="2h30m", min_length=1, max_length=256))
+                await interaction.response.send_modal(modal)
 
             # Editing Time
             elif editOption == "Time":
-                startTimeOld = event["time"]
-                hours, minutes, delta = self.getDetailsFromDuration(event["duration"])
-                eventTime = await self.eventTime(interaction, eventType, (), delta)
-                if eventTime is None:
-                    return None
-
-                startTime, endTime = eventTime
-                event["time"] = startTime.strftime(TIME_FORMAT)
-                event["endTime"] = endTime.strftime(TIME_FORMAT)
-                reorderEvents = True
-
-                # Notify attendees of time change
-                guild = self.bot.get_guild(GUILD_ID)
-                if guild is None:
-                    log.exception("editEvent: guild is None")
-                    return None
-
-                embed = Embed(title=f":clock3: The starting time has changed for: {event['title']}!", description=f"From: {discord.utils.format_dt(UTC.localize(datetime.strptime(startTimeOld, TIME_FORMAT)), style='F')}\n\u2000\u2000To: {discord.utils.format_dt(UTC.localize(datetime.strptime(event['time'], TIME_FORMAT)), style='F')}", color=Color.orange())
-                for memberId in event["accepted"] + event["declined"] + event["tentative"]:
-                    member = guild.get_member(memberId)
-                    if member is not None:
-                        try:
-                            await member.send(embed=embed)
-                        except Exception as e:
-                            log.exception(f"{member} | {e}")
+                modal = ScheduleModal(self, "Time", "modal_time", eventMsg)
+                modal.add_item(discord.ui.TextInput(label="Time", default=event["time"], placeholder="2069-04-20 04:20 PM", min_length=1, max_length=256))
+                await interaction.response.send_modal(modal)
 
 
-            if isTemplateEdit:
-                log.info(f"{interaction.user.display_name} ({interaction.user}) edited the template: {event['name']}!")
-                embed = Embed(title=f"✅ Template edited!", color=Color.green())
-                await interaction.user.send(embed=embed)
-
-            else: # Not template
-                if editingTime > self.lastUpdate:
-                    log.info(f"{interaction.user.display_name} ({interaction.user}) edited the event: {event['title']}.")
-                    embed = Embed(title=f"✅ {event['type']} edited!", color=Color.green())
-                    await interaction.user.send(embed=embed)
-                    return reorderEvents
-                else:
-                    embed = Embed(title="❌ Schedule was updated while you were editing your operation. Try again!", color=Color.red())
-                    await interaction.user.send(embed=embed)
-                    log.info(f"{interaction.user.display_name} ({interaction.user}) was editing an event but schedule was updated!")
-                    return None
+            log.info(f"{interaction.user.display_name} ({interaction.user}) edited the event: {event['title'] if 'title' in event else event['name']}.")
 
         # All select menu options in edit_select
         elif select.custom_id.startswith("edit_select_"):
@@ -957,8 +889,93 @@ class Schedule(commands.Cog):
                 json.dump(events, f, indent=4)
 
             await eventMsg.edit(embed=self.getEventEmbed(event))
-            await interaction.response.send_message(embed=Embed(title="✅ Edited event", color=Color.green()), ephemeral=True, delete_after=10.0)
+            await interaction.response.send_message(embed=Embed(title="✅ Event edited", color=Color.green()), ephemeral=True, delete_after=5.0)
 
+    async def modalHandling(self, modal: discord.ui.Modal, interaction: discord.Interaction, eventMsg: discord.Message) -> None:
+        with open(EVENTS_FILE) as f:
+            events = json.load(f)
+        value = modal.children[0].value
+        event = [event for event in events if event["messageId"] == eventMsg.id][0]
+
+        if value == "":
+            event[modal.custom_id[len("modal_"):]] = None
+
+        elif modal.custom_id == "modal_reservableRoles":
+            # TODO fix reserve button
+            reservableRoles = value.split("\n")
+            if len(reservableRoles) > 25:
+                await interaction.response.send_message(embed=Embed(title="❌ Ain't supporting over 25 roles bruh", color=Color.red()), ephemeral=True, delete_after=10.0)
+                return
+
+            # No res roles or all roles are unoccupied
+            elif event["reservableRoles"] is None or all([id is None for id in event["reservableRoles"].values()]):
+                event["reservableRoles"] = {role: None for role in reservableRoles}
+
+            # Res roles are set and some occupied
+            else:
+                event["reservableRoles"] = {role: event["reservableRoles"][role] if role in event["reservableRoles"] else None for role in reservableRoles}
+
+        elif modal.custom_id == "modal_maxPlayers":
+            if value.lower() == "none" or (value.isdigit() and int(value) > MAX_SERVER_ATTENDANCE):
+                event["maxPlayers"] = None
+            elif value.lower() in ("anonymous", "hidden"):
+                event["maxPlayers"] = value.lower()
+            elif value.isdigit() and 1 < int(value) < MAX_SERVER_ATTENDANCE:
+                event["maxPlayers"] = int(value)
+            else:
+                await interaction.response.send_message(embed=Embed(title="❌ That ain't a valid response bruh", color=Color.red()), ephemeral=True, delete_after=10.0)
+                return
+
+        elif modal.custom_id == "modal_duration":
+            hours, minutes, delta = self.getDetailsFromDuration(value)
+
+            event["duration"] = f"{(str(hours) + 'h')*(hours != 0)}{' '*(hours != 0 and minutes !=0)}{(str(minutes) + 'm')*(minutes != 0)}"
+
+            # Update event endTime if no template
+            if "endTime" in event:
+                startTime = UTC.localize(datetime.strptime(event["time"], TIME_FORMAT))
+                endTime = startTime + delta
+                event["endTime"] = endTime.strftime(TIME_FORMAT)
+
+        elif modal.custom_id == "modal_time":
+            # TODO add event collision and shit from eventTime()
+            # TODO reorder events
+
+            startTimeOld = event["time"]
+            hours, minutes, delta = self.getDetailsFromDuration(event["duration"])
+            try:
+                startTime = datetimeParse(value)
+            except ValueError:
+                await interaction.response.send_message(embed=Embed(title="❌ That ain't a valid response bruh", color=Color.red()), ephemeral=True, delete_after=10.0)
+                return
+
+            endTime = startTime + delta
+            event["time"] = startTime.strftime(TIME_FORMAT)
+            event["endTime"] = endTime.strftime(TIME_FORMAT)
+
+            # Notify attendees of time change
+            guild = self.bot.get_guild(GUILD_ID)
+            if guild is None:
+                log.exception("editEvent: guild is None")
+                return None
+
+            embed = Embed(title=f":clock3: The starting time has changed for: {event['title']}!", description=f"From: {discord.utils.format_dt(UTC.localize(datetime.strptime(startTimeOld, TIME_FORMAT)), style='F')}\n\u2000\u2000To: {discord.utils.format_dt(UTC.localize(datetime.strptime(event['time'], TIME_FORMAT)), style='F')}", color=Color.orange())
+            for memberId in event["accepted"] + event["declined"] + event["tentative"]:
+                member = guild.get_member(memberId)
+                if member is not None:
+                    try:
+                        await member.send(embed=embed)
+                    except Exception as e:
+                        log.exception(f"{member} | {e}")
+
+        else:
+            event[modal.custom_id[len("modal_"):]] = value
+
+        with open(EVENTS_FILE, "w") as f:
+            json.dump(events, f, indent=4)
+
+        await eventMsg.edit(embed=self.getEventEmbed(event))
+        await interaction.response.send_message(embed=Embed(title="✅ Event edited", color=Color.green()), ephemeral=True, delete_after=5.0)
 
     async def eventTitle(self, interaction: discord.Interaction, eventType: str, isOperation:bool = False) -> str | None:
         """ Handles the title part of scheduling an event.
@@ -1206,12 +1223,11 @@ class Schedule(commands.Cog):
         delta = timedelta(hours=hours, minutes=minutes)
         return hours, minutes, delta
 
-    async def eventDuration(self, interaction: discord.Interaction, eventType: str) -> tuple | None:
+    async def eventDuration(self, interaction: discord.Interaction) -> tuple | None:
         """ Handles the duration part of scheduling an event.
 
         Parameters:
         interaction (discord.Interaction): The Discord interaction.
-        eventType (str): The type of event, e.g. Operation.
 
         Returns:
         tuple | None: tuple with (hours, minutes, delta) zipped. None if fail.
@@ -1221,7 +1237,7 @@ class Schedule(commands.Cog):
         color = Color.gold()
         duration = "INVALID INPUT"
         while not re.match(r"^\s*((([1-9]\d*)?\d\s*h(\s*([0-5])?\d\s*m?)?)|(([0-5])?\d\s*m))\s*$", duration):
-            embed = Embed(title=f"What is the duration of the {eventType}?", description="E.g.\n`30m`\n`2h`\n`4h 30m`\n`2h30`", color=color)
+            embed = Embed(title=f"What is the duration?", description="E.g.\n`30m`\n`2h`\n`4h 30m`\n`2h30`", color=color)
             embed.set_footer(text=SCHEDULE_CANCEL)
             color = Color.red()
             await dmChannel.send(embed=embed)
@@ -1230,7 +1246,7 @@ class Schedule(commands.Cog):
                 duration = response.content.strip().lower()
 
                 if duration == "cancel":
-                    await self.cancelCommand(dmChannel, f"{eventType} scheduling")
+                    await self.cancelCommand(dmChannel, f"Event scheduling")
                     return None
             except asyncio.TimeoutError:
                 await dmChannel.send(embed=TIMEOUT_EMBED)
@@ -1244,7 +1260,7 @@ class Schedule(commands.Cog):
         if not str(interaction.user.id) in memberTimeZones:
             timeZoneOutput = await self.changeTimeZone(interaction.user, isCommand=False)
             if not timeZoneOutput:
-                await self.cancelCommand(dmChannel, f"{eventType} scheduling")
+                await self.cancelCommand(dmChannel, "Event scheduling")
                 return None
 
         return self.getDetailsFromDuration(duration)
@@ -1419,16 +1435,17 @@ class Schedule(commands.Cog):
         return True
 
 
-    async def editEvent(self, interaction: discord.Interaction, event: dict, isTemplateEdit: bool) -> bool | None:
+    async def editEvent(self, interaction: discord.Interaction, event: dict, isTemplateEdit: bool, eventMsg: discord.Message | None = None) -> None:
         """ Edits a preexisting event.
 
         Parameters:
         interaction (discord.Interaction): The Discord interaction.
         event (dict): The event.
         isTemplateEdit (bool): A boolean to check if the user is editing a template or not.
+        eventMsg (): .
 
         Returns:
-        bool | None: True if reorder events, None if fail.
+        None.
         """
 
         if interaction.message is None:
@@ -1468,9 +1485,9 @@ class Schedule(commands.Cog):
                 options.append(discord.SelectOption(label=editOption))
 
         view = ScheduleView()
-        view.add_item(ScheduleSelect(instance=self, eventMsg=interaction.message, placeholder="Select what to edit.", minValues=1, maxValues=1, customId="edit_select", row=0, options=options))
+        view.add_item(ScheduleSelect(instance=self, eventMsg=(interaction.message if eventMsg is None else eventMsg), placeholder="Select what to edit.", minValues=1, maxValues=1, customId="edit_select", row=0, options=options))
 
-        await interaction.response.send_message(content=interaction.user.mention, view=view, ephemeral=True, delete_after=60.0)
+        await interaction.response.send_message(view=view, ephemeral=True, delete_after=60.0)
 
 # ===== </Schedule Functions> =====
 
@@ -1534,7 +1551,7 @@ class Schedule(commands.Cog):
             return
 
         # Operation duration
-        duration = await self.eventDuration(interaction, "Operation")
+        duration = await self.eventDuration(interaction)
         if duration is None:
             return
         hours, minutes, delta = duration
@@ -1731,7 +1748,7 @@ class Schedule(commands.Cog):
 
         # Workshop duration
         if template is None:
-            duration = await self.eventDuration(interaction, "Operation")
+            duration = await self.eventDuration(interaction)
             if duration is None:
                 return
             hours, minutes, delta = duration
@@ -1923,7 +1940,7 @@ class Schedule(commands.Cog):
             return
 
         # Event duration
-        duration = await self.eventDuration(interaction, "Event")
+        duration = await self.eventDuration(interaction)
         if duration is None:
             return
         hours, minutes, delta = duration
@@ -2118,12 +2135,26 @@ class ScheduleButton(discord.ui.Button):
 
 class ScheduleSelect(discord.ui.Select):
     def __init__(self, instance, eventMsg: discord.Message, placeholder: str, minValues: int, maxValues: int, customId: str, row: int, options: list[discord.SelectOption], *args, **kwargs):
-        super().__init__(placeholder=placeholder, min_values=minValues, max_values=maxValues, custom_id=customId, row=row, options=options)
+        super().__init__(placeholder=placeholder, min_values=minValues, max_values=maxValues, custom_id=customId, row=row, options=options, *args, **kwargs)
         self.eventMsg = eventMsg
         self.instance = instance
 
     async def callback(self, interaction: discord.Interaction) -> None:
         await self.instance.selectHandling(self, interaction, self.eventMsg)
+
+class ScheduleModal(discord.ui.Modal):
+    def __init__(self, instance, title: str, customId: str, eventMsg: discord.Message) -> None:
+        super().__init__(title=title, custom_id=customId)
+        self.instance = instance
+        self.eventMsg = eventMsg
+
+    async def on_submit(self, interaction: discord.Interaction):
+        await self.instance.modalHandling(self, interaction, self.eventMsg)
+
+    async def on_error(self, interaction: discord.Interaction, error: Exception) -> None:
+        await interaction.response.send_message("Something went wrong. cope.", ephemeral=True)
+
+        log.exception(error)
 
 # ===== </Views and Buttons> =====
 

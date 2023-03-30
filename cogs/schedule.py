@@ -1,6 +1,7 @@
 import os, re, json, asyncio, random, discord
 import pytz  # type: ignore
 
+from math import ceil
 from copy import deepcopy
 from datetime import datetime, timedelta
 from dateutil.parser import parse as datetimeParse  # type: ignore
@@ -700,6 +701,34 @@ class Schedule(commands.Cog):
         except Exception as e:
             log.exception(f"{interaction.user} | {e}")
 
+    def generateSelectView(self, options: list[discord.SelectOption], setOptionLabel: str, eventMsg: discord.Message, placeholder: str, customId: str):
+        """ Generates good select menu view - ceil(len(options)/25) dropdowns.
+
+        Parameters:
+        options (list[discord.SelectOption]): All select menu options
+        setOptionLabel (str): Removes first option that has this string as label.
+        eventMsg (discord.Message): The event message.
+        placeholder (str): Placeholder string of select menus.
+        customId (str): Custom ID of select menu.
+
+        Returns:
+        None.
+        """
+
+        # Remove setOptionLabel from options
+        for idx, option in enumerate(options):
+            if option.label == setOptionLabel:
+                options.pop(idx)
+                break
+
+        # Generate view
+        view = ScheduleView()
+        for i in range(ceil(len(options) / 25)):
+            view.add_item(ScheduleSelect(instance=self, eventMsg=eventMsg, placeholder=placeholder, minValues=1, maxValues=1, customId=f"{customId}_REMOVE{i}", row=i, options=options[:25]))
+            options = options[25:]
+
+        return view
+
     async def selectHandling(self, select: discord.ui.Select, interaction: discord.Interaction, eventMsg: discord.Message) -> None:
         """ Handling all schedule select menu interactions.
 
@@ -747,38 +776,37 @@ class Schedule(commands.Cog):
             with open(EVENTS_FILE, "w") as f:
                 json.dump(events, f, indent=4)
 
-        elif select.custom_id == "edit_select":
-            editOption = select.values[0]
 
+        elif select.custom_id == "edit_select":
             reorderEvents = False
-            # eventType = event.get("type", "operation")
+            with open(EVENTS_FILE) as f:
+                events = json.load(f)
+            event = [event for event in events if event["messageId"] == eventMsg.id][0]
+
+            editOption = select.values[0]
+            eventType = event.get("type", "Operation")
+            dmChannel = interaction.user.dm_channel
+            if dmChannel is None:
+                log.exception("SelectHandling: dmChannel is None")
+                return
 
             # Editing Type
             if editOption == "Type":
-                eventTypeNum = "INVALID INPUT"
-                color = Color.gold()
-                while eventTypeNum not in ("1", "2", "3"):
-                    embed = Embed(title=":pencil2: What is the type of your event?", color=color)
-                    embed.add_field(name="Type", value="**1** 🟩 Operation\n**2** 🟦 Workshop\n**3** 🟨 Event")
-                    embed.set_footer(text=SCHEDULE_CANCEL)
-                    color = Color.red()
-                    await interaction.user.send(embed=embed)
-                    try:
-                        response = await self.bot.wait_for("message", timeout=TIME_ONE_MIN, check=lambda msg, author=interaction.user, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
-                        eventTypeNum = response.content.strip()
-                        if eventTypeNum.lower() == "cancel":
-                            await self.cancelCommand(interaction.user.dm_channel, "Event editing")
-                            return None
-                    except asyncio.TimeoutError:
-                        await interaction.user.send(embed=TIMEOUT_EMBED)
-                        return None
-                event["type"] = {"1": "Operation", "2": "Workshop", "3": "Event"}.get(eventTypeNum, "Operation")
+                options = [
+                    discord.SelectOption(emoji="🟩", label="Operation"),
+                    discord.SelectOption(emoji="🟦", label="Workshop"),
+                    discord.SelectOption(emoji="🟨", label="Event")
+                ]
+                view = self.generateSelectView(options, eventType, eventMsg, "Select event type.", "edit_select_type")
+
+                await interaction.response.send_message(view=view, ephemeral=True, delete_after=60.0)
+                return
 
             # Editing Template Name
             elif editOption == "Template Name":
                 embed = Embed(title=SCHEDULE_EVENT_TEMPLATE_SAVE_NAME_QUESTION, color=Color.gold())
                 embed.set_footer(text=SCHEDULE_CANCEL)
-                await dmChannel.send(embed=embed)
+                await interaction.user.send(embed=embed)
                 try:
                     response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, author=interaction.user, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
                     templateName = response.content.strip()
@@ -786,7 +814,7 @@ class Schedule(commands.Cog):
                         await self.cancelCommand(dmChannel, "Event editing")
                         return None
                 except asyncio.TimeoutError:
-                    await dmChannel.send(embed=TIMEOUT_EMBED)
+                    await interaction.user.send(embed=TIMEOUT_EMBED)
                     return None
                 event["name"] = templateName
 
@@ -799,34 +827,15 @@ class Schedule(commands.Cog):
 
             # Editing Linking
             elif editOption == "Linking":
-                workshopInterestOk = False
-                color = Color.gold()
-                while not workshopInterestOk:
-                    with open(WORKSHOP_INTEREST_FILE) as f:
-                        workshopInterestOptions = list(json.load(f).keys())
-                    embed = Embed(title=":link: Which workshop waiting list is your workshop linked to?", description="When linking your workshop and finished scheduling it, it will automatically ping everyone interested in it.\nFurthermore, those that complete the workshop will be removed from the interest list!\nEnter `none` to not link it.", color=color)
-                    embed.add_field(name="Workshop Lists", value="\n".join(f"**{idx}.** {wsName}" for idx, wsName in enumerate(workshopInterestOptions, 1)))
-                    embed.set_footer(text=SCHEDULE_CANCEL)
-                    color = Color.red()
-                    await dmChannel.send(embed=embed)
-                    try:
-                        response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, author=interaction.user, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
-                        workshopInterest = response.content.strip()
-                        if workshopInterest.lower() == "cancel":
-                            await self.cancelCommand(dmChannel, "Event editing")
-                            return None
-                        workshopInterestOk = True
-                        if workshopInterest.isdigit() and int(workshopInterest) <= len(workshopInterestOptions) and int(workshopInterest) > 0:
-                            workshopInterest = workshopInterestOptions[int(workshopInterest) - 1]
-                        elif workshopInterest.strip().lower() == "none":
-                            workshopInterest = None
-                        else:
-                            workshopInterestOk = False
-                    except asyncio.TimeoutError:
-                        await dmChannel.send(embed=TIMEOUT_EMBED)
-                        return None
+                with open(WORKSHOP_INTEREST_FILE) as f:
+                    wsIntOptions = json.load(f).keys()
 
-                event["workshopInterest"] = workshopInterest
+                options = [discord.SelectOption(label=wsName) for wsName in wsIntOptions]
+                options.insert(0, discord.SelectOption(label="None"))
+                view = self.generateSelectView(options, event["map"], eventMsg, "Select a map.", "edit_select_map")
+
+                await interaction.response.send_message(view=view, ephemeral=True, delete_after=60.0)
+                return
 
             # Editing Description
             elif editOption == "Description":
@@ -857,10 +866,12 @@ class Schedule(commands.Cog):
 
             # Editing Map
             elif editOption == "Map":
-                eventMap = await self.eventMap(interaction, eventType)
-                if eventMap is False:
-                    return None
-                event["map"] = eventMap
+                options = [discord.SelectOption(label=mapName) for mapName in MAPS]
+                options.insert(0, discord.SelectOption(label="None"))
+                view = self.generateSelectView(options, event["map"], eventMsg, "Select a map.", "edit_select_map")
+
+                await interaction.response.send_message(view=view, ephemeral=True, delete_after=60.0)
+                return
 
             # Editing Attendence
             elif editOption == "Max Players":
@@ -915,22 +926,39 @@ class Schedule(commands.Cog):
 
 
             if isTemplateEdit:
-                embed = Embed(title=f"✅ Template edited!", color=Color.green())
-                await dmChannel.send(embed=embed)
                 log.info(f"{interaction.user.display_name} ({interaction.user}) edited the template: {event['name']}!")
-                return True
+                embed = Embed(title=f"✅ Template edited!", color=Color.green())
+                await interaction.user.send(embed=embed)
 
             else: # Not template
                 if editingTime > self.lastUpdate:
-                    embed = Embed(title=f"✅ {event['type']} edited!", color=Color.green())
-                    await dmChannel.send(embed=embed)
                     log.info(f"{interaction.user.display_name} ({interaction.user}) edited the event: {event['title']}.")
+                    embed = Embed(title=f"✅ {event['type']} edited!", color=Color.green())
+                    await interaction.user.send(embed=embed)
                     return reorderEvents
                 else:
                     embed = Embed(title="❌ Schedule was updated while you were editing your operation. Try again!", color=Color.red())
-                    await dmChannel.send(embed=embed)
+                    await interaction.user.send(embed=embed)
                     log.info(f"{interaction.user.display_name} ({interaction.user}) was editing an event but schedule was updated!")
                     return None
+
+        # All select menu options in edit_select
+        elif select.custom_id.startswith("edit_select_"):
+            with open(EVENTS_FILE) as f:
+                events = json.load(f)
+
+            eventKey = select.custom_id[len("edit_select_"):].split("_REMOVE")[0]
+            eventValue = None if select.values[0] == "None" else select.values[0]
+
+            event = [event for event in events if event["messageId"] == eventMsg.id][0]
+            event[eventKey] = eventValue
+
+            with open(EVENTS_FILE, "w") as f:
+                json.dump(events, f, indent=4)
+
+            await eventMsg.edit(embed=self.getEventEmbed(event))
+            await interaction.response.send_message(embed=Embed(title="✅ Edited event", color=Color.green()), ephemeral=True, delete_after=10.0)
+
 
     async def eventTitle(self, interaction: discord.Interaction, eventType: str, isOperation:bool = False) -> str | None:
         """ Handles the title part of scheduling an event.
@@ -1404,7 +1432,8 @@ class Schedule(commands.Cog):
         """
 
         if interaction.message is None:
-            log.exceptio
+            log.exception("editEvent: interaction.message is None")
+            return None
         options = []
 
         if not isTemplateEdit:

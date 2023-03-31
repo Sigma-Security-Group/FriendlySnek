@@ -941,17 +941,6 @@ class Schedule(commands.Cog):
         elif modal.custom_id == "modal_time":
             # TODO add event collision and shit from eventTime()
             # TODO reorder events
-            """
-            Instead of update channel:
-            oldEventsOrder = events
-            newEventsOrder = sorted(events)
-            if oldEventsOrder[pos] == newEventsOrder[pos]:
-                oldEventsOrder.pop(pos)
-            # now you're left with affected events.
-            for newEvent in newEventsOrder:
-                oldEventOrder.message.edit(embed=newEvent, view=view)
-            # This way you only edit the events that are affected and not resending the entire shit
-            """
 
             startTimeOld = event["time"]
             hours, minutes, delta = self.getDetailsFromDuration(event["duration"])
@@ -979,6 +968,33 @@ class Schedule(commands.Cog):
                         await member.send(embed=embed)
                     except Exception as e:
                         log.exception(f"{member} | {e}")
+
+            with open(EVENTS_FILE, "w") as f:
+                json.dump(events, f, indent=4)
+
+            # await eventMsg.edit(embed=self.getEventEmbed(event))
+            await interaction.response.send_message(embed=Embed(title="✅ Event edited", color=Color.green()), ephemeral=True, delete_after=5.0)
+
+            # Reorder events
+            """
+            Instead of update channel:
+            oldEventsOrder = events
+            newEventsOrder = sorted(events)
+            if oldEventsOrder[pos] == newEventsOrder[pos]:
+                oldEventsOrder.pop(pos)
+            # now you're left with affected events.
+            for newEvent in newEventsOrder:
+                oldEventOrder.message.edit(embed=newEvent, view=view)
+            # This way you only edit the events that are affected and not resending the entire shit
+            """
+            sortedEvents = sorted(events, key=lambda e: datetime.strptime(e["time"], TIME_FORMAT), reverse=True)
+            for idx, eve in enumerate(events):
+                if eve["messageId"] != sortedEvents[idx]:
+                    msgId = eve["messageId"]
+                    events[idx] = sortedEvents[idx]
+                    events[idx]["messageId"] = msgId
+            return
+
 
         else:
             event[modal.custom_id[len("modal_"):]] = value

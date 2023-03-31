@@ -901,7 +901,7 @@ class Schedule(commands.Cog):
             event[modal.custom_id[len("modal_"):]] = None
 
         elif modal.custom_id == "modal_reservableRoles":
-            # TODO fix reserve button
+            # TODO show/hide reserve button on roles/None
             reservableRoles = value.split("\n")
             if len(reservableRoles) > 25:
                 await interaction.response.send_message(embed=Embed(title="❌ Ain't supporting over 25 roles bruh", color=Color.red()), ephemeral=True, delete_after=10.0)
@@ -916,6 +916,7 @@ class Schedule(commands.Cog):
                 event["reservableRoles"] = {role: event["reservableRoles"][role] if role in event["reservableRoles"] else None for role in reservableRoles}
 
         elif modal.custom_id == "modal_maxPlayers":
+            # TODO show/hide buttons on "hidden"
             if value.lower() == "none" or (value.isdigit() and int(value) > MAX_SERVER_ATTENDANCE):
                 event["maxPlayers"] = None
             elif value.lower() in ("anonymous", "hidden"):

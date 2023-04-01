@@ -863,9 +863,11 @@ class Schedule(commands.Cog):
                 with open(MEMBER_TIME_ZONES_FILE) as f:
                     memberTimeZones = json.load(f)
                 if str(interaction.user.id) not in memberTimeZones:
+                    await interaction.response.send_message("Please retry after you've set a time zone in DMs!", ephemeral=True, delete_after=60.0)
                     timeZoneOutput = await self.changeTimeZone(interaction.user)
                     if timeZoneOutput is False:
                         await interaction.response.send_message(embed=Embed(title="❌ Event Editing canceled", description="You must provide a time zone in your DMs!", color=Color.red()))
+                    return
 
                 # Send modal
                 with open(MEMBER_TIME_ZONES_FILE) as f:
@@ -978,28 +980,35 @@ class Schedule(commands.Cog):
             # === Reorder events ===
             # Save message ID order
             msgIds = []
-            for event in events:
-                msgIds.append(event["messageId"])
+            for eve in events:
+                msgIds.append(eve["messageId"])
 
             # Sort events
-            events = sorted(events, key=lambda e: datetime.strptime(e["time"], TIME_FORMAT), reverse=True)
+            sortedEvents = sorted(events, key=lambda e: datetime.strptime(e["time"], TIME_FORMAT), reverse=True)
 
             schedule = await guild.fetch_channel(SCHEDULE)
             if not isinstance(schedule, discord.channel.TextChannel):
                 log.exception("ModalHandling: schedule is not discord.channel.TextChannel")
                 return
 
-            for idx, event in enumerate(events):
+            anyEventChange = False
+            for idx, eve in enumerate(sortedEvents):
                 # If msg is in a different position
-                if event["messageId"] != msgIds[idx]:
-                    event["messageId"] = msgIds[idx]
+                if eve["messageId"] != msgIds[idx]:
+                    anyEventChange = True
+                    eve["messageId"] = msgIds[idx]
 
                     # Edit msg to match position
                     msg = await schedule.fetch_message(msgIds[idx])
-                    await msg.edit(embed=self.getEventEmbed(events[idx]), view=self.getEventView(events[idx]))
+                    await msg.edit(embed=self.getEventEmbed(sortedEvents[idx]), view=self.getEventView(sortedEvents[idx]))
+
+            if anyEventChange is False:
+                msg = await schedule.fetch_message(event["messageId"])
+                await msg.edit(embed=self.getEventEmbed(event), view=self.getEventView(event))
+
 
             with open(EVENTS_FILE, "w") as f:
-                json.dump(events, f, indent=4)
+                json.dump(sortedEvents, f, indent=4)
             await interaction.response.send_message(embed=Embed(title="✅ Event edited", color=Color.green()), ephemeral=True, delete_after=5.0)
             return
 

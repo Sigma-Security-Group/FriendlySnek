@@ -1,6 +1,7 @@
 import os, re, json, asyncio, random, discord
 import pytz  # type: ignore
 
+from pprint import pprint
 from math import ceil
 from copy import deepcopy
 from datetime import datetime, timedelta
@@ -866,10 +867,21 @@ class Schedule(commands.Cog):
 
             # Editing Time
             elif editOption == "Time":
-                modal = ScheduleModal(self, "Time", "modal_time", eventMsg)
-                modal.add_item(discord.ui.TextInput(label="Time", default=event["time"], placeholder="2069-04-20 04:20 PM", min_length=1, max_length=256))
-                await interaction.response.send_modal(modal)
+                # Set user time zone
+                with open(MEMBER_TIME_ZONES_FILE) as f:
+                    memberTimeZones = json.load(f)
+                if str(interaction.user.id) not in memberTimeZones:
+                    timeZoneOutput = await self.changeTimeZone(interaction.user)
+                    if timeZoneOutput is False:
+                        await interaction.response.send_message(embed=Embed(title="❌ Event Editing canceled", description="You must provide a time zone in your DMs!", color=Color.red()))
 
+                # Send modal
+                with open(MEMBER_TIME_ZONES_FILE) as f:
+                    memberTimeZones = json.load(f)
+                timeZone = pytz.timezone(memberTimeZones[str(interaction.user.id)])
+                modal = ScheduleModal(self, "Time", "modal_time", eventMsg)
+                modal.add_item(discord.ui.TextInput(label="Time", default=datetimeParse(event["time"]).replace(tzinfo=UTC).astimezone(timeZone).strftime(TIME_FORMAT), placeholder="2069-04-20 04:20 PM", min_length=1, max_length=256))
+                await interaction.response.send_modal(modal)
 
             log.info(f"{interaction.user.display_name} ({interaction.user}) edited the event: {event['title'] if 'title' in event else event['name']}.")
 
@@ -944,6 +956,11 @@ class Schedule(commands.Cog):
                 await interaction.response.send_message(embed=Embed(title="❌ That ain't a valid response bruh", color=Color.red()), ephemeral=True, delete_after=10.0)
                 return
 
+            with open(MEMBER_TIME_ZONES_FILE) as f:
+                    memberTimeZones = json.load(f)
+            timeZone = pytz.timezone(memberTimeZones[str(interaction.user.id)])
+            startTime = timeZone.localize(startTime).astimezone(UTC)
+
             endTime = startTime + delta
             event["time"] = startTime.strftime(TIME_FORMAT)
             event["endTime"] = endTime.strftime(TIME_FORMAT)
@@ -966,20 +983,27 @@ class Schedule(commands.Cog):
             with open(EVENTS_FILE, "w") as f:
                 json.dump(events, f, indent=4)
 
-            # Reorder events
-            sortedEvents = sorted(events, key=lambda e: datetime.strptime(e["time"], TIME_FORMAT), reverse=True)
-            for idx, eve in enumerate(events):
-                if eve["messageId"] != sortedEvents[idx]:
-                    msgId = eve["messageId"]
-                    events[idx] = sortedEvents[idx]
-                    events[idx]["messageId"] = msgId
+            # === Reorder events ===
+            # Save message ID order
+            msgIds = []
+            for event in events:
+                msgIds.append(event["messageId"])
 
-                    schedule = await guild.fetch_channel(SCHEDULE)
-                    if not isinstance(schedule, discord.channel.TextChannel):
-                        log.exception("ModalHandling: schedule is not discord.channel.TextChannel")
-                        return
+            # Sort events
+            events = sorted(events, key=lambda e: datetime.strptime(e["time"], TIME_FORMAT), reverse=True)
 
-                    msg = await schedule.fetch_message(msgId)
+            schedule = await guild.fetch_channel(SCHEDULE)
+            if not isinstance(schedule, discord.channel.TextChannel):
+                log.exception("ModalHandling: schedule is not discord.channel.TextChannel")
+                return
+
+            for idx, event in enumerate(events):
+                # If msg is in a different position
+                if event["messageId"] != msgIds[idx]:
+                    event["messageId"] = msgIds[idx]
+
+                    # Edit msg to match position
+                    msg = await schedule.fetch_message(msgIds[idx])
                     await msg.edit(embed=self.getEventEmbed(events[idx]), view=self.getEventView(events[idx]))
 
             with open(EVENTS_FILE, "w") as f:
@@ -1409,9 +1433,11 @@ class Schedule(commands.Cog):
                         return None
                     elif collisionResponse == "edit":
                         exitForLoop = True
+                        break
                     elif collisionResponse == "override":
                         eventCollision = False
                         exitForLoop = True
+                        break
 
         return (startTime, endTime)
 
@@ -1487,29 +1513,6 @@ class Schedule(commands.Cog):
         view.add_item(ScheduleSelect(instance=self, eventMsg=eventMsg, placeholder="Select what to edit.", minValues=1, maxValues=1, customId="edit_select", row=0, options=options))
 
         await interaction.response.send_message(view=view, ephemeral=True, delete_after=60.0)
-
-    async def editTemplate(self, interaction: discord.Interaction, template: dict) -> None:
-        editOptions = (
-            "Template Name",
-            "Title",
-            "Linking",
-            "Description",
-            "External URL",
-            "Reservable Roles",
-            "Map",
-            "Max Players",
-            "Duration"
-        )
-        # TODO fix this shit
-        # log.info(f"{interaction.user.display_name} ({interaction.user}) is editing the template: {template['name']}")
-        # options = []
-        # for editOption in editOptions:
-        #     options.append(discord.SelectOption(label=editOption))
-
-        # view = ScheduleView()
-        # view.add_item(ScheduleSelect(instance=self, eventMsg=eventMsg, placeholder="Select what to edit.", minValues=1, maxValues=1, customId="edit_select", row=0, options=options))
-
-        # await interaction.response.send_message(view=view, ephemeral=True, delete_after=60.0)
 
 
 # ===== </Schedule Functions> =====
@@ -1642,7 +1645,8 @@ class Schedule(commands.Cog):
         while True:
             with open(WORKSHOP_TEMPLATES_FILE) as f:
                 workshopTemplates = json.load(f)
-            embed = Embed(title=":clipboard: Templates", description="Enter a template number.\nEnter `none` to make a workshop from scratch.\n\nEdit template: `edit` + template number. E.g. `edit 2`.\nDelete template: `delete` + template number. E.g. `delete 4`. **IRREVERSIBLE!**", color=color)
+            #embed = Embed(title=":clipboard: Templates", description="Enter a template number.\nEnter `none` to make a workshop from scratch.\n\nEdit template: `edit` + template number. E.g. `edit 2`.\nDelete template: `delete` + template number. E.g. `delete 4`. **IRREVERSIBLE!**", color=color)
+            embed = Embed(title=":clipboard: Templates", description="Enter a template number.", color=color)
             embed.add_field(name="Templates", value="\n".join(f"**{idx}.** {template['name']}" for idx, template in enumerate(workshopTemplates, 1)) if len(workshopTemplates) > 0 else "-")
             embed.set_footer(text=SCHEDULE_CANCEL)
             color = Color.red()
@@ -1669,7 +1673,8 @@ class Schedule(commands.Cog):
                     break
 
                 elif re.search(r"(edit |delete )?\d+", templateAction, re.IGNORECASE):
-                    if templateAction.lower().startswith("delete"):
+                    # TEMPORARILY DISABLED EDITING AND DELETING WORKSHOP TEMPLATES
+                    """if templateAction.lower().startswith("delete"):
                         templateNumber = templateAction.split(" ")[-1]
                         if templateNumber.isdigit() and int(templateNumber) <= len(workshopTemplates) and int(templateNumber) > 0:
                             workshopTemplate = workshopTemplates[int(templateNumber) - 1]
@@ -1696,24 +1701,50 @@ class Schedule(commands.Cog):
                             with open(WORKSHOP_TEMPLATES_FILE, "w") as f:
                                 json.dump(workshopTemplates, f, indent=4)
                             await dmChannel.send(embed=Embed(title="✅ Template deleted!", color=Color.green()))
-                            color = Color.gold()
+                            color = Color.gold()"""
 
-                    elif templateAction.lower().startswith("edit"):
+                    """
+                        elif templateAction.lower().startswith("edit"):
                         templateNumber = templateAction.split(" ")[-1]
                         if templateNumber.isdigit() and int(templateNumber) <= len(workshopTemplates) and int(templateNumber) > 0:
                             workshopTemplate = workshopTemplates[int(templateNumber) - 1]
                             log.info(f"{interaction.user.display_name} ({interaction.user}) is editing the workshop template: {workshopTemplate['name']}...")
-                            await self.editEvent(interaction, workshopTemplate, isTemplateEdit=True)
+
+                            #await self.editTemplate(interaction, workshopTemplate)
+                            editOptions = (
+                                "Template Name",
+                                "Title",
+                                "Linking",
+                                "Description",
+                                "External URL",
+                                "Reservable Roles",
+                                "Map",
+                                "Max Players",
+                                "Duration"
+                            )
+                            # TODO fix this shit
+                            # log.info(f"{interaction.user.display_name} ({interaction.user}) is editing the template: {template['name']}")
+                            # options = []
+                            # for editOption in editOptions:
+                            #     options.append(discord.SelectOption(label=editOption))
+
+                            # view = ScheduleView()
+                            # view.add_item(ScheduleSelect(instance=self, eventMsg=eventMsg, placeholder="Select what to edit.", minValues=1, maxValues=1, customId="edit_select", row=0, options=options))
+
+                            # await interaction.response.send_message(view=view, ephemeral=True, delete_after=60.0)
+
+
+
 
                             workshopTemplates[int(templateNumber) - 1] = workshopTemplate
                             with open(WORKSHOP_TEMPLATES_FILE, "w") as f:
                                 json.dump(workshopTemplates, f, indent=4)
-                            color = Color.gold()
+                            color = Color.gold()"""
 
-                    else: # Select template
-                        if templateAction.isdigit() and int(templateAction) <= len(workshopTemplates) and int(templateAction) > 0:
-                            template = workshopTemplates[int(templateAction) - 1]
-                            break
+                    #else: # Select template
+                    if templateAction.isdigit() and int(templateAction) <= len(workshopTemplates) and int(templateAction) > 0:
+                        template = workshopTemplates[int(templateAction) - 1]
+                        break
 
             except asyncio.TimeoutError:
                 await dmChannel.send(embed=TIMEOUT_EMBED)
@@ -2133,9 +2164,9 @@ class Schedule(commands.Cog):
 
         with open(MEMBER_TIME_ZONES_FILE, "w") as f:
             json.dump(memberTimeZones, f, indent=4)
-            embed = Embed(title=f"✅ Time zone preferences changed!", description=f"Updated to `{timeZone.zone}`!" if isInputNotNone else "Preference removed!", color=Color.green())
-            await dmChannel.send(embed=embed)
-            return True
+        embed = Embed(title=f"✅ Time zone preferences changed!", description=f"Updated to `{timeZone.zone}`!" if isInputNotNone else "Preference removed!", color=Color.green())
+        await dmChannel.send(embed=embed)
+        return True
 
 # ===== </Change Time Zone> =====
 

@@ -1,4 +1,5 @@
-import os, re, pytz, asyncio, discord
+import os, re, asyncio, discord
+import pytz # type: ignore
 
 from logger import Logger
 log = Logger()
@@ -46,6 +47,7 @@ if not os.path.exists("./tmp"):  # Mission missionUploader stuff- TODO maybe cre
     os.mkdir("tmp")
 
 COGS = [cog[:-3] for cog in os.listdir("cogs/") if cog.endswith(".py")]
+#COGS = ["schedule"]  # Faster startup
 cogsReady = {cog: False for cog in COGS}
 
 INTENTS = discord.Intents.all()

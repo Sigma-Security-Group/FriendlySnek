@@ -1,7 +1,6 @@
 import os, re, json, asyncio, random, discord
 import pytz  # type: ignore
 
-from pprint import pprint
 from math import ceil
 from copy import deepcopy
 from datetime import datetime, timedelta
@@ -587,13 +586,6 @@ class Schedule(commands.Cog):
 
                 event = [event for event in events if event["messageId"] == message.id][0]
                 await self.editEvent(interaction, event, message)
-                #if reorderEvents:
-                #    with open(EVENTS_FILE, "w") as f:
-                #        json.dump(events, f, indent=4)
-                #    await self.updateSchedule()
-                #    return
-                #else:
-                #    await message.edit(embed=self.getEventEmbed(event))
 
             elif button.custom_id == "delete":
                 if message is None:
@@ -799,20 +791,20 @@ class Schedule(commands.Cog):
                 await interaction.response.send_message(view=view, ephemeral=True, delete_after=60.0)
 
             # TODO Editing Template Name
-            elif editOption == "Template Name":
-                embed = Embed(title=SCHEDULE_EVENT_TEMPLATE_SAVE_NAME_QUESTION, color=Color.gold())
-                embed.set_footer(text=SCHEDULE_CANCEL)
-                await interaction.user.send(embed=embed)
-                try:
-                    response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, author=interaction.user, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
-                    templateName = response.content.strip()
-                    if templateName.lower() == "cancel":
-                        await self.cancelCommand(dmChannel, "Event editing")
-                        return None
-                except asyncio.TimeoutError:
-                    await interaction.user.send(embed=TIMEOUT_EMBED)
-                    return None
-                event["name"] = templateName
+            #elif editOption == "Template Name":
+            #    embed = Embed(title=SCHEDULE_EVENT_TEMPLATE_SAVE_NAME_QUESTION, color=Color.gold())
+            #    embed.set_footer(text=SCHEDULE_CANCEL)
+            #    await interaction.user.send(embed=embed)
+            #    try:
+            #        response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, author=interaction.user, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
+            #        templateName = response.content.strip()
+            #        if templateName.lower() == "cancel":
+            #            await self.cancelCommand(dmChannel, "Event editing")
+            #            return None
+            #    except asyncio.TimeoutError:
+            #        await interaction.user.send(embed=TIMEOUT_EMBED)
+            #        return None
+            #    event["name"] = templateName
 
             # Editing Title
             elif editOption == "Title":

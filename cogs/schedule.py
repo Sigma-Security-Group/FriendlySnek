@@ -454,6 +454,9 @@ class Schedule(commands.Cog):
 
         return view
 
+    def isAllowedToEdit(self, user: discord.Member, eventAuthorId: int) -> bool:
+        return user.id == eventAuthorId or any(role.id == UNIT_STAFF or role.id == SERVER_HAMSTER for role in user.roles)
+
     async def buttonHandling(self, message: discord.Message | None, button: discord.ui.Button, interaction: discord.Interaction) -> None:
         """ Handling all schedule button interactions.
 
@@ -565,7 +568,7 @@ class Schedule(commands.Cog):
                 event = eventList[0]
                 scheduleNeedsUpdate = False
 
-                if interaction.user.id != event["authorId"] and not any(role.id == UNIT_STAFF or role.id == SERVER_HAMSTER for role in interaction.user.roles):
+                if self.isAllowedToEdit(interaction.user, event["authorId"]) is False:
                     await interaction.response.send_message(RESPONSE_UNALLOWED.format("configure"), ephemeral=True, delete_after=60.0)
                     return
 
@@ -730,6 +733,11 @@ class Schedule(commands.Cog):
         Returns:
         None.
         """
+
+        if not isinstance(interaction.user, discord.Member):
+            log.exception("Schedule SelectHandling: interaction.user is not discord.Member")
+            return
+
         if select.custom_id == "reserve_role_select":
             # Disable all discord.ui.Item
             if select.view is None:
@@ -771,6 +779,10 @@ class Schedule(commands.Cog):
             with open(EVENTS_FILE) as f:
                 events = json.load(f)
             event = [event for event in events if event["messageId"] == eventMsg.id][0]
+
+            if self.isAllowedToEdit(interaction.user, event["authorId"]) is False:
+                await interaction.response.send_message("Please restart the editing process.", ephemeral=True, delete_after=60.0)
+                return
 
             editOption = select.values[0]
             eventType = event.get("type", "Operation")
@@ -897,6 +909,10 @@ class Schedule(commands.Cog):
             await interaction.response.send_message(embed=Embed(title="✅ Event edited", color=Color.green()), ephemeral=True, delete_after=5.0)
 
     async def modalHandling(self, modal: discord.ui.Modal, interaction: discord.Interaction, eventMsg: discord.Message) -> None:
+        if not isinstance(interaction.user, discord.Member):
+            log.exception("Schedule modalHandling: interaction.user is not discord.Member")
+            return
+
         with open(EVENTS_FILE) as f:
             events = json.load(f)
         value = modal.children[0].value
@@ -951,7 +967,7 @@ class Schedule(commands.Cog):
                 return
 
             with open(MEMBER_TIME_ZONES_FILE) as f:
-                    memberTimeZones = json.load(f)
+                memberTimeZones = json.load(f)
             timeZone = pytz.timezone(memberTimeZones[str(interaction.user.id)])
             startTime = timeZone.localize(startTime).astimezone(UTC)
 
@@ -1181,7 +1197,6 @@ class Schedule(commands.Cog):
 
             # Save values when same keys
             return {role: event["reservableRoles"][role] if role in event["reservableRoles"] else None for role in reservableRoles}
-
 
     async def eventMap(self, interaction: discord.Interaction, eventType: str) -> bool | str | None:
         """ Handles the map part of scheduling an event.
@@ -1480,7 +1495,6 @@ class Schedule(commands.Cog):
                 msgId = event["messageId"]
         await interaction.followup.send(RESPONSE_EVENT_DONE.format(newEvent["title"], GUILD_ID, SCHEDULE, msgId))
         return True
-
 
     async def editEvent(self, interaction: discord.Interaction, event: dict, eventMsg: discord.Message) -> None:
         """ Edits a preexisting event.

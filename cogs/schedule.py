@@ -1066,7 +1066,7 @@ class Schedule(commands.Cog):
                 return None
 
             if isOperation is False or title.lower() != "regenerate":
-                return title
+                return title.replace("\n", "")
 
     async def eventDescription(self, interaction: discord.Interaction, eventType: str, currentDesc: str = "") -> str | None:
         """ Handles the description part of scheduling an event.
@@ -1647,7 +1647,7 @@ class Schedule(commands.Cog):
             with open(WORKSHOP_TEMPLATES_FILE) as f:
                 workshopTemplates = json.load(f)
             #embed = Embed(title=":clipboard: Templates", description="Enter a template number.\nEnter `none` to make a workshop from scratch.\n\nEdit template: `edit` + template number. E.g. `edit 2`.\nDelete template: `delete` + template number. E.g. `delete 4`. **IRREVERSIBLE!**", color=color)
-            embed = Embed(title=":clipboard: Templates", description="Enter a template number.", color=color)
+            embed = Embed(title=":clipboard: Templates", description="Enter a template number.\nEnter `none` to make a workshop from scratch.", color=color)
             embed.add_field(name="Templates", value="\n".join(f"**{idx}.** {template['name']}" for idx, template in enumerate(workshopTemplates, 1)) if len(workshopTemplates) > 0 else "-")
             embed.set_footer(text=SCHEDULE_CANCEL)
             color = Color.red()

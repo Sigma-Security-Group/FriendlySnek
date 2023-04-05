@@ -7,3 +7,5 @@ python-dateutil
 pysftp
 beautifulsoup4
 asyncpraw
+quart
+quart_discord

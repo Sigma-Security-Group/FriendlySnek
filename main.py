@@ -1,5 +1,5 @@
-import os, re, asyncio, discord
-import pytz # type: ignore
+import os, re, asyncio, discord, quart
+import pytz, quart_discord # type: ignore
 
 from logger import Logger
 log = Logger()
@@ -37,6 +37,18 @@ import secret
 from constants import *
 if secret.DEBUG:
     from constants.debug import *
+
+
+# === Website ===
+app = quart.Quart(__name__)
+app.config["SECRET_KEY"] = secret.SECRET_KEY
+app.config["DISCORD_CLIENT_ID"] = FRIENDLY_SNEK_DEV_FROGGI
+app.config["DISCORD_CLIENT_SECRET"] = secret.CLIENT_SECRET
+app.config["DISCORD_REDIRECT_URI"] = "http://127.0.0.1:5000/callback"
+app.config["DISCORD_BOT_TOKEN"] = secret.TOKEN
+website = quart_discord.DiscordOAuth2Session(app, app.config["DISCORD_CLIENT_ID"], secret.CLIENT_SECRET, app.config["DISCORD_REDIRECT_URI"], secret.TOKEN)
+
+
 
 if not os.path.exists("./data"):
     log.info("Creating a data directory!")

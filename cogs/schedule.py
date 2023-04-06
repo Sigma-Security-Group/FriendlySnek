@@ -1381,7 +1381,7 @@ class Schedule(commands.Cog):
                     break
 
                 # Set time is in the past
-                if (delta := UTC.localize(utcNow) - startTime) > timedelta(hours=1) and delta < timedelta(days=1):  # Set time in the past 24 hours
+                if (delta := UTC.localize(utcNow) - startTime) > timedelta(hours=1) and delta < timedelta(days=1):  # Time is between 1 hour and one day ago.
                     newStartTime = startTime + timedelta(days=1)
                     embed = Embed(title="Time was detected to be in the past 24h and was set to tomorrow.", description=f"Input time: {discord.utils.format_dt(startTime, style='F')}.\nSelected time: {discord.utils.format_dt(newStartTime, style='F')}.", color=Color.orange())
                     await dmChannel.send(embed=embed)

@@ -523,22 +523,25 @@ class Schedule(commands.Cog):
 
                 view = ScheduleView()
                 options = []
-                for role in vacantRoles:
-                    options.append(discord.SelectOption(label=role))
 
-                view.add_item(ScheduleSelect(instance=self, eventMsg=interaction.message, placeholder="Select a role.", minValues=1, maxValues=1, customId="reserve_role_select", row=0, options=options))
-                btn = ScheduleButton(self, interaction.message, row=1, label="Unreserve", style=discord.ButtonStyle.danger, custom_id="reserve_role_unreserve")
+                if len(vacantRoles) > 0:
+                    for role in vacantRoles:
+                        options.append(discord.SelectOption(label=role))
+                    view.add_item(ScheduleSelect(instance=self, eventMsg=interaction.message, placeholder="Select a role.", minValues=1, maxValues=1, customId="reserve_role_select", row=0, options=options))
+
 
                 # Disable button if user hasn't reserved
                 for roleName in event["reservableRoles"]:
                     if event["reservableRoles"][roleName] == interaction.user.id:
+                        view.add_item(ScheduleButton(self, interaction.message, row=1, label="Unreserve Current Role", style=discord.ButtonStyle.danger, custom_id="reserve_role_unreserve"))
                         break
-                else:
-                    btn.disabled = True
 
-                view.add_item(btn)
+                if len(view.children) == 0:
+                    await interaction.response.send_message(content=f"{interaction.user.mention} All roles are reserved!", ephemeral=True, delete_after=60.0)
+                    return
 
                 await interaction.response.send_message(content=interaction.user.mention, view=view, ephemeral=True, delete_after=60.0)
+                return
 
             elif button.custom_id == "reserve_role_unreserve":
                 scheduleNeedsUpdate = False
@@ -2203,8 +2206,8 @@ class ScheduleButton(discord.ui.Button):
         await self.instance.buttonHandling(self.message, self, interaction)
 
 class ScheduleSelect(discord.ui.Select):
-    def __init__(self, instance, eventMsg: discord.Message, placeholder: str, minValues: int, maxValues: int, customId: str, row: int, options: list[discord.SelectOption], *args, **kwargs):
-        super().__init__(placeholder=placeholder, min_values=minValues, max_values=maxValues, custom_id=customId, row=row, options=options, *args, **kwargs)
+    def __init__(self, instance, eventMsg: discord.Message, placeholder: str, minValues: int, maxValues: int, customId: str, row: int, options: list[discord.SelectOption], disabled:bool = False, *args, **kwargs):
+        super().__init__(placeholder=placeholder, min_values=minValues, max_values=maxValues, custom_id=customId, row=row, options=options, disabled=disabled, *args, **kwargs)
         self.eventMsg = eventMsg
         self.instance = instance
 

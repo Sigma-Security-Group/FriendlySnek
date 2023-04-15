@@ -754,10 +754,10 @@ class Schedule(commands.Cog):
             event = [event for event in events if event["messageId"] == eventMsg.id][0]
             for roleName in event["reservableRoles"]:
                 if event["reservableRoles"][roleName] == interaction.user.id:
+                    event["reservableRoles"][roleName] = None
                     break
 
             # Reserve desired role
-            event["reservableRoles"][roleName] = None
             event["reservableRoles"][select.values[0]] = interaction.user.id
             await interaction.followup.send(embed=Embed(title=f"✅ Role reserved: `{select.values[0]}`", color=Color.green()), ephemeral=True)
 

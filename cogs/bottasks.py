@@ -5,7 +5,7 @@ from datetime import datetime, timezone, timedelta
 from dateutil.parser import parse as datetimeParse  # type: ignore
 from bs4 import BeautifulSoup as BS  # type: ignore
 
-from discord import utils
+from discord import utils, Embed
 from discord.ext import commands, tasks  # type: ignore
 
 from constants import *
@@ -107,20 +107,12 @@ class BotTasks(commands.Cog):
                     log.exception("checkModUpdates: Hampter role is None")
                     return
 
-                message = hampter.mention + (f" ({len(output)})" if len(output) > 1 else "") + "\n\n"  # Ping for first message
+                # Each mod update will be sent in a separate message
+                msgContent = hampter.mention + (f" ({len(output)})" if len(output) > 1 else "") + "\n\n"  # Ping for first message
                 for mod in output:
-                    # Title + Date
-                    message += f"{mod['name']}\n"
+                    await changelog.send(msgContent, embed=Embed(title=mod["name"], url=CHANGELOG_URL.format(mod['modID']), timestamp=mod["datetime"]))
+                    msgContent = None  # Only 1 ping
 
-                    # Timestamp
-                    message += utils.format_dt(mod["datetime"], style="F") + "\n"
-
-                    # Link
-                    message += f"<{CHANGELOG_URL.format(mod['modID'])}>"
-
-                    # Each new mod update will be sent in a separate message
-                    await changelog.send(message)
-                    message = ""
 
         except Exception as e:
             log.exception(e)

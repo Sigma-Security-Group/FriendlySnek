@@ -4,8 +4,9 @@ import asyncpraw, requests, pytz  # type: ignore
 from datetime import datetime, timezone, timedelta
 from dateutil.parser import parse as datetimeParse  # type: ignore
 from bs4 import BeautifulSoup as BS  # type: ignore
+from .workshopInterest import WORKSHOP_INTEREST_LIST  # type: ignore
 
-from discord import utils, Embed
+from discord import utils, Embed, Color
 from discord.ext import commands, tasks  # type: ignore
 
 from constants import *
@@ -36,6 +37,15 @@ class BotTasks(commands.Cog):
 
     @tasks.loop(minutes=30.0)
     async def checkModUpdates(self) -> None:
+        """ Checks mod updates, pings hampters if detected.
+
+        Parameters:
+        None.
+
+        Returns:
+        None.
+        """
+
         try:
             output = []
 
@@ -121,6 +131,15 @@ class BotTasks(commands.Cog):
 
 
     async def redditRecruitmentPosts(self) -> None:
+        """ Posts Reddit recruitment posts once a week.
+
+        Parameters:
+        None.
+
+        Returns:
+        None.
+        """
+
         try:
             username = "SigmaSecurityGroup"
             reddit = asyncpraw.Reddit(
@@ -198,15 +217,76 @@ Join Us:
         except Exception as e:
             log.exception(e)
 
+
+    def getPingString(self, rawRole: int | tuple) -> str | None:
+        """ Generate a ping string from role id(s).
+
+        Parameters:
+        rawRole (int | tuple): One role id or tuple with role ids.
+
+        Returns:
+        str | None: str with pings or None if failed
+        """
+
+        guild = self.bot.get_guild(GUILD_ID)
+        if guild is None:
+            log.exception("Bottasks getSmePing: guild is None")
+            return None
+
+        if isinstance(rawRole, int):
+            role = guild.get_role(rawRole)
+            if role is None:
+                log.exception("Bottasks smeReminder: role is None")
+                return None
+            return role.mention
+
+        roles = [guild.get_role(roleId) for roleId in rawRole]
+        if None in roles:
+            log.exception(f"Bottasks getSmePing: roleId {roles[roles.index(None)]} returns None")
+            return None
+        return " ".join([role.mention for role in roles])  # type: ignore
+
     async def smeReminder(self) -> None:
+        """ Reminds SMEs if they haven't hosten in the required time.
+
+        Parameters:
+        None.
+
+        Returns:
+        None.
+        """
+
         if datetime.today().day != 1:  # Only execute function on 1st day of month
             return
 
-        # with open(EVENTS_HISTORY_FILE) as f:
-        #     events = json.load(f)
+        with open(EVENTS_HISTORY_FILE) as f:
+            events = json.load(f)
 
-        # for event in events[::-1]:
-        #     if event["title"]
+        smeCorner = self.bot.get_channel(SME_CORNER)
+        if not isinstance(smeCorner, discord.TextChannel):
+            log.exception("Bottasks smeReminder: smeCorner is not discord.TextChannel")
+            return
+
+        pingEmbed = Embed(
+            title="Workshop Reminder",
+            color=Color.orange()
+        )
+
+        for wsName, wsDetails in WORKSHOP_INTEREST_LIST.items():
+            for event in events[::-1]:  # Newest to oldest events
+                if "workshopInterest" in event and event["workshopInterest"] == wsName:
+
+                    # Send reminder if latest workshop was scheduled more than 60 days ago
+                    if datetime.strptime(event["time"], TIME_FORMAT) < (datetime.now() - timedelta(days=60)):
+                        eventScheduled = pytz.utc.localize(datetime.strptime(event['time'], TIME_FORMAT))
+                        pingEmbed.description = f"Last `{wsName}` event you had (`{event['title']}`) was at {discord.utils.format_dt(eventScheduled, style='F')} ({discord.utils.format_dt(eventScheduled, style='R')}).\nPlease host at least every 2 months to give everyone a chance to cert!"
+                        await smeCorner.send(self.getPingString(wsDetails["role"]), embed=pingEmbed)
+                    break
+
+            else:  # No workshop found
+                pingEmbed.description = f"Last `{wsName}` event you had couldn't be found in my logs.\nPlease host at least every 2 months to give everyone a chance to cert!"
+                await smeCorner.send(self.getPingString(wsDetails["role"]), embed=pingEmbed)
+
 
     @tasks.loop(hours=1.0)
     async def oneHourTasks(self) -> None:

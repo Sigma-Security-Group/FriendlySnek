@@ -1,4 +1,4 @@
-import secret, os, random
+import secret, os, random, json
 import asyncpraw, requests, pytz  # type: ignore
 
 from datetime import datetime, timezone, timedelta
@@ -13,6 +13,8 @@ from __main__ import log, cogsReady
 if secret.DEBUG:
     from constants.debug import *
 
+
+EVENTS_HISTORY_FILE = "data/eventsHistory.json"
 MOD_IDS = [1673456286, 623475643, 2041057379, 463939057, 773131200, 773125288, 884966711, 2174495332, 1376867375, 2522638637, 2459780823, 751965892, 2904714255, 1726184748, 2372036642, 2791403093, 2242548109, 450814997, 837729515, 897295039, 2447965207, 1643720957, 1375890861, 583496184, 583544987, 2264863911, 1638341685, 686802825, 2467590475, 333310405, 2811760677, 1284600102, 1224892496, 2941986336, 1745501605, 1291778160, 1883956552, 2020940806, 1188303655, 2140288272, 1858075458, 1858070328, 1808238502, 1862208264, 929396506, 1845100804, 930903722, 2814015609, 2801060088, 2585749287, 1770265310, 1423583812, 1397683809, 843425103, 843593391, 843632231, 843577117, 2466229756, 2013446344, 2264836821, 699630614, 1187306764, 2892020195, 1623498241, 2266710560, 2397371875, 2397360831, 2397376046, 2377329491, 1703187116, 1926513010, 1963617777, 1251859358, 1779063631, 2018593688]  # Just take it from the modpack HTML, ez clap (Updated: 17th March 2023)
 
 
@@ -28,8 +30,8 @@ class BotTasks(commands.Cog):
         if not self.checkModUpdates.is_running():
             self.checkModUpdates.start()
 
-        if not self.redditRecruitmentPosts.is_running():
-            self.redditRecruitmentPosts.start()
+        if not self.oneHourTasks.is_running():
+            self.oneHourTasks.start()
 
 
     @tasks.loop(minutes=30.0)
@@ -118,7 +120,6 @@ class BotTasks(commands.Cog):
             log.exception(e)
 
 
-    @tasks.loop(hours=1.0)
     async def redditRecruitmentPosts(self) -> None:
         try:
             username = "SigmaSecurityGroup"
@@ -196,6 +197,22 @@ Join Us:
             await armaDisc.send(f"Reddit recruitment post published, go upvote it!\nhttps://www.reddit.com{submission.permalink}")
         except Exception as e:
             log.exception(e)
+
+    async def smeReminder(self) -> None:
+        if datetime.today().day != 1:  # Only execute function on 1st day of month
+            return
+
+        # with open(EVENTS_HISTORY_FILE) as f:
+        #     events = json.load(f)
+
+        # for event in events[::-1]:
+        #     if event["title"]
+
+    @tasks.loop(hours=1.0)
+    async def oneHourTasks(self) -> None:
+        await self.redditRecruitmentPosts()
+        await self.smeReminder()
+
 
 async def setup(bot: commands.Bot) -> None:
     await bot.add_cog(BotTasks(bot))

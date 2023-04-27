@@ -18,13 +18,6 @@ if DEBUG:
 
 TIMEOUT_EMBED = Embed(title=ERROR_TIMEOUT, color=Color.red())
 
-EVENTS_FILE = "data/events.json"
-MEMBER_TIME_ZONES_FILE = "data/memberTimeZones.json"
-EVENTS_HISTORY_FILE = "data/eventsHistory.json"
-WORKSHOP_TEMPLATES_FILE = "data/workshopTemplates.json"
-WORKSHOP_TEMPLATES_DELETED_FILE = "data/workshopDeletedTemplates.json"
-WORKSHOP_INTEREST_FILE = "data/workshopInterest.json"
-
 OPERATION_NAME_ADJECTIVES = "constants/opAdjectives.txt"
 OPERATION_NAME_NOUNS = "constants/opNouns.txt"
 

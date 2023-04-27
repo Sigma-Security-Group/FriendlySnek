@@ -2,6 +2,17 @@ import discord
 GUILD_ID = 288446755219963914
 GUILD = discord.Object(id=GUILD_ID)
 
+####################
+# DATA FILES
+####################
+
+EVENTS_FILE = "data/events.json"
+EVENTS_HISTORY_FILE = "data/eventsHistory.json"
+MEMBER_TIME_ZONES_FILE = "data/memberTimeZones.json"
+WORKSHOP_INTEREST_FILE = "data/workshopInterest.json"
+WORKSHOP_TEMPLATES_FILE = "data/workshopTemplates.json"
+WORKSHOP_TEMPLATES_DELETED_FILE = "data/workshopDeletedTemplates.json"
+
 
 ####################
 # PEOPLE

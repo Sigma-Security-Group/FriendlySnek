@@ -121,7 +121,7 @@ class BotTasks(commands.Cog):
                 # Each mod update will be sent in a separate message
                 msgContent = hampter.mention + (f" ({len(output)})" if len(output) > 1 else "") + "\n\n"  # Ping for first message
                 for mod in output:
-                    await changelog.send(msgContent, embed=Embed(title=mod["name"], url=CHANGELOG_URL.format(mod['modID']), timestamp=mod["datetime"]))
+                    await changelog.send(msgContent, embed=Embed(title=mod["name"], url=CHANGELOG_URL.format(mod['modID']), timestamp=mod["datetime"], color=Color.dark_blue()))
                     msgContent = None  # Only 1 ping
 
 

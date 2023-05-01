@@ -255,7 +255,9 @@ Join Us:
         None.
         """
 
-        if datetime.today().day != 1:  # Only execute function on 1st day of month
+        utcNow = datetime.utcnow()
+
+        if utcNow.day != 1 or utcNow.hour != 0:  # Only execute function on 1st day of month around midnight UTC
             return
 
         with open(EVENTS_HISTORY_FILE) as f:

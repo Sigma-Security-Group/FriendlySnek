@@ -275,15 +275,17 @@ Join Us:
             color=Color.orange()
         )
 
+        workshopsInTimeFrame = []
         for wsName, wsDetails in WORKSHOP_INTEREST_LIST.items():
-            nextWs = False
+            wsScheduled = False
             # Check for scheduled events
             for event in events:
                 if "workshopInterest" in event and event["workshopInterest"] == wsName:
-                    nextWs = True
+                    wsScheduled = True
+                    workshopsInTimeFrame.append(wsName)
                     break
 
-            if nextWs is True:
+            if wsScheduled is True:
                 continue
 
             # Check for past events
@@ -295,11 +297,16 @@ Join Us:
                         eventScheduled = pytz.utc.localize(datetime.strptime(event['time'], TIME_FORMAT))
                         pingEmbed.description = f"Last `{wsName}` event you had (`{event['title']}`) was at {discord.utils.format_dt(eventScheduled, style='F')} ({discord.utils.format_dt(eventScheduled, style='R')}).\nPlease host at least every 2 months to give everyone a chance to cert!"
                         await smeCorner.send(self.getPingString(wsDetails["role"]), embed=pingEmbed)
+                    else:
+                        workshopsInTimeFrame.append(wsName)
                     break
 
             else:  # No workshop found
                 pingEmbed.description = f"Last `{wsName}` event you had couldn't be found in my logs.\nPlease host at least every 2 months to give everyone a chance to cert!"
                 await smeCorner.send(self.getPingString(wsDetails["role"]), embed=pingEmbed)
+
+        if len(workshopsInTimeFrame) > 0:
+            await smeCorner.send(":clap: Good job for keeping up the hosting " + ", ".join([f"`{wsName}`" for wsName in workshopsInTimeFrame]) + "! :clap:")
 
 
     @tasks.loop(hours=1.0)

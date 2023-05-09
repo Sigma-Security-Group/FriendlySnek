@@ -105,6 +105,7 @@ jsonCreateNoExist(MEMBER_TIME_ZONES_FILE, {})
 jsonCreateNoExist(EVENTS_HISTORY_FILE, [])
 jsonCreateNoExist(WORKSHOP_TEMPLATES_FILE, [])
 jsonCreateNoExist(WORKSHOP_TEMPLATES_DELETED_FILE, [])
+jsonCreateNoExist(REMINDERS_FILE, {})
 
 try:
     with open("./.git/logs/refs/heads/main") as f:

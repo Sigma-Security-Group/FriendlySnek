@@ -33,6 +33,9 @@ class BotTasks(commands.Cog):
         if not self.oneHourTasks.is_running():
             self.oneHourTasks.start()
 
+        if not self.fiveMinTasks.is_running():
+            self.fiveMinTasks.start()
+
 
     @tasks.loop(minutes=30.0)
     async def checkModUpdates(self) -> None:
@@ -245,6 +248,7 @@ Join Us:
             return None
         return " ".join([role.mention for role in roles])  # type: ignore
 
+
     async def smeReminder(self) -> None:
         """ Reminds SMEs if they haven't hosten in the required time.
 
@@ -315,5 +319,91 @@ Join Us:
         await self.smeReminder()
 
 
+    @tasks.loop(minutes=5)
+    async def fiveMinTasks(self) -> None:
+        # datetime.timestamp(datetime)
+        log.debug("Reminder task")
+
+        with open(REMINDERS_FILE) as f:
+            reminders = json.load(f)
+
+        removalList = []
+        updateTimeList = []
+        for time, details in reminders.items():
+            reminderTime = datetime.fromtimestamp(float(time))
+            if reminderTime > datetime.utcnow():
+                continue
+
+            # User
+            user = self.bot.get_user(details["userID"])
+            if user is None:
+                log.warning("bottasks fiveMinTasks: user is None")
+                removalList.append(time)
+                continue
+
+            # Channel
+            channel = self.bot.get_channel(details["channelID"])
+            if channel is None or not isinstance(channel, discord.TextChannel):
+                log.warning("bottasks fiveMinTasks: channel not TextChannel")
+                removalList.append(time)
+                continue
+
+            # Send message
+            setTime = datetime.fromtimestamp(details["setTime"])
+            embed = Embed(title="Reminder", description=details["message"], timestamp=setTime, color=Color.dark_blue())
+            embed.set_footer(text="Set")
+            await channel.send(user.mention, embed=embed)
+            removalList.append(time)
+
+            # Repeat
+            if details["repeat"] is True:
+                updateTimeList.append(time)
+
+        for updateTime in updateTimeList:
+            reminderTime = datetime.fromtimestamp(float(updateTime))
+            diffTime = timedelta(seconds=float(updateTime) - reminders[updateTime]["setTime"])
+            reminders[datetime.timestamp(reminderTime + diffTime)] = reminders[updateTime]
+
+        # Update file
+        for removal in removalList:
+            del reminders[removal]
+
+        with open(REMINDERS_FILE, "w", encoding="utf-8") as f:
+            json.dump(reminders, f, indent=4)
+
+
+class Reminders(commands.GroupCog, name="reminder"):
+    def __init__(self, bot: commands.Bot) -> None:
+        self.bot = bot
+        super().__init__()
+
+    @discord.app_commands.command(name="set")
+    @discord.app_commands.guilds(GUILD)
+    @discord.app_commands.describe(
+        when = "When to be reminded of something.",
+        text = "What to be reminded of"
+    )
+    async def reminderSet(self, interaction: discord.Interaction) -> None:
+        """ Sets a reminder to remind you of something at a specific time. """
+        await interaction.response.send_message("Set", ephemeral=True)
+
+    @discord.app_commands.command(name="list")
+    async def reminderList(self, interaction: discord.Interaction) -> None:
+        """ Shows the currently running reminders. """
+        await interaction.response.send_message("List", ephemeral=True)
+
+    @discord.app_commands.command(name="clear")
+    async def reminderClear(self, interaction: discord.Interaction) -> None:
+        """ Clears all reminders you have set. """
+        await interaction.response.send_message("Clear", ephemeral=True)
+
+    @discord.app_commands.command(name="delete")
+    async def reminderDelete(self, interaction: discord.Interaction) -> None:
+        """ Delete a reminder. """
+        await interaction.response.send_message("Delete", ephemeral=True)
+
+
 async def setup(bot: commands.Bot) -> None:
     await bot.add_cog(BotTasks(bot))
+
+    await bot.add_cog(Reminders(bot))

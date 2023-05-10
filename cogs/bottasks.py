@@ -545,7 +545,7 @@ class Reminders(commands.GroupCog, name="reminder"):
                 desc += reminderDetails["message"] + "\n\n"
                 reminderCount += 1
         embed.description = desc[:4096]
-        embed.set_footer(text=f"{reminderCount} reminder{'s' * (reminderCount > 0)}")
+        embed.set_footer(text=f"{reminderCount} reminder{'s' * (reminderCount > 1)}")
 
         if reminderCount == 0:
             await interaction.response.send_message("No reminders currently active.", ephemeral=True, delete_after=10.0)

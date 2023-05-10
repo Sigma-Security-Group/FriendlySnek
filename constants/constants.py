@@ -12,6 +12,7 @@ MEMBER_TIME_ZONES_FILE = "data/memberTimeZones.json"
 WORKSHOP_INTEREST_FILE = "data/workshopInterest.json"
 WORKSHOP_TEMPLATES_FILE = "data/workshopTemplates.json"
 WORKSHOP_TEMPLATES_DELETED_FILE = "data/workshopDeletedTemplates.json"
+REMINDERS_FILE = "data/reminders.json"
 
 
 ####################

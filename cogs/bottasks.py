@@ -33,8 +33,8 @@ class BotTasks(commands.Cog):
         if not self.oneHourTasks.is_running():
             self.oneHourTasks.start()
 
-        if not self.fiveMinTasks.is_running():
-            self.fiveMinTasks.start()
+        if not self.tenSecTasks.is_running():
+            self.tenSecTasks.start()
 
 
     @tasks.loop(minutes=30.0)
@@ -319,9 +319,8 @@ Join Us:
         await self.smeReminder()
 
 
-    @tasks.loop(minutes=5)
-    async def fiveMinTasks(self) -> None:
-        # datetime.timestamp(datetime)
+    @tasks.loop(seconds=10)
+    async def tenSecTasks(self) -> None:
         log.debug("Reminder task")
 
         with open(REMINDERS_FILE) as f:
@@ -331,38 +330,44 @@ Join Us:
         updateTimeList = []
         for time, details in reminders.items():
             reminderTime = datetime.fromtimestamp(float(time))
-            if reminderTime > datetime.utcnow():
+            if reminderTime > datetime.now():
                 continue
 
             # User
             user = self.bot.get_user(details["userID"])
             if user is None:
-                log.warning("bottasks fiveMinTasks: user is None")
+                log.warning("bottasks tenSecTasks: user is None")
                 removalList.append(time)
                 continue
 
             # Channel
             channel = self.bot.get_channel(details["channelID"])
             if channel is None or not isinstance(channel, discord.TextChannel):
-                log.warning("bottasks fiveMinTasks: channel not TextChannel")
+                log.warning("bottasks tenSecTasks: channel not TextChannel")
                 removalList.append(time)
                 continue
 
-            # Send message
+            # Embed
             setTime = datetime.fromtimestamp(details["setTime"])
             embed = Embed(title="Reminder", description=details["message"], timestamp=setTime, color=Color.dark_blue())
             embed.set_footer(text="Set")
-            await channel.send(user.mention, embed=embed)
-            removalList.append(time)
 
             # Repeat
             if details["repeat"] is True:
+                embed.set_author(name="Repeated reminder")
+                embed.set_footer(text="Next reminder")
+                embed.timestamp = datetime.fromtimestamp(float(time)) + timedelta(seconds=details["timedeltaSeconds"])
                 updateTimeList.append(time)
+
+            # Send msg
+            await channel.send(user.mention, embed=embed)
+            removalList.append(time)
+
 
         for updateTime in updateTimeList:
             reminderTime = datetime.fromtimestamp(float(updateTime))
-            diffTime = timedelta(seconds=float(updateTime) - reminders[updateTime]["setTime"])
-            reminders[datetime.timestamp(reminderTime + diffTime)] = reminders[updateTime]
+            reminders[updateTime]["setTime"] = datetime.now().timestamp()
+            reminders[datetime.timestamp(reminderTime + timedelta(seconds=reminders[updateTime]["timedeltaSeconds"]))] = reminders[updateTime]
 
         # Update file
         for removal in removalList:
@@ -377,6 +382,30 @@ class Reminders(commands.GroupCog, name="reminder"):
         self.bot = bot
         super().__init__()
 
+    # TODO Transfer newcomer here - figure out how to check if they've already pinged
+    #@staticmethod
+    #def newSystemReminder(time: datetime, channelID: int, message: str) -> None:
+    #    """ Create a new custom reminder (newcomers)
+
+    #    Parameters:
+    #    time (datetime): Time to be notified.
+    #    channelID (int): Channel id to be sent in.
+    #    message (str): Message content.
+
+    #    Returns:
+    #    datetime: The future date.
+    #    """
+    #    with open(REMINDERS_FILE) as f:
+    #        reminders = json.load(f)
+
+    #    reminders[datetime.timestamp(time)] = {
+    #        "channelID": channelID,
+    #        "message": message,
+    #    }
+    #    with open(REMINDERS_FILE, "w", encoding="utf-8") as f:
+    #        json.dump(reminders, f, indent=4)
+
+
     def getFutureDate(self, datetimeDict: dict[str, int | None]) -> datetime:
         """ Create future datetime from time period values.
 
@@ -386,7 +415,7 @@ class Reminders(commands.GroupCog, name="reminder"):
         Returns:
         datetime: The future date.
         """
-        futureDate = now = datetime.utcnow()
+        futureDate = now = datetime.now()
         if datetimeDict["years"] is not None:
             yearsToAdd = datetimeDict["years"]
             try:
@@ -463,18 +492,17 @@ class Reminders(commands.GroupCog, name="reminder"):
     async def reminderSet(self, interaction: discord.Interaction, when: str, text: str | None = None, repeat: bool | None = None) -> None:
         """ Sets a reminder to remind you of something at a specific time. """
         if when.strip() == "":
-            await interaction.response.send_message(embed=Embed(title="❌ Input e.g. 'in 5 minutes' or '1st July'.", color=Color.red()), ephemeral=True, delete_after=10.0)
+            await interaction.response.send_message(embed=Embed(title="❌ Input e.g. 'in 5 minutes' or '1 hour'.", color=Color.red()), ephemeral=True, delete_after=10.0)
             return
 
-        try:
-            reminderTime = datetimeParse(when)
-            log.debug(reminderTime)
-        except ValueError:
-            whenParse = self.parseRelativeTime(when)
-            log.debug(whenParse)
-            if whenParse is None:
-                await interaction.response.send_message(embed=Embed(title="❌ Could not parse the given time.", color=Color.red()), ephemeral=True, delete_after=10.0)
-                return
+        reminderTime = self.parseRelativeTime(when)
+        if reminderTime is None:
+            await interaction.response.send_message(embed=Embed(title="❌ Could not parse the given time.", color=Color.red()), ephemeral=True, delete_after=10.0)
+            return
+
+        if repeat is True and ((reminderTime - datetime.now()) < timedelta(minutes=1)):
+            await interaction.response.send_message(embed=Embed(title="❌ I will not spam-remind you.", color=Color.red()), ephemeral=True, delete_after=10.0)
+            return
 
         if interaction.channel is None:
             log.warning("bottasks reminderSet: interaction.channel is None")
@@ -488,9 +516,13 @@ class Reminders(commands.GroupCog, name="reminder"):
             "userID": interaction.user.id,
             "channelID": interaction.channel.id,
             "message": text or "reminder",
-            "setTime": datetime.timestamp(datetime.utcnow()),
+            "setTime": datetime.timestamp(datetime.now()),
+            "timedeltaSeconds": (reminderTime - datetime.now()).total_seconds(),
             "repeat": repeat or False
         }
+        with open(REMINDERS_FILE, "w", encoding="utf-8") as f:
+            json.dump(reminders, f, indent=4)
+
         embed=Embed(description=f"I will remind you {discord.utils.format_dt(reminderTime, style='R')}", color=Color.green())
         embed.set_author(name=interaction.user, icon_url=interaction.user.display_avatar)
         await interaction.response.send_message(embed=embed)
@@ -512,10 +544,11 @@ class Reminders(commands.GroupCog, name="reminder"):
                 desc += discord.utils.format_dt(datetime.fromtimestamp(float(reminderTime), tz=pytz.utc)) + ":\n"
                 desc += reminderDetails["message"] + "\n\n"
                 reminderCount += 1
+        embed.description = desc
         embed.set_footer(text=f"{reminderCount} reminder{'s' * (reminderCount > 0)}")
 
         if reminderCount == 0:
-            await interaction.response.send_message("No reminders currently active.")
+            await interaction.response.send_message("No reminders currently active.", ephemeral=True, delete_after=10.0)
             return
 
         await interaction.response.send_message(embed=embed)
@@ -535,7 +568,7 @@ class Reminders(commands.GroupCog, name="reminder"):
                 removeList.append(reminderTime)
 
         if len(removeList) == 0:
-            await interaction.response.send_message("No reminders currently active.")
+            await interaction.response.send_message("No reminders currently active.", ephemeral=True, delete_after=10.0)
             return
 
         # Remove reminders
@@ -544,8 +577,7 @@ class Reminders(commands.GroupCog, name="reminder"):
         with open(REMINDERS_FILE, "w", encoding="utf-8") as f:
             json.dump(reminders, f, indent=4)
 
-        await interaction.response.send_message(f"{len(removeList)} reminders removed.")
-
+        await interaction.response.send_message(f"{len(removeList)} reminder{'s' * (len(removeList) > 1)} removed.")
 
 
     async def reminderDeleteAutocomplete(self, interaction: discord.Interaction, current: str) -> list[discord.app_commands.Choice[str]]:
@@ -556,26 +588,47 @@ class Reminders(commands.GroupCog, name="reminder"):
         userReminders = []
         for reminderTime, reminderDetails in reminders.items():
             if reminderDetails["userID"] == interaction.user.id:
-                userReminders.append(datetime.fromtimestamp(float(reminderTime), tz=pytz.utc).strftime("%Y-%m-%d %H:%M") + f": {reminderDetails['message'][:20]}")
+                userReminders.append({
+                    "name": datetime.fromtimestamp(float(reminderTime), tz=pytz.utc).strftime("%Y-%m-%d %H:%M") + f": {reminderDetails['message'][:20]}",
+                    "value": reminderTime
+                })
 
         if len(userReminders) == 0:
-            return [discord.app_commands.Choice(name="No reminders currently active!", value="-")]
+            return [discord.app_commands.Choice(name="No reminders currently active.", value="-")]
         else:
             return [
-                discord.app_commands.Choice(name=reminder, value=reminder)  # Value is queue index
-                for reminder in userReminders if current.lower() in reminder.lower()
+                discord.app_commands.Choice(name=reminder["name"], value=reminder["value"])
+                for reminder in userReminders if current.lower() in reminder["name"].lower()
             ][:25]
-
 
     @discord.app_commands.command(name="delete")
     @discord.app_commands.guilds(GUILD)
     @discord.app_commands.autocomplete(reminder=reminderDeleteAutocomplete)
     async def reminderDelete(self, interaction: discord.Interaction, reminder: str) -> None:
         """ Delete a reminder. """
-        await interaction.response.send_message("Delete", ephemeral=True)
+        if reminder == "-":
+            await interaction.response.send_message("No reminders currently active.", ephemeral=True, delete_after=10.0)
+            return
+
+        with open(REMINDERS_FILE) as f:
+            reminders = json.load(f)
+
+        embed = Embed(
+            title="Reminder Deleted",
+            description=reminders[reminder]["message"],
+            color=Color.red(),
+            timestamp=datetime.fromtimestamp(float(reminder), tz=pytz.utc)
+        )
+        embed.set_footer(text="Reminder set")
+
+        # Remove requested reminder
+        del reminders[reminder]
+        with open(REMINDERS_FILE, "w", encoding="utf-8") as f:
+            json.dump(reminders, f, indent=4)
+
+        await interaction.response.send_message(embed=embed)
 
 
 async def setup(bot: commands.Bot) -> None:
     await bot.add_cog(BotTasks(bot))
-
     await bot.add_cog(Reminders(bot))

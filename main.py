@@ -47,7 +47,7 @@ if not os.path.exists("./tmp"):  # Mission missionUploader stuff- TODO maybe cre
     os.mkdir("tmp")
 
 COGS = [cog[:-3] for cog in os.listdir("cogs/") if cog.endswith(".py")]
-COGS = ["bottasks"]  # Faster startup
+# COGS = ["bottasks"]  # Faster startup
 cogsReady = {cog: False for cog in COGS}
 
 INTENTS = discord.Intents.all()
@@ -65,6 +65,7 @@ class FriendlySnek(commands.Bot):
             ),
             status="online"
         )
+        self.ready = False
 
     async def setup_hook(self) -> None:
         for cog in COGS:
@@ -73,7 +74,6 @@ class FriendlySnek(commands.Bot):
         await self.tree.sync(guild=GUILD)
 
 client = FriendlySnek(intents=INTENTS)
-client.ready = False
 
 @client.event
 async def on_ready() -> None:

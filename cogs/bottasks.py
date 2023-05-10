@@ -544,7 +544,7 @@ class Reminders(commands.GroupCog, name="reminder"):
                 desc += discord.utils.format_dt(datetime.fromtimestamp(float(reminderTime), tz=pytz.utc)) + ":\n"
                 desc += reminderDetails["message"] + "\n\n"
                 reminderCount += 1
-        embed.description = desc
+        embed.description = desc[:4096]
         embed.set_footer(text=f"{reminderCount} reminder{'s' * (reminderCount > 0)}")
 
         if reminderCount == 0:

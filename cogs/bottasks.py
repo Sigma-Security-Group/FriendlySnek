@@ -321,8 +321,6 @@ Join Us:
 
     @tasks.loop(seconds=10)
     async def tenSecTasks(self) -> None:
-        log.debug("Reminder task")
-
         with open(REMINDERS_FILE) as f:
             reminders = json.load(f)
 
@@ -360,7 +358,7 @@ Join Us:
                 updateTimeList.append(time)
 
             # Send msg
-            await channel.send(user.mention, embed=embed)
+            await channel.send(user.mention + " | " + " ".join(re.findall(r"<@&\d+>|<@!?\d+>", details["message"])), embed=embed)
             removalList.append(time)
 
 

@@ -377,18 +377,18 @@ class Reminders(commands.GroupCog, name="reminder"):
         self.bot = bot
         super().__init__()
 
-    def getFutureDate(self, datetimeDict: dict[str, str | None]) -> datetime:
+    def getFutureDate(self, datetimeDict: dict[str, int | None]) -> datetime:
         """ Create future datetime from time period values.
 
         Parameters:
-        datetimeDict (dict[str, str | None]): Keys as time period [year/day/minute] (month is optional), values as None or stringed number.
+        datetimeDict (dict[str, int | None]): Keys as time period [year/day/minute] (month is optional), values as None or stringed number.
 
         Returns:
         datetime: The future date.
         """
         futureDate = now = datetime.utcnow()
         if datetimeDict["years"] is not None:
-            yearsToAdd = int(datetimeDict["years"])
+            yearsToAdd = datetimeDict["years"]
             try:
                 futureDate = datetime(now.year + yearsToAdd, now.month, now.day)
             except ValueError:
@@ -396,7 +396,7 @@ class Reminders(commands.GroupCog, name="reminder"):
 
             futureDate = futureDate.replace(hour=now.hour, minute=now.minute, second=now.second, microsecond=now.microsecond)
 
-        formatTime = lambda t: 0.0 if t is None else float(t[:-1])
+        formatTime = lambda t: 0.0 if t is None else t
         futureDate += timedelta(
             weeks = formatTime(datetimeDict["weeks"]),
             days = formatTime(datetimeDict["days"]),
@@ -406,30 +406,51 @@ class Reminders(commands.GroupCog, name="reminder"):
         )
         return futureDate
 
+    def filterMatches(self, matches) -> dict[str, int | None]:
+        """ Merges multiple time dicts into one, by finding biggest values & adds recurring ones.
+
+        Parameters:
+        matches (): List of re.Match.
+
+        Returns:
+        dict[str, int | None]: The one dict.
+        """
+        totalValues: dict[str, int | None] = {}
+        for match in matches:
+            for key, value in match.groupdict().items():
+                if key not in totalValues or totalValues[key] is None:
+                    totalValues[key] = None if value is None else int(value)
+                elif isinstance(totalValues[key], int) and value is not None:
+                    totalValues[key] += int(value)
+        return totalValues
 
     def parseRelativeTime(self, time: str) -> datetime | None:
-        """  """
-        timeNoSpace = "".join(time.split())
+        """ Parses raw str relative time into datetime object.
+
+        Parameters:
+        time (str): Unparsed relative time.
+
+        Returns:
+        datetime | None: DT object if time could be parsed, or None if unparsable.
+        """
+        timeStrip = time.strip()
         shortTimeRegex = r"(?P<years>\d+(?=y))?(?P<weeks>\d+(?=w))?(?P<days>\d+(?=d))?(?P<hours>\d+(?=h))?(?P<minutes>\d+(?=m))?(?P<seconds>\d+(?=s))?"
-        #isAllMatchesNone = lambda matches: len([value for value in (match.groupdict().values() for match in matches) if value is not None]) > 0
-        reMatches = re.finditer(shortTimeRegex, timeNoSpace, re.I)
+        timeDict = self.filterMatches(re.finditer(shortTimeRegex, timeStrip, re.I))
 
-        #datetimeDict = list(re.finditer(shortTimeRegex, timeNoSpace, re.I))[0].groupdict()
-
-        # TODO Create function to iterate through all reMatches and fetch the highest values (not None), maybe add duplicates (1s2s)
+        timeFound = lambda times: len([value for value in times.values() if value is not None]) > 0
 
         # Short version of relative time inputted (e.g. "1y9m11wd99h111m999s")
-        if isAllMatchesNone(reMatches) is False:
-            return self.getFutureDate(datetimeDict)
+        if timeFound(timeDict) is True:
+            return self.getFutureDate(timeDict)
 
         # Long version of relative time inputted (e.g. "99 minutes")
         longTimeRegex = r"(?P<years>\d+(?=\s?years?))?(?P<months>\d+(?=\s?months?))?(?P<weeks>\d+(?=\s?weeks?))?(?P<days>\d+(?=\s?days?))?(?P<hours>\d+(?=\s?hours?))?(?P<minutes>\d+(?=\s?minutes?))?(?P<seconds>\d+(?=\s?seconds?))?"
-        datetimeDict = list(re.finditer(longTimeRegex, timeNoSpace, re.I))[0].groupdict()
-        if any(datetimeDict.values()) is True:
-            return self.getFutureDate(datetimeDict)
+        timeDict = self.filterMatches(re.finditer(longTimeRegex, timeStrip, re.I))
+        if timeFound(timeDict) is True:
+            return self.getFutureDate(timeDict)
 
+        # timeFound is False on both accounts
         return None
-
 
 
     @discord.app_commands.command(name="set")
@@ -466,7 +487,7 @@ class Reminders(commands.GroupCog, name="reminder"):
         reminders[datetime.timestamp(reminderTime)] = {
             "userID": interaction.user.id,
             "channelID": interaction.channel.id,
-            "message": text or "",
+            "message": text or "reminder",
             "setTime": datetime.timestamp(datetime.utcnow()),
             "repeat": repeat or False
         }
@@ -474,18 +495,82 @@ class Reminders(commands.GroupCog, name="reminder"):
         embed.set_author(name=interaction.user, icon_url=interaction.user.display_avatar)
         await interaction.response.send_message(embed=embed)
 
+
     @discord.app_commands.command(name="list")
+    @discord.app_commands.guilds(GUILD)
     async def reminderList(self, interaction: discord.Interaction) -> None:
         """ Shows the currently running reminders. """
-        await interaction.response.send_message("List", ephemeral=True)
+        with open(REMINDERS_FILE) as f:
+            reminders = json.load(f)
+
+        embed = Embed(title="Reminders", color=Color.dark_blue())
+
+        desc = ""
+        reminderCount = 0
+        for reminderTime, reminderDetails in reminders.items():
+            if reminderDetails["userID"] == interaction.user.id:
+                desc += discord.utils.format_dt(datetime.fromtimestamp(float(reminderTime), tz=pytz.utc)) + ":\n"
+                desc += reminderDetails["message"] + "\n\n"
+                reminderCount += 1
+        embed.set_footer(text=f"{reminderCount} reminder{'s' * (reminderCount > 0)}")
+
+        if reminderCount == 0:
+            await interaction.response.send_message("No reminders currently active.")
+            return
+
+        await interaction.response.send_message(embed=embed)
+
 
     @discord.app_commands.command(name="clear")
+    @discord.app_commands.guilds(GUILD)
     async def reminderClear(self, interaction: discord.Interaction) -> None:
         """ Clears all reminders you have set. """
-        await interaction.response.send_message("Clear", ephemeral=True)
+        with open(REMINDERS_FILE) as f:
+            reminders = json.load(f)
+
+        # Find user reminders
+        removeList = []
+        for reminderTime, reminderDetails in reminders.items():
+            if reminderDetails["userID"] == interaction.user.id:
+                removeList.append(reminderTime)
+
+        if len(removeList) == 0:
+            await interaction.response.send_message("No reminders currently active.")
+            return
+
+        # Remove reminders
+        for remove in removeList:
+            del reminders[remove]
+        with open(REMINDERS_FILE, "w", encoding="utf-8") as f:
+            json.dump(reminders, f, indent=4)
+
+        await interaction.response.send_message(f"{len(removeList)} reminders removed.")
+
+
+
+    async def reminderDeleteAutocomplete(self, interaction: discord.Interaction, current: str) -> list[discord.app_commands.Choice[str]]:
+        with open(REMINDERS_FILE) as f:
+            reminders = json.load(f)
+
+        # Find user reminders
+        userReminders = []
+        for reminderTime, reminderDetails in reminders.items():
+            if reminderDetails["userID"] == interaction.user.id:
+                userReminders.append(datetime.fromtimestamp(float(reminderTime), tz=pytz.utc).strftime("%Y-%m-%d %H:%M") + f": {reminderDetails['message'][:20]}")
+
+        if len(userReminders) == 0:
+            return [discord.app_commands.Choice(name="No reminders currently active!", value="-")]
+        else:
+            return [
+                discord.app_commands.Choice(name=reminder, value=reminder)  # Value is queue index
+                for reminder in userReminders if current.lower() in reminder.lower()
+            ][:25]
+
 
     @discord.app_commands.command(name="delete")
-    async def reminderDelete(self, interaction: discord.Interaction) -> None:
+    @discord.app_commands.guilds(GUILD)
+    @discord.app_commands.autocomplete(reminder=reminderDeleteAutocomplete)
+    async def reminderDelete(self, interaction: discord.Interaction, reminder: str) -> None:
         """ Delete a reminder. """
         await interaction.response.send_message("Delete", ephemeral=True)
 

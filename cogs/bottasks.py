@@ -1,4 +1,4 @@
-import secret, os, random, json
+import secret, os, random, json, re
 import asyncpraw, requests, pytz  # type: ignore
 
 from datetime import datetime, timezone, timedelta
@@ -377,15 +377,102 @@ class Reminders(commands.GroupCog, name="reminder"):
         self.bot = bot
         super().__init__()
 
+    def getFutureDate(self, datetimeDict: dict[str, str | None]) -> datetime:
+        """ Create future datetime from time period values.
+
+        Parameters:
+        datetimeDict (dict[str, str | None]): Keys as time period [year/day/minute] (month is optional), values as None or stringed number.
+
+        Returns:
+        datetime: The future date.
+        """
+        futureDate = now = datetime.utcnow()
+        if datetimeDict["years"] is not None:
+            yearsToAdd = int(datetimeDict["years"])
+            try:
+                futureDate = datetime(now.year + yearsToAdd, now.month, now.day)
+            except ValueError:
+                futureDate = datetime(now.year + yearsToAdd, now.month + 1, 1)
+
+            futureDate = futureDate.replace(hour=now.hour, minute=now.minute, second=now.second, microsecond=now.microsecond)
+
+        formatTime = lambda t: 0.0 if t is None else float(t[:-1])
+        futureDate += timedelta(
+            weeks = formatTime(datetimeDict["weeks"]),
+            days = formatTime(datetimeDict["days"]),
+            hours = formatTime(datetimeDict["hours"]),
+            minutes = formatTime(datetimeDict["minutes"]),
+            seconds = formatTime(datetimeDict["seconds"])
+        )
+        return futureDate
+
+
+    def parseRelativeTime(self, time: str) -> datetime | None:
+        """  """
+        timeNoSpace = "".join(time.split())
+        shortTimeRegex = r"(?P<years>\d+(?=y))?(?P<weeks>\d+(?=w))?(?P<days>\d+(?=d))?(?P<hours>\d+(?=h))?(?P<minutes>\d+(?=m))?(?P<seconds>\d+(?=s))?"
+        #isAllMatchesNone = lambda matches: len([value for value in (match.groupdict().values() for match in matches) if value is not None]) > 0
+        reMatches = re.finditer(shortTimeRegex, timeNoSpace, re.I)
+
+        #datetimeDict = list(re.finditer(shortTimeRegex, timeNoSpace, re.I))[0].groupdict()
+
+        # TODO Create function to iterate through all reMatches and fetch the highest values (not None), maybe add duplicates (1s2s)
+
+        # Short version of relative time inputted (e.g. "1y9m11wd99h111m999s")
+        if isAllMatchesNone(reMatches) is False:
+            return self.getFutureDate(datetimeDict)
+
+        # Long version of relative time inputted (e.g. "99 minutes")
+        longTimeRegex = r"(?P<years>\d+(?=\s?years?))?(?P<months>\d+(?=\s?months?))?(?P<weeks>\d+(?=\s?weeks?))?(?P<days>\d+(?=\s?days?))?(?P<hours>\d+(?=\s?hours?))?(?P<minutes>\d+(?=\s?minutes?))?(?P<seconds>\d+(?=\s?seconds?))?"
+        datetimeDict = list(re.finditer(longTimeRegex, timeNoSpace, re.I))[0].groupdict()
+        if any(datetimeDict.values()) is True:
+            return self.getFutureDate(datetimeDict)
+
+        return None
+
+
+
     @discord.app_commands.command(name="set")
     @discord.app_commands.guilds(GUILD)
     @discord.app_commands.describe(
         when = "When to be reminded of something.",
-        text = "What to be reminded of"
+        text = "What to be reminded of.",
+        repeat = "If the reminder repeats."
     )
-    async def reminderSet(self, interaction: discord.Interaction) -> None:
+    async def reminderSet(self, interaction: discord.Interaction, when: str, text: str | None = None, repeat: bool | None = None) -> None:
         """ Sets a reminder to remind you of something at a specific time. """
-        await interaction.response.send_message("Set", ephemeral=True)
+        if when.strip() == "":
+            await interaction.response.send_message(embed=Embed(title="❌ Input e.g. 'in 5 minutes' or '1st July'.", color=Color.red()), ephemeral=True, delete_after=10.0)
+            return
+
+        try:
+            reminderTime = datetimeParse(when)
+            log.debug(reminderTime)
+        except ValueError:
+            whenParse = self.parseRelativeTime(when)
+            log.debug(whenParse)
+            if whenParse is None:
+                await interaction.response.send_message(embed=Embed(title="❌ Could not parse the given time.", color=Color.red()), ephemeral=True, delete_after=10.0)
+                return
+
+        if interaction.channel is None:
+            log.warning("bottasks reminderSet: interaction.channel is None")
+            await interaction.response.send_message(embed=Embed(title="❌ Invalid channel.", color=Color.red()), ephemeral=True, delete_after=10.0)
+            return
+
+        with open(REMINDERS_FILE) as f:
+            reminders = json.load(f)
+
+        reminders[datetime.timestamp(reminderTime)] = {
+            "userID": interaction.user.id,
+            "channelID": interaction.channel.id,
+            "message": text or "",
+            "setTime": datetime.timestamp(datetime.utcnow()),
+            "repeat": repeat or False
+        }
+        embed=Embed(description=f"I will remind you {discord.utils.format_dt(reminderTime, style='R')}", color=Color.green())
+        embed.set_author(name=interaction.user, icon_url=interaction.user.display_avatar)
+        await interaction.response.send_message(embed=embed)
 
     @discord.app_commands.command(name="list")
     async def reminderList(self, interaction: discord.Interaction) -> None:

@@ -1,6 +1,7 @@
-import os, re, asyncio, discord
+import os, re, asyncio, discord, datetime
 import pytz # type: ignore
 
+from cogs.bottasks import Reminders
 from logger import Logger
 log = Logger()
 
@@ -52,7 +53,6 @@ cogsReady = {cog: False for cog in COGS}
 
 INTENTS = discord.Intents.all()
 UTC = pytz.utc
-newcomers: set[int] = set()
 
 class FriendlySnek(commands.Bot):
     def __init__(self, *, intents: discord.Intents) -> None:
@@ -80,7 +80,9 @@ async def on_ready() -> None:
     while not all(cogsReady.values()):
         await asyncio.sleep(1)
     client.ready = True
+
     log.info(f"Bot Ready! Logged in as {client.user}.")
+
 
 @client.event
 async def on_message(message: discord.Message) -> None:
@@ -106,14 +108,10 @@ async def on_message(message: discord.Message) -> None:
         message.content = message.content.lower()
         await client.process_commands(message)
 
-    # Unmark newcomer pinging Unit Staff or Advisor as needing a reminder to ping Unit Staff or Advisor
-    if message.author.id in newcomers:
-        if message.guild.get_role(UNIT_STAFF) in message.role_mentions or message.guild.get_role(ADVISOR) in message.role_mentions:
-            newcomers.remove(message.author.id)
-
     # Run message content analysis
     await analyzeChannel(client, message, COMBAT_FOOTAGE, "video")
     await analyzeChannel(client, message, PROPAGANDA, "image")
+
 
 async def analyzeChannel(client, message: discord.Message, channelID: int, attachmentContentType: str) -> None:
     """ Will analyze the discord.Message contents and see if it meets the channel purpose.
@@ -148,6 +146,7 @@ async def analyzeChannel(client, message: discord.Message, channelID: int, attac
     except Exception as e:
         log.exception(f"{message.author} | {e}")
 
+
 @client.event
 async def on_member_join(member: discord.Member) -> None:
     """ On member join client event.
@@ -161,44 +160,15 @@ async def on_member_join(member: discord.Member) -> None:
     guild = member.guild
     if guild.id != GUILD_ID:
         return
-    newcomers.add(member.id)
+
     log.debug(f"Newcomer joined the server: {member}")
-    await asyncio.sleep(24 * 60 * 60)  # 24 hours in seconds
-    if member.id not in newcomers:
-        log.debug(f"Newcomer is no longer in the server: {member}")
-        return
+    Reminders.newcomerReminder(datetime.datetime.now() + datetime.timedelta(days=1), member.id)
 
-    if member in [member async for member in guild.fetch_members()]:
-        updatedMember = await guild.fetch_member(member.id)
-        if len(updatedMember.roles) <= 2:
-            log.debug(f"Newcomer ping reminder: {updatedMember}")
-            unitStaff = guild.get_role(UNIT_STAFF)
-            advisor = guild.get_role(ADVISOR)
-            await client.get_channel(WELCOME).send(f"{updatedMember.mention} Don't forget to ping{' @​' + unitStaff.name if unitStaff is not None else ''}{' and' if unitStaff and advisor else ''}{' @​' + advisor.name if advisor is not None else ''} when you are ready!")
-        else:
-            log.debug(f"Newcomer is no longer in need of an interview: {updatedMember.display_name} ({updatedMember})")
-    else:
-        log.debug(f"Newcomer is no longer in the server: {member}")
-    if member.id in newcomers:
-        newcomers.remove(member.id)
-
-@client.event
-async def on_member_leave(member: discord.Member) -> None:
-    """ On member leave client event.
-
-    Parameters:
-    member (discord.Member): The Discord member.
-
-    Returns:
-    None.
-    """
-    if member.id in newcomers:
-        newcomers.remove(member.id)
-        log.debug(f"Newcomer left: {member.display_name} ({member})")
 
 @client.event
 async def on_error(event, *args, **kwargs) -> None:
     log.exception(f"An error occured! {event}")
+
 
 @client.event
 async def on_command_error(ctx: commands.Context, error: commands.errors) -> None:
@@ -207,6 +177,7 @@ async def on_command_error(ctx: commands.Context, error: commands.errors) -> Non
         await ctx.send_help(ctx.command)
     elif not errorType is commands.CommandNotFound:
         log.exception(f"{ctx.author} | {error}")
+
 
 def devCheck() -> commands.check:
     """ A permissions check for the reload command.
@@ -221,6 +192,7 @@ def devCheck() -> commands.check:
         return ctx.author.id in DEVELOPERS
     return commands.check(predict)
 
+
 @client.command()
 @devCheck()
 async def reload(ctx: commands.context) -> None:
@@ -232,6 +204,7 @@ async def reload(ctx: commands.context) -> None:
         await client.reload_extension(f"cogs.{cog}")
     await client.tree.sync(guild=GUILD)
     await ctx.send("Cogs reloaded!")
+
 
 if secret.DEBUG:
     @client.command()

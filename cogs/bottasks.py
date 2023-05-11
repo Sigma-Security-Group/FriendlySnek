@@ -331,9 +331,56 @@ Join Us:
             if reminderTime > datetime.now():
                 continue
 
+            ## NEWCOMERS
+
+            # Guild
+            guild = self.bot.get_guild(GUILD_ID)
+            if guild is None:
+                log.warning("bottasks tenSecTasks: guild is None")
+                return
+
             # User
-            user = self.bot.get_user(details["userID"])
-            if user is None:
+            member = guild.get_member(details["userID"])
+
+            if details["type"] == "newcomer":
+                removalList.append(time)
+
+                if member is None:
+                    log.debug("Newcomer is no longer in the server")
+                    continue
+
+                if len(member.roles) > 2:
+                    log.debug(f"Newcomer already verified: {member}")
+                    continue
+
+                channelWelcome = guild.get_channel(WELCOME)
+                if not isinstance(channelWelcome, discord.TextChannel):
+                    log.warning("bottasks tenSecTasks: welcomeChannel is not TextChannel")
+                    return
+
+
+                roleUnitStaff = guild.get_role(UNIT_STAFF)
+                roleAdvisor = guild.get_role(ADVISOR)
+                if roleUnitStaff is None or roleAdvisor is None:
+                    log.warning("bottasks tenSecTasks: roleUnitStaff or roleAdvisor is None")
+                    return
+
+                hasUserPinged = len([
+                    message async for message
+                    in channelWelcome.history(limit=100)
+                    if message.author.id == member.id and (str(roleUnitStaff.id) in message.content or str(roleAdvisor.id) in message.content)
+                ]) > 0
+
+                if hasUserPinged is True:
+                    continue
+
+                await channelWelcome.send(f"{member.mention} Don't forget to ping @​{roleUnitStaff.name} and @​{roleAdvisor.name} when you are ready!")
+                continue
+
+
+            ## REMINDERS
+
+            if member is None:
                 log.warning("bottasks tenSecTasks: user is None")
                 removalList.append(time)
                 continue
@@ -358,7 +405,8 @@ Join Us:
                 updateTimeList.append(time)
 
             # Send msg
-            await channel.send(user.mention + " | " + " ".join(re.findall(r"<@&\d+>|<@!?\d+>", details["message"])), embed=embed)
+            pings = re.findall(r"<@&\d+>|<@!?\d+>", details["message"])
+            await channel.send(member.mention + (" | " * (len(pings) > 0)) + " ".join(pings), embed=embed)
             removalList.append(time)
 
 
@@ -380,28 +428,26 @@ class Reminders(commands.GroupCog, name="reminder"):
         self.bot = bot
         super().__init__()
 
-    # TODO Transfer newcomer here - figure out how to check if they've already pinged
-    #@staticmethod
-    #def newSystemReminder(time: datetime, channelID: int, message: str) -> None:
-    #    """ Create a new custom reminder (newcomers)
+    @staticmethod
+    def newcomerReminder(time: datetime, userID: int) -> None:
+        """ Pings newcomers
 
-    #    Parameters:
-    #    time (datetime): Time to be notified.
-    #    channelID (int): Channel id to be sent in.
-    #    message (str): Message content.
+        Parameters:
+        time (datetime): Time to be notified.
+        userID (int): The newcomer user id.
 
-    #    Returns:
-    #    datetime: The future date.
-    #    """
-    #    with open(REMINDERS_FILE) as f:
-    #        reminders = json.load(f)
+        Returns:
+        None.
+        """
+        with open(REMINDERS_FILE) as f:
+            reminders = json.load(f)
 
-    #    reminders[datetime.timestamp(time)] = {
-    #        "channelID": channelID,
-    #        "message": message,
-    #    }
-    #    with open(REMINDERS_FILE, "w", encoding="utf-8") as f:
-    #        json.dump(reminders, f, indent=4)
+        reminders[datetime.timestamp(time)] = {
+            "type": "newcomer",
+            "userID": userID
+        }
+        with open(REMINDERS_FILE, "w", encoding="utf-8") as f:
+            json.dump(reminders, f, indent=4)
 
 
     def getFutureDate(self, datetimeDict: dict[str, int | None]) -> datetime:
@@ -511,6 +557,7 @@ class Reminders(commands.GroupCog, name="reminder"):
             reminders = json.load(f)
 
         reminders[datetime.timestamp(reminderTime)] = {
+            "type": "reminder",
             "userID": interaction.user.id,
             "channelID": interaction.channel.id,
             "message": text or "reminder",

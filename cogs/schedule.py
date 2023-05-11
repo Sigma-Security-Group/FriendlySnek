@@ -566,7 +566,7 @@ class Schedule(commands.Cog):
                 scheduleNeedsUpdate = False
 
                 if self.isAllowedToEdit(interaction.user, event["authorId"]) is False:
-                    await interaction.response.send_message(RESPONSE_UNALLOWED.format("configure"), ephemeral=True, delete_after=60.0)
+                    await interaction.response.send_message("Only the host, Unit Staff and Server Hampters can configure the event!", ephemeral=True, delete_after=60.0)
                     return
 
                 view = ScheduleView()
@@ -1209,7 +1209,7 @@ class Schedule(commands.Cog):
         dmChannel = await self.checkDMChannel(interaction.user)
         color = Color.gold()
         while True:
-            embed = Embed(title=":globe_with_meridians: Choose a map", description=SCHEDULE_NUMBER_FROM_TO_OR_NONE.format(1, len(MAPS)), color=color)
+            embed = Embed(title=":globe_with_meridians: Choose a map", description=f"Enter `none` or a number from **1** - **{len(MAPS)}**.", color=color)
             color = Color.red()
             embed.add_field(name="Map", value="\n".join(f"**{idx}.** {mapName}" for idx, mapName in enumerate(MAPS, 1)))
             embed.set_footer(text=SCHEDULE_CANCEL)
@@ -1490,7 +1490,7 @@ class Schedule(commands.Cog):
         for event in events:
             if event["title"] == newEvent["title"]:
                 msgId = event["messageId"]
-        await interaction.followup.send(RESPONSE_EVENT_DONE.format(newEvent["title"], GUILD_ID, SCHEDULE, msgId))
+        await interaction.followup.send(f"`{newEvent['title']}` is now on [schedule](<https://discord.com/channels/{GUILD_ID}/{SCHEDULE}/{msgId}>)!")
         return True
 
     async def editEvent(self, interaction: discord.Interaction, event: dict, eventMsg: discord.Message) -> None:

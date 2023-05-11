@@ -321,6 +321,7 @@ Join Us:
 
     @tasks.loop(seconds=10)
     async def tenSecTasks(self) -> None:
+        log.debug("shitty task")
         with open(REMINDERS_FILE) as f:
             reminders = json.load(f)
 
@@ -427,28 +428,6 @@ class Reminders(commands.GroupCog, name="reminder"):
     def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
         super().__init__()
-
-    @staticmethod
-    def newcomerReminder(time: datetime, userID: int) -> None:
-        """ Pings newcomers
-
-        Parameters:
-        time (datetime): Time to be notified.
-        userID (int): The newcomer user id.
-
-        Returns:
-        None.
-        """
-        with open(REMINDERS_FILE) as f:
-            reminders = json.load(f)
-
-        reminders[datetime.timestamp(time)] = {
-            "type": "newcomer",
-            "userID": userID
-        }
-        with open(REMINDERS_FILE, "w", encoding="utf-8") as f:
-            json.dump(reminders, f, indent=4)
-
 
     def getFutureDate(self, datetimeDict: dict[str, int | None]) -> datetime:
         """ Create future datetime from time period values.

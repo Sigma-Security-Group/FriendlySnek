@@ -1,7 +1,6 @@
-import os, re, asyncio, discord, datetime
+import os, re, asyncio, discord, datetime, json
 import pytz # type: ignore
 
-from cogs.bottasks import Reminders
 from logger import Logger
 log = Logger()
 
@@ -162,7 +161,17 @@ async def on_member_join(member: discord.Member) -> None:
         return
 
     log.debug(f"Newcomer joined the server: {member}")
-    Reminders.newcomerReminder(datetime.datetime.now() + datetime.timedelta(days=1), member.id)
+
+    remindTime = datetime.datetime.now() + datetime.timedelta(days=1)
+    with open(REMINDERS_FILE) as f:
+        reminders = json.load(f)
+
+    reminders[datetime.datetime.timestamp(remindTime)] = {
+        "type": "newcomer",
+        "userID": member.id
+    }
+    with open(REMINDERS_FILE, "w", encoding="utf-8") as f:
+        json.dump(reminders, f, indent=4)
 
 
 @client.event

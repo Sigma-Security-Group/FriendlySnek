@@ -33,8 +33,8 @@ class BotTasks(commands.Cog):
         if not self.oneHourTasks.is_running():
             self.oneHourTasks.start()
 
-        if not self.tenSecTasks.is_running():
-            self.tenSecTasks.start()
+        if not self.fiveMinTasks.is_running():
+            self.fiveMinTasks.start()
 
 
     @tasks.loop(minutes=30.0)
@@ -319,8 +319,8 @@ Join Us:
         await self.smeReminder()
 
 
-    @tasks.loop(seconds=10)
-    async def tenSecTasks(self) -> None:
+    @tasks.loop(minutes=5)
+    async def fiveMinTasks(self) -> None:
         with open(REMINDERS_FILE) as f:
             reminders = json.load(f)
 
@@ -336,7 +336,7 @@ Join Us:
             # Guild
             guild = self.bot.get_guild(GUILD_ID)
             if guild is None:
-                log.warning("bottasks tenSecTasks: guild is None")
+                log.warning("bottasks fiveMinTasks: guild is None")
                 return
 
             # User
@@ -355,14 +355,14 @@ Join Us:
 
                 channelWelcome = guild.get_channel(WELCOME)
                 if not isinstance(channelWelcome, discord.TextChannel):
-                    log.warning("bottasks tenSecTasks: welcomeChannel is not TextChannel")
+                    log.warning("bottasks fiveMinTasks: welcomeChannel is not TextChannel")
                     return
 
 
                 roleUnitStaff = guild.get_role(UNIT_STAFF)
                 roleAdvisor = guild.get_role(ADVISOR)
                 if roleUnitStaff is None or roleAdvisor is None:
-                    log.warning("bottasks tenSecTasks: roleUnitStaff or roleAdvisor is None")
+                    log.warning("bottasks fiveMinTasks: roleUnitStaff or roleAdvisor is None")
                     return
 
                 hasUserPinged = len([
@@ -381,14 +381,14 @@ Join Us:
             ## REMINDERS
 
             if member is None:
-                log.warning("bottasks tenSecTasks: user is None")
+                log.warning("bottasks fiveMinTasks: user is None")
                 removalList.append(time)
                 continue
 
             # Channel
             channel = self.bot.get_channel(details["channelID"])
             if channel is None or not isinstance(channel, discord.TextChannel):
-                log.warning("bottasks tenSecTasks: channel not TextChannel")
+                log.warning("bottasks fiveMinTasks: channel not TextChannel")
                 removalList.append(time)
                 continue
 

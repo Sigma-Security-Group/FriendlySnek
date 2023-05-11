@@ -65,7 +65,6 @@ class FriendlySnek(commands.Bot):
             ),
             status="online"
         )
-        self.ready = False
 
     async def setup_hook(self) -> None:
         for cog in COGS:
@@ -74,6 +73,7 @@ class FriendlySnek(commands.Bot):
         await self.tree.sync(guild=GUILD)
 
 client = FriendlySnek(intents=INTENTS)
+client.ready = False
 
 @client.event
 async def on_ready() -> None:

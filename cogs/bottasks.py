@@ -321,7 +321,6 @@ Join Us:
 
     @tasks.loop(seconds=10)
     async def tenSecTasks(self) -> None:
-        log.debug("shitty task")
         with open(REMINDERS_FILE) as f:
             reminders = json.load(f)
 

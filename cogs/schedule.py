@@ -136,10 +136,10 @@ SCHEDULE_EVENT_VIEW = {
     #    "required": False,
     #    "row": 2
     #},
-    #"Linking": {  # Display when type == ws
-    #    "required": False,
-    #    "row": 2
-    #},
+    "Linking": {  # Display when type == ws
+        "required": False,
+        "row": 2
+    },
     #"Save As Template": {  # Display when type != bop
     #    "required": False,
     #    "row": 2
@@ -147,6 +147,10 @@ SCHEDULE_EVENT_VIEW = {
 
     "Submit": {
         "required": True,
+        "row": 3
+    },
+    "Cancel": {
+        "required": False,
         "row": 3
     }
 }
@@ -559,7 +563,7 @@ class Schedule(commands.Cog):
             fieldAcceptedValue = embed.fields[fieldPos].value
             if fieldAcceptedName is not None and ("/" in fieldAcceptedName):  # Accepted (0/XX) ✅
                 limitFirstPart = fieldAcceptedName[fieldAcceptedName.index("/") + 1:]  # XX) ✅
-                outputDict["maxPlayers"] = limitFirstPart[:limitFirstPart.index(")")] ## XX
+                outputDict["maxPlayers"] = int(limitFirstPart[:limitFirstPart.index(")")]) ## XX
             elif fieldAcceptedValue is not None and fieldAcceptedValue == "\u200B":
                 outputDict["maxPlayers"] = "anonymous"
 
@@ -824,9 +828,14 @@ class Schedule(commands.Cog):
                     IF TEMPLATE HAS BEEN SELECTED
                     SHOW SELECTED TEMPLATE, APPEND NAME AFTER "SAVE AS TEMPLATE"
 
-                Submit: Button
+                -Submit
                     FROM_EMBED_TO_DICT
-                    FROM_DICT_TO_EMBED
+                -Cancel
+                    (are you sure?)
+
+                * add footer / name & date (set on time)
+                * Not author cannot interact with event [TEST]
+
                 """
                 if button.view is None:
                     log.exception("Schedule buttonHandling: button.view is None")
@@ -958,6 +967,10 @@ class Schedule(commands.Cog):
                         ))
 
 
+                    case "linking":
+                        ...
+
+
                     case "submit":
                         # Check if all mandatory fields are filled
                         for child in button.view.children:
@@ -969,18 +982,19 @@ class Schedule(commands.Cog):
                         jsonCreateNoExist(EVENTS_FILE, [])
                         with open(EVENTS_FILE) as f:
                             events = json.load(f)
+                        previewEmbedDict["authorId"] = interaction.user.id
                         events.append(previewEmbedDict)
                         with open(EVENTS_FILE, "w") as f:
                             json.dump(events, f, indent=4)
 
+                        # Reply
+                        await interaction.response.edit_message(content=f"`{previewEmbedDict['title']}` is now on <#{SCHEDULE}>!", embed=None, view=None)
+
                         # Update schedule
                         await self.updateSchedule()
 
-
-                        # Clear message and set content to result
-                        eventMsgId = 0 if len(matchedEvents := [event["messageId"] for event in events if event["title"] == previewEmbedDict["title"]]) == 0 else matchedEvents[0]
-
-                        await interaction.response.edit_message(content=f"`{previewEmbedDict['title']}` is now on [schedule](<https://discord.com/channels/{GUILD_ID}/{SCHEDULE}/{eventMsgId}>)!", embed=None, view=None)
+                    case "cancel":
+                        await interaction.response.edit_message(content="Nvm guys, didn't wanna bop.", embed=None, view=None)
 
                 return
 
@@ -1375,6 +1389,8 @@ class Schedule(commands.Cog):
                     except ValueError:
                         await interaction.response.send_message(interaction.user.mention, embed=EMBED_INVALID, ephemeral=True, delete_after=10.0)
                         return
+
+                    embed.timestamp = startTime
 
                     # No duration - output only starttime
                     fieldPos = findFieldPos(embed, "Duration")
@@ -2118,6 +2134,7 @@ class Schedule(commands.Cog):
             ))
 
         embed=Embed(title=SCHEDULE_EVENT_PREVIEW_EMBED["title"], description=SCHEDULE_EVENT_PREVIEW_EMBED["description"])
+        embed.set_footer(text=f"Created by {interaction.user.display_name}")
         await interaction.response.send_message("Schedule an event using the buttons, and get a live preview!", embed=embed, view=view)
 
 

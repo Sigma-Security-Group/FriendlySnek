@@ -834,7 +834,7 @@ class Schedule(commands.Cog):
                     log.exception("buttonHandling delete: button message is None")
                     return
 
-                embed = Embed(title=SCHEDULE_EVENT_CONFIRM_DELETE.format(f"{event['type'].lower()}: `{event['title']}`"), color=Color.orange())
+                embed = Embed(title=f"Are you sure you want to delete this {event['type'].lower()}: `{event['title']}`?", color=Color.orange())
                 view = ScheduleView()
                 items = [
                     ScheduleButton(self, message, row=0, label="Delete", style=discord.ButtonStyle.success, custom_id="delete_event_confirm"),
@@ -1162,8 +1162,31 @@ class Schedule(commands.Cog):
                         await self.updateSchedule()
 
                     case "cancel":
-                        await interaction.response.edit_message(content="Nvm guys, didn't wanna bop.", embed=None, view=None)
+                        embed = Embed(title="Are you sure you want to cancel this event scheduling?", color=Color.orange())
+                        view = ScheduleView()
+                        items = [
+                            ScheduleButton(self, interaction.message, row=0, label="Cancel", style=discord.ButtonStyle.success, custom_id="event_schedule_cancel_confirm"),
+                            ScheduleButton(self, interaction.message, row=0, label="No, I changed my mind", style=discord.ButtonStyle.danger, custom_id="event_schedule_cancel_decline"),
+                        ]
+                        for item in items:
+                            view.add_item(item)
+                        await interaction.response.send_message(embed=embed, view=view, ephemeral=True, delete_after=60.0)
 
+                    case "cancel_confirm":
+                        if message is None:
+                            log.exception("Schedule buttonHandling: message is None")
+                            return
+                        for child in button.view.children:
+                            if isinstance(child, discord.ui.Button):
+                                child.disabled = True
+                        await interaction.response.edit_message(view=button.view)
+                        await message.edit(content="Nvm guys, didn't wanna bop.", embed=None, view=None)
+
+                    case "cancel_decline":
+                        if message is None:
+                            log.exception("Schedule buttonHandling: message is None")
+                            return
+                        await interaction.response.send_message(content="Alright, I won't cancel the scheduling.")
 
                 if buttonLabel.startswith("select_template"):
                     filename = f"data/{previewEmbedDict['type'].lower()}Templates.json"

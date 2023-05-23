@@ -96,76 +96,103 @@ EVENT_TYPE_COLORS = {
 SCHEDULE_EVENT_VIEW = {
     "Type": {
         "required": True,
-        "row": 0
+        "row": 0,
+        "startDisabled": False,
+        "customStyle": None
     },
     "Title": {
         "required": True,
-        "row": 0
+        "row": 0,
+        "startDisabled": False,
+        "customStyle": None
     },
     "Description": {
         "required": True,
-        "row": 0
+        "row": 0,
+        "startDisabled": False,
+        "customStyle": None
     },
     "Duration": {
         "required": True,
-        "row": 0
+        "row": 0,
+        "startDisabled": False,
+        "customStyle": None
     },
     "Time": {
         "required": True,
-        "row": 0
+        "row": 0,
+        "startDisabled": False,
+        "customStyle": None
     },
 
     "External URL": {
         "required": False,
-        "row": 1
+        "row": 1,
+        "startDisabled": False,
+        "customStyle": None
     },
     "Reservable Roles": {
         "required": False,
-        "row": 1
+        "row": 1,
+        "startDisabled": False,
+        "customStyle": None
     },
     "Map": {
         "required": False,
-        "row": 1
+        "row": 1,
+        "startDisabled": False,
+        "customStyle": None
     },
     "Max Players": {
         "required": True,
-        "row": 1
+        "row": 1,
+        "startDisabled": False,
+        "customStyle": None
     },
 
-    #"Select Template": {  # Display when type != bop
-    #    "required": False,
-    #    "row": 2
-    #},
-    "Linking": {  # Display when type == ws
-        "required": False,
-        "row": 2
+    "Linking": {  # Type == ws
+        "required": True,
+        "row": 2,
+        "startDisabled": True,
+        "customStyle": None
     },
-    #"Save As Template": {  # Display when type != bop
-    #    "required": False,
-    #    "row": 2
-    #},
+    "Select Template: None": {  # Type in "(workshop", "event")
+        "required": False,
+        "row": 2,
+        "startDisabled": True,
+        "customStyle": None
+    },
+    "Save As Template": {  # Type in "(workshop", "event")
+        "required": False,
+        "row": 2,
+        "startDisabled": True,
+        "customStyle": None
+    },
+    "Update Template": {  # Type in "(workshop", "event") and Select Template is True
+        "required": False,
+        "row": 2,
+        "startDisabled": True,
+        "customStyle": None
+    },
 
     "Submit": {
         "required": True,
-        "row": 3
+        "row": 3,
+        "startDisabled": False,
+        "customStyle": discord.ButtonStyle.primary
     },
     "Cancel": {
         "required": False,
-        "row": 3
+        "row": 3,
+        "startDisabled": False,
+        "customStyle": discord.ButtonStyle.primary
     }
 }
 
 SCHEDULE_EVENT_PREVIEW_EMBED = {
     "title": "Create an event!",
-    "description": "[Red buttons = Mandatory]\n[Gray = Optional]\n[Green = Done]"
+    "description": "[Red buttons = Mandatory]\n[Gray = Optional]\n[Green = Done]\n\n[Markdown Syntax (Formatting)](https://support.discord.com/hc/en-us/articles/210298617-Markdown-Text-101-Chat-Formatting-Bold-Italic-Underline)"
 }
-
-# Finds a field's position if found (int), if none found (None)
-findFieldPos = lambda embed, fieldName : None if embed.fields is None else (
-    indexes[0] if len(
-        indexes := [idx for idx, field in enumerate(embed.fields) if field.name is not None and field.name.startswith(fieldName)]
-    ) > 0 else None
-)
 
 def jsonCreateNoExist(filename: str, dump: list | dict) -> None:
     """ Creates a JSON file with a dump if not exist.
@@ -499,7 +526,6 @@ class Schedule(commands.Cog):
 
         author = guild.get_member(event["authorId"])
         embed.set_footer(text="Created by Unknown User" if author is None else f"Created by {author.display_name}")
-        embed.set_author(name=f"Workshop: {event['workshopInterest']}" if ("workshopInterest" in event and event["workshopInterest"] is not None) else "")
         embed.timestamp = UTC.localize(datetime.strptime(event["time"], TIME_FORMAT))
 
         return embed
@@ -527,19 +553,24 @@ class Schedule(commands.Cog):
     @staticmethod
     def fromPreviewEmbedToDict(embed: discord.Embed) -> dict:
         """  """
-        # TODO: Check if findFieldPos() can be merged here
+        # Finds a field's position if found (int), if none found (None)
+        findFieldPos = lambda fieldName : None if embed.fields is None else (
+            indexes[0] if len(
+                indexes := [idx for idx, field in enumerate(embed.fields) if field.name is not None and field.name.startswith(fieldName)]
+            ) > 0 else None
+        )
 
         outputDict = {
             "authorId": None,
             "title": embed.title,
             "description": embed.description,
-            "externalURL": None if (findFieldPosURL := findFieldPos(embed, "External URL")) is None else embed.fields[findFieldPosURL].value,
+            "externalURL": None if (findFieldPosURL := findFieldPos("External URL")) is None else embed.fields[findFieldPosURL].value,
             "reservableRoles": None,
             "maxPlayers": None,
-            "map": None if (findFieldPosMap := findFieldPos(embed, "Map")) is None else embed.fields[findFieldPosMap].value,
+            "map": None if (findFieldPosMap := findFieldPos("Map")) is None else embed.fields[findFieldPosMap].value,
             "time": None,
             "endTime": None,
-            "duration": None if (findFieldPosDuration := findFieldPos(embed, "Duration")) is None else embed.fields[findFieldPosDuration].value,
+            "duration": None if (findFieldPosDuration := findFieldPos("Duration")) is None else embed.fields[findFieldPosDuration].value,
             "messageId": None,
             "accepted": [],
             "declined": [],
@@ -548,14 +579,14 @@ class Schedule(commands.Cog):
         }
 
         # Reservable Roles
-        fieldPos = findFieldPos(embed, "Reservable Roles")
+        fieldPos = findFieldPos("Reservable Roles")
         if fieldPos is not None:
             fieldResRolesValue = embed.fields[fieldPos].value
             if fieldResRolesValue is not None:
                 outputDict["reservableRoles"] = {line[:-len(" - **VACANT**")]: None for line in fieldResRolesValue.split("\n")}
 
         # Attendance / Max Players
-        fieldPos = findFieldPos(embed, "Accepted")
+        fieldPos = findFieldPos("Accepted")
         if fieldPos is None:
             outputDict["maxPlayers"] = "hidden"
         else:
@@ -568,7 +599,7 @@ class Schedule(commands.Cog):
                 outputDict["maxPlayers"] = "anonymous"
 
         # Time
-        fieldPos = findFieldPos(embed, "Time")
+        fieldPos = findFieldPos("Time")
         if fieldPos is not None:
             timeFieldValue = embed.fields[fieldPos].value
             if timeFieldValue is not None:
@@ -580,13 +611,81 @@ class Schedule(commands.Cog):
 
         # Workshop Interest
         if outputDict["type"] == "Workshop":
-            outputDict["workshopInterest"] = embed.author.name[len("Workshop: "):] if embed.author is not None and embed.author.name is not None else None
+            outputDict["workshopInterest"] = None
+            if embed.author.name is not None:
+                workshop = embed.author.name[len("Linking: "):]
+                outputDict["workshopInterest"] = None if workshop == "None" else workshop
 
         return outputDict
 
-    def isAllowedToEdit(self, user: discord.Member, eventAuthorId: int) -> bool:
+    def fromDictToPreviewEmbed(self, previewDict: dict) -> discord.Embed:
+        """ """
+        # Title, Description, Color
+        embed = Embed(title=previewDict["title"], description=previewDict["description"], color=None if previewDict["type"] is None else EVENT_TYPE_COLORS[previewDict["type"]])
+
+        # Reservable Roles
+        if previewDict["reservableRoles"] is not None:
+            embed.add_field(name="\u200B", value="\u200B", inline=False)
+            embed.add_field(name=f"Reservable Roles (0/{len(previewDict['reservableRoles'])}) 👤", value="\n".join(f"{roleName} - **VACANT**" for roleName in previewDict["reservableRoles"]), inline=False)
+
+        # Padding: Time/Duration | ResRoles
+        if previewDict["time"] is not None or previewDict["duration"] is not None:
+            embed.add_field(name="\u200B", value="\u200B", inline=False)
+
+        # Time
+        if previewDict["time"] is not None:
+            hours = 0
+            endTime = "<Set Duration>"
+            if previewDict["duration"] is not None:
+                hours, minutes, delta = self.getDetailsFromDuration(previewDict["duration"])
+                endTime = discord.utils.format_dt(datetimeParse(previewDict["time"]).replace(tzinfo=pytz.utc) + delta, "t" if hours < 24 else "F")
+            embed.add_field(name="Time", value=f"{discord.utils.format_dt(datetimeParse(previewDict['time']).replace(tzinfo=pytz.utc), 'F')} - {endTime}", inline=(hours < 24))
+
+        # Duration
+        if previewDict["duration"] is not None:
+            embed.add_field(name="Duration", value=previewDict["duration"], inline=True)
+
+        # Map
+        if previewDict["map"] is not None:
+            embed.add_field(name="Map", value=previewDict["map"], inline=False)
+
+        # External URL
+        if previewDict["externalURL"] is not None:
+            embed.add_field(name="\u200B", value="\u200B", inline=False)
+            embed.add_field(name="External URL", value=previewDict["externalURL"], inline=False)
+        embed.add_field(name="\u200B", value="\u200B", inline=False)
+
+        # Author, Footer, Timestamp
+        guild = self.bot.get_guild(GUILD_ID)
+        if guild is None:
+            log.exception("Schedule fromDictToPreviewEmbed: guild is None")
+            return Embed(title="Error")
+        if previewDict["type"] == "Workshop" and "workshopInterest" in previewDict:
+            embed.set_author(name=f"Linking: {previewDict['workshopInterest']}")
+        embed.set_footer(text="Created by Unknown User" if (author := guild.get_member(previewDict["authorId"])) is None else f"Created by {author.display_name}")
+        if previewDict["time"] is not None:
+            embed.timestamp = UTC.localize(datetime.strptime(previewDict["time"], TIME_FORMAT))
+
+        # Attendance / Max Players
+        if previewDict["maxPlayers"] == "hidden":
+            return embed
+
+        fieldNameNumberSuffix = ""
+        if isinstance(previewDict["maxPlayers"], int):
+            fieldNameNumberSuffix = f"/{previewDict['maxPlayers']}"
+
+        fieldValue = "-" if previewDict["maxPlayers"] is None else "\u200B"
+        embed.add_field(name=f"Accepted (0{fieldNameNumberSuffix}) ✅", value=fieldValue, inline=True)
+        embed.add_field(name=f"Declined (0) ❌", value=fieldValue, inline=True)
+        embed.add_field(name=f"Tentative (0) ❓", value=fieldValue, inline=True)
+
+        return embed
+
+    @staticmethod
+    def isAllowedToEdit(user: discord.Member, eventAuthorId: int) -> bool:
         """  """
         return user.id == eventAuthorId or any(role.id == UNIT_STAFF or role.id == SERVER_HAMSTER for role in user.roles)
+
 
     async def buttonHandling(self, message: discord.Message | None, button: discord.ui.Button, interaction: discord.Interaction, authorId: int | None) -> None:
         """ Handling all schedule button interactions.
@@ -815,13 +914,13 @@ class Schedule(commands.Cog):
                 -Map: Dropdowns
                 -Max Players: Modal
 
+                -Linking: Dropdowns
+                    -AVAILABLE IF TYPE=(WS)
+                    -IN EMBED: AUTHOR NAME OR SOME LINK
                 Select Template: Dropdowns
                     AVAILABLE IF TYPE=(WS/EVENT)
                     GENERATE_SELECT_VIEW
                     WHEN SELECTED, REMOVE ALL PROGRESS ON ANY EMBED CREATED, OVERWRITE WITH TEMPLATE
-                Linking: Dropdowns
-                    AVAILABLE IF TYPE=(WS)
-                    IN EMBED: AUTHOR NAME OR SOME LINK
                 Save As Template: Modal (different template name)
                     AVAILABLE IF TYPE=(WS/EVENT)
                 [UPDATE TEMPLATE]
@@ -833,9 +932,7 @@ class Schedule(commands.Cog):
                 -Cancel
                     (are you sure?)
 
-                * add footer / name & date (set on time)
                 * Not author cannot interact with event [TEST]
-
                 """
                 if button.view is None:
                     log.exception("Schedule buttonHandling: button.view is None")
@@ -844,7 +941,6 @@ class Schedule(commands.Cog):
                 if interaction.user.id != authorId:
                     await interaction.response.send_message(f"{interaction.user.mention} Only the one who executed the command may interact with the buttons!", ephemeral=True, delete_after=10.0)
                     return
-
 
                 buttonLabel = button.custom_id[len("event_schedule_"):]
 
@@ -858,7 +954,10 @@ class Schedule(commands.Cog):
 
                 previewEmbedDict = self.fromPreviewEmbedToDict(interaction.message.embeds[0])
 
+                isAllRequiredInfoFilled = lambda : len([child.label for child in button.view.children if isinstance(child, discord.ui.Button) and child.label != "Submit" and child.style == discord.ButtonStyle.danger and child.disabled == False]) == 0
+
                 match buttonLabel:
+                    # INFO FIELDS
                     case "type":
                         typeOptions = [
                             discord.SelectOption(emoji="🟩", label="Operation"),
@@ -898,7 +997,7 @@ class Schedule(commands.Cog):
                         with open(MEMBER_TIME_ZONES_FILE) as f:
                             memberTimeZones = json.load(f)
                         if str(interaction.user.id) not in memberTimeZones:
-                            await interaction.response.send_message(f"{interaction.user.mention} Please retry after you've set a time zone in DMs!", ephemeral=True, delete_after=60.0)
+                            await interaction.response.send_message(f"{interaction.user.mention} Please retry after you've set a time zone in DMs!", ephemeral=True, delete_after=10.0)
                             timeZoneOutput = await self.changeTimeZone(interaction.user)
                             if timeZoneOutput is False:
                                 await interaction.followup.send(embed=Embed(title="❌ Timezone configuration canceled", description="You must provide a time zone in your DMs!", color=Color.red()))
@@ -966,17 +1065,86 @@ class Schedule(commands.Cog):
                             maxLength=9
                         ))
 
-
                     case "linking":
-                        ...
+                        with open(WORKSHOP_INTEREST_FILE) as f:
+                            workshops = json.load(f)
+                        options = [discord.SelectOption(label=wsName) for wsName in workshops]
+                        await interaction.response.send_message(interaction.user.mention, view=self.generateSelectView(
+                            options,
+                            True,
+                            previewEmbedDict["workshopInterest"] if "workshopInterest" in previewEmbedDict else "",
+                            interaction.message,
+                            "Link event to a workshop.",
+                            "select_create_linking",
+                            button.view
+                        ),
+                            ephemeral=True,
+                            delete_after=60.0
+                        )
 
 
+                    # TEMPLATES
+                    case "save_as_template":
+                        if isAllRequiredInfoFilled() is False:
+                            await interaction.response.send_message(f"{interaction.user.mention} Before saving the event as a template, you need to fill out the mandatory (red buttons) information!", ephemeral=True, delete_after=10.0)
+                            return
+
+                        await interaction.response.send_modal(generateModal(
+                            style=discord.TextStyle.short,
+                            placeholder="Fixed Wing Workshop + Cert",
+                            default=None,
+                            required=True,
+                            minLength=1,
+                            maxLength=63  # (BUTTON_LABEL_MAX_LEN := 80) - len("Select Template: ")
+                        ))
+
+                    case "update_template":
+                        if isAllRequiredInfoFilled() is False:
+                            await interaction.response.send_message(f"{interaction.user.mention} Before updating the template, you need to fill out the mandatory (red buttons) information!", ephemeral=True, delete_after=10.0)
+                            return
+
+                        # Fetch template name from button label
+                        templateName = ""
+                        for child in button.view.children:
+                            if isinstance(child, discord.ui.Button) and child.label is not None and child.label.startswith("Select Template"):
+                                templateName = "".join(child.label.split(":")[1:]).strip()
+                                break
+                        if templateName == "":
+                            log.exception("Schedule buttonHandling: templateName == \"\"")
+                            return
+
+                        # Write to file
+                        filename = f"data/{previewEmbedDict['type'].lower()}Templates.json"
+                        jsonCreateNoExist(filename, [])
+                        with open(filename) as f:
+                            templates = json.load(f)
+
+                        templateIndex = None
+                        for idx, template in enumerate(templates):
+                            if template["templateName"] == templateName:
+                                templateIndex = idx
+                                break
+                        else:
+                            log.exception("Schedule buttonHandling: templateIndex not found")
+                            return
+
+                        previewEmbedDict["authorId"] = interaction.user.id
+                        previewEmbedDict["templateName"] = templateName
+                        previewEmbedDict["time"] = previewEmbedDict["endTime"] = None
+                        templates[templateIndex] = previewEmbedDict
+                        with open(filename, "w") as f:
+                            json.dump(templates, f, indent=4)
+
+                        # Reply
+                        await interaction.response.send_message(f"✅ Updated template: `{templateName}`", ephemeral=True, delete_after=10.0)
+
+
+                    # EVENT FINISHING
                     case "submit":
                         # Check if all mandatory fields are filled
-                        for child in button.view.children:
-                            if isinstance(child, discord.ui.Button) and child.label != "Submit" and child.style == discord.ButtonStyle.danger:
-                                await interaction.response.send_message(f"{interaction.user.mention} Before creating the event, you need to fill out the mandatory (red buttons) information!", ephemeral=True, delete_after=10.0)
-                                return
+                        if isAllRequiredInfoFilled() is False:
+                            await interaction.response.send_message(f"{interaction.user.mention} Before creating the event, you need to fill out the mandatory (red buttons) information!", ephemeral=True, delete_after=10.0)
+                            return
 
                         # Append event to JSON
                         jsonCreateNoExist(EVENTS_FILE, [])
@@ -995,6 +1163,33 @@ class Schedule(commands.Cog):
 
                     case "cancel":
                         await interaction.response.edit_message(content="Nvm guys, didn't wanna bop.", embed=None, view=None)
+
+
+                if buttonLabel.startswith("select_template"):
+                    filename = f"data/{previewEmbedDict['type'].lower()}Templates.json"
+                    jsonCreateNoExist(filename, [])
+                    with open(filename) as f:
+                        templates = json.load(f)
+
+                    options = [discord.SelectOption(label=template["templateName"], description=template["description"][:100]) for template in templates]
+                    setOptionLabel = ""
+                    for child in button.view.children:
+                        if isinstance(child, discord.ui.Button) and child.label is not None and child.label.startswith("Select Template"):
+                            setOptionLabel = "".join(child.label.split(":")[1:]).strip()
+
+                    await interaction.response.send_message(interaction.user.mention, view=self.generateSelectView(
+                        options,
+                        True,
+                        setOptionLabel,
+                        interaction.message,
+                        "Select a template.",
+                        "select_create_select_template",
+                        button.view
+                    ),
+                        ephemeral=True,
+                        delete_after=60.0
+                    )
+
 
                 return
 
@@ -1087,7 +1282,8 @@ class Schedule(commands.Cog):
                 child.disabled = True
             await interaction.response.edit_message(view=select.view)
 
-            newEventMsgEmbed = eventMsg.embeds[0]
+            previewEmbedDict = self.fromPreviewEmbedToDict(eventMsg.embeds[0])
+            previewEmbedDict["authorId"] = interaction.user.id
 
             # Update eventMsg button style
             for child in eventMsgView.children:
@@ -1097,16 +1293,112 @@ class Schedule(commands.Cog):
 
             # Do preview embed edits
             if infoLabel == "type":
-                newEventMsgEmbed.colour = EVENT_TYPE_COLORS[selectedValue]
+                permittedEventTypesForTemplates = ("Workshop", "Event")
+                previewEmbedDict["type"] = selectedValue
+                for child in eventMsgView.children:
+                    if not isinstance(child, discord.ui.Button) or child.label is None:
+                        log.exception("Schedule selectHandling: not isinstance(child, discord.ui.Button) or child.label is None")
+                        return
+
+
+                    # (Un)lock buttons depending on current event type
+                    if child.label == "Linking":
+                        child.disabled = (selectedValue != "Workshop")
+                        continue
+
+
+                    if child.label.startswith("Select Template"):
+                        # Quick disable if not permitted event type
+                        if selectedValue not in permittedEventTypesForTemplates:
+                            child.disabled = True
+                            continue
+
+                        # Disable if no templates exist
+                        filename = f"data/{selectedValue.lower()}Templates.json"
+                        jsonCreateNoExist(filename, [])
+                        with open(filename) as f:
+                            templates = json.load(f)
+                        child.disabled = len(templates) == 0
+
+
+                    if child.label == "Save As Template":
+                        child.disabled = (selectedValue not in permittedEventTypesForTemplates)
+                        continue
+
+
+                    # Derive "Update Template" disabled attribute from Select Template name (if one has been selected)
+                    if child.label == "Update Template":
+                        for childv2 in eventMsgView.children:
+                            if isinstance(childv2, discord.ui.Button) and childv2.label is not None and childv2.label.startswith("Select Template"):
+                                child.disabled = ("".join(childv2.label.split(":")[1:]).strip() == "None")  # Text after colon (template selected)
+                                break
+
             elif infoLabel == "map":
-                execution, index = self.updateField(newEventMsgEmbed, "Map", "Map", selectedValue, False)
-                if execution == "update":
-                    newEventMsgEmbed.set_field_at(index, name="Map", value=selectedValue, inline=False)
                 if selectedValue == "None":
-                    newEventMsgEmbed.remove_field(index)
+                    previewEmbedDict["map"] = None
+                else:
+                    previewEmbedDict["map"] = selectedValue
+
+            elif infoLabel == "linking":
+                if selectedValue == "None":
+                    previewEmbedDict["workshopInterest"] = None
+                else:
+                    previewEmbedDict["workshopInterest"] = selectedValue
+
+            elif infoLabel == "select_template":
+                # Update template buttons label & disabled
+                for child in eventMsgView.children:
+                    if not isinstance(child, discord.ui.Button) or child.label is None:
+                        continue
+                    if child.label.startswith("Select Template"):
+                        child.label = f"Select Template: {selectedValue}"
+                    elif child.label == "Update Template":
+                        child.disabled = (selectedValue == "None")
+
+                # Insert template info into preview embed and view
+                filename = f"data/{previewEmbedDict['type'].lower()}Templates.json"
+                jsonCreateNoExist(filename, [])
+                with open(filename) as f:
+                    templates = json.load(f)
+                for template in templates:
+                    if template["templateName"] == selectedValue:
+                        embed = self.fromDictToPreviewEmbed(template)
+                        for child in eventMsgView.children:
+                            if not isinstance(child, discord.ui.Button) or child.label is None:
+                                continue
+
+                            # Time is required but will not be saved in templates
+                            if child.label == "Time":
+                                child.style = discord.ButtonStyle.danger
+                                continue
+
+                            # All required fields are already filled
+                            if child.style == discord.ButtonStyle.danger or child.label == "Type":
+                                child.style = discord.ButtonStyle.success
+                                continue
+
+                            # Linking
+                            if child.label == "Linking":
+                                if embed.footer.icon_url is not None:
+                                    child.style = discord.ButtonStyle.success
+                                    continue
+
+                            # Ignore template buttons
+                            if "Template" in child.label or child.style == discord.ButtonStyle.primary:
+                                continue
+
+                            # Optional fields
+                            jsonKey = (child.label[0].lower() + child.label[1:]).replace(" ", "")
+                            if jsonKey == "linking":
+                                jsonKey = "workshopInterest"
+                            child.style = discord.ButtonStyle.secondary if template[jsonKey] is None else discord.ButtonStyle.success
+
+                        await eventMsg.edit(embed=embed, view=eventMsgView)
+                        return
+
 
             # Edit preview embed & view
-            await eventMsg.edit(embed=newEventMsgEmbed, view=eventMsgView)
+            await eventMsg.edit(embed=self.fromDictToPreviewEmbed(previewEmbedDict), view=eventMsgView)
 
 
 
@@ -1173,22 +1465,6 @@ class Schedule(commands.Cog):
 
                 await interaction.response.send_message(view=view, ephemeral=True, delete_after=60.0)
 
-            # TODO Editing Template Name
-            #elif editOption == "Template Name":
-            #    embed = Embed(title=SCHEDULE_EVENT_TEMPLATE_SAVE_NAME_QUESTION, color=Color.gold())
-            #    embed.set_footer(text=SCHEDULE_CANCEL)
-            #    await interaction.user.send(embed=embed)
-            #    try:
-            #        response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, author=interaction.user, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
-            #        templateName = response.content.strip()
-            #        if templateName.lower() == "cancel":
-            #            await self.cancelCommand(dmChannel, "Event editing")
-            #            return None
-            #    except asyncio.TimeoutError:
-            #        await interaction.user.send(embed=TIMEOUT_EMBED)
-            #        return None
-            #    event["name"] = templateName
-
             # Editing Title
             elif selectedValue == "Title":
                 modal = ScheduleModal(self, "Title", "modal_title", eventMsg)
@@ -1201,7 +1477,7 @@ class Schedule(commands.Cog):
                     wsIntOptions = json.load(f).keys()
 
                 options = [discord.SelectOption(label=wsName) for wsName in wsIntOptions]
-                view = self.generateSelectView(options, True, event["map"], eventMsg, "Select a map.", "edit_select_map")
+                view = self.generateSelectView(options, True, event["map"], eventMsg, "Link event to a workshop.", "edit_select_linking")
                 await interaction.response.send_message(view=view, ephemeral=True, delete_after=60.0)
 
             # Editing Description
@@ -1278,55 +1554,55 @@ class Schedule(commands.Cog):
             await interaction.response.send_message(embed=Embed(title="✅ Event edited", color=Color.green()), ephemeral=True, delete_after=5.0)
 
 
-    @staticmethod
-    def updateField(embed: discord.Embed, fieldNameQuery:str, fieldNameUpdate: str, fieldValue: str, fieldInline: bool) -> tuple[str, int]:
-        """ Update a specific embed field.
+    #@staticmethod
+    #def updateField(embed: discord.Embed, fieldNameQuery:str, fieldNameUpdate: str, fieldValue: str, fieldInline: bool) -> tuple[str, int]:
+    #    """ Update a specific embed field.
 
-        Parameters:
-        embed (discord.Embed): The Discord Embed
-        fieldNameQuery (str): Field name to look for.
-        fieldNameUpdate (str): Updated name.
-        fieldValue (str): Updated value.
-        fieldInline (bool): Updated inline.
+    #    Parameters:
+    #    embed (discord.Embed): The Discord Embed
+    #    fieldNameQuery (str): Field name to look for.
+    #    fieldNameUpdate (str): Updated name.
+    #    fieldValue (str): Updated value.
+    #    fieldInline (bool): Updated inline.
 
-        Returns:
-        tule[str, int]: tuple[0] either "update" or "new" string, indicating field execution. tuple[1] field index. (NOTE: Execution "update" doesn't manipulate fields, only "new" does)
-        """
-        allFields = ("Reservable Roles", "Time", "Duration", "Map", "External URL", "Accepted", "Declined", "Tentative")
+    #    Returns:
+    #    tule[str, int]: tuple[0] either "update" or "new" string, indicating field execution. tuple[1] field index. (NOTE: Execution "update" doesn't manipulate fields, only "new" does)
+    #    """
+    #    allFields = ("Reservable Roles", "Time", "Duration", "Map", "External URL", "Accepted", "Declined", "Tentative")
 
-        # FIELD EXISTS
-        for idx, embedField in enumerate(embed.fields):
-            if embedField.name == "\u200B":
-                continue
+    #    # FIELD EXISTS
+    #    for idx, embedField in enumerate(embed.fields):
+    #        if embedField.name == "\u200B":
+    #            continue
 
-            #log.debug(f"updateField: {embedField.name}") ### DO NOT LOG THE NAME, RAISES CHARMAP ERROR FROM EMOJIS LMFAO
-            if embedField.name is not None and embedField.name.startswith(fieldNameQuery):
-                return ("update", idx)
+    #        #log.debug(f"updateField: {embedField.name}") ### DO NOT LOG THE NAME, RAISES CHARMAP ERROR FROM EMOJIS LMFAO
+    #        if embedField.name is not None and embedField.name.startswith(fieldNameQuery):
+    #            return ("update", idx)
 
-        # FIELD DOESN'T EXIST
-        else:
-            # Count real fields in embed
-            activeFieldInEmbedCount = 0
-            for idx, allField in enumerate(allFields):
-                if allField == fieldNameQuery:
-                    break
-                for embedField in embed.fields:
-                    if embedField.name is not None and embedField.name.startswith(allField):
-                        activeFieldInEmbedCount += 1
-                        break
+    #    # FIELD DOESN'T EXIST
+    #    else:
+    #        # Count real fields in embed
+    #        activeFieldInEmbedCount = 0
+    #        for idx, allField in enumerate(allFields):
+    #            if allField == fieldNameQuery:
+    #                break
+    #            for embedField in embed.fields:
+    #                if embedField.name is not None and embedField.name.startswith(allField):
+    #                    activeFieldInEmbedCount += 1
+    #                    break
 
-            # Add blank fields to count
-            realFieldsRemaining = activeFieldInEmbedCount
-            for embedField in embed.fields:
-                if realFieldsRemaining == 0:
-                    break
-                if embedField.name is not None and embedField.name != "\u200B":
-                    realFieldsRemaining -= 1
-                elif embedField.name == "\u200B":
-                    activeFieldInEmbedCount += 1
+    #        # Add blank fields to count
+    #        realFieldsRemaining = activeFieldInEmbedCount
+    #        for embedField in embed.fields:
+    #            if realFieldsRemaining == 0:
+    #                break
+    #            if embedField.name is not None and embedField.name != "\u200B":
+    #                realFieldsRemaining -= 1
+    #            elif embedField.name == "\u200B":
+    #                activeFieldInEmbedCount += 1
 
-            embed.insert_field_at(activeFieldInEmbedCount, name=fieldNameUpdate, value=fieldValue, inline=fieldInline)
-            return ("new", activeFieldInEmbedCount)
+    #        embed.insert_field_at(activeFieldInEmbedCount, name=fieldNameUpdate, value=fieldValue, inline=fieldInline)
+    #        return ("new", activeFieldInEmbedCount)
 
 
     async def modalHandling(self, modal: discord.ui.Modal, interaction: discord.Interaction, eventMsg: discord.Message, view: discord.ui.View | None) -> None:
@@ -1349,35 +1625,23 @@ class Schedule(commands.Cog):
                     break
 
             # Update embed
-            embed = eventMsg.embeds[0]
+            previewEmbedDict = self.fromPreviewEmbedToDict(eventMsg.embeds[0])
+            previewEmbedDict["authorId"] = interaction.user.id
+
             match infoLabel:
                 case "title":
-                    embed.title = SCHEDULE_EVENT_PREVIEW_EMBED["title"] if value == "" else value
+                    previewEmbedDict["title"] = SCHEDULE_EVENT_PREVIEW_EMBED["title"] if value == "" else value
 
                 case "description":
-                    embed.description = SCHEDULE_EVENT_PREVIEW_EMBED["description"] if value == "" else value
+                    previewEmbedDict["description"] = SCHEDULE_EVENT_PREVIEW_EMBED["description"] if value == "" else value
 
                 case "duration":
                     if not re.match(r"^\s*((([1-9]\d*)?\d\s*h(\s*([0-5])?\d\s*m?)?)|(([0-5])?\d\s*m))\s*$", value):
-                        await interaction.response.send_message(interaction.user.mention, embed=Embed(title="❌ That ain't a valid duration", color=Color.red()), ephemeral=True, delete_after=10.0)
+                        await interaction.response.send_message(interaction.user.mention, embed=EMBED_INVALID, ephemeral=True, delete_after=10.0)
                         return
 
                     hours, minutes, delta = self.getDetailsFromDuration(value)
-                    durationStr = f"{(str(hours) + 'h')*(hours != 0)}{' '*(hours != 0 and minutes !=0)}{(str(minutes) + 'm')*(minutes != 0)}"
-
-                    execution, index = self.updateField(embed, "Duration", "Duration", durationStr, True)
-                    if execution == "update":
-                        embed.set_field_at(index, name="Duration", value=durationStr, inline=True)
-
-                    # Update Time endtime
-                    fieldPos = findFieldPos(embed, "Time")
-                    if isinstance(fieldPos, int):
-                        timeFieldValue = embed.fields[fieldPos].value
-                        if timeFieldValue is not None:
-                            startTime = datetime.fromtimestamp(float(re.findall(r"(?<=<t:)\d+(?=:\w>)", timeFieldValue)[0]))
-
-                            timeFieldValueNew = f"{discord.utils.format_dt(startTime, 'F')} - {discord.utils.format_dt(startTime+delta, 't' if hours < 24 else 'F')}"
-                            embed.set_field_at(fieldPos, name="Time", value=timeFieldValueNew, inline=(hours < 24))
+                    previewEmbedDict["duration"] = f"{(str(hours) + 'h')*(hours != 0)}{' '*(hours != 0 and minutes !=0)}{(str(minutes) + 'm')*(minutes != 0)}"
 
                 case "time":
                     # Basic premise
@@ -1390,99 +1654,71 @@ class Schedule(commands.Cog):
                         await interaction.response.send_message(interaction.user.mention, embed=EMBED_INVALID, ephemeral=True, delete_after=10.0)
                         return
 
-                    embed.timestamp = startTime
-
-                    # No duration - output only starttime
-                    fieldPos = findFieldPos(embed, "Duration")
-                    if fieldPos is None:
-                        timeFieldValue = f"{discord.utils.format_dt(startTime, 'F')} - <Set Duration>"
-                        execution, index = self.updateField(embed, "Time", "Time", timeFieldValue, True)
-                        if execution == "update":
-                            embed.set_field_at(index, name="Time", value=timeFieldValue, inline=True)
-                        else:  # Added Time, add blanks (padding)
-                            embed.insert_field_at(index, name="\u200B", value="\u200B", inline=False)  # Blank before
-
-                    # Duration found - output start- & endtime
-                    else:
-                        duration = embed.fields[fieldPos].value
-                        if duration is None:
-                            log.exception("schedule modalHandling: embed.fields[fieldPos].value is None")
-                            return
-                        hours, minutes, delta = self.getDetailsFromDuration(duration)
-
-                        timeFieldValue = f"{discord.utils.format_dt(startTime, 'F')} - {discord.utils.format_dt(startTime+delta, 't' if hours < 24 else 'F')}"
-                        execution, index = self.updateField(embed, "Time", "Time", timeFieldValue, (hours < 24))
-                        if execution == "update":
-                            embed.set_field_at(index, name="Time", value=timeFieldValue, inline=(hours < 24))
-                        else:  # Added Time, add blanks (padding)
-                            embed.insert_field_at(index, name="\u200B", value="\u200B", inline=False)  # Blank before
+                    # Set time
+                    startTime = timeZone.localize(startTime).astimezone(pytz.utc)
+                    previewEmbedDict["time"] = startTime.strftime(TIME_FORMAT)
+                    previewEmbedDict["endTime"] = None
+                    # Set endTime if duration available
+                    if previewEmbedDict["duration"] is not None:
+                        hours, minutes, delta = self.getDetailsFromDuration(previewEmbedDict["duration"])
+                        previewEmbedDict["endTime"] = (startTime + delta).strftime(TIME_FORMAT)
 
                 case "external_url":
-                    if value == "":
-                        fieldPos = findFieldPos(embed, "External URL")
-                        if fieldPos is not None:
-                            embed.remove_field(fieldPos)  # URL
-                            embed.remove_field(fieldPos-1)  # Blank before
-                    else:
-                        execution, index = self.updateField(embed, "External URL", "External URL", value, False)
-                        if execution == "update":
-                            embed.set_field_at(index, name="External URL", value=value, inline=False)
-                        else:  # Added URL, add blanks (padding)
-                            embed.insert_field_at(index, name="\u200B", value="\u200B", inline=False)  # Blank before
+                    previewEmbedDict["externalURL"] = value or None
 
                 case "reservable_roles":
-                    if value == "":
-                        fieldPos = findFieldPos(embed, "Reservable Roles")
-                        if fieldPos is not None:
-                            embed.remove_field(fieldPos)  # URL
-                            embed.remove_field(fieldPos-1)  # Blank before
-                    else:
-                        resRoles = [f"{role} - **VACANT**" for role in value.split("\n")]
-                        fieldValue = "\n".join(resRoles)
-                        fieldName = f"Reservable Roles (0/{len(resRoles)}) 👤"
-
-                        execution, index = self.updateField(embed, "Reservable Roles", fieldName, fieldValue, False)
-                        if execution == "update":
-                            embed.set_field_at(index, name=fieldName, value=fieldValue, inline=False)
-                        else:  # Added ResRoles, add blanks (padding)
-                            embed.insert_field_at(index, name="\u200B", value="\u200B", inline=False)  # Blank before
+                    previewEmbedDict["reservableRoles"] = None if value == "" else {role: None for role in value.split("\n")}
 
                 case "max_players":
-                    if value.lower() not in ("", "none", "hidden", "anonymous") and value.isdigit() is False:
-                        await interaction.response.send_message(embed=Embed(title="❌ That ain't a valid input", color=Color.red()), ephemeral=True, delete_after=10.0)
+                    valueLower = value.lower()
+                    if valueLower not in ("none", "hidden", "anonymous") and not value.isdigit():
+                        await interaction.response.send_message(embed=EMBED_INVALID, ephemeral=True, delete_after=10.0)
                         return
 
-                    if value == "" or value.lower() == "hidden":
-                        fieldPos = findFieldPos(embed, "Accepted")
-                        if fieldPos is not None:
-                            # Delete all RSVP fields
-                            embed.remove_field(fieldPos+2)  # Tentative
-                            embed.remove_field(fieldPos+1)  # Declined
-                            embed.remove_field(fieldPos)  # Accepted
-                            embed.remove_field(fieldPos-1)  # Blank
+                    if valueLower == "none":
+                        previewEmbedDict["maxPlayers"] = None
+                    elif value.isdigit():
+                        previewEmbedDict["maxPlayers"] = 50 if int(value) > MAX_SERVER_ATTENDANCE else int(value)
                     else:
-                        if value.isdigit():
-                            if int(value) > MAX_SERVER_ATTENDANCE:
-                                fieldNameNumberSuffix = "/50"
-                            else:
-                                fieldNameNumberSuffix = f"/{value}"
-                        else:
-                            fieldNameNumberSuffix = ""
+                        previewEmbedDict["maxPlayers"] = valueLower
 
-                        fieldValue = "\u200B" if value == "anonymous" else "-"
+                case "save_as_template":
+                    # Write to file
+                    filename = f"data/{previewEmbedDict['type'].lower()}Templates.json"
+                    jsonCreateNoExist(filename, [])
+                    with open(filename) as f:
+                        templates = json.load(f)
+                    templateOverwritten = (False, 0)
+                    for idx, template in enumerate(templates):
+                        if template["title"] == previewEmbedDict["title"]:
+                            templateOverwritten = (True, idx)
+                            break
+                    if templateOverwritten[0]:
+                        templates.pop(templateOverwritten[1])
+                    previewEmbedDict["templateName"] = value
+                    previewEmbedDict["time"] = previewEmbedDict["endTime"] = None
+                    templates.append(previewEmbedDict)
+                    with open(filename, "w") as f:
+                        json.dump(templates, f, indent=4)
 
-                        execution, index = self.updateField(embed, "Accepted", f"Accepted (0{fieldNameNumberSuffix}) ✅", fieldValue, True)
-                        if execution == "new":
-                            embed.insert_field_at(index, name="\u200B", value="\u200B", inline=False)  # Blank before
-                            embed.add_field(name=f"Declined (0{fieldNameNumberSuffix}) ❌", value=fieldValue, inline=True)
-                            embed.add_field(name=f"Tentative (0{fieldNameNumberSuffix}) ❓", value=fieldValue, inline=True)
-                        elif execution == "update":
-                            embed.set_field_at(index, name=f"Accepted (0{fieldNameNumberSuffix}) ✅", value=fieldValue, inline=True)
-                            embed.set_field_at(index+1, name=f"Declined (0{fieldNameNumberSuffix}) ❌", value=fieldValue, inline=True)
-                            embed.set_field_at(index+2, name=f"Tentative (0{fieldNameNumberSuffix}) ❓", value=fieldValue, inline=True)
+                    # Update label
+                    for child in view.children:
+                        if not isinstance(child, discord.ui.Button) or child.label is None:
+                            continue
+                        if child.label.startswith("Select Template"):
+                            child.label = f"Select Template: {value}"
+                            child.disabled = False
+                        elif child.label == "Save As Template":
+                            child.style = discord.ButtonStyle.secondary
+                        elif child.label == "Update Template":
+                            child.disabled = False
 
+                    # Reply & edit msg
+                    await interaction.response.send_message(f"✅ Saved {('[Overwritten] ') * templateOverwritten[0]}template as: `{value}`", ephemeral=True, delete_after=10.0)
+                    await eventMsg.edit(view=view)
+                    return
 
-            await interaction.response.edit_message(embed=embed, view=view)
+            await interaction.response.edit_message(embed=self.fromDictToPreviewEmbed(previewEmbedDict), view=view)
             return
 
         # == Editing Event ==
@@ -1554,12 +1790,12 @@ class Schedule(commands.Cog):
                 log.exception("editEvent: guild is None")
                 return None
 
-            embed = Embed(title=f":clock3: The starting time has changed for: {event['title']}!", description=f"From: {discord.utils.format_dt(UTC.localize(datetime.strptime(startTimeOld, TIME_FORMAT)), style='F')}\n\u2000\u2000To: {discord.utils.format_dt(UTC.localize(datetime.strptime(event['time'], TIME_FORMAT)), style='F')}", color=Color.orange())
+            previewEmbed = Embed(title=f":clock3: The starting time has changed for: {event['title']}!", description=f"From: {discord.utils.format_dt(UTC.localize(datetime.strptime(startTimeOld, TIME_FORMAT)), style='F')}\n\u2000\u2000To: {discord.utils.format_dt(UTC.localize(datetime.strptime(event['time'], TIME_FORMAT)), style='F')}", color=Color.orange())
             for memberId in event["accepted"] + event["declined"] + event["tentative"]:
                 member = guild.get_member(memberId)
                 if member is not None:
                     try:
-                        await member.send(embed=embed)
+                        await member.send(embed=previewEmbed)
                     except Exception as e:
                         log.exception(f"{member} | {e}")
 
@@ -2123,17 +2359,22 @@ class Schedule(commands.Cog):
 
         view = ScheduleView()
         for label, data in SCHEDULE_EVENT_VIEW.items():
+            style = discord.ButtonStyle.danger if data["required"] is True else discord.ButtonStyle.secondary
+            if data["customStyle"] is not None:
+                style = data["customStyle"]
             view.add_item(ScheduleButton(
                 self,
                 None,
                 interaction.user.id,
-                style=discord.ButtonStyle.danger if data["required"] is True else discord.ButtonStyle.secondary,
+                style=style,
                 label=label,
                 custom_id=f"event_schedule_{label.lower().replace(' ', '_')}",
-                row=data["row"]
+                row=data["row"],
+                disabled=data["startDisabled"]
             ))
 
         embed=Embed(title=SCHEDULE_EVENT_PREVIEW_EMBED["title"], description=SCHEDULE_EVENT_PREVIEW_EMBED["description"])
+        embed.add_field(name="\u200B", value="\u200B", inline=False)
         embed.set_footer(text=f"Created by {interaction.user.display_name}")
         await interaction.response.send_message("Schedule an event using the buttons, and get a live preview!", embed=embed, view=view)
 

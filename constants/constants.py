@@ -6,12 +6,18 @@ GUILD = discord.Object(id=GUILD_ID)
 # DATA FILES
 ####################
 
+# Events
 EVENTS_FILE = "data/events.json"
 EVENTS_HISTORY_FILE = "data/eventsHistory.json"
+
+# Templates
+EVENT_TEMPLATES_FILE = "data/eventTemplates.json"
+WORKSHOP_TEMPLATES_FILE = "data/workshopTemplates.json"
+WORKSHOP_TEMPLATES_DELETED_FILE = "data/workshopDeletedTemplates.json"  # Maybe remove?
+
+# Misc
 MEMBER_TIME_ZONES_FILE = "data/memberTimeZones.json"
 WORKSHOP_INTEREST_FILE = "data/workshopInterest.json"
-WORKSHOP_TEMPLATES_FILE = "data/workshopTemplates.json"
-WORKSHOP_TEMPLATES_DELETED_FILE = "data/workshopDeletedTemplates.json"
 REMINDERS_FILE = "data/reminders.json"
 
 

@@ -32,11 +32,6 @@ POLL_PERCENT_REGEX = r"\(\d+\.?\d*%\)\s*"
 ####################
 
 SCHEDULE_EVENT_SELECTED_TIME_ZONE = "Your current time zone preference is `{0}`."
-RESPONSE_EVENT_PROGRESS = "Scheduling... Standby for {0}..."
 
 ## Errors
 SCHEDULE_EVENT_ERROR_DESCRIPTION = "Enter `edit` to input a new time.\nEnter `override` to override this warning."
-
-### Templates
-SCHEDULE_EVENT_TEMPLATE_SAVE_NAME_QUESTION = "Which name would you like to save the template as?"
-SCHEDULE_EVENT_CONFIRM_DELETE = "Are you sure you want to delete this {0}?"

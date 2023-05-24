@@ -6,12 +6,18 @@ GUILD = discord.Object(id=GUILD_ID)
 # DATA FILES
 ####################
 
+# Events
 EVENTS_FILE = "data/events.json"
 EVENTS_HISTORY_FILE = "data/eventsHistory.json"
+
+# Templates
+EVENT_TEMPLATES_FILE = "data/eventTemplates.json"
+WORKSHOP_TEMPLATES_FILE = "data/workshopTemplates.json"
+WORKSHOP_TEMPLATES_DELETED_FILE = "data/workshopDeletedTemplates.json"  # Maybe remove?
+
+# Misc
 MEMBER_TIME_ZONES_FILE = "data/memberTimeZones.json"
 WORKSHOP_INTEREST_FILE = "data/workshopInterest.json"
-WORKSHOP_TEMPLATES_FILE = "data/workshopTemplates.json"
-WORKSHOP_TEMPLATES_DELETED_FILE = "data/workshopDeletedTemplates.json"
 REMINDERS_FILE = "data/reminders.json"
 
 
@@ -68,9 +74,6 @@ ARMA_DISCUSSION = 827147720284045322
 COMBAT_FOOTAGE = 655474579451412540
 PROPAGANDA = 508701809557110834
 SME_CORNER = 762942406940688395
-
-# Bot Stuff
-BOT_SPAM = 880957686122958880
 
 # Operations
 COMMAND = 341763940046340098  # Voice

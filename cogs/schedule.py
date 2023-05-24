@@ -16,13 +16,13 @@ if DEBUG:
     from constants.debug import *
 
 
-TIMEOUT_EMBED = Embed(title=ERROR_TIMEOUT, color=Color.red())
+EMBED_TIMEOUT = Embed(title=ERROR_TIMEOUT, color=Color.red())
+EMBED_INVALID = Embed(title="❌ Invalid input", color=Color.red())
 
 OPERATION_NAME_ADJECTIVES = "constants/opAdjectives.txt"
 OPERATION_NAME_NOUNS = "constants/opNouns.txt"
 
 MAX_SERVER_ATTENDANCE = 50
-MAX_PLAYERS_STR_OPTIONS = ("anonymous", "hidden")
 
 # Training map first, then the rest in alphabetical order
 MAPS = [
@@ -87,8 +87,115 @@ TIMESTAMP_STYLES = {
     "R": "Relative Time"
 }
 
+EVENT_TYPE_COLORS = {
+    "Operation": Color.green(),
+    "Workshop": Color.blue(),
+    "Event": Color.gold()
+}
+
+SCHEDULE_EVENT_VIEW: dict[str, dict[str, discord.ButtonStyle | bool | int | None]] = {
+    "Type": {
+        "required": True,
+        "row": 0,
+        "startDisabled": False,
+        "customStyle": None
+    },
+    "Title": {
+        "required": True,
+        "row": 0,
+        "startDisabled": False,
+        "customStyle": None
+    },
+    "Description": {
+        "required": True,
+        "row": 0,
+        "startDisabled": False,
+        "customStyle": None
+    },
+    "Duration": {
+        "required": True,
+        "row": 0,
+        "startDisabled": False,
+        "customStyle": None
+    },
+    "Time": {
+        "required": True,
+        "row": 0,
+        "startDisabled": False,
+        "customStyle": None
+    },
+
+    "External URL": {
+        "required": False,
+        "row": 1,
+        "startDisabled": False,
+        "customStyle": None
+    },
+    "Reservable Roles": {
+        "required": False,
+        "row": 1,
+        "startDisabled": False,
+        "customStyle": None
+    },
+    "Map": {
+        "required": False,
+        "row": 1,
+        "startDisabled": False,
+        "customStyle": None
+    },
+    "Max Players": {
+        "required": True,
+        "row": 1,
+        "startDisabled": False,
+        "customStyle": None
+    },
+
+    "Linking": {
+        "required": True,
+        "row": 2,
+        "startDisabled": True,
+        "customStyle": None
+    },
+    "Select Template: None": {
+        "required": False,
+        "row": 2,
+        "startDisabled": True,
+        "customStyle": None
+    },
+    "Save As Template": {
+        "required": False,
+        "row": 2,
+        "startDisabled": True,
+        "customStyle": None
+    },
+    "Update Template": {
+        "required": False,
+        "row": 2,
+        "startDisabled": True,
+        "customStyle": None
+    },
+
+    "Submit": {
+        "required": True,
+        "row": 3,
+        "startDisabled": False,
+        "customStyle": discord.ButtonStyle.primary
+    },
+    "Cancel": {
+        "required": False,
+        "row": 3,
+        "startDisabled": False,
+        "customStyle": discord.ButtonStyle.primary
+    }
+}
+
+SCHEDULE_EVENT_PREVIEW_EMBED = {
+    "title": "Create an event!",
+    "description": "[Red buttons = Mandatory]\n[Gray = Optional]\n[Green = Done]\n\n[Markdown Syntax (Formatting)](https://support.discord.com/hc/en-us/articles/210298617-Markdown-Text-101-Chat-Formatting-Bold-Italic-Underline)"
+}
+
 def jsonCreateNoExist(filename: str, dump: list | dict) -> None:
-    """ Creates a JSON file with a dump if not exist.
+    """Creates a JSON file with a dump if not exist.
 
     Parameters:
     filename (str): The files name.
@@ -127,8 +234,9 @@ class Schedule(commands.Cog):
         if not self.tenMinTask.is_running():
             self.tenMinTask.start()
 
-    async def cancelCommand(self, channel: discord.DMChannel, abortText: str) -> None:
-        """ Sends an abort response to the user.
+    @staticmethod
+    async def cancelCommand(channel: discord.DMChannel, abortText: str) -> None:
+        """Sends an abort response to the user.
 
         Parameters:
         channel (discord.DMChannel): The users DM channel where the message is sent.
@@ -139,11 +247,13 @@ class Schedule(commands.Cog):
         """
         await channel.send(embed=Embed(title=f"❌ {abortText} canceled!", color=Color.red()))
 
-    async def checkDMChannel(self, user: discord.User | discord.Member) -> discord.channel.DMChannel:
+    @staticmethod
+    async def checkDMChannel(user: discord.User | discord.Member) -> discord.channel.DMChannel:
+        """  """
         return await user.create_dm() if user.dm_channel is None else user.dm_channel
 
     async def saveEventToHistory(self, event, autoDeleted=False) -> None:
-        """ Saves a specific event to history.
+        """Saves a specific event to history.
 
         Parameters:
         event: The specified event.
@@ -194,7 +304,7 @@ class Schedule(commands.Cog):
 
     @tasks.loop(minutes=10)
     async def tenMinTask(self) -> None:
-        """ 10 minute interval tasks.
+        """10 minute interval tasks.
 
         Parameters:
         None.
@@ -286,7 +396,7 @@ class Schedule(commands.Cog):
     @discord.app_commands.guilds(GUILD)
     @discord.app_commands.checks.has_any_role(UNIT_STAFF, SERVER_HAMSTER, CURATOR)
     async def refreshSchedule(self, interaction: discord.Interaction) -> None:
-        """ Refreshes the schedule - Use if an event was deleted without using the reaction.
+        """Refreshes the schedule - Use if an event was deleted without using the reaction.
 
         Parameters:
         interaction (discord.Interaction): The Discord interaction.
@@ -300,7 +410,7 @@ class Schedule(commands.Cog):
 
     @refreshSchedule.error
     async def onRefreshScheduleError(self, interaction: discord.Interaction, error: discord.app_commands.AppCommandError) -> None:
-        """ refreshSchedule errors - dedicated for the discord.app_commands.errors.MissingAnyRole error.
+        """refreshSchedule errors - dedicated for the discord.app_commands.errors.MissingAnyRole error.
 
         Parameters:
         interaction (discord.Interaction): The Discord interaction.
@@ -324,14 +434,7 @@ class Schedule(commands.Cog):
 # ===== <Schedule Functions> =====
 
     async def updateSchedule(self) -> None:
-        """ Updates the schedule channel with all messages.
-
-        Parameters:
-        None.
-
-        Returns:
-        None.
-        """
+        """Updates the schedule channel with all messages."""
         self.lastUpdate = datetime.utcnow()
         channel = self.bot.get_channel(SCHEDULE)
         if channel is None or not isinstance(channel, discord.channel.TextChannel):
@@ -340,34 +443,31 @@ class Schedule(commands.Cog):
 
         await channel.purge(limit=None, check=lambda m: m.author.id in FRIENDLY_SNEKS)
 
-        await channel.send(f"__Welcome to the schedule channel!__\n🟩 Schedule operations: `/operation` (`/bop`)\n🟦 Workshops: `/workshop` (`/ws`)\n🟨 Generic events: `/event`\n\nThe datetime you see in here are based on __your local time zone__.\nChange timezone when scheduling events with `/changetimezone`.\n\nSuggestions/bugs contact: {', '.join([f'**{channel.guild.get_member(name).display_name}**' for name in DEVELOPERS if channel.guild.get_member(name) is not None])} -- <https://github.com/Sigma-Security-Group/FriendlySnek> `{commitHash}`")
+        await channel.send(f"__Welcome to the schedule channel!__\n🟩 Schedule operations: `/operation` (`/bop`)\n🟦 Workshops: `/workshop` (`/ws`)\n🟨 Generic events: `/event`\n\nThe datetime you see in here are based on __your local time zone__.\nChange timezone when scheduling events with `/changetimezone`.\n\nSuggestions/bugs contact: {', '.join([f'**{developerName.display_name}**' for name in DEVELOPERS if (developerName := channel.guild.get_member(name)) is not None])} -- <https://github.com/Sigma-Security-Group/FriendlySnek> `{commitHash}`")
 
-        if os.path.exists(EVENTS_FILE):
-            try:
-                with open(EVENTS_FILE) as f:
-                    events = json.load(f)
-                if len(events) == 0:
-                    await channel.send("...\nNo bop?\n...\nSnek is sad")
-                    await channel.send(":cry:")
-                    return
+        jsonCreateNoExist(EVENTS_FILE, [])
+        try:
+            with open(EVENTS_FILE) as f:
+                events = json.load(f)
+            if len(events) == 0:
+                await channel.send("...\nNo bop?\n...\nSnek is sad")
+                await channel.send(":cry:")
+                return
 
-                newEvents: list[dict] = []
+            newEvents: list[dict] = []
+            with open(EVENTS_FILE, "w") as f:
+                json.dump(newEvents, f, indent=4)
+            for event in sorted(events, key=lambda e: datetime.strptime(e["time"], TIME_FORMAT), reverse=True):
+                msg = await channel.send(embed=self.getEventEmbed(event), view=self.getEventView(event))
+                event["messageId"] = msg.id
+                newEvents.append(event)
                 with open(EVENTS_FILE, "w") as f:
                     json.dump(newEvents, f, indent=4)
-                for event in sorted(events, key=lambda e: datetime.strptime(e["time"], TIME_FORMAT), reverse=True):
-                    msg = await channel.send(embed=self.getEventEmbed(event), view=self.getEventView(event))
-                    event["messageId"] = msg.id
-                    newEvents.append(event)
-                    with open(EVENTS_FILE, "w") as f:
-                        json.dump(newEvents, f, indent=4)
-            except Exception as e:
-                log.exception(e)
-        else:
-            with open(EVENTS_FILE, "w") as f:
-                json.dump([], f, indent=4)
+        except Exception as e:
+            log.exception(e)
 
     def getEventEmbed(self, event: dict) -> Embed:
-        """ Generates an embed from the given event.
+        """Generates an embed from the given event.
 
         Parameters:
         event (dict): The event.
@@ -376,13 +476,11 @@ class Schedule(commands.Cog):
         Embed: The generated embed.
         """
         guild = self.bot.get_guild(GUILD_ID)
+        if guild is None:
+            log.exception("Schedule getEventEmbed: guild is None")
+            return Embed()
 
-        colors = {
-            "Operation": Color.green(),
-            "Workshop": Color.blue(),
-            "Event": Color.gold()
-        }
-        embed = Embed(title=event["title"], description=event["description"], color=colors[event.get("type", "Operation")])
+        embed = Embed(title=event["title"], description=event["description"], color=EVENT_TYPE_COLORS[event.get("type", "Operation")])
 
         if event["reservableRoles"] is not None:
             embed.add_field(name="\u200B", value="\u200B", inline=False)
@@ -423,7 +521,7 @@ class Schedule(commands.Cog):
             embed.add_field(name=f"Tentative ({len(tentative)}) ❓", value="\u200B", inline=True)
 
         author = guild.get_member(event["authorId"])
-        embed.set_footer(text=f"Created by {author.display_name}") if author else embed.set_footer(text="Created by Unknown User")
+        embed.set_footer(text="Created by Unknown User" if author is None else f"Created by {author.display_name}")
         embed.timestamp = UTC.localize(datetime.strptime(event["time"], TIME_FORMAT))
 
         return embed
@@ -448,16 +546,207 @@ class Schedule(commands.Cog):
 
         return view
 
-    def isAllowedToEdit(self, user: discord.Member, eventAuthorId: int) -> bool:
-        return user.id == eventAuthorId or any(role.id == UNIT_STAFF or role.id == SERVER_HAMSTER for role in user.roles)
+    @staticmethod
+    def fromPreviewEmbedToDict(embed: discord.Embed) -> dict:
+        """Generates event dict from preview embed."""
+        # Finds a field's position if found (int), if none found (None)
+        findFieldPos = lambda fieldName : None if embed.fields is None else (
+            indexes[0] if len(
+                indexes := [idx for idx, field in enumerate(embed.fields) if field.name is not None and field.name.startswith(fieldName)]
+            ) > 0 else None
+        )
 
-    async def buttonHandling(self, message: discord.Message | None, button: discord.ui.Button, interaction: discord.Interaction) -> None:
-        """ Handling all schedule button interactions.
+        outputDict = {
+            "authorId": None,
+            "title": embed.title,
+            "description": embed.description,
+            "externalURL": None if (findFieldPosURL := findFieldPos("External URL")) is None else embed.fields[findFieldPosURL].value,
+            "reservableRoles": None,
+            "maxPlayers": None,
+            "map": None if (findFieldPosMap := findFieldPos("Map")) is None else embed.fields[findFieldPosMap].value,
+            "time": None,
+            "endTime": None,
+            "duration": None if (findFieldPosDuration := findFieldPos("Duration")) is None else embed.fields[findFieldPosDuration].value,
+            "messageId": None,
+            "accepted": [],
+            "declined": [],
+            "tentative": [],
+            "type": [eventType for eventType in EVENT_TYPE_COLORS if EVENT_TYPE_COLORS[eventType] == embed.color][0] if embed.color in EVENT_TYPE_COLORS.values() else None
+        }
+
+        # Reservable Roles
+        fieldPos = findFieldPos("Reservable Roles")
+        if fieldPos is not None:
+            fieldResRolesValue = embed.fields[fieldPos].value
+            if fieldResRolesValue is not None:
+                outputDict["reservableRoles"] = {line[:-len(" - **VACANT**")]: None for line in fieldResRolesValue.split("\n")}
+
+        # Attendance / Max Players
+        fieldPos = findFieldPos("Accepted")
+        if fieldPos is None:
+            outputDict["maxPlayers"] = "hidden"
+        else:
+            fieldAcceptedName = embed.fields[fieldPos].name
+            fieldAcceptedValue = embed.fields[fieldPos].value
+            if fieldAcceptedName is not None and ("/" in fieldAcceptedName):  # Accepted (0/XX) ✅
+                limitFirstPart = fieldAcceptedName[fieldAcceptedName.index("/") + 1:]  # XX) ✅
+                outputDict["maxPlayers"] = int(limitFirstPart[:limitFirstPart.index(")")]) ## XX
+            elif fieldAcceptedValue is not None and fieldAcceptedValue == "\u200B":
+                outputDict["maxPlayers"] = "anonymous"
+
+        # Time
+        fieldPos = findFieldPos("Time")
+        if fieldPos is not None:
+            timeFieldValue = embed.fields[fieldPos].value
+            if timeFieldValue is not None:
+
+                matches = re.findall(r"(?<=<t:)\d+(?=:\w>)", timeFieldValue)
+                outputDict["time"] = datetime.fromtimestamp(float(matches[0])).astimezone(pytz.utc).strftime(TIME_FORMAT)
+                if len(matches) > 1:
+                    outputDict["endTime"] = datetime.fromtimestamp(float(matches[1])).astimezone(pytz.utc).strftime(TIME_FORMAT)
+
+        # Workshop Interest
+        if outputDict["type"] == "Workshop":
+            outputDict["workshopInterest"] = None
+            if embed.author.name is not None:
+                workshop = embed.author.name[len("Linking: "):]
+                outputDict["workshopInterest"] = None if workshop == "None" else workshop
+
+        return outputDict
+
+    def fromDictToPreviewEmbed(self, previewDict: dict) -> discord.Embed:
+        """Generates event dict from preview embed."""
+        # Title, Description, Color
+        embed = Embed(title=previewDict["title"], description=previewDict["description"], color=None if previewDict["type"] is None else EVENT_TYPE_COLORS[previewDict["type"]])
+
+        # Reservable Roles
+        if previewDict["reservableRoles"] is not None:
+            embed.add_field(name="\u200B", value="\u200B", inline=False)
+            embed.add_field(name=f"Reservable Roles (0/{len(previewDict['reservableRoles'])}) 👤", value="\n".join(f"{roleName} - **VACANT**" for roleName in previewDict["reservableRoles"]), inline=False)
+
+        # Padding: Time/Duration | ResRoles
+        if previewDict["time"] is not None or previewDict["duration"] is not None:
+            embed.add_field(name="\u200B", value="\u200B", inline=False)
+
+        # Time
+        if previewDict["time"] is not None:
+            hours = 0
+            endTime = "<Set Duration>"
+            if previewDict["duration"] is not None:
+                hours, minutes, delta = self.getDetailsFromDuration(previewDict["duration"])
+                endTime = discord.utils.format_dt(datetimeParse(previewDict["time"]).replace(tzinfo=pytz.utc) + delta, "t" if hours < 24 else "F")
+            embed.add_field(name="Time", value=f"{discord.utils.format_dt(datetimeParse(previewDict['time']).replace(tzinfo=pytz.utc), 'F')} - {endTime}", inline=(hours < 24))
+
+        # Duration
+        if previewDict["duration"] is not None:
+            embed.add_field(name="Duration", value=previewDict["duration"], inline=True)
+
+        # Map
+        if previewDict["map"] is not None:
+            embed.add_field(name="Map", value=previewDict["map"], inline=False)
+
+        # External URL
+        if previewDict["externalURL"] is not None:
+            embed.add_field(name="\u200B", value="\u200B", inline=False)
+            embed.add_field(name="External URL", value=previewDict["externalURL"], inline=False)
+        embed.add_field(name="\u200B", value="\u200B", inline=False)
+
+        # Author, Footer, Timestamp
+        guild = self.bot.get_guild(GUILD_ID)
+        if guild is None:
+            log.exception("Schedule fromDictToPreviewEmbed: guild is None")
+            return Embed(title="Error")
+        if previewDict["type"] == "Workshop" and "workshopInterest" in previewDict:
+            embed.set_author(name=f"Linking: {previewDict['workshopInterest']}")
+        embed.set_footer(text="Created by Unknown User" if (author := guild.get_member(previewDict["authorId"])) is None else f"Created by {author.display_name}")
+        if previewDict["time"] is not None:
+            embed.timestamp = UTC.localize(datetime.strptime(previewDict["time"], TIME_FORMAT))
+
+        # Attendance / Max Players
+        if previewDict["maxPlayers"] == "hidden":
+            return embed
+
+        fieldNameNumberSuffix = ""
+        if isinstance(previewDict["maxPlayers"], int):
+            fieldNameNumberSuffix = f"/{previewDict['maxPlayers']}"
+
+        fieldValue = "-" if previewDict["maxPlayers"] is None else "\u200B"
+        embed.add_field(name=f"Accepted (0{fieldNameNumberSuffix}) ✅", value=fieldValue, inline=True)
+        embed.add_field(name=f"Declined (0) ❌", value=fieldValue, inline=True)
+        embed.add_field(name=f"Tentative (0) ❓", value=fieldValue, inline=True)
+
+        return embed
+
+    def fromDictToPreviewView(self, previewDict: dict, selectedTemplate: str) -> discord.ui.View:
+        """Generates preview view from event dict."""
+        view = ScheduleView()
+        for label, data in SCHEDULE_EVENT_VIEW.items():
+            permittedEventTypesForTemplates = ("Workshop", "Event")
+
+            style = discord.ButtonStyle.secondary
+            previewDictKey = label.lower().replace("url", "URL").replace("linking", "workshopInterest").replace(" ", "")
+            if label == "Type" or (previewDictKey in previewDict and previewDict[previewDictKey] is not None):
+                style = discord.ButtonStyle.success
+            elif isinstance(data["customStyle"], discord.ButtonStyle):
+                style = data["customStyle"]
+            elif data["required"]:
+                style = discord.ButtonStyle.danger
+
+
+            button = ScheduleButton(
+                self,
+                None,
+                previewDict["authorId"],
+                style=style,
+                label=label,
+                custom_id=f"event_schedule_{label.lower().replace(' ', '_')}",
+                row=data["row"],
+                disabled=data["startDisabled"]
+            )
+
+            # (Un)lock buttons depending on current event type
+            if label == "Linking":
+                button.disabled = (previewDict["type"] != "Workshop")  # Only workshop
+
+            elif label == "Select Template: None":
+                button.label = f"Select Template: {selectedTemplate}"
+                # Quick disable if not permitted event type
+                if previewDict["type"] is None or previewDict["type"] not in permittedEventTypesForTemplates:
+                    button.disabled = True
+                else:
+                    # Disable if no templates exist
+                    filename = f"data/{previewDict['type'].lower()}Templates.json"
+                    jsonCreateNoExist(filename, [])
+                    with open(filename) as f:
+                        templates = json.load(f)
+                    button.disabled = len(templates) == 0
+
+            elif label == "Save As Template":
+                button.disabled = (previewDict["type"] not in permittedEventTypesForTemplates)
+
+            # Allow if correct type and template selected
+            elif label == "Update Template":
+                button.disabled = (selectedTemplate == "None") or (previewDict["type"] not in permittedEventTypesForTemplates)
+
+            view.add_item(button)
+
+        return view
+
+
+    @staticmethod
+    def isAllowedToEdit(user: discord.Member, eventAuthorId: int) -> bool:
+        """Is user allowed to edit event on schedule."""
+        return (user.id == eventAuthorId) or (user.id in DEVELOPERS) or any(role.id == UNIT_STAFF or role.id == SERVER_HAMSTER for role in user.roles)
+
+
+    async def buttonHandling(self, message: discord.Message | None, button: discord.ui.Button, interaction: discord.Interaction, authorId: int | None) -> None:
+        """Handling all schedule button interactions.
 
         Parameters:
         message (discord.Message | None): If the message is provided, it's used along with some specific button action.
         button (discord.ui.Button): The Discord button.
         interaction (discord.Interaction): The Discord interaction.
+        authorId (int | None): ID of user who executed the command.
 
         Returns:
         None.
@@ -471,8 +760,6 @@ class Schedule(commands.Cog):
             return
 
         try:
-            dmChannel = await self.checkDMChannel(interaction.user)
-
             with open(EVENTS_FILE) as f:
                 events = json.load(f)
 
@@ -599,7 +886,7 @@ class Schedule(commands.Cog):
                     log.exception("buttonHandling delete: button message is None")
                     return
 
-                embed = Embed(title=SCHEDULE_EVENT_CONFIRM_DELETE.format(f"{event['type'].lower()}: `{event['title']}`"), color=Color.orange())
+                embed = Embed(title=f"Are you sure you want to delete this {event['type'].lower()}: `{event['title']}`?", color=Color.orange())
                 view = ScheduleView()
                 items = [
                     ScheduleButton(self, message, row=0, label="Delete", style=discord.ButtonStyle.success, custom_id="delete_event_confirm"),
@@ -666,6 +953,293 @@ class Schedule(commands.Cog):
                 await interaction.followup.send(embed=Embed(title=f"❌ Event deletion canceled!", color=Color.red()), ephemeral=True)
                 return
 
+            elif button.custom_id is not None and button.custom_id.startswith("event_schedule_"):
+                if button.view is None:
+                    log.exception("Schedule buttonHandling: button.view is None")
+                    return
+
+                if interaction.user.id != authorId:
+                    await interaction.response.send_message(f"{interaction.user.mention} Only the one who executed the command may interact with the buttons!", ephemeral=True, delete_after=10.0)
+                    return
+
+                buttonLabel = button.custom_id[len("event_schedule_"):]
+
+                generateModal = lambda style, placeholder, default, required, minLength, maxLength: ScheduleModal(
+                        self, title="Create event", customId=f"modal_create_{buttonLabel}", eventMsg=interaction.message, view=button.view
+                    ).add_item(
+                        discord.ui.TextInput(
+                            label=buttonLabel.replace("_", " ").capitalize(), style=style, placeholder=placeholder, default=default, required=required, min_length=minLength, max_length=maxLength
+                        )
+                    )
+
+                previewEmbedDict = self.fromPreviewEmbedToDict(interaction.message.embeds[0])
+
+                isAllRequiredInfoFilled = lambda : len([child.label for child in button.view.children if isinstance(child, discord.ui.Button) and child.label != "Submit" and child.style == discord.ButtonStyle.danger and child.disabled == False]) == 0
+
+                match buttonLabel:
+                    # INFO FIELDS
+                    case "type":
+                        typeOptions = [
+                            discord.SelectOption(emoji="🟩", label="Operation"),
+                            discord.SelectOption(emoji="🟦", label="Workshop"),
+                            discord.SelectOption(emoji="🟨", label="Event")
+                        ]
+                        await interaction.response.send_message(interaction.user.mention, view=self.generateSelectView(
+                            typeOptions,
+                            False,
+                            previewEmbedDict["type"] or "",
+                            interaction.message,
+                            "Select event type.",
+                            "select_create_type",
+                            button.view
+                        ),
+                            ephemeral=True,
+                            delete_after=60.0
+                        )
+
+                    case "title":
+                        placeholder = "Operation Honda Civic" if previewEmbedDict["title"] == SCHEDULE_EVENT_PREVIEW_EMBED["title"] else previewEmbedDict["title"]
+                        default = None if previewEmbedDict["title"] == SCHEDULE_EVENT_PREVIEW_EMBED["title"] else previewEmbedDict["title"]
+                        await interaction.response.send_modal(generateModal(discord.TextStyle.short, placeholder, default, True, 1, 256))
+
+                    case "description":
+                        placeholder = "Wazzup beijing" if previewEmbedDict["description"] == SCHEDULE_EVENT_PREVIEW_EMBED["description"] else previewEmbedDict["description"]
+                        default = None if previewEmbedDict["description"] == SCHEDULE_EVENT_PREVIEW_EMBED["description"] else previewEmbedDict["description"]
+                        await interaction.response.send_modal(generateModal(discord.TextStyle.long, placeholder, default, True, 1, 4000))
+
+                    case "duration":
+                        placeholder = "2h30m" if previewEmbedDict["duration"] is None else previewEmbedDict["duration"]
+                        default = "" if previewEmbedDict["duration"] is None else previewEmbedDict["duration"]
+                        await interaction.response.send_modal(generateModal(discord.TextStyle.short, placeholder, default, True, 1, 16))
+
+                    case "time":
+                        # Set user time zone
+                        with open(MEMBER_TIME_ZONES_FILE) as f:
+                            memberTimeZones = json.load(f)
+                        if str(interaction.user.id) not in memberTimeZones:
+                            await interaction.response.send_message(f"{interaction.user.mention} Please retry after you've set a time zone in DMs!", ephemeral=True, delete_after=10.0)
+                            timeZoneOutput = await self.changeTimeZone(interaction.user)
+                            if timeZoneOutput is False:
+                                await interaction.followup.send(embed=Embed(title="❌ Timezone configuration canceled", description="You must provide a time zone in your DMs!", color=Color.red()))
+                            return
+
+                        timeZone = pytz.timezone(memberTimeZones[str(interaction.user.id)])
+                        nextHalfHour = datetime.utcnow() + (datetime.min - datetime.utcnow()) % timedelta(minutes=30)
+
+                        placeholder = UTC.localize(nextHalfHour).astimezone(timeZone).strftime(TIME_FORMAT)
+                        default = ""
+
+                        if previewEmbedDict["time"] is not None:
+                            default = placeholder = datetimeParse(previewEmbedDict["time"]).replace(tzinfo=pytz.utc).astimezone(timeZone).strftime(TIME_FORMAT)
+
+                        await interaction.response.send_modal(generateModal(
+                            style=discord.TextStyle.short,
+                            placeholder=placeholder,
+                            default=default,
+                            required=True,
+                            minLength=1,
+                            maxLength=32
+                        ))
+
+                    case "external_url":
+                        placeholder = "https://www.gnu.org" if previewEmbedDict["externalURL"] is None else previewEmbedDict["externalURL"]
+                        default = "" if previewEmbedDict["externalURL"] is None else previewEmbedDict["externalURL"]
+                        await interaction.response.send_modal(generateModal(discord.TextStyle.short, placeholder, default, False, None, 1024))
+
+                    case "reservable_roles":
+                        placeholder = "Actual\n2IC\nA-10C Pilot"
+                        default = ""
+                        if previewEmbedDict["reservableRoles"] is not None:
+                            default = placeholder = "\n".join(previewEmbedDict["reservableRoles"])
+
+                        await interaction.response.send_modal(generateModal(discord.TextStyle.long, placeholder, default, False, 1, 512))
+
+                    case "map":
+                        options = [discord.SelectOption(label=mapName) for mapName in MAPS]
+                        await interaction.response.send_message(interaction.user.mention, view=self.generateSelectView(
+                            options,
+                            True,
+                            previewEmbedDict["map"],
+                            interaction.message,
+                            "Select a map.",
+                            "select_create_map",
+                            button.view
+                        ),
+                            ephemeral=True,
+                            delete_after=60.0
+                        )
+
+                    case "max_players":
+                        default = str(previewEmbedDict["maxPlayers"])
+
+                        # Correct no input to default=""
+                        if previewEmbedDict["maxPlayers"] == "hidden" and button.style == discord.ButtonStyle.danger:
+                            default = ""
+
+                        await interaction.response.send_modal(generateModal(
+                            style=discord.TextStyle.short,
+                            placeholder="None / <Number> / Anonymous / Hidden",  # Always this so ppl know what to type
+                            default=default,
+                            required=True,
+                            minLength=1,
+                            maxLength=9
+                        ))
+
+                    case "linking":
+                        with open(WORKSHOP_INTEREST_FILE) as f:
+                            workshops = json.load(f)
+                        options = [discord.SelectOption(label=wsName) for wsName in workshops]
+                        await interaction.response.send_message(interaction.user.mention, view=self.generateSelectView(
+                            options,
+                            True,
+                            previewEmbedDict["workshopInterest"] if "workshopInterest" in previewEmbedDict else "",
+                            interaction.message,
+                            "Link event to a workshop.",
+                            "select_create_linking",
+                            button.view
+                        ),
+                            ephemeral=True,
+                            delete_after=60.0
+                        )
+
+
+                    # TEMPLATES
+                    case "save_as_template":
+                        if isAllRequiredInfoFilled() is False:
+                            await interaction.response.send_message(f"{interaction.user.mention} Before saving the event as a template, you need to fill out the mandatory (red buttons) information!", ephemeral=True, delete_after=10.0)
+                            return
+
+                        await interaction.response.send_modal(generateModal(
+                            style=discord.TextStyle.short,
+                            placeholder="Fixed Wing Workshop + Cert",
+                            default=None,
+                            required=True,
+                            minLength=1,
+                            maxLength=63  # (BUTTON_LABEL_MAX_LEN := 80) - len("Select Template: ")
+                        ))
+
+                    case "update_template":
+                        if isAllRequiredInfoFilled() is False:
+                            await interaction.response.send_message(f"{interaction.user.mention} Before updating the template, you need to fill out the mandatory (red buttons) information!", ephemeral=True, delete_after=10.0)
+                            return
+
+                        # Fetch template name from button label
+                        templateName = ""
+                        for child in button.view.children:
+                            if isinstance(child, discord.ui.Button) and child.label is not None and child.label.startswith("Select Template"):
+                                templateName = "".join(child.label.split(":")[1:]).strip()
+                                break
+                        if templateName == "":
+                            log.exception("Schedule buttonHandling: templateName == \"\"")
+                            return
+                        log.info(f"{interaction.user} updated the template: {templateName}")
+                        # Write to file
+                        filename = f"data/{previewEmbedDict['type'].lower()}Templates.json"
+                        jsonCreateNoExist(filename, [])
+                        with open(filename) as f:
+                            templates = json.load(f)
+
+                        templateIndex = None
+                        for idx, template in enumerate(templates):
+                            if template["templateName"] == templateName:
+                                templateIndex = idx
+                                break
+                        else:
+                            log.exception("Schedule buttonHandling: templateIndex not found")
+                            return
+
+                        previewEmbedDict["authorId"] = interaction.user.id
+                        previewEmbedDict["templateName"] = templateName
+                        previewEmbedDict["time"] = previewEmbedDict["endTime"] = None
+                        templates[templateIndex] = previewEmbedDict
+                        with open(filename, "w") as f:
+                            json.dump(templates, f, indent=4)
+
+                        # Reply
+                        await interaction.response.send_message(f"✅ Updated template: `{templateName}`", ephemeral=True, delete_after=10.0)
+
+
+                    # EVENT FINISHING
+                    case "submit":
+                        # Check if all mandatory fields are filled
+                        if isAllRequiredInfoFilled() is False:
+                            await interaction.response.send_message(f"{interaction.user.mention} Before creating the event, you need to fill out the mandatory (red buttons) information!", ephemeral=True, delete_after=10.0)
+                            return
+
+                        # Append event to JSON
+                        jsonCreateNoExist(EVENTS_FILE, [])
+                        with open(EVENTS_FILE) as f:
+                            events = json.load(f)
+                        previewEmbedDict["authorId"] = interaction.user.id
+                        events.append(previewEmbedDict)
+                        with open(EVENTS_FILE, "w") as f:
+                            json.dump(events, f, indent=4)
+
+                        # Reply
+                        await interaction.response.edit_message(content=f"`{previewEmbedDict['title']}` is now on <#{SCHEDULE}>!", embed=None, view=None)
+
+                        # Update schedule
+                        await self.updateSchedule()
+
+                    case "cancel":
+                        embed = Embed(title="Are you sure you want to cancel this event scheduling?", color=Color.orange())
+                        view = ScheduleView()
+                        items = [
+                            ScheduleButton(self, interaction.message, interaction.user.id, row=0, label="Cancel", style=discord.ButtonStyle.success, custom_id="event_schedule_cancel_confirm"),
+                            ScheduleButton(self, interaction.message, interaction.user.id, row=0, label="No, I changed my mind", style=discord.ButtonStyle.danger, custom_id="event_schedule_cancel_decline"),
+                        ]
+                        for item in items:
+                            view.add_item(item)
+                        await interaction.response.send_message(embed=embed, view=view, ephemeral=True, delete_after=60.0)
+
+                    case "cancel_confirm":
+                        if message is None:
+                            log.exception("Schedule buttonHandling: message is None")
+                            return
+                        for child in button.view.children:
+                            if isinstance(child, discord.ui.Button):
+                                child.disabled = True
+                        await interaction.response.edit_message(view=button.view)
+                        await message.edit(content="Nvm guys, didn't wanna bop.", embed=None, view=None)
+
+                    case "cancel_decline":
+                        if message is None:
+                            log.exception("Schedule buttonHandling: message is None")
+                            return
+                        for child in button.view.children:
+                            if isinstance(child, discord.ui.Button):
+                                child.disabled = True
+                        await interaction.response.edit_message(view=button.view)
+                        await interaction.followup.send(content="Alright, I won't cancel the scheduling.", ephemeral=True)
+
+                if buttonLabel.startswith("select_template"):
+                    filename = f"data/{previewEmbedDict['type'].lower()}Templates.json"
+                    jsonCreateNoExist(filename, [])
+                    with open(filename) as f:
+                        templates = json.load(f)
+
+                    options = [discord.SelectOption(label=template["templateName"], description=template["description"][:100]) for template in templates]
+                    setOptionLabel = ""
+                    for child in button.view.children:
+                        if isinstance(child, discord.ui.Button) and child.label is not None and child.label.startswith("Select Template"):
+                            setOptionLabel = "".join(child.label.split(":")[1:]).strip()
+
+                    await interaction.response.send_message(interaction.user.mention, view=self.generateSelectView(
+                        options,
+                        True,
+                        setOptionLabel,
+                        interaction.message,
+                        "Select a template.",
+                        "select_create_select_template",
+                        button.view
+                    ),
+                        ephemeral=True,
+                        delete_after=60.0
+                    )
+
+
+                return
+
 
             if scheduleNeedsUpdate:
                 try:
@@ -688,15 +1262,17 @@ class Schedule(commands.Cog):
         except Exception as e:
             log.exception(f"{interaction.user} | {e}")
 
-    def generateSelectView(self, options: list[discord.SelectOption], noneOption: bool, setOptionLabel: str, eventMsg: discord.Message, placeholder: str, customId: str):
-        """ Generates good select menu view - ceil(len(options)/25) dropdowns.
+    def generateSelectView(self, options: list[discord.SelectOption], noneOption: bool, setOptionLabel: str, eventMsg: discord.Message, placeholder: str, customId: str, eventMsgView: discord.ui.View | None = None):
+        """Generates good select menu view - ceil(len(options)/25) dropdowns.
 
         Parameters:
         options (list[discord.SelectOption]): All select menu options
-        setOptionLabel (str): Removes first option that has this string as label.
+        noneOption (bool): Adds an option for None.
+        setOptionLabel (str): Removes this (selected) option from the options.
         eventMsg (discord.Message): The event message.
-        placeholder (str): Placeholder string of select menus.
+        placeholder (str): Menu placeholder.
         customId (str): Custom ID of select menu.
+        eventMsgView (discord.ui.View | None = None): Optional view of eventMsg
 
         Returns:
         None.
@@ -714,18 +1290,19 @@ class Schedule(commands.Cog):
         # Generate view
         view = ScheduleView()
         for i in range(ceil(len(options) / 25)):
-            view.add_item(ScheduleSelect(instance=self, eventMsg=eventMsg, placeholder=placeholder, minValues=1, maxValues=1, customId=f"{customId}_REMOVE{i}", row=i, options=options[:25]))
+            view.add_item(ScheduleSelect(instance=self, eventMsg=eventMsg, placeholder=placeholder, minValues=1, maxValues=1, customId=f"{customId}_REMOVE{i}", row=i, options=options[:25], eventMsgView=eventMsgView))
             options = options[25:]
 
         return view
 
-    async def selectHandling(self, select: discord.ui.Select, interaction: discord.Interaction, eventMsg: discord.Message) -> None:
-        """ Handling all schedule select menu interactions.
+    async def selectHandling(self, select: discord.ui.Select, interaction: discord.Interaction, eventMsg: discord.Message, eventMsgView: discord.ui.View | None) -> None:
+        """Handling all schedule select menu interactions.
 
         Parameters:
         select (discord.ui.Select): The Discord select menu
         interaction (discord.Interaction): The Discord interaction.
         eventMsg (discord.Message): The event message.
+        eventMsgView (discord.ui.View | None): The event message view.
 
         Returns:
         None.
@@ -735,7 +1312,114 @@ class Schedule(commands.Cog):
             log.exception("Schedule SelectHandling: interaction.user is not discord.Member")
             return
 
-        if select.custom_id == "reserve_role_select":
+        selectedValue = select.values[0]
+
+        if select.custom_id.startswith("select_create_"):
+            if eventMsgView is None:
+                log.exception("Schedule SelectHandling: eventMsgView is None")
+                return
+
+            infoLabel = select.custom_id[len("select_create_"):].split("_REMOVE")[0]  # e.g. "type"
+
+            # Disable all discord.ui.Item
+            if select.view is None:
+                log.exception("Schedule SelectHandling: select.view is None")
+                return
+            for child in select.view.children:
+                child.disabled = True
+            await interaction.response.edit_message(view=select.view)
+
+            previewEmbedDict = self.fromPreviewEmbedToDict(eventMsg.embeds[0])
+            previewEmbedDict["authorId"] = interaction.user.id
+
+
+            # Do preview embed edits
+            if infoLabel == "type":
+                previewEmbedDict["type"] = selectedValue
+
+                templateName = "None"
+                # Fetch templateName
+                for child in eventMsgView.children:
+                    if isinstance(child, discord.ui.Button) and child.label is not None and child.label.startswith("Select Template: "):
+                        templateName = ":".join(child.label.split(":")[1:]).strip()
+                        break
+
+                # Update view
+                previewView = self.fromDictToPreviewView(previewEmbedDict, templateName)
+                eventMsgView.clear_items()
+                for item in previewView.children:
+                    eventMsgView.add_item(item)
+
+            elif infoLabel == "map":
+                previewEmbedDict["map"] = None if previewEmbedDict["map"] == "None" else selectedValue
+
+            elif infoLabel == "linking":
+                previewEmbedDict["workshopInterest"] = None if selectedValue == "None" else selectedValue
+
+            elif infoLabel == "select_template":
+                # Update template buttons label & disabled
+                for child in eventMsgView.children:
+                    if not isinstance(child, discord.ui.Button) or child.label is None:
+                        continue
+                    if child.label.startswith("Select Template"):
+                        child.label = f"Select Template: {selectedValue}"
+                    elif child.label == "Update Template":
+                        child.disabled = (selectedValue == "None")
+
+                # Insert template info into preview embed and view
+                filename = f"data/{previewEmbedDict['type'].lower()}Templates.json"
+                jsonCreateNoExist(filename, [])
+                with open(filename) as f:
+                    templates = json.load(f)
+                for template in templates:
+                    if template["templateName"] == selectedValue:
+                        embed = self.fromDictToPreviewEmbed(template)
+                        for child in eventMsgView.children:
+                            if not isinstance(child, discord.ui.Button) or child.label is None:
+                                continue
+
+                            # Time is required but will not be saved in templates
+                            if child.label == "Time":
+                                child.style = discord.ButtonStyle.danger
+                                continue
+
+                            # All required fields are already filled
+                            if child.style == discord.ButtonStyle.danger or child.label == "Type":
+                                child.style = discord.ButtonStyle.success
+                                continue
+
+                            # Linking
+                            if child.label == "Linking":
+                                if embed.footer.icon_url is not None:
+                                    child.style = discord.ButtonStyle.success
+                                    continue
+
+                            # Ignore template buttons
+                            if "Template" in child.label or child.style == discord.ButtonStyle.primary:
+                                continue
+
+                            # Optional fields
+                            jsonKey = (child.label[0].lower() + child.label[1:]).replace(" ", "")
+                            if jsonKey == "linking":
+                                jsonKey = "workshopInterest"
+                            child.style = discord.ButtonStyle.secondary if template[jsonKey] is None else discord.ButtonStyle.success
+
+                        await eventMsg.edit(embed=embed, view=eventMsgView)
+                        return
+
+
+            # Update eventMsg button style
+            for child in eventMsgView.children:
+                if isinstance(child, discord.ui.Button) and child.label is not None and child.label.lower().replace(" ", "_") == infoLabel:
+                    child.style = discord.ButtonStyle.success
+                    break
+
+            # Edit preview embed & view
+            await eventMsg.edit(embed=self.fromDictToPreviewEmbed(previewEmbedDict), view=eventMsgView)
+
+
+
+        elif select.custom_id == "reserve_role_select":
             # Disable all discord.ui.Item
             if select.view is None:
                 log.exception("selectHandling select.view is None")
@@ -755,8 +1439,8 @@ class Schedule(commands.Cog):
                     break
 
             # Reserve desired role
-            event["reservableRoles"][select.values[0]] = interaction.user.id
-            await interaction.followup.send(embed=Embed(title=f"✅ Role reserved: `{select.values[0]}`", color=Color.green()), ephemeral=True)
+            event["reservableRoles"][selectedValue] = interaction.user.id
+            await interaction.followup.send(embed=Embed(title=f"✅ Role reserved: `{selectedValue}`", color=Color.green()), ephemeral=True)
 
             # Put the user in accepted
             if interaction.user.id in event["declined"]:
@@ -781,15 +1465,14 @@ class Schedule(commands.Cog):
                 await interaction.response.send_message("Please restart the editing process.", ephemeral=True, delete_after=60.0)
                 return
 
-            editOption = select.values[0]
             eventType = event.get("type", "Operation")
-            dmChannel = interaction.user.dm_channel
-            if dmChannel is None:
-                log.exception("SelectHandling: dmChannel is None")
-                return
+            #dmChannel = interaction.user.dm_channel
+            #if dmChannel is None:
+            #    log.exception("SelectHandling: dmChannel is None")
+            #    return
 
             # Editing Type
-            if editOption == "Type":
+            if selectedValue == "Type":
                 options = [
                     discord.SelectOption(emoji="🟩", label="Operation"),
                     discord.SelectOption(emoji="🟦", label="Workshop"),
@@ -799,75 +1482,59 @@ class Schedule(commands.Cog):
 
                 await interaction.response.send_message(view=view, ephemeral=True, delete_after=60.0)
 
-            # TODO Editing Template Name
-            #elif editOption == "Template Name":
-            #    embed = Embed(title=SCHEDULE_EVENT_TEMPLATE_SAVE_NAME_QUESTION, color=Color.gold())
-            #    embed.set_footer(text=SCHEDULE_CANCEL)
-            #    await interaction.user.send(embed=embed)
-            #    try:
-            #        response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, author=interaction.user, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
-            #        templateName = response.content.strip()
-            #        if templateName.lower() == "cancel":
-            #            await self.cancelCommand(dmChannel, "Event editing")
-            #            return None
-            #    except asyncio.TimeoutError:
-            #        await interaction.user.send(embed=TIMEOUT_EMBED)
-            #        return None
-            #    event["name"] = templateName
-
             # Editing Title
-            elif editOption == "Title":
+            elif selectedValue == "Title":
                 modal = ScheduleModal(self, "Title", "modal_title", eventMsg)
                 modal.add_item(discord.ui.TextInput(label="Title", default=event["title"], placeholder="Operation Honda Civic", min_length=1, max_length=256))
                 await interaction.response.send_modal(modal)
 
             # Editing Linking
-            elif editOption == "Linking":
+            elif selectedValue == "Linking":
                 with open(WORKSHOP_INTEREST_FILE) as f:
                     wsIntOptions = json.load(f).keys()
 
                 options = [discord.SelectOption(label=wsName) for wsName in wsIntOptions]
-                view = self.generateSelectView(options, True, event["map"], eventMsg, "Select a map.", "edit_select_map")
+                view = self.generateSelectView(options, True, event["map"], eventMsg, "Link event to a workshop.", "edit_select_linking")
                 await interaction.response.send_message(view=view, ephemeral=True, delete_after=60.0)
 
             # Editing Description
-            elif editOption == "Description":
+            elif selectedValue == "Description":
                 modal = ScheduleModal(self, "Description", "modal_description", eventMsg)
                 modal.add_item(discord.ui.TextInput(style=discord.TextStyle.long, label="Description", default=event["description"], placeholder="Bomb oogaboogas", min_length=1, max_length=4000))
                 await interaction.response.send_modal(modal)
 
             # Editing URL
-            elif editOption == "External URL":
+            elif selectedValue == "External URL":
                 modal = ScheduleModal(self, "External URL", "modal_externalURL", eventMsg)
                 modal.add_item(discord.ui.TextInput(style=discord.TextStyle.long, label="URL", default=event["externalURL"], placeholder="OPORD: https://www.gnu.org/", max_length=1024, required=False))
                 await interaction.response.send_modal(modal)
 
             # Editing Reservable Roles
-            elif editOption == "Reservable Roles":
+            elif selectedValue == "Reservable Roles":
                 modal = ScheduleModal(self, "Reservable Roles", "modal_reservableRoles", eventMsg)
-                modal.add_item(discord.ui.TextInput(style=discord.TextStyle.long, label="Reservable Roles", default=(None if event["reservableRoles"] is None else "\n".join(event["reservableRoles"].keys())), placeholder="Co-Zeus\nActual\nJTAC\nF-35A Pilot", max_length=500, required=False))
+                modal.add_item(discord.ui.TextInput(style=discord.TextStyle.long, label="Reservable Roles", default=(None if event["reservableRoles"] is None else "\n".join(event["reservableRoles"].keys())), placeholder="Co-Zeus\nActual\nJTAC\nF-35A Pilot", max_length=512, required=False))
                 await interaction.response.send_modal(modal)
 
             # Editing Map
-            elif editOption == "Map":
+            elif selectedValue == "Map":
                 options = [discord.SelectOption(label=mapName) for mapName in MAPS]
                 view = self.generateSelectView(options, True, event["map"], eventMsg, "Select a map.", "edit_select_map")
                 await interaction.response.send_message(view=view, ephemeral=True, delete_after=60.0)
 
             # Editing Attendence
-            elif editOption == "Max Players":
+            elif selectedValue == "Max Players":
                 modal = ScheduleModal(self, "Attendees", "modal_maxPlayers", eventMsg)
                 modal.add_item(discord.ui.TextInput(label="Attendees", default=event["maxPlayers"], placeholder="Number / None / Anonymous / Hidden", min_length=1, max_length=9))
                 await interaction.response.send_modal(modal)
 
             # Editing Duration
-            elif editOption == "Duration":
+            elif selectedValue == "Duration":
                 modal = ScheduleModal(self, "Duration", "modal_duration", eventMsg)
-                modal.add_item(discord.ui.TextInput(label="Duration", default=event["duration"], placeholder="2h30m", min_length=1, max_length=256))
+                modal.add_item(discord.ui.TextInput(label="Duration", default=event["duration"], placeholder="2h30m", min_length=1, max_length=16))
                 await interaction.response.send_modal(modal)
 
             # Editing Time
-            elif editOption == "Time":
+            elif selectedValue == "Time":
                 # Set user time zone
                 with open(MEMBER_TIME_ZONES_FILE) as f:
                     memberTimeZones = json.load(f)
@@ -875,15 +1542,13 @@ class Schedule(commands.Cog):
                     await interaction.response.send_message("Please retry after you've set a time zone in DMs!", ephemeral=True, delete_after=60.0)
                     timeZoneOutput = await self.changeTimeZone(interaction.user)
                     if timeZoneOutput is False:
-                        await interaction.response.send_message(embed=Embed(title="❌ Event Editing canceled", description="You must provide a time zone in your DMs!", color=Color.red()))
+                        await interaction.followup.send(embed=Embed(title="❌ Event Editing canceled", description="You must provide a time zone in your DMs!", color=Color.red()))
                     return
 
                 # Send modal
-                with open(MEMBER_TIME_ZONES_FILE) as f:
-                    memberTimeZones = json.load(f)
                 timeZone = pytz.timezone(memberTimeZones[str(interaction.user.id)])
                 modal = ScheduleModal(self, "Time", "modal_time", eventMsg)
-                modal.add_item(discord.ui.TextInput(label="Time", default=datetimeParse(event["time"]).replace(tzinfo=UTC).astimezone(timeZone).strftime(TIME_FORMAT), placeholder="2069-04-20 04:20 PM", min_length=1, max_length=256))
+                modal.add_item(discord.ui.TextInput(label="Time", default=datetimeParse(event["time"]).replace(tzinfo=UTC).astimezone(timeZone).strftime(TIME_FORMAT), placeholder="2069-04-20 04:20 PM", min_length=1, max_length=32))
                 await interaction.response.send_modal(modal)
 
             log.info(f"{interaction.user.display_name} ({interaction.user}) edited the event: {event['title'] if 'title' in event else event['name']}.")
@@ -894,7 +1559,7 @@ class Schedule(commands.Cog):
                 events = json.load(f)
 
             eventKey = select.custom_id[len("edit_select_"):].split("_REMOVE")[0]
-            eventValue = None if select.values[0] == "None" else select.values[0]
+            eventValue = None if selectedValue == "None" else selectedValue
 
             event = [event for event in events if event["messageId"] == eventMsg.id][0]
             event[eventKey] = eventValue
@@ -905,14 +1570,126 @@ class Schedule(commands.Cog):
             await eventMsg.edit(embed=self.getEventEmbed(event))
             await interaction.response.send_message(embed=Embed(title="✅ Event edited", color=Color.green()), ephemeral=True, delete_after=5.0)
 
-    async def modalHandling(self, modal: discord.ui.Modal, interaction: discord.Interaction, eventMsg: discord.Message) -> None:
+    async def modalHandling(self, modal: discord.ui.Modal, interaction: discord.Interaction, eventMsg: discord.Message, view: discord.ui.View | None) -> None:
         if not isinstance(interaction.user, discord.Member):
             log.exception("Schedule modalHandling: interaction.user is not discord.Member")
             return
+        value = modal.children[0].value.strip()
+
+        # == Creating Event ==
+
+        if modal.custom_id.startswith("modal_create_") and view is not None:
+            infoLabel = modal.custom_id[len("modal_create_"):]
+
+            # Update embed
+            previewEmbedDict = self.fromPreviewEmbedToDict(eventMsg.embeds[0])
+            previewEmbedDict["authorId"] = interaction.user.id
+
+            match infoLabel:
+                case "title":
+                    previewEmbedDict["title"] = SCHEDULE_EVENT_PREVIEW_EMBED["title"] if value == "" else value
+
+                case "description":
+                    previewEmbedDict["description"] = SCHEDULE_EVENT_PREVIEW_EMBED["description"] if value == "" else value
+
+                case "duration":
+                    if not re.match(r"^\s*((([1-9]\d*)?\d\s*h(\s*([0-5])?\d\s*m?)?)|(([0-5])?\d\s*m))\s*$", value):
+                        await interaction.response.send_message(interaction.user.mention, embed=EMBED_INVALID, ephemeral=True, delete_after=10.0)
+                        return
+
+                    hours, minutes, delta = self.getDetailsFromDuration(value)
+                    previewEmbedDict["duration"] = f"{(str(hours) + 'h')*(hours != 0)}{' '*(hours != 0 and minutes !=0)}{(str(minutes) + 'm')*(minutes != 0)}"
+
+                case "time":
+                    # Basic premise
+                    with open(MEMBER_TIME_ZONES_FILE) as f:
+                        memberTimeZones = json.load(f)
+                    timeZone = pytz.timezone(memberTimeZones[str(interaction.user.id)])
+                    try:
+                        startTime = datetimeParse(value)
+                    except Exception:
+                        await interaction.response.send_message(interaction.user.mention, embed=EMBED_INVALID, ephemeral=True, delete_after=10.0)
+                        return
+
+                    # Set time
+                    startTime = timeZone.localize(startTime).astimezone(pytz.utc)
+                    previewEmbedDict["time"] = startTime.strftime(TIME_FORMAT)
+                    previewEmbedDict["endTime"] = None
+                    # Set endTime if duration available
+                    if previewEmbedDict["duration"] is not None:
+                        hours, minutes, delta = self.getDetailsFromDuration(previewEmbedDict["duration"])
+                        previewEmbedDict["endTime"] = (startTime + delta).strftime(TIME_FORMAT)
+
+                case "external_url":
+                    previewEmbedDict["externalURL"] = value or None
+
+                case "reservable_roles":
+                    previewEmbedDict["reservableRoles"] = None if value == "" else {role: None for role in value.split("\n")}
+
+                case "max_players":
+                    valueLower = value.lower()
+                    if valueLower not in ("none", "hidden", "anonymous") and not value.isdigit():
+                        await interaction.response.send_message(embed=EMBED_INVALID, ephemeral=True, delete_after=10.0)
+                        return
+
+                    if valueLower == "none":
+                        previewEmbedDict["maxPlayers"] = None
+                    elif value.isdigit():
+                        previewEmbedDict["maxPlayers"] = 50 if int(value) > MAX_SERVER_ATTENDANCE else int(value)
+                    else:
+                        previewEmbedDict["maxPlayers"] = valueLower
+
+                case "save_as_template":
+                    # Write to file
+                    filename = f"data/{previewEmbedDict['type'].lower()}Templates.json"
+                    jsonCreateNoExist(filename, [])
+                    with open(filename) as f:
+                        templates = json.load(f)
+                    templateOverwritten = (False, 0)
+                    for idx, template in enumerate(templates):
+                        if template["title"] == previewEmbedDict["title"]:
+                            templateOverwritten = (True, idx)
+                            break
+                    log.info(f"{interaction.user} saved {('[Overwritten] ') * templateOverwritten[0]}a template as: {previewEmbedDict['title']}")
+                    if templateOverwritten[0]:
+                        templates.pop(templateOverwritten[1])
+                    previewEmbedDict["templateName"] = value
+                    previewEmbedDict["time"] = previewEmbedDict["endTime"] = None
+                    templates.append(previewEmbedDict)
+                    with open(filename, "w") as f:
+                        json.dump(templates, f, indent=4)
+
+                    # Update label
+                    for child in view.children:
+                        if not isinstance(child, discord.ui.Button) or child.label is None:
+                            continue
+                        if child.label.startswith("Select Template"):
+                            child.label = f"Select Template: {value}"
+                            child.disabled = False
+                        elif child.label == "Update Template":
+                            child.disabled = False
+
+                    # Reply & edit msg
+                    await interaction.response.send_message(f"✅ Saved {('[Overwritten] ') * templateOverwritten[0]}template as: `{value}`", ephemeral=True, delete_after=10.0)
+                    await eventMsg.edit(view=view)
+                    return
+
+            # Update button style
+            for child in view.children:
+                if isinstance(child, discord.ui.Button) and child.label is not None and child.label.lower().replace(" ", "_") == infoLabel:
+                    if value == "":
+                        child.style = discord.ButtonStyle.danger if SCHEDULE_EVENT_VIEW[infoLabel.replace("_", " ").title().replace("Url", "URL")]["required"] else discord.ButtonStyle.secondary
+                    else:
+                        child.style = discord.ButtonStyle.success
+                    break
+
+            await interaction.response.edit_message(embed=self.fromDictToPreviewEmbed(previewEmbedDict), view=view)
+            return
+
+        # == Editing Event ==
 
         with open(EVENTS_FILE) as f:
             events = json.load(f)
-        value = modal.children[0].value
         event = [event for event in events if event["messageId"] == eventMsg.id][0]
 
         if value == "":
@@ -940,7 +1717,7 @@ class Schedule(commands.Cog):
             elif value.isdigit() and 1 < int(value) < MAX_SERVER_ATTENDANCE:
                 event["maxPlayers"] = int(value)
             else:
-                await interaction.response.send_message(embed=Embed(title="❌ That ain't a valid response bruh", color=Color.red()), ephemeral=True, delete_after=10.0)
+                await interaction.response.send_message(interaction.user.mention, embed=EMBED_INVALID, ephemeral=True, delete_after=10.0)
                 return
 
         elif modal.custom_id == "modal_duration":
@@ -960,7 +1737,7 @@ class Schedule(commands.Cog):
             try:
                 startTime = datetimeParse(value)
             except ValueError:
-                await interaction.response.send_message(embed=Embed(title="❌ That ain't a valid response bruh", color=Color.red()), ephemeral=True, delete_after=10.0)
+                await interaction.response.send_message(interaction.user.mention, embed=EMBED_INVALID, ephemeral=True, delete_after=10.0)
                 return
 
             with open(MEMBER_TIME_ZONES_FILE) as f:
@@ -978,12 +1755,12 @@ class Schedule(commands.Cog):
                 log.exception("editEvent: guild is None")
                 return None
 
-            embed = Embed(title=f":clock3: The starting time has changed for: {event['title']}!", description=f"From: {discord.utils.format_dt(UTC.localize(datetime.strptime(startTimeOld, TIME_FORMAT)), style='F')}\n\u2000\u2000To: {discord.utils.format_dt(UTC.localize(datetime.strptime(event['time'], TIME_FORMAT)), style='F')}", color=Color.orange())
+            previewEmbed = Embed(title=f":clock3: The starting time has changed for: {event['title']}!", description=f"From: {discord.utils.format_dt(UTC.localize(datetime.strptime(startTimeOld, TIME_FORMAT)), style='F')}\n\u2000\u2000To: {discord.utils.format_dt(UTC.localize(datetime.strptime(event['time'], TIME_FORMAT)), style='F')}", color=Color.orange())
             for memberId in event["accepted"] + event["declined"] + event["tentative"]:
                 member = guild.get_member(memberId)
                 if member is not None:
                     try:
-                        await member.send(embed=embed)
+                        await member.send(embed=previewEmbed)
                     except Exception as e:
                         log.exception(f"{member} | {e}")
 
@@ -1022,7 +1799,7 @@ class Schedule(commands.Cog):
 
             with open(EVENTS_FILE, "w") as f:
                 json.dump(sortedEvents, f, indent=4)
-            await interaction.response.send_message(embed=Embed(title="✅ Event edited", color=Color.green()), ephemeral=True, delete_after=5.0)
+            await interaction.response.send_message(interaction.user.mention, embed=Embed(title="✅ Event edited", color=Color.green()), ephemeral=True, delete_after=5.0)
             return
 
 
@@ -1033,240 +1810,11 @@ class Schedule(commands.Cog):
             json.dump(events, f, indent=4)
 
         await eventMsg.edit(embed=self.getEventEmbed(event), view=self.getEventView(event))
-        await interaction.response.send_message(embed=Embed(title="✅ Event edited", color=Color.green()), ephemeral=True, delete_after=5.0)
+        await interaction.response.send_message(interaction.user.mention, embed=Embed(title="✅ Event edited", color=Color.green()), ephemeral=True, delete_after=5.0)
 
-    async def eventTitle(self, interaction: discord.Interaction, eventType: str, isOperation:bool = False) -> str | None:
-        """ Handles the title part of scheduling an event.
-
-        Parameters:
-        interaction (discord.Interaction): The Discord interaction.
-        eventType (str): The type of event, e.g. Operation.
-        isOperation (bool): If it's an operation (add description & name generation).
-
-        Returns:
-        str | None: str if title, None if error.
-        """
-
-        dmChannel = await self.checkDMChannel(interaction.user)
-        color = Color.gold()
-        while True:
-            embed = Embed(title=f":pencil2: What is the title of your {eventType}?", description=None if isOperation is False else "Operation names should start with the word `Operation`.\nE.g. Operation Red Tide.\n\nEnter `regenerate` to renew the generated operation names.", color=color)
-            embed.set_footer(text=SCHEDULE_CANCEL)
-
-            # Add generated operation names
-            if isOperation is True:
-                with open(OPERATION_NAME_ADJECTIVES) as f:
-                    adjectives = f.readlines()
-                    adj = [random.choice(adjectives).strip("\n") for _ in range(10)]
-
-                with open(OPERATION_NAME_NOUNS) as f:
-                    nouns = f.readlines()
-                    nou = [random.choice(nouns).strip("\n") for _ in range(10)]
-
-                titles = [f"{adj[i].capitalize()} {nou[i].capitalize()}" for i in range(10)]
-                embed.add_field(name="Generated Operation Names", value="\n".join(titles))
-
-            await dmChannel.send(embed=embed)
-            color = Color.orange()
-            try:
-                response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, interaction=interaction, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == interaction.user)
-                title = response.content.strip()
-                if title.lower() == "cancel" or title == "":
-                    await self.cancelCommand(dmChannel, f"{eventType} scheduling")
-                    return None
-            except asyncio.TimeoutError:
-                await dmChannel.send(embed=TIMEOUT_EMBED)
-                return None
-
-            if isOperation is False or title.lower() != "regenerate":
-                return title.replace("\n", "")
-
-    async def eventDescription(self, interaction: discord.Interaction, eventType: str, currentDesc: str = "") -> str | None:
-        """ Handles the description part of scheduling an event.
-
-        Parameters:
-        interaction (discord.Interaction): The Discord interaction.
-        eventType (str): The type of event, e.g. Operation.
-        currentDesc (str): Already set description; will be prompted.
-
-        Returns:
-        str | None: str if description, None if error.
-        """
-
-        dmChannel = await self.checkDMChannel(interaction.user)
-        embed = Embed(title=":notepad_spiral: What is the description?", description=None if currentDesc == "" else f"Current description:\n```{currentDesc[:4000]}\n```", color=Color.gold())
-        embed.set_footer(text=SCHEDULE_CANCEL)
-        await dmChannel.send(embed=embed)
-
-        try:
-            response = await self.bot.wait_for("message", timeout=TIME_THIRTY_MIN, check=lambda msg, interaction=interaction, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == interaction.user)
-            description = response.content.strip()
-            if description.lower() == "cancel":
-                await self.cancelCommand(dmChannel, f"{eventType} scheduling")
-                return None
-        except asyncio.TimeoutError:
-            await dmChannel.send(embed=TIMEOUT_EMBED)
-            return None
-
-        return description
-
-    async def eventURL(self, interaction: discord.Interaction, eventType: str) -> bool | str | None:
-        """ Handles the URL part of scheduling an event.
-
-        Parameters:
-        interaction (discord.Interaction): The Discord interaction.
-        eventType (str): The type of event, e.g. Operation.
-
-        Returns:
-        bool | str | None: False if error, str if URL, None if no URL.
-        """
-
-        dmChannel = await self.checkDMChannel(interaction.user)
-        embed = Embed(title=":notebook_with_decorative_cover: Enter `none` or a URL", description="E.g. Signup sheet, Briefing, OPORD, etc.", color=Color.gold())
-        embed.set_footer(text=SCHEDULE_CANCEL)
-        await dmChannel.send(embed=embed)
-        try:
-            response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, interaction=interaction, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == interaction.user)
-            externalURL = response.content.strip()
-            if externalURL.lower() == "cancel":
-                await self.cancelCommand(dmChannel, f"{eventType} scheduling")
-                return False
-            if externalURL.lower() == "none" or externalURL == "":
-                return None
-        except asyncio.TimeoutError:
-            await dmChannel.send(embed=TIMEOUT_EMBED)
-            return False
-
-        return externalURL
-
-    async def eventReserveRole(self, interaction: discord.Interaction, eventType: str, currentRoles: str | None = None, event: dict | None = None) -> bool | dict | None:
-        """ Handles the reservable roles part of scheduling an event.
-
-        Parameters:
-        interaction (discord.Interaction): The Discord interaction.
-        eventType (str): The type of event, e.g. Operation.
-        currentRoles (str | None): Already set roles; will be prompted.
-        event (dict | None): Sent along with currentRoles.
-
-        Returns:
-        bool | dict | None: False if error, dict if roles (role names as keys), None if no roles.
-        """
-
-        dmChannel = await self.checkDMChannel(interaction.user)
-        color = Color.gold()
-        while True:
-            embed = Embed(title="Reservable Roles", description="Enter `none` if there are none.\n\nOtherwise, type each reservable role in a new line (Shift + Enter)." + ("" if currentRoles is None else "\n(Editing the name of a role will make it vacant, but roles which keep their exact names will keep their reservations)."), color=color)
-            if currentRoles is not None:
-                embed.add_field(name="Current reservable roles", value=f"```txt\n{currentRoles}\n```")
-
-            embed.set_footer(text=SCHEDULE_CANCEL)
-            color = Color.red()
-            await dmChannel.send(embed=embed)
-            try:
-                response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, interaction=interaction, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == interaction.user)
-                reservables = response.content.strip()
-            except asyncio.TimeoutError:
-                await dmChannel.send(embed=TIMEOUT_EMBED)
-                return False
-
-            if reservables.lower() == "cancel":
-                await self.cancelCommand(dmChannel, f"{eventType} scheduling")
-                return False
-
-            reservableRoles = None
-            if reservables.lower() == "none" or reservables == "":
-                return None
-
-            reservableRoles = [role.strip() for role in reservables.split("\n") if len(role.strip()) > 0]
-
-            if len(reservableRoles) > 25:
-                await dmChannel.send(embed=Embed(description="bruh, tf u gonna do with that many roles? Up to 25 roles are supported.", color=Color.red()))
-                return False
-
-            # Values all None
-            if currentRoles is None:
-                return {role: None for role in reservableRoles}
-
-            # Check event
-            if event is None:
-                log.exception("eventReserveRoles: event is None")
-                return False
-
-            # Save values when same keys
-            return {role: event["reservableRoles"][role] if role in event["reservableRoles"] else None for role in reservableRoles}
-
-    async def eventMap(self, interaction: discord.Interaction, eventType: str) -> bool | str | None:
-        """ Handles the map part of scheduling an event.
-
-        Parameters:
-        interaction (discord.Interaction): The Discord interaction.
-        eventType (str): The type of event, e.g. Operation.
-
-        Returns:
-        bool | str | None: False if error, str if map, None if no map.
-        """
-
-        dmChannel = await self.checkDMChannel(interaction.user)
-        color = Color.gold()
-        while True:
-            embed = Embed(title=":globe_with_meridians: Choose a map", description=f"Enter `none` or a number from **1** - **{len(MAPS)}**.", color=color)
-            color = Color.red()
-            embed.add_field(name="Map", value="\n".join(f"**{idx}.** {mapName}" for idx, mapName in enumerate(MAPS, 1)))
-            embed.set_footer(text=SCHEDULE_CANCEL)
-            await dmChannel.send(embed=embed)
-            try:
-                response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, interaction=interaction, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == interaction.user)
-                eventMap = response.content.strip()
-            except asyncio.TimeoutError:
-                await dmChannel.send(embed=TIMEOUT_EMBED)
-                return False
-
-            if eventMap.lower() == "cancel":
-                await self.cancelCommand(dmChannel, f"{eventType} scheduling")
-                return False
-            if eventMap.isdigit() and 0 < int(eventMap) <= len(MAPS):
-                return MAPS[int(eventMap) - 1]
-            elif eventMap.lower() == "none" or eventMap == "":
-                return None
-
-    async def eventAttendance(self, interaction: discord.Interaction, eventType: str) -> bool | int | str | None:
-        """ Handles the attendance part of scheduling an event.
-
-        Parameters:
-        interaction (discord.Interaction): The Discord interaction.
-        eventType (str): The type of event, e.g. Operation.
-
-        Returns:
-        bool | int | str | None: False if error, int if limit, str if other alternative, None if no limit.
-        """
-
-        dmChannel = await self.checkDMChannel(interaction.user)
-        color = Color.gold()
-        while True:
-            embed = Embed(title=":family_man_boy_boy: What is the maximum number of attendees?", description="Enter a number to set a limit.\nEnter `none` to set no limit.\nEnter `anonymous` to count attendance anonymously.\nEnter `hidden` to not count attendance.", color=color)
-            embed.set_footer(text=SCHEDULE_CANCEL)
-            color = Color.red()
-            await dmChannel.send(embed=embed)
-            try:
-                response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, interaction=interaction, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == interaction.user)
-                maxPlayers = response.content.strip().lower()
-            except asyncio.TimeoutError:
-                await dmChannel.send(embed=TIMEOUT_EMBED)
-                return False
-
-            if maxPlayers == "cancel":
-                await self.cancelCommand(dmChannel, f"{eventType} scheduling")
-                return False
-
-            if maxPlayers == "none" or (maxPlayers.isdigit() and (int(maxPlayers) == 0 or int(maxPlayers) > MAX_SERVER_ATTENDANCE)):
-                return None
-            elif maxPlayers.isdigit():
-                return int(maxPlayers)
-            elif maxPlayers in MAX_PLAYERS_STR_OPTIONS:
-                return maxPlayers
-
-    def getDetailsFromDuration(self, duration: str) -> tuple:
-        """ Extracts hours, minutes and delta time from user duration.
+    @staticmethod
+    def getDetailsFromDuration(duration: str) -> tuple:
+        """Extracts hours, minutes and delta time from user duration.
 
         Parameters:
         duration (str): A duration.
@@ -1280,221 +1828,8 @@ class Schedule(commands.Cog):
         delta = timedelta(hours=hours, minutes=minutes)
         return hours, minutes, delta
 
-    async def eventDuration(self, interaction: discord.Interaction) -> tuple | None:
-        """ Handles the duration part of scheduling an event.
-
-        Parameters:
-        interaction (discord.Interaction): The Discord interaction.
-
-        Returns:
-        tuple | None: tuple with (hours, minutes, delta) zipped. None if fail.
-        """
-
-        dmChannel = await self.checkDMChannel(interaction.user)
-        color = Color.gold()
-        duration = "INVALID INPUT"
-        while not re.match(r"^\s*((([1-9]\d*)?\d\s*h(\s*([0-5])?\d\s*m?)?)|(([0-5])?\d\s*m))\s*$", duration):
-            embed = Embed(title=f"What is the duration?", description="E.g.\n`30m`\n`2h`\n`4h 30m`\n`2h30`", color=color)
-            embed.set_footer(text=SCHEDULE_CANCEL)
-            color = Color.red()
-            await dmChannel.send(embed=embed)
-            try:
-                response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, interaction=interaction, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == interaction.user)
-                duration = response.content.strip().lower()
-
-                if duration == "cancel":
-                    await self.cancelCommand(dmChannel, f"Event scheduling")
-                    return None
-            except asyncio.TimeoutError:
-                await dmChannel.send(embed=TIMEOUT_EMBED)
-                return None
-
-
-        # Change user time zone if needed
-        with open(MEMBER_TIME_ZONES_FILE) as f:
-            memberTimeZones = json.load(f)
-
-        if not str(interaction.user.id) in memberTimeZones:
-            timeZoneOutput = await self.changeTimeZone(interaction.user, isCommand=False)
-            if not timeZoneOutput:
-                await self.cancelCommand(dmChannel, "Event scheduling")
-                return None
-
-        return self.getDetailsFromDuration(duration)
-
-    async def eventTime(self, interaction: discord.Interaction, eventType: str, collidingEventTypes: tuple, delta: timedelta) -> tuple | None:
-        """ Handles the time part of scheduling an event; prompts, collision, etc.
-
-        Parameters:
-        interaction (discord.Interaction): The Discord interaction.
-        eventType (str): The type of event, e.g. Operation.
-        collidingEventTypes (tuple): A tuple of eventtypes that you want to collide with.
-        delta (timedelta): Difference in time from start to end.
-
-        Returns:
-        tuple | None: A tuple which contains the (event start time and end time). None if fail.
-        """
-
-        dmChannel = await self.checkDMChannel(interaction.user)
-        with open(MEMBER_TIME_ZONES_FILE) as f:
-            memberTimeZones = json.load(f)
-
-
-        timeZone = pytz.timezone(memberTimeZones[str(interaction.user.id)])
-        eventCollision = True
-        while eventCollision:
-
-
-            eventCollision = False
-            while True:
-
-                # Gets starttime of event
-                color = Color.gold()
-                while True:
-                    embed = Embed(title=f"What is the time of the {eventType.lower()}?", description=SCHEDULE_EVENT_SELECTED_TIME_ZONE.format(timeZone.zone), color=color)
-                    utcNow = datetime.utcnow()
-                    nextHalfHour = utcNow + (datetime.min - utcNow) % timedelta(minutes=30)
-                    embed.add_field(name="Example", value=UTC.localize(nextHalfHour).astimezone(timeZone).strftime(TIME_FORMAT))
-                    embed.set_footer(text=SCHEDULE_CANCEL)
-                    color = Color.red()
-                    await dmChannel.send(embed=embed)
-                    try:
-                        response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, interaction=interaction, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == interaction.user)
-                        startTime = response.content.strip()
-                        if startTime.lower() == "cancel" or startTime == "":
-                            await self.cancelCommand(dmChannel, f"{eventType} scheduling")
-                            return None
-                    except asyncio.TimeoutError:
-                        await dmChannel.send(embed=TIMEOUT_EMBED)
-                        return None
-                    try:
-                        startTime = datetimeParse(startTime)
-                        break
-                    except ValueError:
-                        pass
-
-                startTime = timeZone.localize(startTime).astimezone(UTC)
-                if startTime > UTC.localize(utcNow):  # Set time is in the future
-                    break
-
-                # Set time is in the past
-                if (delta := UTC.localize(utcNow) - startTime) > timedelta(hours=1) and delta < timedelta(days=1):  # Time is between 1 hour and one day ago.
-                    newStartTime = startTime + timedelta(days=1)
-                    embed = Embed(title="Time was detected to be in the past 24h and was set to tomorrow.", description=f"Input time: {discord.utils.format_dt(startTime, style='F')}.\nSelected time: {discord.utils.format_dt(newStartTime, style='F')}.", color=Color.orange())
-                    await dmChannel.send(embed=embed)
-                    startTime = newStartTime
-                    break
-                else:  # Set time older than 24 hours
-                    embed = Embed(title="It appears that the selected time is in the past. Are you sure you want to set it to this?", description="Enter `yes` or `y` to keep this time.\nEnter anything else to change it to another time.", color=Color.orange())
-                    embed.set_footer(text=SCHEDULE_CANCEL)
-                    await dmChannel.send(embed=embed)
-                    try:
-                        response = await self.bot.wait_for("message", timeout=TIME_ONE_MIN, check=lambda msg, author=interaction.user, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
-                        keepStartTime = response.content.strip().lower()
-                        if keepStartTime == "cancel" or keepStartTime == "":
-                            await self.cancelCommand(dmChannel, f"{eventType} scheduling")
-                            return None
-                    except asyncio.TimeoutError:
-                        await dmChannel.send(embed=TIMEOUT_EMBED)
-                        return None
-                    if keepStartTime in ("yes", "y"):
-                        break
-
-
-            endTime = startTime + delta
-            with open(EVENTS_FILE) as f:
-                events = json.load(f)
-
-            exitForLoop = False
-            for event in events:
-                if exitForLoop:
-                    break
-
-                while True:
-                    if event.get("type", eventType) not in collidingEventTypes:
-                        break
-                    eventStartTime = UTC.localize(datetime.strptime(event["time"], TIME_FORMAT))  # Target event start time
-                    eventEndTime = UTC.localize(datetime.strptime(event["endTime"], TIME_FORMAT))  # Target event end time
-                    if (eventStartTime <= startTime < eventEndTime) or (eventStartTime <= endTime < eventEndTime) or (startTime <= eventStartTime < endTime):  # If scheduled event and target event overlap
-                        eventCollision = True
-                        embed = Embed(title=f"❌ This time collides with the event: `{event['title']}`!", description=SCHEDULE_EVENT_ERROR_DESCRIPTION, color=Color.red())
-                        embed.set_footer(text=SCHEDULE_CANCEL)
-                        await dmChannel.send(embed=embed)
-                    elif eventEndTime < startTime and eventEndTime + timedelta(hours=1) > startTime:
-                        eventCollision = True
-                        embed = Embed(title=f"❌ Your {eventType.lower()} would start less than an hour after `{event['title']}` ends!", description=SCHEDULE_EVENT_ERROR_DESCRIPTION, color=Color.red())
-                        embed.set_footer(text=SCHEDULE_CANCEL)
-                        await dmChannel.send(embed=embed)
-                    elif endTime < eventStartTime and endTime + timedelta(hours=1) > eventStartTime:
-                        eventCollision = True
-                        embed = Embed(title=f"❌ `{event['title'].lower()}` starts less than an hour after your event ends!", description=SCHEDULE_EVENT_ERROR_DESCRIPTION, color=Color.red())
-                        embed.set_footer(text=SCHEDULE_CANCEL)
-                        await dmChannel.send(embed=embed)
-
-                    if eventCollision is False:
-                        break
-
-                    try:
-                        response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, interaction=interaction, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == interaction.user)
-                        collisionResponse = response.content.strip().lower()
-                    except asyncio.TimeoutError:
-                        await dmChannel.send(embed=TIMEOUT_EMBED)
-                        return None
-
-                    if collisionResponse == "cancel" or collisionResponse == "":
-                        await self.cancelCommand(dmChannel, f"{eventType} scheduling")
-                        return None
-                    elif collisionResponse == "edit":
-                        exitForLoop = True
-                        break
-                    elif collisionResponse == "override":
-                        eventCollision = False
-                        exitForLoop = True
-                        break
-
-        return (startTime, endTime)
-
-    async def eventFinalizing(self, interaction: discord.Interaction, newEvent: dict) -> bool:
-        """ Handles the finalizing part of scheduling an event.
-
-        Parameters:
-        interaction (discord.Interaction): The Discord interaction.
-        newEvent (dict): The new event.
-
-        Returns:
-        bool: Function success
-        """
-
-        dmChannel = await self.checkDMChannel(interaction.user)
-
-        # Update events file
-        try:
-            jsonCreateNoExist(EVENTS_FILE, [])
-            with open(EVENTS_FILE) as f:
-                events = json.load(f)
-            events.append(newEvent)
-            with open(EVENTS_FILE, "w") as f:
-                json.dump(events, f, indent=4)
-        except Exception as e:
-            log.exception(f"{interaction.user} | {e}")
-            return False
-
-        # Send verification to user
-        embed = Embed(title=f"✅ {newEvent['type']} created!", color=Color.green())
-        await dmChannel.send(embed=embed)
-        log.info(f"{interaction.user.display_name} ({interaction.user}) created the operation: {newEvent['title']}")
-
-        await self.updateSchedule()
-
-        # Announce new bop
-        for event in events:
-            if event["title"] == newEvent["title"]:
-                msgId = event["messageId"]
-        await interaction.followup.send(f"`{newEvent['title']}` is now on [schedule](<https://discord.com/channels/{GUILD_ID}/{SCHEDULE}/{msgId}>)!")
-        return True
-
     async def editEvent(self, interaction: discord.Interaction, event: dict, eventMsg: discord.Message) -> None:
-        """ Edits a preexisting event.
+        """Edits a preexisting event.
 
         Parameters:
         interaction (discord.Interaction): The Discord interaction.
@@ -1530,514 +1865,42 @@ class Schedule(commands.Cog):
 # ===== </Schedule Functions> =====
 
 
-# ===== <Operation> =====
+# ===== <Event> =====
 
     @discord.app_commands.command(name="bop")
     @discord.app_commands.guilds(GUILD)
-    async def bop(self, interaction: discord.Interaction) -> None:
-        """ Create an operation to add to the schedule. """
-        await self.scheduleOperation(interaction)
-
-    @discord.app_commands.command(name="operation")
-    @discord.app_commands.guilds(GUILD)
-    async def operation(self, interaction: discord.Interaction) -> None:
-        """ Create an operation to add to the schedule. """
-        await self.scheduleOperation(interaction)
-
     async def scheduleOperation(self, interaction: discord.Interaction) -> None:
-        """ Scheduling an operation.
-
-        Parameters:
-        interaction (discord.Interaction): The Discord interaction.
-
-        Returns:
-        None.
-        """
-        await interaction.response.send_message(RESPONSE_EVENT_PROGRESS.format(":b:op."))
-        log.info(f"{interaction.user.display_name} ({interaction.user}) is creating an operation...")
-
-        authorId = interaction.user.id
-
-        # Operation title
-        title = await self.eventTitle(interaction, "Operation", isOperation=True)
-        if title is None:
-            return
-
-        # Operation description
-        description = await self.eventDescription(interaction, "Operation")
-        if description is None:
-            return
-
-        # Operation URL
-        externalURL = await self.eventURL(interaction, "Operation")
-        if externalURL is False:
-            return
-
-        # Operation reservable roles
-        reservableRoles = await self.eventReserveRole(interaction, "Operation")
-        if reservableRoles is False:
-            return
-
-        # Operation map
-        eventMap = await self.eventMap(interaction, "Operation")
-        if eventMap is False:
-            return
-
-        # Operation attendance
-        maxPlayers = await self.eventAttendance(interaction, "Operation")
-        if maxPlayers is False:
-            return
-
-        # Operation duration
-        duration = await self.eventDuration(interaction)
-        if duration is None:
-            return
-        hours, minutes, delta = duration
-
-        # Operation time
-        eventTimes = await self.eventTime(interaction, "Operation", ("Operation", "Workshop"), delta)
-        if eventTimes is None:
-            return
-        startTime, endTime = eventTimes
-
-        # Operation finalizing
-        newEvent = {
-            "authorId": authorId,
-            "title": title,
-            "description": description,
-            "externalURL": externalURL,
-            "reservableRoles": reservableRoles,
-            "maxPlayers": maxPlayers,  # int, None, str (MAX_PLAYERS_STR_OPTIONS)
-            "map": eventMap,
-            "time": startTime.strftime(TIME_FORMAT),
-            "endTime": endTime.strftime(TIME_FORMAT),
-            "duration": f"{(str(hours) + 'h')*(hours != 0)}{' '*(hours != 0 and minutes !=0)}{(str(minutes) + 'm')*(minutes != 0)}",
-            "messageId": None,
-            "accepted": [],
-            "declined": [],
-            "tentative": [],
-            "type": "Operation"  # Operation, Workshop, Event
-        }
-        finalization = await self.eventFinalizing(interaction, newEvent)
-        if finalization is False:
-            return
-
-# ===== </Operation> =====
-
-
-# ===== <Workshop> =====
+        """Create an operation to add to the schedule."""
+        await self.scheduleEventInteraction(interaction, "Operation")
 
     @discord.app_commands.command(name="ws")
     @discord.app_commands.guilds(GUILD)
-    async def ws(self, interaction: discord.Interaction) -> None:
-        """ Create a workshop to add to the schedule. """
-        await self.scheduleWorkshop(interaction)
-
-    @discord.app_commands.command(name="workshop")
-    @discord.app_commands.guilds(GUILD)
-    async def workshop(self, interaction: discord.Interaction) -> None:
-        """ Create a workshop to add to the schedule. """
-        await self.scheduleWorkshop(interaction)
-
     async def scheduleWorkshop(self, interaction: discord.Interaction) -> None:
-        """ Scheduling a workshop.
-
-        Parameters:
-        interaction (discord.Interaction): The Discord interaction.
-
-        Returns:
-        None.
-        """
-        await interaction.response.send_message(RESPONSE_EVENT_PROGRESS.format("workshop"))
-        log.info(f"{interaction.user.display_name} ({interaction.user}) is creating a workshop...")
-
-        authorId = interaction.user.id
-
-        color = Color.gold()
-        while True:
-            with open(WORKSHOP_TEMPLATES_FILE) as f:
-                workshopTemplates = json.load(f)
-            #embed = Embed(title=":clipboard: Templates", description="Enter a template number.\nEnter `none` to make a workshop from scratch.\n\nEdit template: `edit` + template number. E.g. `edit 2`.\nDelete template: `delete` + template number. E.g. `delete 4`. **IRREVERSIBLE!**", color=color)
-            embed = Embed(title=":clipboard: Templates", description="Enter a template number.\nEnter `none` to make a workshop from scratch.", color=color)
-            embed.add_field(name="Templates", value="\n".join(f"**{idx}.** {template['name']}" for idx, template in enumerate(workshopTemplates, 1)) if len(workshopTemplates) > 0 else "-")
-            embed.set_footer(text=SCHEDULE_CANCEL)
-            color = Color.red()
-            try:
-                msg = await interaction.user.send(embed=embed)
-            except Exception as e:
-                log.exception(f"{interaction.user} | {e}")
-                return
-            dmChannel = msg.channel
-            if not isinstance(dmChannel, discord.channel.DMChannel):
-                log.exception("ScheduleWorkshop: dmChannel not discord.channel.DMChannel")
-                return
-
-            try:
-                response = await self.bot.wait_for("message", timeout=TIME_ONE_MIN, check=lambda msg, interaction=interaction, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == interaction.user)
-                templateAction = response.content.strip()
-
-                if templateAction.lower() == "cancel":
-                    await self.cancelCommand(dmChannel, "Workshop scheduling")
-                    return
-
-                elif templateAction.lower() == "none":
-                    template = None
-                    break
-
-                elif re.search(r"(edit |delete )?\d+", templateAction, re.IGNORECASE):
-                    # TEMPORARILY DISABLED EDITING AND DELETING WORKSHOP TEMPLATES
-                    """if templateAction.lower().startswith("delete"):
-                        templateNumber = templateAction.split(" ")[-1]
-                        if templateNumber.isdigit() and int(templateNumber) <= len(workshopTemplates) and int(templateNumber) > 0:
-                            workshopTemplate = workshopTemplates[int(templateNumber) - 1]
-                            try:
-                                msg = await dmChannel.send(embed=Embed(title=SCHEDULE_EVENT_CONFIRM_DELETE.format(f"template: `{workshopTemplate['name']}`"), color=Color.orange()))
-                            except Exception as e:
-                                log.exception(f"{interaction.user} | {e}")
-                                return
-                            await msg.add_reaction("🗑")
-                            try:
-                                await self.bot.wait_for("reaction_add", timeout=TIME_ONE_MIN, check=lambda reaction, user, author=interaction.user: reaction.emoji == "🗑" and user == author)
-                            except asyncio.TimeoutError:
-                                await interaction.user.send(embed=TIMEOUT_EMBED)
-                                return
-                            log.info(f"{interaction.user.display_name} ({interaction.user}) deleted the workshop template: {workshopTemplate['name']}!")
-
-                            with open(WORKSHOP_TEMPLATES_DELETED_FILE) as f:
-                                workshopTempaltesDeleted = json.load(f)
-                            workshopTempaltesDeleted.append(workshopTemplates[int(templateAction.split(" ")[-1]) - 1])
-                            with open(WORKSHOP_TEMPLATES_DELETED_FILE, "w") as f:
-                                json.dump(workshopTempaltesDeleted, f, indent=4)
-
-                            workshopTemplates.pop(int(templateAction.split(" ")[-1]) - 1)
-                            with open(WORKSHOP_TEMPLATES_FILE, "w") as f:
-                                json.dump(workshopTemplates, f, indent=4)
-                            await dmChannel.send(embed=Embed(title="✅ Template deleted!", color=Color.green()))
-                            color = Color.gold()"""
-
-                    """
-                        elif templateAction.lower().startswith("edit"):
-                        templateNumber = templateAction.split(" ")[-1]
-                        if templateNumber.isdigit() and int(templateNumber) <= len(workshopTemplates) and int(templateNumber) > 0:
-                            workshopTemplate = workshopTemplates[int(templateNumber) - 1]
-                            log.info(f"{interaction.user.display_name} ({interaction.user}) is editing the workshop template: {workshopTemplate['name']}...")
-
-                            #await self.editTemplate(interaction, workshopTemplate)
-                            editOptions = (
-                                "Template Name",
-                                "Title",
-                                "Linking",
-                                "Description",
-                                "External URL",
-                                "Reservable Roles",
-                                "Map",
-                                "Max Players",
-                                "Duration"
-                            )
-                            # TODO fix this shit
-                            # log.info(f"{interaction.user.display_name} ({interaction.user}) is editing the template: {template['name']}")
-                            # options = []
-                            # for editOption in editOptions:
-                            #     options.append(discord.SelectOption(label=editOption))
-
-                            # view = ScheduleView()
-                            # view.add_item(ScheduleSelect(instance=self, eventMsg=eventMsg, placeholder="Select what to edit.", minValues=1, maxValues=1, customId="edit_select", row=0, options=options))
-
-                            # await interaction.response.send_message(view=view, ephemeral=True, delete_after=60.0)
-
-
-
-
-                            workshopTemplates[int(templateNumber) - 1] = workshopTemplate
-                            with open(WORKSHOP_TEMPLATES_FILE, "w") as f:
-                                json.dump(workshopTemplates, f, indent=4)
-                            color = Color.gold()"""
-
-                    #else: # Select template
-                    if templateAction.isdigit() and int(templateAction) <= len(workshopTemplates) and int(templateAction) > 0:
-                        template = workshopTemplates[int(templateAction) - 1]
-                        break
-
-            except asyncio.TimeoutError:
-                await dmChannel.send(embed=TIMEOUT_EMBED)
-                return
-            except Exception as e:
-                log.exception(e)
-
-        # Workshop title
-        if template is None:
-            title = await self.eventTitle(interaction, "Workshop")
-            if title is None:
-                return
-        else:
-            title = template["title"]
-
-        # Workshop description
-        if template is None:
-            description = await self.eventDescription(interaction, "Workshop")
-            if description is None:
-                return
-        else:
-            description = template["description"]
-
-        # Workshop URL
-        if template is None:
-            externalURL = await self.eventURL(interaction, "Workshop")
-            if externalURL is False:
-                return
-        else:
-            externalURL = template["externalURL"]
-
-        # Workshop reservable roles
-        if template is None:
-            reservableRoles = await self.eventReserveRole(interaction, "Workshop")
-            if reservableRoles is False:
-                return
-        else:
-            reservableRoles = template["reservableRoles"]
-
-        # Workshop map
-        if template is None:
-            eventMap = await self.eventMap(interaction, "Workshop")
-            if eventMap is False:
-                return
-        else:
-            eventMap = template["map"]
-
-        # Workshop attendance
-        if template is None:
-            maxPlayers = await self.eventAttendance(interaction, "Workshop")
-            if maxPlayers is False:
-                return
-        else:
-            maxPlayers = template["maxPlayers"]
-
-        # Workshop duration
-        if template is None:
-            duration = await self.eventDuration(interaction)
-            if duration is None:
-                return
-            hours, minutes, delta = duration
-        else:
-            duration = template["duration"]
-            if not isinstance(duration, str):
-                log.exception("Workshop template duration not string")
-                return
-            hours, minutes, delta = self.getDetailsFromDuration(duration)
-
-        # Workshop linking
-        if template is None:
-            workshopInterestOk = False
-            color = Color.gold()
-            while not workshopInterestOk:
-                with open(WORKSHOP_INTEREST_FILE) as f:
-                    workshopInterestOptions = list(json.load(f).keys())
-                embed = Embed(title=":link: Which workshop waiting list is your workshop linked to?", description="When linking your workshop and finished scheduling it, it will automatically ping everyone interested in it.\nFurthermore, those that complete the workshop will be removed from the interest list!\nEnter `none` to not link it.", color=color)
-                embed.add_field(name="Workshop Lists", value="\n".join(f"**{idx}.** {wsName}" for idx, wsName in enumerate(workshopInterestOptions, 1)))
-                embed.set_footer(text=SCHEDULE_CANCEL)
-                color = Color.red()
-                await dmChannel.send(embed=embed)
-                try:
-                    response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, interaction=interaction, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == interaction.user)
-                    workshopInterest = response.content.strip()
-                    if workshopInterest.lower() == "cancel":
-                        await self.cancelCommand(dmChannel, "Workshop scheduling")
-                        return
-                    workshopInterestOk = True
-                    if workshopInterest.isdigit() and int(workshopInterest) <= len(workshopInterestOptions) and int(workshopInterest) > 0:
-                        workshopInterest = workshopInterestOptions[int(workshopInterest) - 1]
-                    elif workshopInterest.strip().lower() == "none":
-                        workshopInterest = None
-                    else:
-                        workshopInterestOk = False
-                except asyncio.TimeoutError:
-                    await dmChannel.send(embed=TIMEOUT_EMBED)
-                    return
-        else:
-            workshopInterest = template.get("workshopInterest")
-
-
-        # Workshop time
-        eventTimes = await self.eventTime(interaction, "Workshop", ("Operation",), delta)
-        if eventTimes is None:
-            return
-        startTime, endTime = eventTimes
-
-        # Workshop save template
-        if template is None:
-            embed = Embed(title="Do you wish to save this workshop as a template?", description="Enter `yes` or `y` if you want to save it.\nEnter anything else to not.", color=Color.gold())
-            embed.set_footer(text=SCHEDULE_CANCEL)
-            await dmChannel.send(embed=embed)
-            try:
-                response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, interaction=interaction, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == interaction.user)
-                templateSaveResponse = response.content.strip().lower()
-                if templateSaveResponse == "cancel":
-                    await self.cancelCommand(dmChannel, "Workshop scheduling")
-                    return
-                saveTemplate = templateSaveResponse in ("yes", "y")
-            except asyncio.TimeoutError:
-                await dmChannel.send(embed=TIMEOUT_EMBED)
-                return
-            if saveTemplate:
-                embed = Embed(title=SCHEDULE_EVENT_TEMPLATE_SAVE_NAME_QUESTION, description="Enter `none` to make it the same as the title.", color=Color.gold())
-                embed.set_footer(text=SCHEDULE_CANCEL)
-                await dmChannel.send(embed=embed)
-                try:
-                    response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, interaction=interaction, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == interaction.user)
-                    templateName = response.content.strip()
-                    if templateName.lower() == "cancel":
-                        await self.cancelCommand(dmChannel, "Workshop scheduling")
-                        return
-                    elif templateName.lower() == "none":
-                        templateName = title
-                except asyncio.TimeoutError:
-                    await dmChannel.send(embed=TIMEOUT_EMBED)
-                    return
-                newTemplate = {
-                    "name": templateName,
-                    "title": title,
-                    "description": description,
-                    "externalURL": externalURL,
-                    "reservableRoles": reservableRoles,
-                    "maxPlayers": maxPlayers,  # int, None, str (MAX_PLAYERS_STR_OPTIONS)
-                    "map": eventMap,
-                    "duration": f"{(str(hours) + 'h')*(hours != 0)}{' '*(hours != 0 and minutes !=0)}{(str(minutes) + 'm')*(minutes != 0)}",
-                    "workshopInterest": workshopInterest
-                }
-                with open(WORKSHOP_TEMPLATES_FILE) as f:
-                    workshopTemplates = json.load(f)
-                workshopTemplates.append(newTemplate)
-                with open(WORKSHOP_TEMPLATES_FILE, "w") as f:
-                    json.dump(workshopTemplates, f, indent=4)
-                embed = Embed(title=f"✅ Template saved as `{templateName}`!", color=Color.green())
-                await dmChannel.send(embed=embed)
-            else:
-                embed = Embed(title="❌ Template not saved!", color=Color.red())
-                await dmChannel.send(embed=embed)
-
-        # Workshop finalizing
-        newEvent = {
-            "authorId": authorId,
-            "title": title,
-            "description": description,
-            "externalURL": externalURL,
-            "reservableRoles": reservableRoles,
-            "maxPlayers": maxPlayers,  # int, None, str (MAX_PLAYERS_STR_OPTIONS)
-            "map": eventMap,
-            "time": startTime.strftime(TIME_FORMAT),
-            "endTime": endTime.strftime(TIME_FORMAT),
-            "duration": f"{(str(hours) + 'h')*(hours != 0)}{' '*(hours != 0 and minutes !=0)}{(str(minutes) + 'm')*(minutes != 0)}",
-            "messageId": None,
-            "accepted": [],
-            "declined": [],
-            "tentative": [],
-            "workshopInterest": workshopInterest,
-            "type": "Workshop"  # Operation, Workshop, Event
-        }
-        finalization = await self.eventFinalizing(interaction, newEvent)
-        if finalization is False:
-            return
-
-        # Send workshop interest pings
-        if workshopInterest is not None:
-            with open(WORKSHOP_INTEREST_FILE) as f:
-                workshopInterestItem = [{"name": name, "wsInterest": wsInterest} for name, wsInterest in json.load(f).items() if name == workshopInterest][0]
-
-            guild = self.bot.get_guild(GUILD_ID)
-            if guild is None:
-                log.exception("ScheduleWorkshop: guild is None")
-                return
-
-            message = ""
-            for memberId in workshopInterestItem["wsInterest"]["members"]:
-                message += f"{member.mention} " if (member := guild.get_member(memberId)) is not None else ""
-            if message != "":
-                await guild.get_channel(ARMA_DISCUSSION).send(f"{message}\nA **{workshopInterestItem['name']} workshop** is up on <#{SCHEDULE}> - which you are interested in.\nIf you're no longer interested, please remove yourself from the list in <#{WORKSHOP_INTEREST}>!")
-
-# ===== </Workshop> =====
-
-
-# ===== <Event> =====
+        """Create a workshop to add to the schedule."""
+        await self.scheduleEventInteraction(interaction, "Workshop")
 
     @discord.app_commands.command(name="event")
     @discord.app_commands.guilds(GUILD)
     async def scheduleEvent(self, interaction: discord.Interaction) -> None:
-        """ Create an event to add to the schedule.
+        """Create an event to add to the schedule."""
+        await self.scheduleEventInteraction(interaction, "Event")
 
-        Parameters:
-        interaction (discord.Interaction): The Discord interaction.
 
-        Returns:
-        None.
-        """
-        await interaction.response.send_message(RESPONSE_EVENT_PROGRESS.format("event"))
-        log.info(f"{interaction.user.display_name} ({interaction.user}) is creating an event...")
+    async def scheduleEventInteraction(self, interaction: discord.Interaction, preselectedType: str) -> None:
+        """Create an event to add to the schedule."""
+        log.info(f"{interaction.user.display_name} ({interaction.user}) is creating an {preselectedType.lower()}...")
 
-        authorId = interaction.user.id
-
-        # Event title
-        title = await self.eventTitle(interaction, "Event")
-        if title is None:
-            return
-
-        # Event description
-        description = await self.eventDescription(interaction, "Event")
-        if description is None:
-            return
-
-        # Event URL
-        externalURL = await self.eventURL(interaction, "Event")
-        if externalURL is False:
-            return
-
-        # Event reservable roles
-        reservableRoles = await self.eventReserveRole(interaction, "Event")
-        if reservableRoles is False:
-            return
-
-        # Event map
-        eventMap = await self.eventMap(interaction, "Event")
-        if eventMap is False:
-            return
-
-        # Event attendance
-        maxPlayers = await self.eventAttendance(interaction, "Event")
-        if maxPlayers is False:
-            return
-
-        # Event duration
-        duration = await self.eventDuration(interaction)
-        if duration is None:
-            return
-        hours, minutes, delta = duration
-
-        # Event time
-        eventTimes = await self.eventTime(interaction, "Event", (), delta)
-        if eventTimes is None:
-            return
-        startTime, endTime = eventTimes
-
-        # Event finalizing
-        newEvent = {
-            "authorId": authorId,
-            "title": title,
-            "description": description,
-            "externalURL": externalURL,
-            "reservableRoles": reservableRoles,
-            "maxPlayers": maxPlayers,  # int, None, str (MAX_PLAYERS_STR_OPTIONS)
-            "map": eventMap,
-            "time": startTime.strftime(TIME_FORMAT),
-            "endTime": endTime.strftime(TIME_FORMAT),
-            "duration": f"{(str(hours) + 'h')*(hours != 0)}{' '*(hours != 0 and minutes !=0)}{(str(minutes) + 'm')*(minutes != 0)}",
-            "messageId": None,
-            "accepted": [],
-            "declined": [],
-            "tentative": [],
-            "type": "Event"  # Operation, Workshop, Event
+        previewDict = {
+            "authorId": interaction.user.id,
+            "type": preselectedType
         }
-        finalization = await self.eventFinalizing(interaction, newEvent)
-        if finalization is False:
-            return
+        view = self.fromDictToPreviewView(previewDict, "None")
+
+        embed=Embed(title=SCHEDULE_EVENT_PREVIEW_EMBED["title"], description=SCHEDULE_EVENT_PREVIEW_EMBED["description"], color=EVENT_TYPE_COLORS[preselectedType])
+        embed.add_field(name="\u200B", value="\u200B", inline=False)
+        embed.set_footer(text=f"Created by {interaction.user.display_name}")
+        await interaction.response.send_message("Schedule an event using the buttons, and get a live preview!", embed=embed, view=view)
+
 
 # ===== </Event> =====
 
@@ -2049,7 +1912,7 @@ class Schedule(commands.Cog):
     @discord.app_commands.describe(time = "Your local time, e.g. 9:00 PM", message = "Add a message before the timestamp", timezone = "Convert the time from a different time zone other than your personal, e.g. EST & Europe/London", informative = "Displays all formats, raw text, etc.")
     @discord.app_commands.choices(informative = [discord.app_commands.Choice(name="Yes plz", value="Yes")])
     async def timestamp(self, interaction: discord.Interaction, time: str, message: str = "", timezone: str = "", informative: discord.app_commands.Choice[str] | None = None) -> None:
-        """ Convert your local time to a dynamic Discord timestamp.
+        """Convert your local time to a dynamic Discord timestamp.
 
         Parameters:
         interaction (discord.Interaction): The Discord interaction.
@@ -2112,14 +1975,14 @@ class Schedule(commands.Cog):
     @discord.app_commands.command(name="changetimezone")
     @discord.app_commands.guilds(GUILD)
     async def timeZoneCmd(self, interaction: discord.Interaction) -> None:
-        """ Change your time zone preferences for your next scheduled event. """
+        """Change your time zone preferences for your next scheduled event. """
         await interaction.response.send_message("Changing time zone preferences...")
         timeZoneOutput = await self.changeTimeZone(interaction.user, isCommand=True)
         if not timeZoneOutput:
             await self.cancelCommand(await self.checkDMChannel(interaction.user), "Time zone preferences")
 
     async def changeTimeZone(self, author: discord.User | discord.Member, isCommand: bool = True) -> bool:
-        """ Changing a personal time zone.
+        """Changing a personal time zone.
 
         Parameters:
         author (discord.Member): The command author.
@@ -2171,7 +2034,7 @@ class Schedule(commands.Cog):
                             timezoneOk = True
 
             except asyncio.TimeoutError:
-                await dmChannel.send(embed=TIMEOUT_EMBED)
+                await dmChannel.send(embed=EMBED_TIMEOUT)
                 return False
 
         with open(MEMBER_TIME_ZONES_FILE, "w") as f:
@@ -2186,40 +2049,46 @@ class Schedule(commands.Cog):
 # ===== <Views and Buttons> =====
 
 class ScheduleView(discord.ui.View):
+    """Handling all schedule views."""
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.timeout = None
 
 class ScheduleButton(discord.ui.Button):
-    def __init__(self, instance, message: discord.Message | None, *args, **kwargs):
+    """Handling all schedule buttons."""
+    def __init__(self, instance, message: discord.Message | None, authorId: int | None = None, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.instance = instance
         self.message = message
+        self.authorId = authorId
 
     async def callback(self, interaction: discord.Interaction):
-        await self.instance.buttonHandling(self.message, self, interaction)
+        await self.instance.buttonHandling(self.message, self, interaction, self.authorId)
 
 class ScheduleSelect(discord.ui.Select):
-    def __init__(self, instance, eventMsg: discord.Message, placeholder: str, minValues: int, maxValues: int, customId: str, row: int, options: list[discord.SelectOption], disabled:bool = False, *args, **kwargs):
+    """Handling all schedule dropdowns."""
+    def __init__(self, instance, eventMsg: discord.Message, placeholder: str, minValues: int, maxValues: int, customId: str, row: int, options: list[discord.SelectOption], disabled: bool = False, eventMsgView: discord.ui.View | None = None, *args, **kwargs):
         super().__init__(placeholder=placeholder, min_values=minValues, max_values=maxValues, custom_id=customId, row=row, options=options, disabled=disabled, *args, **kwargs)
         self.eventMsg = eventMsg
         self.instance = instance
+        self.eventMsgView = eventMsgView
 
     async def callback(self, interaction: discord.Interaction) -> None:
-        await self.instance.selectHandling(self, interaction, self.eventMsg)
+        await self.instance.selectHandling(self, interaction, self.eventMsg, self.eventMsgView)
 
 class ScheduleModal(discord.ui.Modal):
-    def __init__(self, instance, title: str, customId: str, eventMsg: discord.Message) -> None:
+    """Handling all schedule modals."""
+    def __init__(self, instance, title: str, customId: str, eventMsg: discord.Message, view: discord.ui.View | None = None) -> None:
         super().__init__(title=title, custom_id=customId)
         self.instance = instance
         self.eventMsg = eventMsg
+        self.view = view
 
     async def on_submit(self, interaction: discord.Interaction):
-        await self.instance.modalHandling(self, interaction, self.eventMsg)
+        await self.instance.modalHandling(self, interaction, self.eventMsg, self.view)
 
     async def on_error(self, interaction: discord.Interaction, error: Exception) -> None:
         await interaction.response.send_message("Something went wrong. cope.", ephemeral=True)
-
         log.exception(error)
 
 # ===== </Views and Buttons> =====

@@ -195,7 +195,7 @@ SCHEDULE_EVENT_PREVIEW_EMBED = {
 }
 
 def jsonCreateNoExist(filename: str, dump: list | dict) -> None:
-    """ Creates a JSON file with a dump if not exist.
+    """Creates a JSON file with a dump if not exist.
 
     Parameters:
     filename (str): The files name.
@@ -234,8 +234,9 @@ class Schedule(commands.Cog):
         if not self.tenMinTask.is_running():
             self.tenMinTask.start()
 
-    async def cancelCommand(self, channel: discord.DMChannel, abortText: str) -> None:
-        """ Sends an abort response to the user.
+    @staticmethod
+    async def cancelCommand(channel: discord.DMChannel, abortText: str) -> None:
+        """Sends an abort response to the user.
 
         Parameters:
         channel (discord.DMChannel): The users DM channel where the message is sent.
@@ -246,11 +247,13 @@ class Schedule(commands.Cog):
         """
         await channel.send(embed=Embed(title=f"❌ {abortText} canceled!", color=Color.red()))
 
-    async def checkDMChannel(self, user: discord.User | discord.Member) -> discord.channel.DMChannel:
+    @staticmethod
+    async def checkDMChannel(user: discord.User | discord.Member) -> discord.channel.DMChannel:
+        """  """
         return await user.create_dm() if user.dm_channel is None else user.dm_channel
 
     async def saveEventToHistory(self, event, autoDeleted=False) -> None:
-        """ Saves a specific event to history.
+        """Saves a specific event to history.
 
         Parameters:
         event: The specified event.
@@ -301,7 +304,7 @@ class Schedule(commands.Cog):
 
     @tasks.loop(minutes=10)
     async def tenMinTask(self) -> None:
-        """ 10 minute interval tasks.
+        """10 minute interval tasks.
 
         Parameters:
         None.
@@ -393,7 +396,7 @@ class Schedule(commands.Cog):
     @discord.app_commands.guilds(GUILD)
     @discord.app_commands.checks.has_any_role(UNIT_STAFF, SERVER_HAMSTER, CURATOR)
     async def refreshSchedule(self, interaction: discord.Interaction) -> None:
-        """ Refreshes the schedule - Use if an event was deleted without using the reaction.
+        """Refreshes the schedule - Use if an event was deleted without using the reaction.
 
         Parameters:
         interaction (discord.Interaction): The Discord interaction.
@@ -407,7 +410,7 @@ class Schedule(commands.Cog):
 
     @refreshSchedule.error
     async def onRefreshScheduleError(self, interaction: discord.Interaction, error: discord.app_commands.AppCommandError) -> None:
-        """ refreshSchedule errors - dedicated for the discord.app_commands.errors.MissingAnyRole error.
+        """refreshSchedule errors - dedicated for the discord.app_commands.errors.MissingAnyRole error.
 
         Parameters:
         interaction (discord.Interaction): The Discord interaction.
@@ -431,14 +434,7 @@ class Schedule(commands.Cog):
 # ===== <Schedule Functions> =====
 
     async def updateSchedule(self) -> None:
-        """ Updates the schedule channel with all messages.
-
-        Parameters:
-        None.
-
-        Returns:
-        None.
-        """
+        """Updates the schedule channel with all messages."""
         self.lastUpdate = datetime.utcnow()
         channel = self.bot.get_channel(SCHEDULE)
         if channel is None or not isinstance(channel, discord.channel.TextChannel):
@@ -471,7 +467,7 @@ class Schedule(commands.Cog):
             log.exception(e)
 
     def getEventEmbed(self, event: dict) -> Embed:
-        """ Generates an embed from the given event.
+        """Generates an embed from the given event.
 
         Parameters:
         event (dict): The event.
@@ -552,7 +548,7 @@ class Schedule(commands.Cog):
 
     @staticmethod
     def fromPreviewEmbedToDict(embed: discord.Embed) -> dict:
-        """  """
+        """Generates event dict from preview embed."""
         # Finds a field's position if found (int), if none found (None)
         findFieldPos = lambda fieldName : None if embed.fields is None else (
             indexes[0] if len(
@@ -619,7 +615,7 @@ class Schedule(commands.Cog):
         return outputDict
 
     def fromDictToPreviewEmbed(self, previewDict: dict) -> discord.Embed:
-        """ """
+        """Generates event dict from preview embed."""
         # Title, Description, Color
         embed = Embed(title=previewDict["title"], description=previewDict["description"], color=None if previewDict["type"] is None else EVENT_TYPE_COLORS[previewDict["type"]])
 
@@ -682,7 +678,7 @@ class Schedule(commands.Cog):
         return embed
 
     def fromDictToPreviewView(self, previewDict: dict, selectedTemplate: str) -> discord.ui.View:
-        """  """
+        """Generates preview view from event dict."""
         view = ScheduleView()
         for label, data in SCHEDULE_EVENT_VIEW.items():
             permittedEventTypesForTemplates = ("Workshop", "Event")
@@ -744,7 +740,7 @@ class Schedule(commands.Cog):
 
 
     async def buttonHandling(self, message: discord.Message | None, button: discord.ui.Button, interaction: discord.Interaction, authorId: int | None) -> None:
-        """ Handling all schedule button interactions.
+        """Handling all schedule button interactions.
 
         Parameters:
         message (discord.Message | None): If the message is provided, it's used along with some specific button action.
@@ -1267,7 +1263,7 @@ class Schedule(commands.Cog):
             log.exception(f"{interaction.user} | {e}")
 
     def generateSelectView(self, options: list[discord.SelectOption], noneOption: bool, setOptionLabel: str, eventMsg: discord.Message, placeholder: str, customId: str, eventMsgView: discord.ui.View | None = None):
-        """ Generates good select menu view - ceil(len(options)/25) dropdowns.
+        """Generates good select menu view - ceil(len(options)/25) dropdowns.
 
         Parameters:
         options (list[discord.SelectOption]): All select menu options
@@ -1300,7 +1296,7 @@ class Schedule(commands.Cog):
         return view
 
     async def selectHandling(self, select: discord.ui.Select, interaction: discord.Interaction, eventMsg: discord.Message, eventMsgView: discord.ui.View | None) -> None:
-        """ Handling all schedule select menu interactions.
+        """Handling all schedule select menu interactions.
 
         Parameters:
         select (discord.ui.Select): The Discord select menu
@@ -1353,45 +1349,6 @@ class Schedule(commands.Cog):
                 eventMsgView.clear_items()
                 for item in previewView.children:
                     eventMsgView.add_item(item)
-
-                """permittedEventTypesForTemplates = ("Workshop", "Event")
-                for child in eventMsgView.children:
-                    if not isinstance(child, discord.ui.Button) or child.label is None:
-                        log.exception("Schedule selectHandling: not isinstance(child, discord.ui.Button) or child.label is None")
-                        return
-
-
-                    # (Un)lock buttons depending on current event type
-                    if child.label == "Linking":
-                        child.disabled = (selectedValue != "Workshop")
-                        continue
-
-
-                    if child.label.startswith("Select Template"):
-                        # Quick disable if not permitted event type
-                        if selectedValue not in permittedEventTypesForTemplates:
-                            child.disabled = True
-                            continue
-
-                        # Disable if no templates exist
-                        filename = f"data/{selectedValue.lower()}Templates.json"
-                        jsonCreateNoExist(filename, [])
-                        with open(filename) as f:
-                            templates = json.load(f)
-                        child.disabled = len(templates) == 0
-
-
-                    if child.label == "Save As Template":
-                        child.disabled = (selectedValue not in permittedEventTypesForTemplates)
-                        continue
-
-
-                    # Derive "Update Template" disabled attribute from Select Template name (if one has been selected)
-                    if child.label == "Update Template":
-                        for childv2 in eventMsgView.children:
-                            if isinstance(childv2, discord.ui.Button) and childv2.label is not None and childv2.label.startswith("Select Template"):
-                                child.disabled = ("".join(childv2.label.split(":")[1:]).strip() == "None")  # Text after colon (template selected)
-                                break"""
 
             elif infoLabel == "map":
                 previewEmbedDict["map"] = None if previewEmbedDict["map"] == "None" else selectedValue
@@ -1855,8 +1812,9 @@ class Schedule(commands.Cog):
         await eventMsg.edit(embed=self.getEventEmbed(event), view=self.getEventView(event))
         await interaction.response.send_message(interaction.user.mention, embed=Embed(title="✅ Event edited", color=Color.green()), ephemeral=True, delete_after=5.0)
 
-    def getDetailsFromDuration(self, duration: str) -> tuple:
-        """ Extracts hours, minutes and delta time from user duration.
+    @staticmethod
+    def getDetailsFromDuration(duration: str) -> tuple:
+        """Extracts hours, minutes and delta time from user duration.
 
         Parameters:
         duration (str): A duration.
@@ -1871,7 +1829,7 @@ class Schedule(commands.Cog):
         return hours, minutes, delta
 
     async def editEvent(self, interaction: discord.Interaction, event: dict, eventMsg: discord.Message) -> None:
-        """ Edits a preexisting event.
+        """Edits a preexisting event.
 
         Parameters:
         interaction (discord.Interaction): The Discord interaction.
@@ -1938,24 +1896,6 @@ class Schedule(commands.Cog):
         }
         view = self.fromDictToPreviewView(previewDict, "None")
 
-        """view = ScheduleView()
-        for label, data in SCHEDULE_EVENT_VIEW.items():
-            style = discord.ButtonStyle.danger if data["required"] is True else discord.ButtonStyle.secondary
-            if data["customStyle"] is not None:
-                style = data["customStyle"]
-            if label == "Type":
-                style = discord.ButtonStyle.success
-            view.add_item(ScheduleButton(
-                self,
-                None,
-                interaction.user.id,
-                style=style,
-                label=label,
-                custom_id=f"event_schedule_{label.lower().replace(' ', '_')}",
-                row=data["row"],
-                disabled=data["startDisabled"]
-            ))"""
-
         embed=Embed(title=SCHEDULE_EVENT_PREVIEW_EMBED["title"], description=SCHEDULE_EVENT_PREVIEW_EMBED["description"], color=EVENT_TYPE_COLORS[preselectedType])
         embed.add_field(name="\u200B", value="\u200B", inline=False)
         embed.set_footer(text=f"Created by {interaction.user.display_name}")
@@ -1972,7 +1912,7 @@ class Schedule(commands.Cog):
     @discord.app_commands.describe(time = "Your local time, e.g. 9:00 PM", message = "Add a message before the timestamp", timezone = "Convert the time from a different time zone other than your personal, e.g. EST & Europe/London", informative = "Displays all formats, raw text, etc.")
     @discord.app_commands.choices(informative = [discord.app_commands.Choice(name="Yes plz", value="Yes")])
     async def timestamp(self, interaction: discord.Interaction, time: str, message: str = "", timezone: str = "", informative: discord.app_commands.Choice[str] | None = None) -> None:
-        """ Convert your local time to a dynamic Discord timestamp.
+        """Convert your local time to a dynamic Discord timestamp.
 
         Parameters:
         interaction (discord.Interaction): The Discord interaction.
@@ -2035,14 +1975,14 @@ class Schedule(commands.Cog):
     @discord.app_commands.command(name="changetimezone")
     @discord.app_commands.guilds(GUILD)
     async def timeZoneCmd(self, interaction: discord.Interaction) -> None:
-        """ Change your time zone preferences for your next scheduled event. """
+        """Change your time zone preferences for your next scheduled event. """
         await interaction.response.send_message("Changing time zone preferences...")
         timeZoneOutput = await self.changeTimeZone(interaction.user, isCommand=True)
         if not timeZoneOutput:
             await self.cancelCommand(await self.checkDMChannel(interaction.user), "Time zone preferences")
 
     async def changeTimeZone(self, author: discord.User | discord.Member, isCommand: bool = True) -> bool:
-        """ Changing a personal time zone.
+        """Changing a personal time zone.
 
         Parameters:
         author (discord.Member): The command author.
@@ -2109,11 +2049,13 @@ class Schedule(commands.Cog):
 # ===== <Views and Buttons> =====
 
 class ScheduleView(discord.ui.View):
+    """Handling all schedule views."""
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.timeout = None
 
 class ScheduleButton(discord.ui.Button):
+    """Handling all schedule buttons."""
     def __init__(self, instance, message: discord.Message | None, authorId: int | None = None, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.instance = instance
@@ -2124,6 +2066,7 @@ class ScheduleButton(discord.ui.Button):
         await self.instance.buttonHandling(self.message, self, interaction, self.authorId)
 
 class ScheduleSelect(discord.ui.Select):
+    """Handling all schedule dropdowns."""
     def __init__(self, instance, eventMsg: discord.Message, placeholder: str, minValues: int, maxValues: int, customId: str, row: int, options: list[discord.SelectOption], disabled: bool = False, eventMsgView: discord.ui.View | None = None, *args, **kwargs):
         super().__init__(placeholder=placeholder, min_values=minValues, max_values=maxValues, custom_id=customId, row=row, options=options, disabled=disabled, *args, **kwargs)
         self.eventMsg = eventMsg
@@ -2134,6 +2077,7 @@ class ScheduleSelect(discord.ui.Select):
         await self.instance.selectHandling(self, interaction, self.eventMsg, self.eventMsgView)
 
 class ScheduleModal(discord.ui.Modal):
+    """Handling all schedule modals."""
     def __init__(self, instance, title: str, customId: str, eventMsg: discord.Message, view: discord.ui.View | None = None) -> None:
         super().__init__(title=title, custom_id=customId)
         self.instance = instance
@@ -2145,7 +2089,6 @@ class ScheduleModal(discord.ui.Modal):
 
     async def on_error(self, interaction: discord.Interaction, error: Exception) -> None:
         await interaction.response.send_message("Something went wrong. cope.", ephemeral=True)
-
         log.exception(error)
 
 # ===== </Views and Buttons> =====

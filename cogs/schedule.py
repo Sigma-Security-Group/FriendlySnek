@@ -1551,7 +1551,7 @@ class Schedule(commands.Cog):
                 modal.add_item(discord.ui.TextInput(label="Time", default=datetimeParse(event["time"]).replace(tzinfo=UTC).astimezone(timeZone).strftime(TIME_FORMAT), placeholder="2069-04-20 04:20 PM", min_length=1, max_length=32))
                 await interaction.response.send_modal(modal)
 
-            log.info(f"{interaction.user.display_name} ({interaction.user}) edited the event: {event['title'] if 'title' in event else event['name']}.")
+            log.info(f"{interaction.user.display_name} ({interaction.user}) edited the event: {event['title'] if 'title' in event else event['templateName']}.")
 
         # All select menu options in edit_select
         elif select.custom_id.startswith("edit_select_"):

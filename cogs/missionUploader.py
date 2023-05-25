@@ -38,7 +38,7 @@ class MissionUploader(commands.Cog):
     @discord.app_commands.guilds(GUILD)
     @discord.app_commands.checks.has_any_role(UNIT_STAFF, SERVER_HAMSTER, MISSION_BUILDER, CURATOR)
     async def uploadMission(self, interaction: discord.Interaction) -> None:
-        """ Upload a mission PBO file to the server.
+        """Upload a mission PBO file to the server.
 
         Parameters:
         interaction (discord.Interaction): The Discor interaction.
@@ -64,6 +64,7 @@ class MissionUploader(commands.Cog):
                 file = response.content.strip().lower()
                 if file.lower() == "cancel":
                     await dmChannel.send(embed=Embed(title=f"❌ Mission uploading canceled!", color=Color.red()))
+                    await interaction.edit_original_response(content="Mission uploading canceled!")
                     return
             except asyncio.TimeoutError:
                 await dmChannel.send(embed=TIMEOUT_EMBED)
@@ -146,6 +147,7 @@ class MissionUploader(commands.Cog):
         await botChannel.send(embed=embed)
 
         log.info(f"{interaction.user.display_name} ({interaction.user}) uploaded the mission file: {filename}!")
+        await interaction.edit_original_response(content=f"Mission file successfully uploaded: `{filename}`")
         if not secret.DEBUG:
             embed = Embed(title="✅ Mission file uploaded", color=Color.green())
         else:

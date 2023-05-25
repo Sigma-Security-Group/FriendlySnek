@@ -47,7 +47,7 @@ if not os.path.exists("./tmp"):  # Mission missionUploader stuff- TODO maybe cre
     os.mkdir("tmp")
 
 COGS = [cog[:-3] for cog in os.listdir("cogs/") if cog.endswith(".py")]
-COGS = ["schedule"]  # DEBUG: Faster startup
+# COGS = ["schedule"]  # DEBUG: Faster startup
 cogsReady = {cog: False for cog in COGS}
 
 INTENTS = discord.Intents.all()

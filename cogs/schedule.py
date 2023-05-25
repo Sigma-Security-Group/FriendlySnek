@@ -1003,7 +1003,7 @@ class Schedule(commands.Cog):
                         await interaction.response.send_modal(generateModal(discord.TextStyle.short, placeholder, default, True, 1, 256))
 
                     case "description":
-                        placeholder = "Wazzup beijing" if previewEmbedDict["description"] == SCHEDULE_EVENT_PREVIEW_EMBED["description"] else previewEmbedDict["description"]
+                        placeholder = "Wazzup beijing" if previewEmbedDict["description"] == SCHEDULE_EVENT_PREVIEW_EMBED["description"] else previewEmbedDict["description"][:100]
                         default = None if previewEmbedDict["description"] == SCHEDULE_EVENT_PREVIEW_EMBED["description"] else previewEmbedDict["description"]
                         await interaction.response.send_modal(generateModal(discord.TextStyle.long, placeholder, default, True, 1, 4000))
 
@@ -1042,7 +1042,7 @@ class Schedule(commands.Cog):
                         ))
 
                     case "external_url":
-                        placeholder = "https://www.gnu.org" if previewEmbedDict["externalURL"] is None else previewEmbedDict["externalURL"]
+                        placeholder = "https://www.gnu.org" if previewEmbedDict["externalURL"] is None else previewEmbedDict["externalURL"][:100]
                         default = "" if previewEmbedDict["externalURL"] is None else previewEmbedDict["externalURL"]
                         await interaction.response.send_modal(generateModal(discord.TextStyle.short, placeholder, default, False, None, 1024))
 
@@ -1050,7 +1050,7 @@ class Schedule(commands.Cog):
                         placeholder = "Actual\n2IC\nA-10C Pilot"
                         default = ""
                         if previewEmbedDict["reservableRoles"] is not None:
-                            default = placeholder = "\n".join(previewEmbedDict["reservableRoles"])
+                            default = placeholder = "\n".join(previewEmbedDict["reservableRoles"])[:100]
 
                         await interaction.response.send_modal(generateModal(discord.TextStyle.long, placeholder, default, False, 1, 512))
 
@@ -1148,9 +1148,9 @@ class Schedule(commands.Cog):
                             log.exception("Schedule buttonHandling: templateIndex not found")
                             return
 
-                        previewEmbedDict["authorId"] = interaction.user.id
                         previewEmbedDict["templateName"] = templateName
-                        previewEmbedDict["time"] = previewEmbedDict["endTime"] = None
+                        for shit in ("authorId", "time", "endTime", "messageId", "accepted", "declined", "tentative"):
+                            previewEmbedDict.pop(shit, None)
                         templates[templateIndex] = previewEmbedDict
                         with open(filename, "w") as f:
                             json.dump(templates, f, indent=4)
@@ -1373,6 +1373,8 @@ class Schedule(commands.Cog):
                     templates = json.load(f)
                 for template in templates:
                     if template["templateName"] == selectedValue:
+                        template["authorId"] = interaction.user.id
+                        template["time"] = template["endTime"] = None
                         embed = self.fromDictToPreviewEmbed(template)
                         for child in eventMsgView.children:
                             if not isinstance(child, discord.ui.Button) or child.label is None:
@@ -1640,6 +1642,8 @@ class Schedule(commands.Cog):
                         previewEmbedDict["maxPlayers"] = valueLower
 
                 case "save_as_template":
+                    previewEmbedDict["templateName"] = value
+
                     # Write to file
                     filename = f"data/{previewEmbedDict['type'].lower()}Templates.json"
                     jsonCreateNoExist(filename, [])
@@ -1647,14 +1651,15 @@ class Schedule(commands.Cog):
                         templates = json.load(f)
                     templateOverwritten = (False, 0)
                     for idx, template in enumerate(templates):
-                        if template["title"] == previewEmbedDict["title"]:
+                        if template["templateName"] == previewEmbedDict["templateName"]:
                             templateOverwritten = (True, idx)
                             break
-                    log.info(f"{interaction.user} saved {('[Overwritten] ') * templateOverwritten[0]}a template as: {previewEmbedDict['title']}")
+                    log.info(f"{interaction.user} saved {('[Overwritten] ') * templateOverwritten[0]}a template as: {previewEmbedDict['templateName']}")
                     if templateOverwritten[0]:
                         templates.pop(templateOverwritten[1])
-                    previewEmbedDict["templateName"] = value
-                    previewEmbedDict["time"] = previewEmbedDict["endTime"] = None
+                    for shit in ("authorId", "time", "endTime", "messageId", "accepted", "declined", "tentative"):
+                        previewEmbedDict.pop(shit, None)
+
                     templates.append(previewEmbedDict)
                     with open(filename, "w") as f:
                         json.dump(templates, f, indent=4)

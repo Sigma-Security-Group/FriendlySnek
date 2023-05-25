@@ -31,6 +31,7 @@ POLL_PERCENT_REGEX = r"\(\d+\.?\d*%\)\s*"
 # Schedule.py
 ####################
 
+SCHEDULE_TEMPLATE_REMOVE_FROM_EVENT = ("authorId", "type", "time", "endTime", "messageId", "accepted", "declined", "tentative")
 SCHEDULE_EVENT_SELECTED_TIME_ZONE = "Your current time zone preference is `{0}`."
 
 ## Errors

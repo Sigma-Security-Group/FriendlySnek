@@ -670,7 +670,7 @@ class Schedule(commands.Cog):
         if isinstance(previewDict["maxPlayers"], int):
             fieldNameNumberSuffix = f"/{previewDict['maxPlayers']}"
 
-        fieldValue = "-" if previewDict["maxPlayers"] is None else "\u200B"
+        fieldValue = "\u200B" if previewDict["maxPlayers"] == "anonymous" else "-"
         embed.add_field(name=f"Accepted (0{fieldNameNumberSuffix}) ✅", value=fieldValue, inline=True)
         embed.add_field(name=f"Declined (0) ❌", value=fieldValue, inline=True)
         embed.add_field(name=f"Tentative (0) ❓", value=fieldValue, inline=True)
@@ -1149,7 +1149,7 @@ class Schedule(commands.Cog):
                             return
 
                         previewEmbedDict["templateName"] = templateName
-                        for shit in ("authorId", "time", "endTime", "messageId", "accepted", "declined", "tentative"):
+                        for shit in SCHEDULE_TEMPLATE_REMOVE_FROM_EVENT:
                             previewEmbedDict.pop(shit, None)
                         templates[templateIndex] = previewEmbedDict
                         with open(filename, "w") as f:
@@ -1375,6 +1375,7 @@ class Schedule(commands.Cog):
                     if template["templateName"] == selectedValue:
                         template["authorId"] = interaction.user.id
                         template["time"] = template["endTime"] = None
+                        template["type"] = previewEmbedDict['type']
                         embed = self.fromDictToPreviewEmbed(template)
                         for child in eventMsgView.children:
                             if not isinstance(child, discord.ui.Button) or child.label is None:
@@ -1468,10 +1469,6 @@ class Schedule(commands.Cog):
                 return
 
             eventType = event.get("type", "Operation")
-            #dmChannel = interaction.user.dm_channel
-            #if dmChannel is None:
-            #    log.exception("SelectHandling: dmChannel is None")
-            #    return
 
             # Editing Type
             if selectedValue == "Type":
@@ -1657,7 +1654,7 @@ class Schedule(commands.Cog):
                     log.info(f"{interaction.user} saved {('[Overwritten] ') * templateOverwritten[0]}a template as: {previewEmbedDict['templateName']}")
                     if templateOverwritten[0]:
                         templates.pop(templateOverwritten[1])
-                    for shit in ("authorId", "time", "endTime", "messageId", "accepted", "declined", "tentative"):
+                    for shit in SCHEDULE_TEMPLATE_REMOVE_FROM_EVENT:
                         previewEmbedDict.pop(shit, None)
 
                     templates.append(previewEmbedDict)

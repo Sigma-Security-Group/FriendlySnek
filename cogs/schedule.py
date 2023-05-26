@@ -1,4 +1,4 @@
-import os, re, json, asyncio, random, discord
+import os, re, json, asyncio, discord
 import pytz  # type: ignore
 
 from math import ceil
@@ -9,6 +9,7 @@ from dateutil.parser import parse as datetimeParse  # type: ignore
 from discord import Embed, Color
 from discord.ext import commands, tasks  # type: ignore
 
+from .workshopInterest import WorkshopInterest  # type: ignore
 from secret import DEBUG
 from constants import *
 from __main__ import log, cogsReady
@@ -211,7 +212,7 @@ def jsonCreateNoExist(filename: str, dump: list | dict) -> None:
 jsonCreateNoExist(MEMBER_TIME_ZONES_FILE, {})
 jsonCreateNoExist(EVENTS_HISTORY_FILE, [])
 jsonCreateNoExist(WORKSHOP_TEMPLATES_FILE, [])
-jsonCreateNoExist(WORKSHOP_TEMPLATES_DELETED_FILE, [])
+#jsonCreateNoExist(WORKSHOP_TEMPLATES_DELETED_FILE, [])
 jsonCreateNoExist(REMINDERS_FILE, {})
 
 try:
@@ -222,6 +223,7 @@ except Exception as e:
 
 
 class Schedule(commands.Cog):
+    """Schedule Cog."""
     def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
 
@@ -269,8 +271,8 @@ class Schedule(commands.Cog):
 
         if event.get("type", "Operation") == "Workshop" and (workshopInterestName := event.get("workshopInterest")) is not None:
             with open(WORKSHOP_INTEREST_FILE) as f:
-                workshopInterest = json.load(f)
-            if (workshop := workshopInterest.get(workshopInterestName)) is not None:
+                workshopInterestFile = json.load(f)
+            if (workshop := workshopInterestFile.get(workshopInterestName)) is not None:
                 accepted = event["accepted"]
                 if isinstance(event["maxPlayers"], int):  # If int: maxPlayer limit
                     accepted = accepted[:event["maxPlayers"]]
@@ -281,9 +283,13 @@ class Schedule(commands.Cog):
                         workshop["members"].remove(memberId)
                 if updateWorkshopInterest:
                     with open(WORKSHOP_INTEREST_FILE, "w") as f:
-                        json.dump(workshopInterest, f, indent=4)
-                    embed = self.bot.get_cog("WorkshopInterest").getWorkshopEmbed(guild, workshopInterestName)
-                    workshopMessage = await self.bot.get_channel(WORKSHOP_INTEREST).fetch_message(workshop["messageId"])
+                        json.dump(workshopInterestFile, f, indent=4)
+                    channelWorkshopInterest = self.bot.get_channel(WORKSHOP_INTEREST)
+                    if not isinstance(channelWorkshopInterest, discord.TextChannel):
+                        log.exception("Schedule saveEventToHistory: channelWorkshopInterest is not discord.TextChannel")
+                        return
+                    embed = WorkshopInterest.getWorkshopEmbed(guild, workshopInterestName)
+                    workshopMessage = await channelWorkshopInterest.fetch_message(workshop["messageId"])
                     await workshopMessage.edit(embed=embed)
 
         with open(EVENTS_HISTORY_FILE) as f:
@@ -2001,7 +2007,11 @@ class Schedule(commands.Cog):
         timezoneOk = False
         color = Color.gold()
         while not timezoneOk:
-            embed = Embed(title=":clock1: What's your preferred time zone?", description=(SCHEDULE_EVENT_SELECTED_TIME_ZONE.format(memberTimeZones[str(author.id)]) if str(author.id) in memberTimeZones else "You don't have a preferred time zone set.") + "\n\nEnter a number from the list below.\nEnter any time zone name from the column \"**TZ DATABASE NAME**\" in this [Wikipedia article](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones)." + "\nEnter `none` to erase current preferences." * isCommand, color=color)
+            embed = Embed(
+                title=":clock1: What's your preferred time zone?",
+                description=(f"Your current time zone preference is `{memberTimeZones[str(author.id)]}`." if str(author.id) in memberTimeZones else "You don't have a preferred time zone set.") + "\n\nEnter a number from the list below.\nEnter any time zone name from the column \"**TZ DATABASE NAME**\" in this [Wikipedia article](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones)." + "\nEnter `none` to erase current preferences." * isCommand,
+                color=color
+            )
             embed.add_field(name="Popular Time Zones", value="\n".join(f"**{idx}.** {tz}" for idx, tz in enumerate(TIME_ZONES, 1)))
             embed.set_footer(text="Enter `cancel` to abort this command.")
             color = Color.red()

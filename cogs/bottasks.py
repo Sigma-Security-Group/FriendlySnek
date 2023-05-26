@@ -6,7 +6,7 @@ from dateutil.parser import parse as datetimeParse  # type: ignore
 from bs4 import BeautifulSoup as BS  # type: ignore
 from .workshopInterest import WORKSHOP_INTEREST_LIST  # type: ignore
 
-from discord import utils, Embed, Color
+from discord import Embed, Color
 from discord.ext import commands, tasks  # type: ignore
 
 from constants import *
@@ -39,146 +39,119 @@ class BotTasks(commands.Cog):
 
     @tasks.loop(minutes=30.0)
     async def checkModUpdates(self) -> None:
-        """ Checks mod updates, pings hampters if detected.
+        """Checks mod updates, pings hampters if detected."""
+        output = []
+        for modID in MOD_IDS:
+            # Fetch mod
+            response = requests.get(url=CHANGELOG_URL.format(modID))
 
-        Parameters:
-        None.
+            # Parse HTML
+            soup = BS(response.text, "html.parser")
 
-        Returns:
-        None.
-        """
+            # Mod Title
+            name = soup.find("div", class_="workshopItemTitle")
+            if name is None:
+                continue
+            name = name.string
 
-        try:
-            output = []
+            # Find latest update
+            update = soup.find("div", class_="detailBox workshopAnnouncement noFooter")
 
-            for modID in MOD_IDS:
-                # Fetch mod
-                response = requests.get(url=CHANGELOG_URL.format(modID))
 
-                # Parse HTML
-                soup = BS(response.text, "html.parser")
-
-                # Mod Title
-                name = soup.find("div", class_="workshopItemTitle")
-                if name is None:
+            # Loop paragraphs in latest update
+            for paragraph in update.descendants:
+                stripTxt = str(paragraph).strip()
+                if not stripTxt:  # Ignore empty shit
                     continue
-                name = name.string
 
-                # Find latest update
-                update = soup.find("div", class_="detailBox workshopAnnouncement noFooter")
-
-
-                # Loop paragraphs in latest update
-                for paragraph in update.descendants:
-                    stripTxt = str(paragraph).strip()
-                    if not stripTxt:  # Ignore empty shit
-                        continue
-
-                    # Find update time
-                    elif stripTxt.startswith("Update: "):
-                        date = stripTxt
-                        break  # dw bout shit after this
-
-                    # Find update changelog
-                    #elif stripTxt.startswith("<p id=\""):  # THE changelog, dw bout shit after it
-                    #    chl = stripTxt
-                    #    break
+                # Find update time
+                elif stripTxt.startswith("Update: "):
+                    date = stripTxt
+                    break  # dw bout shit after this
 
 
-                # Parse time to datetime
-                dateTimeParse = datetimeParse(date[len("Update: "):].replace("@ ", ""))
+            # Parse time to datetime
+            dateTimeParse = datetimeParse(date[len("Update: "):].replace("@ ", ""))
 
-                # Convert it into UTC (shitty arbitrary code)
-                utcTime = pytz.UTC.localize(dateTimeParse + timedelta(hours=7))  # Change this if output time is wrong: will cause double ping
+            # Convert it into UTC (shitty arbitrary code)
+            utcTime = pytz.UTC.localize(dateTimeParse + timedelta(hours=7))  # Change this if output time is wrong: will cause double ping
 
-                # Current time
-                now = pytz.UTC.localize(datetime.utcnow())
+            # Current time
+            now = pytz.UTC.localize(datetime.utcnow())
 
-                # Check if update is new
-                if utcTime > (now - timedelta(minutes=29.0, seconds=59.0)):  # Relative time checking
-                    log.debug(f"Arma mod update: {name}")
-                    output.append({
-                        "modID": modID,
-                        "name": name,
-                        "datetime": utcTime
-                    })
-
-
-            if len(output) > 0:
-                # Create message
-                guild = self.bot.get_guild(GUILD_ID)
-                if guild is None:
-                    log.exception("checkModUpdates: guild is None")
-                    return
-
-                changelog = await guild.fetch_channel(CHANGELOG)
-                if not isinstance(changelog, discord.channel.TextChannel):
-                    log.exception("checkModUpdates: changelog channel is not discord.channel.TextChannel")
-                    return
-
-                hampter = guild.get_role(SERVER_HAMSTER)
-                if hampter is None:
-                    log.exception("checkModUpdates: Hampter role is None")
-                    return
-
-                # Each mod update will be sent in a separate message
-                msgContent = hampter.mention + (f" ({len(output)})" if len(output) > 1 else "") + "\n\n"  # Ping for first message
-                for mod in output:
-                    await changelog.send(msgContent, embed=Embed(title=mod["name"], url=CHANGELOG_URL.format(mod['modID']), timestamp=mod["datetime"], color=Color.dark_blue()))
-                    msgContent = None  # Only 1 ping
+            # Check if update is new
+            if utcTime > (now - timedelta(minutes=29.0, seconds=59.0)):  # Relative time checking
+                log.debug(f"Arma mod update: {name}")
+                output.append({
+                    "modID": modID,
+                    "name": name,
+                    "datetime": utcTime
+                })
 
 
-        except Exception as e:
-            log.exception(e)
+        if len(output) > 0:
+            # Create message
+            guild = self.bot.get_guild(GUILD_ID)
+            if guild is None:
+                log.exception("checkModUpdates: guild is None")
+                return
+
+            changelog = await guild.fetch_channel(CHANGELOG)
+            if not isinstance(changelog, discord.channel.TextChannel):
+                log.exception("checkModUpdates: changelog channel is not discord.channel.TextChannel")
+                return
+
+            hampter = guild.get_role(SERVER_HAMSTER)
+            if hampter is None:
+                log.exception("checkModUpdates: Hampter role is None")
+                return
+
+            # Each mod update will be sent in a separate message
+            msgContent: str | None = hampter.mention + (f" ({len(output)})" if len(output) > 1 else "") + "\n\n"  # Ping for first message
+            for mod in output:
+                await changelog.send(msgContent, embed=Embed(title=mod["name"], url=CHANGELOG_URL.format(mod['modID']), timestamp=mod["datetime"], color=Color.dark_blue()))
+                msgContent = None  # Only 1 ping
+
 
 
     async def redditRecruitmentPosts(self) -> None:
-        """ Posts Reddit recruitment posts once a week.
+        """ Posts Reddit recruitment posts once a week."""
+        username = "SigmaSecurityGroup"
+        reddit = asyncpraw.Reddit(
+            client_id=secret.REDDIT["client_id"],
+            client_secret=secret.REDDIT["client_secret"],
+            password=secret.REDDIT["password"],
+            user_agent=f"Sigma Security Group by /u/{username}",
+            username=username,
+        )
 
-        Parameters:
-        None.
+        account = await reddit.redditor(username)  # Fetch our account
+        submissions = account.submissions.new(limit=1)  # Get account submissions sorted by latest
+        async for submission in submissions:  # Check the latest submission [break]
+            subCreated = datetime.fromtimestamp(submission.created_utc).replace(tzinfo=timezone.utc)  # Latest post timestamp
+            break
 
-        Returns:
-        None.
-        """
+        if datetime.now().replace(tzinfo=timezone.utc) < (subCreated + timedelta(weeks=1.0, minutes=30.0)):  # Dont post if now is less than ~1 week than last post
+            return
 
-        try:
-            username = "SigmaSecurityGroup"
-            reddit = asyncpraw.Reddit(
-                client_id=secret.REDDIT["client_id"],
-                client_secret=secret.REDDIT["client_secret"],
-                password=secret.REDDIT["password"],
-                user_agent=f"Sigma Security Group by /u/{username}",
-                username=username,
-            )
+        # 1 week has passed, post new
+        sub = await reddit.subreddit("FindAUnit")
 
-            account = await reddit.redditor(username)  # Fetch our account
-            submissions = account.submissions.new(limit=1)  # Get account submissions sorted by latest
-            async for submission in submissions:  # Check the latest submission [break]
-                subCreated = datetime.fromtimestamp(submission.created_utc).replace(tzinfo=timezone.utc)  # Latest post timestamp
+        # Find Recruiting flair UUID
+        flairID = None
+        async for flair in sub.flair.link_templates.user_selectable():
+            if flair["flair_text"] == "Recruiting":
+                flairID = flair["flair_template_id"]
                 break
+        else:
+            log.warning("No Recruiting flair found!")
 
-            if datetime.now().replace(tzinfo=timezone.utc) < (subCreated + timedelta(weeks=1.0, minutes=30.0)):  # Dont post if now is less than ~1 week than last post
-                return
-
-            # 1 week has passed, post new
-            sub = await reddit.subreddit("FindAUnit")
-
-            # Find Recruiting flair UUID
-            flairID = None
-            async for flair in sub.flair.link_templates.user_selectable():
-                if flair["flair_text"] == "Recruiting":
-                    flairID = flair["flair_template_id"]
-                    break
-            else:
-                log.warning("No Recruiting flair found!")
-
-            # Submission details
-            propagandaPath = r"constants/SSG_Propaganda"
-            post = {
-                "Title": "[A3][18+][Recruiting][Worldwide] | Casual-Attendance, PMC Themed Unit | Sigma Security Group is now Recruiting!",
-                "FlairID": flairID,
-                "Description": """About Us:
+        # Submission details
+        propagandaPath = r"constants/SSG_Propaganda"
+        post = {
+            "Title": "[A3][18+][Recruiting][Worldwide] | Casual-Attendance, PMC Themed Unit | Sigma Security Group is now Recruiting!",
+            "FlairID": flairID,
+            "Description": """About Us:
 
 - **Flexibility**: Sigma has no formal sign-up process, no commitments, and offers instruction on request. Certification in specialty roles is available and run by professionals in the field.
 
@@ -201,35 +174,31 @@ Requirements:
 Join Us:
 
 - Would you like to know more? Join the **[Discord Server](https://discord.gg/KtcVtfjAYj)** for more information."""
-            }
+        }
 
-            """ submit_image disabled temp cuz devs haven't released new version which fixes image_path error """
-            # Send submission with random image
-            submission = await sub.submit_image(title=post["Title"], image_path=f"{propagandaPath}/{random.choice(os.listdir(propagandaPath))}", flair_id=post["FlairID"])
-            await submission.reply(post["Description"])
+        """ submit_image disabled temp cuz devs haven't released new version which fixes image_path error """
+        # Send submission with random image
+        submission = await sub.submit_image(title=post["Title"], image_path=f"{propagandaPath}/{random.choice(os.listdir(propagandaPath))}", flair_id=post["FlairID"])
+        await submission.reply(post["Description"])
 
-            log.info("Reddit recruitment posted!")
+        log.info("Reddit recruitment posted!")
 
-            armaDisc = self.bot.get_channel(ARMA_DISCUSSION)
-            if not isinstance(armaDisc, discord.channel.TextChannel):
-                log.exception("checkModUpdates: Arma Discussion channel is not discord.channel.TextChannel")
-                return
+        armaDisc = self.bot.get_channel(ARMA_DISCUSSION)
+        if not isinstance(armaDisc, discord.channel.TextChannel):
+            log.exception("checkModUpdates: Arma Discussion channel is not discord.channel.TextChannel")
+            return
 
-            await armaDisc.send(f"Reddit recruitment post published, go upvote it!\nhttps://www.reddit.com{submission.permalink}")
-        except Exception as e:
-            log.exception(e)
-
+        await armaDisc.send(f"Reddit recruitment post published, go upvote it!\nhttps://www.reddit.com{submission.permalink}")
 
     def getPingString(self, rawRole: int | tuple) -> str | None:
-        """ Generate a ping string from role id(s).
+        """Generate a ping string from role id(s).
 
         Parameters:
         rawRole (int | tuple): One role id or tuple with role ids.
 
         Returns:
-        str | None: str with pings or None if failed
+        str | None: str with pings or None if failed.
         """
-
         guild = self.bot.get_guild(GUILD_ID)
         if guild is None:
             log.exception("Bottasks getSmePing: guild is None")
@@ -248,17 +217,8 @@ Join Us:
             return None
         return " ".join([role.mention for role in roles])  # type: ignore
 
-
     async def smeReminder(self) -> None:
-        """ Reminds SMEs if they haven't hosten in the required time.
-
-        Parameters:
-        None.
-
-        Returns:
-        None.
-        """
-
+        """Reminds SMEs if they haven't hosten in the required time."""
         utcNow = datetime.utcnow()
 
         if utcNow.day != 1 or utcNow.hour != 0:  # Only execute function on 1st day of month around midnight UTC
@@ -312,11 +272,11 @@ Join Us:
         if len(workshopsInTimeFrame) > 0:
             await smeCorner.send(":clap: Good job for keeping up the hosting " + ", ".join([f"`{wsName}`" for wsName in workshopsInTimeFrame]) + "! :clap:")
 
-
     @tasks.loop(hours=1.0)
     async def oneHourTasks(self) -> None:
         await self.redditRecruitmentPosts()
         await self.smeReminder()
+
 
 
     @tasks.loop(minutes=5)
@@ -423,13 +383,16 @@ Join Us:
             json.dump(reminders, f, indent=4)
 
 
+
 class Reminders(commands.GroupCog, name="reminder"):
+    """Reminders Cog."""
     def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
         super().__init__()
 
-    def getFutureDate(self, datetimeDict: dict[str, int | None]) -> datetime:
-        """ Create future datetime from time period values.
+    @staticmethod
+    def getFutureDate(datetimeDict: dict[str, int | None]) -> datetime:
+        """Create future datetime from time period values.
 
         Parameters:
         datetimeDict (dict[str, int | None]): Keys as time period [year/day/minute] (month is optional), values as None or stringed number.
@@ -457,8 +420,9 @@ class Reminders(commands.GroupCog, name="reminder"):
         )
         return futureDate
 
-    def filterMatches(self, matches) -> dict[str, int | None]:
-        """ Merges multiple time dicts into one, by finding biggest values & adds recurring ones.
+    @staticmethod
+    def filterMatches(matches) -> dict[str, int | None]:
+        """Merges multiple time dicts into one, by finding biggest values & adds recurring ones.
 
         Parameters:
         matches (): List of re.Match.
@@ -476,7 +440,7 @@ class Reminders(commands.GroupCog, name="reminder"):
         return totalValues
 
     def parseRelativeTime(self, time: str) -> datetime | None:
-        """ Parses raw str relative time into datetime object.
+        """Parses raw str relative time into datetime object.
 
         Parameters:
         time (str): Unparsed relative time.
@@ -512,7 +476,7 @@ class Reminders(commands.GroupCog, name="reminder"):
         repeat = "If the reminder repeats."
     )
     async def reminderSet(self, interaction: discord.Interaction, when: str, text: str | None = None, repeat: bool | None = None) -> None:
-        """ Sets a reminder to remind you of something at a specific time. """
+        """Sets a reminder to remind you of something at a specific time."""
         if when.strip() == "":
             await interaction.response.send_message(embed=Embed(title="❌ Input e.g. 'in 5 minutes' or '1 hour'.", color=Color.red()), ephemeral=True, delete_after=10.0)
             return
@@ -554,7 +518,7 @@ class Reminders(commands.GroupCog, name="reminder"):
     @discord.app_commands.command(name="list")
     @discord.app_commands.guilds(GUILD)
     async def reminderList(self, interaction: discord.Interaction) -> None:
-        """ Shows the currently running reminders. """
+        """Shows the currently running reminders."""
         with open(REMINDERS_FILE) as f:
             reminders = json.load(f)
 
@@ -580,7 +544,7 @@ class Reminders(commands.GroupCog, name="reminder"):
     @discord.app_commands.command(name="clear")
     @discord.app_commands.guilds(GUILD)
     async def reminderClear(self, interaction: discord.Interaction) -> None:
-        """ Clears all reminders you have set. """
+        """Clears all reminders you have set."""
         with open(REMINDERS_FILE) as f:
             reminders = json.load(f)
 
@@ -602,8 +566,9 @@ class Reminders(commands.GroupCog, name="reminder"):
 
         await interaction.response.send_message(f"{len(removeList)} reminder{'s' * (len(removeList) > 1)} removed.")
 
-
-    async def reminderDeleteAutocomplete(self, interaction: discord.Interaction, current: str) -> list[discord.app_commands.Choice[str]]:
+    @staticmethod
+    async def reminderDeleteAutocomplete(interaction: discord.Interaction, current: str) -> list[discord.app_commands.Choice[str]]:
+        """Slash command autocomplete when removing reminders."""
         with open(REMINDERS_FILE) as f:
             reminders = json.load(f)
 
@@ -628,7 +593,7 @@ class Reminders(commands.GroupCog, name="reminder"):
     @discord.app_commands.guilds(GUILD)
     @discord.app_commands.autocomplete(reminder=reminderDeleteAutocomplete)
     async def reminderDelete(self, interaction: discord.Interaction, reminder: str) -> None:
-        """ Delete a reminder. """
+        """Delete a reminder."""
         if reminder == "-":
             await interaction.response.send_message("No reminders currently active.", ephemeral=True, delete_after=10.0)
             return

@@ -41,7 +41,7 @@ class Poll(commands.Cog):
     )
     @discord.app_commands.choices(multivote = [discord.app_commands.Choice(name="Multiple votes", value="Yes"), discord.app_commands.Choice(name="One vote", value="No")])
     async def poll(self, interaction: discord.Interaction, multivote: discord.app_commands.Choice[str], title: str, option1: str, description: str = "", option2: str = "", option3: str = "", option4: str = "", option5: str = "", option6: str = "", option7: str = "", option8: str = "", option9: str = "", option10: str = "") -> None:
-        """ Create a poll with up to 10 options.
+        """Create a poll with up to 10 options.
 
         Parameters:
         interaction (discord.Interaction): The Discord interaction.
@@ -96,7 +96,8 @@ class Poll(commands.Cog):
         except Exception as e:
             log.exception(f"{interaction.user} | {e}")
 
-    async def buttonHandling(self, button: discord.ui.Button, interaction: discord.Interaction, group: dict) -> None:
+    @staticmethod
+    async def buttonHandling(button: discord.ui.Button, interaction: discord.Interaction, group: dict) -> None:
         """ Handling all poll button interactions.
 
         Parameters:
@@ -184,8 +185,8 @@ class PollView(discord.ui.View):
         super().__init__(*args, **kwargs)
         self.instance = instance
 
-    async def on_timeout(self):
-        pass
+    #async def on_timeout(self):
+    #    pass
 
 
 class PollButton(discord.ui.Button):

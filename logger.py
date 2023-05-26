@@ -11,11 +11,13 @@ class Logger:
         with open(LOG_FILE, "w") as f:
             f.write("")
 
-    def stop(self) -> None:
+    @staticmethod
+    def stop() -> None:
         STD_OUT.flush()
 
-    def _log(self, level: str, message: str, flush=False) -> None:
-        """ Log message.
+    @staticmethod
+    def _log(level: str, message: str, flush=False) -> None:
+        """Log message.
 
         Parameters:
         level (str): (DEBUG | INFO | WARNING | ERROR | CRITICAL).

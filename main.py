@@ -54,6 +54,7 @@ INTENTS = discord.Intents.all()
 UTC = pytz.utc
 
 class FriendlySnek(commands.Bot):
+    """Friendly Snek bot."""
     def __init__(self, *, intents: discord.Intents) -> None:
         super().__init__(
             command_prefix=COMMAND_PREFIX,
@@ -85,14 +86,7 @@ async def on_ready() -> None:
 
 @client.event
 async def on_message(message: discord.Message) -> None:
-    """ On message client event.
-
-    Parameters:
-    message (discord.Message): The Discord message.
-
-    Returns:
-    None.
-    """
+    """On message client event."""
     if message.author.id == FRIENDLY_SNEK:  # Ignore messages from itself
         return
     if secret.DEBUG and message.author.id in FRIENDLY_SNEKS:  # Ignore messages from other Friendly Sneks if DEBUG mode
@@ -113,7 +107,7 @@ async def on_message(message: discord.Message) -> None:
 
 
 async def analyzeChannel(client, message: discord.Message, channelID: int, attachmentContentType: str) -> None:
-    """ Will analyze the discord.Message contents and see if it meets the channel purpose.
+    """Will analyze the discord.Message contents and see if it meets the channel purpose.
 
     Parameters:
     message (discord.Message): The Discord message.
@@ -148,7 +142,7 @@ async def analyzeChannel(client, message: discord.Message, channelID: int, attac
 
 @client.event
 async def on_member_join(member: discord.Member) -> None:
-    """ On member join client event.
+    """On member join client event.
 
     Parameters:
     member (discord.Member): The Discord member.
@@ -176,11 +170,13 @@ async def on_member_join(member: discord.Member) -> None:
 
 @client.event
 async def on_error(event, *args, **kwargs) -> None:
+    """  """
     log.exception(f"An error occured! {event}")
 
 
 @client.event
-async def on_command_error(ctx: commands.Context, error: commands.errors) -> None:
+async def on_command_error(ctx: commands.Context, error: commands.CommandError) -> None:
+    """  """
     errorType = type(error)
     if errorType is commands.errors.MissingRequiredArgument:
         await ctx.send_help(ctx.command)
@@ -188,23 +184,8 @@ async def on_command_error(ctx: commands.Context, error: commands.errors) -> Non
         log.exception(f"{ctx.author} | {error}")
 
 
-def devCheck() -> commands.check:
-    """ A permissions check for the reload command.
-
-    Parameters:
-    None.
-
-    Returns:
-    commands.check
-    """
-    def predict(ctx: commands.context) -> bool:
-        return ctx.author.id in DEVELOPERS
-    return commands.check(predict)
-
-
 @client.command()
-@devCheck()
-async def reload(ctx: commands.context) -> None:
+async def reload(ctx: commands.Context) -> None:
     """ Reload bot cogs - Devs only. """
     log.info(f"{ctx.author.display_name} ({ctx.author}) Reloading bot cogs...")
     if ctx.author.id not in DEVELOPERS:
@@ -217,9 +198,10 @@ async def reload(ctx: commands.context) -> None:
 
 if secret.DEBUG:
     @client.command()
-    @devCheck()
-    async def stop(ctx: commands.context) -> None:
+    async def stop(ctx: commands.Context) -> None:
         """ Stops bot - Devs only. """
+        if ctx.author.id not in DEVELOPERS:
+            return
         await client.close()
 
 

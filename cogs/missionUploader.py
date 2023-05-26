@@ -26,6 +26,7 @@ SERVERS = [
 server = SERVERS[0]
 
 class MissionUploader(commands.Cog):
+    """Mission uploader cog."""
     def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
 
@@ -38,14 +39,7 @@ class MissionUploader(commands.Cog):
     @discord.app_commands.guilds(GUILD)
     @discord.app_commands.checks.has_any_role(UNIT_STAFF, SERVER_HAMSTER, MISSION_BUILDER, CURATOR)
     async def uploadMission(self, interaction: discord.Interaction) -> None:
-        """Upload a mission PBO file to the server.
-
-        Parameters:
-        interaction (discord.Interaction): The Discor interaction.
-
-        Returns:
-        None.
-        """
+        """Upload a mission PBO file to the server."""
         await interaction.response.send_message("Upload mission file in DMs...")
         log.debug(f"{interaction.user.display_name} ({interaction.user}) is uploading a mission file...")
 
@@ -156,15 +150,7 @@ class MissionUploader(commands.Cog):
 
     @uploadMission.error
     async def onUploadMissionError(self, interaction: discord.Interaction, error: discord.app_commands.AppCommandError) -> None:
-        """ uploadMission errors - dedicated for the discord.app_commands.errors.MissingAnyRole error.
-
-        Parameters:
-        interaction (discord.Interaction): The Discor interaction.
-        error (discord.app_commands.AppCommandError): The end user error.
-
-        Returns:
-        None.
-        """
+        """uploadMission errors - dedicated for the discord.app_commands.errors.MissingAnyRole error."""
         if type(error) == discord.app_commands.errors.MissingAnyRole:
             guild = self.bot.get_guild(GUILD_ID)
             if guild is None:

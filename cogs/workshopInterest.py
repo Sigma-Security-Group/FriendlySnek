@@ -9,9 +9,7 @@ from __main__ import log, cogsReady
 if DEBUG:
     from constants.debug import *
 
-
-WORKSHOP_INTEREST_FILE = "data/workshopInterest.json"
-
+# Maybe move this to constants.py
 WORKSHOP_INTEREST_LIST: dict[str, dict[str, str | int | tuple]] = {
     "Mechanised": {
         "emoji": "🛡️",
@@ -62,6 +60,7 @@ WORKSHOP_INTEREST_LIST: dict[str, dict[str, str | int | tuple]] = {
 
 
 class WorkshopInterest(commands.Cog):
+    """Workshop Interest Cog."""
     def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
 
@@ -86,7 +85,7 @@ class WorkshopInterest(commands.Cog):
         await self.updateChannel()
 
     async def updateChannel(self) -> None:
-        """ Updates the interest channel with all messages.
+        """Updates the interest channel with all messages.
 
         Parameters:
         None.
@@ -119,8 +118,8 @@ class WorkshopInterest(commands.Cog):
             row = discord.ui.View()
             row.timeout = None
             buttons = (
-                WorkshopInterestButtons(self, row=0, label="Interested", style=discord.ButtonStyle.success, custom_id="add"),
-                WorkshopInterestButtons(self, row=0, label="Not Interested", style=discord.ButtonStyle.danger, custom_id="remove")
+                WorkshopInterestButton(self, row=0, label="Interested", style=discord.ButtonStyle.success, custom_id="add"),
+                WorkshopInterestButton(self, row=0, label="Not Interested", style=discord.ButtonStyle.danger, custom_id="remove")
             )
             for button in buttons:
                 row.add_item(item=button)
@@ -133,8 +132,9 @@ class WorkshopInterest(commands.Cog):
         with open(WORKSHOP_INTEREST_FILE, "w", encoding="utf-8") as f:
             json.dump(wsIntFile, f, indent=4)
 
-    def getWorkshopEmbed(self, guild: discord.Guild, workshopName: str) -> Embed:
-        """ Generates an embed from the given workshop.
+    @staticmethod
+    def getWorkshopEmbed(guild: discord.Guild, workshopName: str) -> Embed:
+        """Generates an embed from the given workshop.
 
         Parameters:
         guild (discord.Guild): The target guild.
@@ -191,7 +191,7 @@ class WorkshopInterest(commands.Cog):
         return embed
 
     async def updateInterestList(self, button: discord.ui.Button, interaction: discord.Interaction) -> None:
-        """ Handling all workshop interest button interactions.
+        """Handling all workshop interest button interactions.
 
         Parameters:
         button (discord.ui.Button): The Discord button.
@@ -249,7 +249,8 @@ class WorkshopInterest(commands.Cog):
             log.exception(f"{interaction.user} | {e}")
 
 
-class WorkshopInterestButtons(discord.ui.Button):
+class WorkshopInterestButton(discord.ui.Button):
+    """Handling all workshop interest buttons."""
     def __init__(self, instance, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.instance = instance

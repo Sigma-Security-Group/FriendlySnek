@@ -51,7 +51,7 @@ class Jokes(commands.Cog):
         await interaction.response.send_message(response)
         if response == "Ok, shutting down now.":
             await sleep(5)
-            await interaction.response.send_message("Just kidding, I'm back. :snake:")
+            await interaction.followup.send("Just kidding, I'm back. :snake:")
 
 async def setup(bot: commands.Bot) -> None:
     await bot.add_cog(Jokes(bot))

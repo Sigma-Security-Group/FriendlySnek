@@ -566,8 +566,7 @@ class Reminders(commands.GroupCog, name="reminder"):
 
         await interaction.response.send_message(f"{len(removeList)} reminder{'s' * (len(removeList) > 1)} removed.")
 
-    @staticmethod
-    async def reminderDeleteAutocomplete(interaction: discord.Interaction, current: str) -> list[discord.app_commands.Choice[str]]:
+    async def reminderDeleteAutocomplete(self, interaction: discord.Interaction, current: str) -> list[discord.app_commands.Choice[str]]:
         """Slash command autocomplete when removing reminders."""
         with open(REMINDERS_FILE) as f:
             reminders = json.load(f)

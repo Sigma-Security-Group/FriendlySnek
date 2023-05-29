@@ -1629,7 +1629,7 @@ class Schedule(commands.Cog):
                     previewEmbedDict["externalURL"] = value or None
 
                 case "reservable_roles":
-                    previewEmbedDict["reservableRoles"] = None if value == "" else {role: None for role in value.split("\n")}
+                    previewEmbedDict["reservableRoles"] = None if value == "" else {role.strip(): None for role in value.split("\n") if role.strip() != ""}
 
                 case "max_players":
                     valueLower = value.lower()

@@ -1290,7 +1290,7 @@ class Schedule(commands.Cog):
                 options.pop(idx)
                 break
 
-        if noneOption is True:
+        if noneOption:
             options.insert(0, discord.SelectOption(label="None", emoji="🚫"))
 
         # Generate view

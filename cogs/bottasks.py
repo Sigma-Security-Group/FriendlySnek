@@ -249,7 +249,7 @@ Join Us:
                     workshopsInTimeFrame.append(wsName)
                     break
 
-            if wsScheduled is True:
+            if wsScheduled:
                 continue
 
             # Check for past events
@@ -331,7 +331,7 @@ Join Us:
                     if message.author.id == member.id and (str(roleUnitStaff.id) in message.content or str(roleAdvisor.id) in message.content)
                 ]) > 0
 
-                if hasUserPinged is True:
+                if hasUserPinged:
                     continue
 
                 await channelWelcome.send(f"{member.mention} Don't forget to ping @​{roleUnitStaff.name} and @​{roleAdvisor.name} when you are ready!")
@@ -358,7 +358,7 @@ Join Us:
             embed.set_footer(text="Set")
 
             # Repeat
-            if details["repeat"] is True:
+            if details["repeat"]:
                 embed.set_author(name="Repeated reminder")
                 embed.set_footer(text="Next reminder")
                 embed.timestamp = datetime.fromtimestamp(float(time)) + timedelta(seconds=details["timedeltaSeconds"])
@@ -455,13 +455,13 @@ class Reminders(commands.GroupCog, name="reminder"):
         timeFound = lambda times: len([value for value in times.values() if value is not None]) > 0
 
         # Short version of relative time inputted (e.g. "1y9m11wd99h111m999s")
-        if timeFound(timeDict) is True:
+        if timeFound(timeDict):
             return self.getFutureDate(timeDict)
 
         # Long version of relative time inputted (e.g. "99 minutes")
         longTimeRegex = r"(?P<years>\d+(?=\s?years?))?(?P<months>\d+(?=\s?months?))?(?P<weeks>\d+(?=\s?weeks?))?(?P<days>\d+(?=\s?days?))?(?P<hours>\d+(?=\s?hours?))?(?P<minutes>\d+(?=\s?minutes?))?(?P<seconds>\d+(?=\s?seconds?))?"
         timeDict = self.filterMatches(re.finditer(longTimeRegex, timeStrip, re.I))
-        if timeFound(timeDict) is True:
+        if timeFound(timeDict):
             return self.getFutureDate(timeDict)
 
         # timeFound is False on both accounts
@@ -486,7 +486,7 @@ class Reminders(commands.GroupCog, name="reminder"):
             await interaction.response.send_message(embed=Embed(title="❌ Could not parse the given time.", color=Color.red()), ephemeral=True, delete_after=10.0)
             return
 
-        if repeat is True and ((reminderTime - datetime.now()) < timedelta(minutes=1)):
+        if repeat and ((reminderTime - datetime.now()) < timedelta(minutes=1)):
             await interaction.response.send_message(embed=Embed(title="❌ I will not spam-remind you.", color=Color.red()), ephemeral=True, delete_after=10.0)
             return
 

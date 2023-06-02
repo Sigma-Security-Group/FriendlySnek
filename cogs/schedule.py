@@ -1763,7 +1763,7 @@ class Schedule(commands.Cog):
                 log.exception("editEvent: guild is None")
                 return None
 
-            previewEmbed = Embed(title=f":clock3: The starting time has changed for: {event['title']}!", description=f"From: {discord.utils.format_dt(UTC.localize(datetime.strptime(startTimeOld, TIME_FORMAT)), style='F')}\n\u2000\u2000To: {discord.utils.format_dt(UTC.localize(datetime.strptime(event['time'], TIME_FORMAT)), style='F')}", color=Color.orange())
+            previewEmbed = Embed(title=f":clock3: The starting time has changed for: [{event['title']}]({eventMsg.jump_url})!", description=f"From: {discord.utils.format_dt(UTC.localize(datetime.strptime(startTimeOld, TIME_FORMAT)), style='F')}\n\u2000\u2000To: {discord.utils.format_dt(UTC.localize(datetime.strptime(event['time'], TIME_FORMAT)), style='F')}", color=Color.orange())
             for memberId in event["accepted"] + event["declined"] + event["tentative"]:
                 member = guild.get_member(memberId)
                 if member is not None:

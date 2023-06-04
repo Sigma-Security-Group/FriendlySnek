@@ -400,7 +400,7 @@ class Schedule(commands.Cog):
 
     @discord.app_commands.command(name="refreshschedule")
     @discord.app_commands.guilds(GUILD)
-    @discord.app_commands.checks.has_any_role(UNIT_STAFF, SERVER_HAMSTER, CURATOR)
+    @discord.app_commands.checks.has_any_role(UNIT_STAFF, SERVER_HAMSTER, CURATOR, SNEK_LORD)
     async def refreshSchedule(self, interaction: discord.Interaction) -> None:
         """Refreshes the schedule - Use if an event was deleted without using the reaction.
 

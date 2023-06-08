@@ -95,11 +95,6 @@ async def on_message(message: discord.Message) -> None:
     if message.guild is None or message.guild.id != GUILD_ID:  # Ignore messages that were not sent on the correct server
         return
 
-    HELLJUMPER = 338453177097650178
-    if message.author.id == HELLJUMPER:
-        await message.delete()
-        await message.channel.send("lmao, get pwnd helljumper")
-
     # Execute commands
     if message.content.startswith(COMMAND_PREFIX):
         log.debug(f"{message.author.display_name} ({message.author}) > {message.content}")

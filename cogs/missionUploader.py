@@ -37,7 +37,7 @@ class MissionUploader(commands.Cog):
 
     @discord.app_commands.command(name="uploadmission")
     @discord.app_commands.guilds(GUILD)
-    @discord.app_commands.checks.has_any_role(UNIT_STAFF, SERVER_HAMSTER, MISSION_BUILDER, CURATOR)
+    @discord.app_commands.checks.has_any_role(UNIT_STAFF, SERVER_HAMSTER, MISSION_BUILDER, CURATOR, SNEK_LORD)
     async def uploadMission(self, interaction: discord.Interaction) -> None:
         """Upload a mission PBO file to the server."""
         await interaction.response.send_message("Upload mission file in DMs...")

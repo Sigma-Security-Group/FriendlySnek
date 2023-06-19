@@ -83,22 +83,6 @@ async def on_ready() -> None:
 
     log.info(f"Bot Ready! Logged in as {client.user}.")
 
-    ## TEST
-    guild = client.get_guild(GUILD_ID)
-    if guild is None:
-        log.exception("main: guild is None")
-        return
-    log.debug(guild.get_member(255054248113471490))
-    log.debug(guild.get_member(255054248113471490).global_name)
-    log.debug(guild.get_member(255054248113471490).display_name)
-    log.debug(guild.get_member(255054248113471490).discriminator)
-
-    log.debug(guild.get_member(229212817448894464))
-    log.debug(guild.get_member(229212817448894464).global_name)
-    log.debug(guild.get_member(229212817448894464).display_name)
-    log.debug(guild.get_member(229212817448894464).discriminator)
-    ## /TEST
-
 
 @client.event
 async def on_message(message: discord.Message) -> None:

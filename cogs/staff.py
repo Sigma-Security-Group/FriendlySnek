@@ -40,7 +40,7 @@ class Staff(commands.Cog):
                 """ Mentions, IDs """
                 member = member_
                 break
-            elif (searchTerm == member_.display_name.lower()) or (searchTerm == member_.name.lower()) or (searchTerm == member_.mention.lower()) or (searchTerm == member_.name.lower() + "#" + member_.discriminator) or (searchTerm == member_.mention.lower().replace("<@", "<@!")) or (searchTerm == member_.mention.lower().replace("<@!", "<@")) or (searchTerm.isdigit() and int(searchTerm) == member_.discriminator):
+            elif (searchTerm == member_.display_name.lower()) or (isinstance(member_.global_name, str) and searchTerm == member_.global_name.lower()) or (searchTerm == member_.name.lower()) or (searchTerm == member_.mention.lower()) or (searchTerm == member_.name.lower() + "#" + member_.discriminator) or (searchTerm == member_.mention.lower().replace("<@", "<@!")) or (searchTerm == member_.mention.lower().replace("<@!", "<@")) or (searchTerm.isdigit() and int(searchTerm) == member_.discriminator):
                 """ Display names, name, raw name """
                 member = member_
                 break

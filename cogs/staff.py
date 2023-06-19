@@ -50,7 +50,7 @@ class Staff(commands.Cog):
         return member
 
     @commands.command(name="getmember")
-    @commands.has_any_role(UNIT_STAFF)
+    @commands.has_any_role(UNIT_STAFF, SNEK_LORD)
     async def getMember(self, ctx: commands.Context, *, member: str) -> None:
         """Get detailed information about a guild member."""
         targetMember = self._getMember(member)
@@ -96,7 +96,7 @@ class Staff(commands.Cog):
         await ctx.send(embed=embed)
 
     @commands.command(name="purge")
-    @commands.has_any_role(UNIT_STAFF)
+    @commands.has_any_role(UNIT_STAFF, SNEK_LORD)
     async def purgeMessagesFromMember(self, ctx: commands.Context, *, member: str) -> None:
         """Purges all messages from a specific member."""
         tagetMember = self._getMember(member)
@@ -129,7 +129,7 @@ class Staff(commands.Cog):
         await ctx.send(embed=embed)
 
     @commands.command(name="lastactivity")
-    @commands.has_any_role(UNIT_STAFF)
+    @commands.has_any_role(UNIT_STAFF, SNEK_LORD)
     async def lastActivity(self, ctx: commands.Context, pingStaff: str = "yes") -> None:
         """Get last activity (message) for all members."""
         guild = self.bot.get_guild(GUILD_ID)
@@ -184,7 +184,7 @@ class Staff(commands.Cog):
             await ctx.send(f"{'' if roleUnitStaff is None else roleUnitStaff.mention} Last activity analysis has finished!")
 
     @commands.command(name="lastactivitymember")
-    @commands.has_any_role(UNIT_STAFF)
+    @commands.has_any_role(UNIT_STAFF, SNEK_LORD)
     async def lastActivityForMember(self, ctx: commands.Context, *, member: str) -> None:
         """Get last activity (message) for a specific member."""
         targetMember = self._getMember(member)
@@ -219,7 +219,7 @@ class Staff(commands.Cog):
             await ctx.send(embed=embed)
 
     @commands.command(name="promote")
-    @commands.has_any_role(UNIT_STAFF)
+    @commands.has_any_role(UNIT_STAFF, SNEK_LORD)
     async def promote(self, ctx: commands.Context, *, member: str) -> None:
         """Promote a member to the next rank."""
         targetMember = self._getMember(member)
@@ -266,7 +266,7 @@ class Staff(commands.Cog):
             await ctx.send(embed=embed)
 
     @commands.command(name="demote")
-    @commands.has_any_role(UNIT_STAFF)
+    @commands.has_any_role(UNIT_STAFF, SNEK_LORD)
     async def demote(self, ctx: commands.Context, *, member: str) -> None:
         """Demote a member to the previous rank."""
         targetMember = self._getMember(member)
@@ -304,7 +304,7 @@ class Staff(commands.Cog):
             await ctx.send(embed=embed)
 
     @commands.command(name="searchmodlogs")
-    @commands.has_any_role(UNIT_STAFF)
+    @commands.has_any_role(UNIT_STAFF, SNEK_LORD)
     async def searchModLogs(self, ctx: commands.Context, *, member: str) -> None:
         """ Fetch all occurrences ances in the moderation log related to a member. """
         channelStaffChat = self.bot.get_channel(STAFF_CHAT)
@@ -369,7 +369,7 @@ class Staff(commands.Cog):
 
     # Advisor command
     @commands.command(name="verify")
-    @commands.has_any_role(UNIT_STAFF, SERVER_HAMSTER, ADVISOR)
+    @commands.has_any_role(UNIT_STAFF, SERVER_HAMSTER, ADVISOR, SNEK_LORD)
     async def verify(self, ctx: commands.Context, *, member: str) -> None:
         """Verifies a Prospect (passed interview)."""
         targetMember = self._getMember(member)
@@ -407,7 +407,7 @@ class Staff(commands.Cog):
 
     # Hampter command
     @commands.command(name="gibcmdline")
-    @commands.has_any_role(UNIT_STAFF, SERVER_HAMSTER, GUINEA_PIG)
+    @commands.has_any_role(UNIT_STAFF, SERVER_HAMSTER, GUINEA_PIG, SNEK_LORD)
     async def gibcmdline(self, ctx: commands.Context) -> None:
         """Generates commandline from attached HTML modpack file."""
 

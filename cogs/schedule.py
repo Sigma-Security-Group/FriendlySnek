@@ -757,7 +757,7 @@ class Schedule(commands.Cog):
         Returns:
         None.
         """
-        if isinstance(interaction.user, discord.User):
+        if not isinstance(interaction.user, discord.Member):
             log.exception("ButtonHandling: user not discord.Member")
             return
 

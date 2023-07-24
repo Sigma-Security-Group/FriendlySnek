@@ -7,3 +7,4 @@ python-dateutil
 pysftp
 beautifulsoup4
 asyncpraw
+unidecode

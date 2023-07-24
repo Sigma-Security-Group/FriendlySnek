@@ -3,7 +3,7 @@ import re
 from datetime import datetime, timezone
 from discord import utils, Embed, Color
 from discord.ext import commands  # type: ignore
-from unidecode import unidecode
+#from unidecode import unidecode
 
 from secret import DEBUG
 from constants import *

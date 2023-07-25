@@ -3,7 +3,7 @@ import re
 from datetime import datetime, timezone
 from discord import utils, Embed, Color
 from discord.ext import commands  # type: ignore
-#from unidecode import unidecode
+from unidecode import unidecode
 
 from secret import DEBUG
 from constants import *
@@ -426,7 +426,7 @@ class Staff(commands.Cog):
 
         alphanumerics = re.compile(r"[\W_]+", re.UNICODE)
         cmdline = ";".join(sorted(["@" + re.sub(alphanumerics, "", mod) for mod in mods], key=str.casefold))  # Casefold = caseinsensitive
-        #cmdline = unidecode(cmdline)
+        cmdline = unidecode(cmdline)
 
         await msg.edit(content=f"```{cmdline}```")
 

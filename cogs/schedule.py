@@ -433,6 +433,20 @@ class Schedule(commands.Cog):
             await interaction.response.send_message(embed=embed)
 
 # ===== </Refresh Schedule> =====
+# ===== <Zeus Commands> ====
+# Move from Deployed to Command
+    @discord.app_commands.command(name="aar")
+    @discord.app_commands.guilds(GUILD)
+    @discord.app_commands.checks.has_any_role(UNIT_STAFF, CURATOR, ZEUS, ZEUS_IN_TRAINING, SNEK_LORD)
+    async def aar(self, interaction: discord.Interaction) -> None:
+        deployed_members = self.bot.get_guild(GUILD_ID).get_channel(DEPLOYED).members
+        for mem in deployed_members:
+            log.debug(f"Moving {mem.display_name} to {COMMAND}")
+            try:
+                await mem.move_to(self.bot.get_guild(GUILD_ID).get_channel(COMMAND))
+            except Exception:
+                log.warning(f"Snek did a booboo moving {mem.display_name}")
+        await interaction.response.send_message("AAR has started, Thanks for running a bop!", ephemeral=True)
 
 
 # ===== <Schedule Functions> =====

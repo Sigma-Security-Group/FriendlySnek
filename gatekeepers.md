@@ -1,9 +1,9 @@
 # Adrian
 
-    * Discord: ΣSG Adrian (ADRIAN#1337)
+    * Discord: ΣSG Adrian (adrian_1337)
     * Github: adesanjo
 
 # Froggi
 
-    * Discord: ΣSG Froggi (Froggi22#3436)
+    * Discord: ΣSG Froggi (froggi22)
     * Github: Froggi22

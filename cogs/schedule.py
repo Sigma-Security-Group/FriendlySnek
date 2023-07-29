@@ -439,6 +439,7 @@ class Schedule(commands.Cog):
     @discord.app_commands.guilds(GUILD)
     @discord.app_commands.checks.has_any_role(UNIT_STAFF, CURATOR, ZEUS, ZEUS_IN_TRAINING, SNEK_LORD)
     async def aar(self, interaction: discord.Interaction) -> None:
+        log.info(f"{interaction.user.display_name} ({interaction.user}) is starting an AAR...")
         deployed_members = self.bot.get_guild(GUILD_ID).get_channel(DEPLOYED).members
         for member in deployed_members:
             log.debug(f"Moving {member.display_name} to {COMMAND}")

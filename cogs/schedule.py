@@ -442,7 +442,7 @@ class Schedule(commands.Cog):
         log.info(f"{interaction.user.display_name} ({interaction.user}) is starting an AAR...")
         deployed_members = self.bot.get_guild(GUILD_ID).get_channel(DEPLOYED).members
         for member in deployed_members:
-            log.debug(f"Moving {member.display_name} to {COMMAND}")
+            log.debug(f"Moving {member.display_name} to Command ( {COMMAND} )")
             try:
                 await member.move_to(self.bot.get_guild(GUILD_ID).get_channel(COMMAND))
             except Exception:

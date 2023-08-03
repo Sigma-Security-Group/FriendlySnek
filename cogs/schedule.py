@@ -440,11 +440,27 @@ class Schedule(commands.Cog):
     @discord.app_commands.checks.has_any_role(UNIT_STAFF, CURATOR, ZEUS, ZEUS_IN_TRAINING, SNEK_LORD)
     async def aar(self, interaction: discord.Interaction) -> None:
         log.info(f"{interaction.user.display_name} ({interaction.user}) is starting an AAR...")
-        deployed_members = self.bot.get_guild(GUILD_ID).get_channel(DEPLOYED).members
+
+        guild = self.bot.get_guild(GUILD_ID)
+        if guild is None:
+            log.exception("aar: guild is None")
+            return
+
+        channelDeployed = guild.get_channel(DEPLOYED)
+        if not isinstance(channelDeployed, discord.VoiceChannel):
+            log.exception("aar: channelDeployed is None")
+            return
+
+        channelCommand = guild.get_channel(COMMAND)
+        if not isinstance(channelCommand, discord.VoiceChannel):
+            log.exception("aar: channelDeployed is None")
+            return
+
+        deployed_members = channelDeployed.members
         for member in deployed_members:
             log.debug(f"Moving {member.display_name} to Command ( {COMMAND} )")
             try:
-                await member.move_to(self.bot.get_guild(GUILD_ID).get_channel(COMMAND))
+                await member.move_to(channelCommand)
             except Exception:
                 log.warning(f"Snek did a booboo moving {member.display_name}")
         await interaction.response.send_message("AAR has started, Thanks for running a bop!", ephemeral=True)

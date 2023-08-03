@@ -16,11 +16,6 @@ WORKSHOP_INTEREST_LIST: dict[str, dict[str, str | int | tuple]] = {
         "role": SME_MECHANISED,
         "description": "A short course on driving, gunning, and commanding a 6.21 million dollar reason the heavy weapons guy is useless."
     },
-    "RPV-SO": {
-        "emoji": "🛩️",
-        "role": SME_RPV_SO,
-        "description": "Learn how to employ recon and attack Remote Piloted Vehicles (Drones)."
-    },
     "Rotary Wing": {
         "emoji": "🚁",
         "role": SME_RW_PILOT,

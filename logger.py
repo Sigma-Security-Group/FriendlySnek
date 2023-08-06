@@ -1,4 +1,4 @@
-import sys, traceback, pytz
+import os, sys, traceback, pytz
 
 from datetime import datetime
 from colorama import Fore, Style  # type: ignore
@@ -8,6 +8,8 @@ STD_OUT = sys.stdout
 
 class Logger:
     def __init__(self) -> None:
+        if os.path.exists(LOG_FILE):
+            os.rename(LOG_FILE, f"{LOG_FILE}.{datetime.now().astimezone(pytz.timezone('Europe/Paris')).strftime('%Y-%m-%d_%H-%M-%S')}")
         with open(LOG_FILE, "w") as f:
             f.write("")
 

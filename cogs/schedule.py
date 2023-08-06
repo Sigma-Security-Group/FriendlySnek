@@ -1861,6 +1861,7 @@ class Schedule(commands.Cog):
         tuple: tuple with hours, minutes, delta zipped.
         """
 
+        duration = duration.lower()
         hours = int(duration.split("h")[0].strip()) if "h" in duration else 0
         minutes = int(duration.split("h")[-1].replace("m", "").strip()) if duration.strip()[-1] != "h" else 0
         delta = timedelta(hours=hours, minutes=minutes)

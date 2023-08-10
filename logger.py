@@ -8,8 +8,11 @@ STD_OUT = sys.stdout
 
 class Logger:
     def __init__(self) -> None:
+        if not os.path.exists("./logs"):
+            os.mkdir("logs")
         if os.path.exists(LOG_FILE):
-            os.rename(LOG_FILE, f"{LOG_FILE}.{datetime.now().astimezone(pytz.timezone('Europe/Paris')).strftime('%Y-%m-%d_%H-%M-%S')}")
+            logFilename = f"./logs/bot.{datetime.now().astimezone(pytz.timezone('Europe/Paris')).strftime('%Y-%m-%d_%H-%M-%S')}.log"
+            os.rename(LOG_FILE, logFilename)
         with open(LOG_FILE, "w") as f:
             f.write("")
 

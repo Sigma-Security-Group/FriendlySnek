@@ -1,3 +1,4 @@
+import contextlib
 import secret, asyncio
 import pysftp, pytz  # type: ignore
 
@@ -57,7 +58,7 @@ class MissionUploader(commands.Cog):
                 response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, interaction=interaction, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == interaction.user)
                 file = response.content.strip().lower()
                 if file.lower() == "cancel":
-                    await dmChannel.send(embed=Embed(title=f"❌ Mission uploading canceled!", color=Color.red()))
+                    await dmChannel.send(embed=Embed(title="❌ Mission uploading canceled!", color=Color.red()))
                     await interaction.edit_original_response(content="Mission uploading canceled!")
                     return
             except asyncio.TimeoutError:
@@ -84,40 +85,49 @@ class MissionUploader(commands.Cog):
 
                 cnopts = pysftp.CnOpts()
                 cnopts.hostkeys = None
-                with pysftp.Connection(server["Host"], port=server["Port"], username=secret.SFTP["username"], password=secret.SFTP["password"], cnopts=cnopts, default_path=server["Directory"]) as sftp:
-                    missionFilesOnServer = [file.filename for file in sftp.listdir_attr()]
+                errorState = "connectionError"
+                try:
+                    with pysftp.Connection(server["Host"], port=server["Port"], username=secret.SFTP["username"], password=secret.SFTP["password"], cnopts=cnopts, default_path=server["Directory"]) as sftp:
+                        connectionError = "otherError"
+                        missionFilesOnServer = [file.filename for file in sftp.listdir_attr()]
 
-                    if len(attachments) == 1 and attachment.filename in missionFilesOnServer:
-                        embed = Embed(title="❌ This file already exists. Please rename the file and reupload it!", color=Color.red())
+                        if len(attachments) == 1 and attachment.filename in missionFilesOnServer:
+                            embed = Embed(title="❌ This file already exists. Please rename the file and reupload it!", color=Color.red())
+                            await dmChannel.send(embed=embed)
+                            continue
+
+                        else:
+                            attachmentOk = True
+
+                        # Uploading
+                        await dmChannel.send(embed=Embed(title="Uploading mission file...", description="Standby, this can take a minute...", color=Color.green()))
+
+                        # Saving file locally
+                        attachment = attachments[0]
+                        filename = attachment.filename
+                        with open(f"tmp/{filename}", "wb") as f:
+                            await attachment.save(f)
+
+                        if not secret.DEBUG:
+                            try:
+                                # Upload file from tmp
+                                with open(f"tmp/{filename}", "rb") as f:
+                                    sftp.put(f"tmp/{filename}")
+                            except Exception as e:
+                                log.exception(f"{interaction.user} | {e}")
+                except Exception as e:
+                    log.exception(f"{interaction.user} | {e}")
+                    if connectionError ==  "connectionError":
+                        embed = Embed(title="❌ Connection error", description="There was an error connecting to the server. Please try again later!", color=Color.red())
                         await dmChannel.send(embed=embed)
-                        continue
-
-                    else:
                         attachmentOk = True
-
-                    # Uploading
-                    await dmChannel.send(embed=Embed(title="Uploading mission file...", description="Standby, this can take a minute...", color=Color.green()))
-
-                    # Saving file locally
-                    attachment = attachments[0]
-                    filename = attachment.filename
-                    with open(f"tmp/{filename}", "wb") as f:
-                        await attachment.save(f)
-
-                    if not secret.DEBUG:
-                        try:
-                            # Upload file from tmp
-                            with open(f"tmp/{filename}", "rb") as f:
-                                sftp.put(f"tmp/{filename}")
-                        except Exception as e:
-                            log.exception(f"{interaction.user} | {e}")
 
             except Exception as e:
                 log.exception(f"{interaction.user} | {e}")
             finally:
-                if sftp is not None:
-                    sftp.close()
-
+                with contextlib.suppress(Exception):
+                    if sftp is not None:
+                        sftp.close()
 
         utcTime = UTC.localize(datetime.utcnow())
         member = f"{interaction.user.display_name} ({interaction.user})"

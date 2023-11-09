@@ -1963,14 +1963,15 @@ class Schedule(commands.Cog):
         Returns:
         None.
         """
-        await interaction.response.defer()
 
         # Get the inputted time
         try:
             timeParsed = datetimeParse(time)
         except ValueError:
-            await interaction.edit_original_response(embed=Embed(title="❌ Invalid time", description="Provide a valid time!", color=Color.red()))
+            await interaction.response.send_message(embed=Embed(title="❌ Invalid time", description="Provide a valid time!", color=Color.red()), ephemeral=True)
             return
+
+        await interaction.response.defer()
 
         if not timezone:  # User's time zone
             # Get user time zone

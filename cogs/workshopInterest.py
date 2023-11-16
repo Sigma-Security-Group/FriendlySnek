@@ -11,6 +11,11 @@ if DEBUG:
 
 # Maybe move this to constants.py
 WORKSHOP_INTEREST_LIST: dict[str, dict[str, str | int | tuple]] = {
+    "Artillery": {
+        "emoji": "💥",
+        "role": SME_ARTILLERY,
+        "description": "Learn to drop big shells on targets far away."
+    },
     "Mechanised": {
         "emoji": "🛡️",
         "role": SME_MECHANISED,

@@ -27,8 +27,8 @@ class BotTasks(commands.Cog):
         log.debug(LOG_COG_READY.format("BotTasks"), flush=True)
         cogsReady["bottasks"] = True
 
-        if not self.checkModUpdates.is_running():
-            self.checkModUpdates.start()
+        # if not self.checkModUpdates.is_running():
+            # self.checkModUpdates.start()
 
         if not self.oneHourTasks.is_running():
             self.oneHourTasks.start()

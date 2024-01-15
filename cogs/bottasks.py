@@ -149,7 +149,7 @@ class BotTasks(commands.Cog):
         # Submission details
         propagandaPath = r"constants/SSG_Propaganda"
         post = {
-            "Title": "[A3][18+][Recruiting][Worldwide] | Casual-Attendance, PMC Themed Unit | Sigma Security Group is now Recruiting!",
+            "Title": "[A3][Recruiting][Worldwide] | Casual-Attendance, PMC Themed Unit | Sigma Security Group is now Recruiting!",
             "FlairID": flairID,
             "Description": """About Us:
 
@@ -167,7 +167,7 @@ Requirements:
 
 - **Community**: We don't want strangers, we ask members to be social and contribute in their own way. Community management roles are on a volunteer basis.
 
-- **Maturity**: Players must be easy going, know when to be serious, and be willing to learn and improve alongside their fellow Operators. You must be at least age 18+ to join.
+- **Maturity**: Players must be easy going, know when to be serious, and be willing to learn and improve alongside their fellow Operators. You must be at least age 16 to join.
 
 - **Communication**: Members must have a functioning microphone and use it during all operations.
 

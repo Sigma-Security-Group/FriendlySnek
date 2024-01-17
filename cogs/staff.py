@@ -370,7 +370,7 @@ class Staff(commands.Cog):
 
     # Advisor command
     @commands.command(name="verify")
-    @commands.has_any_role(UNIT_STAFF, SERVER_HAMSTER, ADVISOR, SNEK_LORD)
+    @commands.has_any_role(UNIT_STAFF, SERVER_HAMSTER, ADVISOR, RECRUITER, SNEK_LORD)
     async def verify(self, ctx: commands.Context, *, member: str) -> None:
         """Verifies a Prospect (passed interview)."""
         targetMember = self._getMember(member)

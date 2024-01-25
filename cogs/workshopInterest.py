@@ -272,6 +272,7 @@ class WorkshopInterest(commands.Cog):
                     await msg.edit(embed=self.getWorkshopEmbed(guild, workshop))
                 except Exception as e:
                     log.exception(f"{ctx.author} | {e}")
+                await ctx.send(embed=Embed(title="✅ Cleared workshop list!", description=f"Cleared workshop list '{worskhopListName}'.", color=Color.green()))
                 break
         else:
             await ctx.send(embed=Embed(title="❌ Invalid workshop name", description=f"Could not find workshop '{worskhopListName}'.", color=Color.red()))

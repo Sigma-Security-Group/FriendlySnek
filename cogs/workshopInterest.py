@@ -55,6 +55,11 @@ WORKSHOP_INTEREST_LIST: dict[str, dict[str, str | int | tuple]] = {
         "emoji": "🐣",
         "role": (UNIT_STAFF, ADVISOR, SPECIALIST, TECHNICIAN),
         "description": "Learn what you need to know before attending an operation in Sigma Security Group."
+    },
+    "Leadership": {
+        "emoji": "🫀",  # Anatomical heart
+        "role": (ADVISOR, SPECIALIST),
+        "description": "Learn how to lead a team, squad or platoon in Sigma Security Group."
     }
 }
 

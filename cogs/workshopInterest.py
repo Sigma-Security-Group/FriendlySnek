@@ -249,6 +249,35 @@ class WorkshopInterest(commands.Cog):
             log.exception(f"{interaction.user} | {e}")
 
 
+    @commands.command(name="clean-specific-workshop-interest-list")
+    @commands.has_any_role(UNIT_STAFF, SNEK_LORD, SME_RW_PILOT, SME_FW_PILOT, SME_JTAC, SME_MEDIC, SME_HEAVY_WEAPONS, SME_MARKSMAN, SME_MECHANISED, SME_ARTILLERY)
+    async def cleanSpecificWorkshopInterestList(self, ctx: commands.Context, *, worskhopListName: str) -> None:
+        """Clear specific workshop interest list, no confirmation."""
+        with open(WORKSHOP_INTEREST_FILE) as f:
+                workshopInterest = json.load(f)
+
+        for workshop in WORKSHOP_INTEREST_LIST.keys():
+            if worskhopListName.lower() == workshop.lower():
+                workshopInterest[workshop]["members"] = []
+                with open(WORKSHOP_INTEREST_FILE, "w") as f:
+                    json.dump(workshopInterest, f, indent=4)
+
+                guild = self.bot.get_guild(GUILD_ID)
+                if guild is None:
+                    log.exception("clean-specific-workshop-interest-list: guild is None")
+                    return
+                channel = self.bot.get_channel(WORKSHOP_INTEREST)
+                msg = await channel.fetch_message(workshopInterest[workshop]["messageId"])
+                try:
+                    await msg.edit(embed=self.getWorkshopEmbed(guild, workshop))
+                except Exception as e:
+                    log.exception(f"{ctx.author} | {e}")
+                await ctx.send(embed=Embed(title="✅ Cleared workshop list!", description=f"Cleared workshop list '{worskhopListName}'.", color=Color.green()))
+                break
+        else:
+            await ctx.send(embed=Embed(title="❌ Invalid workshop name", description=f"Could not find workshop '{worskhopListName}'.", color=Color.red()))
+
+
 class WorkshopInterestButton(discord.ui.Button):
     """Handling all workshop interest buttons."""
     def __init__(self, instance, *args, **kwargs):

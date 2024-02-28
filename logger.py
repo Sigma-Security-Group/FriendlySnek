@@ -42,8 +42,11 @@ class Logger:
         STD_OUT.write(logStrPrint)
         if flush:
             STD_OUT.flush()
-        with open(LOG_FILE, "a") as f:
-            f.write(f">>> {now} : {level} : {message}\n")
+        try:
+            with open(LOG_FILE, "a") as f:
+                f.write(f">>> {now} : {level} : {message}\n")
+        except Exception:
+            pass
 
     def debug(self, message: str, flush=False) -> None:
         """ Log debug message """

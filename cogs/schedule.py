@@ -2134,10 +2134,10 @@ class ScheduleModal(discord.ui.Modal):
         self.view = view
 
     async def on_submit(self, interaction: discord.Interaction):
-        try:
-            await self.instance.modalHandling(self, interaction, self.eventMsg, self.view)
-        except Exception as e:
-            log.exception(f"Modal Handling Failed\n{e}")
+        # try:
+        await self.instance.modalHandling(self, interaction, self.eventMsg, self.view)
+        # except Exception as e:
+        #     log.exception(f"Modal Handling Failed\n{e}")
 
     async def on_error(self, interaction: discord.Interaction, error: Exception) -> None:
         # await interaction.response.send_message("Something went wrong. cope.", ephemeral=True)

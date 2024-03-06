@@ -1,4 +1,5 @@
 import re
+import json
 
 from datetime import datetime, timezone
 from discord import utils, Embed, Color
@@ -365,6 +366,75 @@ class Staff(commands.Cog):
             await channelStaffChat.send(f"Moderation Logs related to {targetMember.display_name} ({targetMember}):\n{messageLinks}")
         else:
             await channelStaffChat.send(f"No Moderation Logs related to {targetMember.display_name} ({targetMember})")
+
+    @commands.command(name="disablerolereserve")
+    @commands.has_any_role(UNIT_STAFF, SNEK_LORD)
+    async def disableRoleReserve(self, ctx: commands.Context, *, member: str) -> None:
+        """Add member to role reservation blacklist."""
+        targetMember = self._getMember(member)
+        if targetMember is None:
+            log.info(f"No member found for search term: {member}")
+            await ctx.send(embed=Embed(title="❌ No member found", description=f"Searched for: `{member}`", color=Color.red()))
+            return
+
+        guild = self.bot.get_guild(GUILD_ID)
+        if guild is None:
+            log.exception("Staff disableRoleReserve: guild is None")
+            return
+
+        log.info(f"{targetMember.display_name} (id: {targetMember.id}) was added to role reservation blacklist by {ctx.author.display_name} (id: {ctx.author.id})")
+
+        with open(ROLE_RESERVATION_BLACKLIST_FILE) as f:
+            blacklist = json.load(f)
+        if all(member["id"] != targetMember.id for member in blacklist):
+            blacklist.append({"id": targetMember.id, "name": targetMember.display_name, "timestamp": datetime.now().timestamp(), "staffId": ctx.author.id, "staffName": ctx.author.display_name})
+            with open(ROLE_RESERVATION_BLACKLIST_FILE, "w") as f:
+                json.dump(blacklist, f, indent=4)
+            with open(EVENTS_FILE) as f:
+                events = json.load(f)
+            for event in events:
+                for reservableRole in event["reservableRoles"]:
+                    if event["reservableRoles"][reservableRole] == targetMember.id:
+                        event["reservableRoles"][reservableRole] = None
+            with open(EVENTS_FILE, "w") as f:
+                json.dump(events, f, indent=4)
+            await self.bot.get_cog("Schedule").updateSchedule()
+
+        embed = Embed(title="✅ Member blacklisted", description=f"{targetMember.mention} is no longer allowed to reserve roles!", color=Color.green())
+        embed.set_footer(text=f"ID: {targetMember.id}")
+        embed.timestamp = datetime.now()
+        await ctx.send(embed=embed)
+
+    @commands.command(name="enablerolereserve")
+    @commands.has_any_role(UNIT_STAFF, SNEK_LORD)
+    async def enableRoleReserve(self, ctx: commands.Context, *, member: str) -> None:
+        """Remove member from role reservation blacklist."""
+        targetMember = self._getMember(member)
+        if targetMember is None:
+            log.info(f"No member found for search term: {member}")
+            await ctx.send(embed=Embed(title="❌ No member found", description=f"Searched for: `{member}`", color=Color.red()))
+            return
+
+        guild = self.bot.get_guild(GUILD_ID)
+        if guild is None:
+            log.exception("Staff enableRoleReserve: guild is None")
+            return
+
+        log.info(f"{targetMember.display_name} (id: {targetMember.id}) was removed from role reservation blacklist by {ctx.author.display_name} (id: {ctx.author.id})")
+
+        with open(ROLE_RESERVATION_BLACKLIST_FILE) as f:
+            blacklist = json.load(f)
+        removedMembers = [member for member in blacklist if member["id"] == targetMember.id]
+        for member in removedMembers:
+            blacklist.remove(member)
+        if removedMembers:
+            with open(ROLE_RESERVATION_BLACKLIST_FILE, "w") as f:
+                json.dump(blacklist, f, indent=4)
+
+        embed = Embed(title="✅ Member removed from blacklist", description=f"{targetMember.mention} is now allowed to reserve roles!", color=Color.green())
+        embed.set_footer(text=f"ID: {targetMember.id}")
+        embed.timestamp = datetime.now()
+        await ctx.send(embed=embed)
 
 
 

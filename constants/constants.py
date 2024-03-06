@@ -20,6 +20,9 @@ MEMBER_TIME_ZONES_FILE = "data/memberTimeZones.json"
 WORKSHOP_INTEREST_FILE = "data/workshopInterest.json"
 REMINDERS_FILE = "data/reminders.json"
 
+# Staff
+ROLE_RESERVATION_BLACKLIST_FILE = "data/roleReservationBlacklist.json"
+
 
 ####################
 # PEOPLE

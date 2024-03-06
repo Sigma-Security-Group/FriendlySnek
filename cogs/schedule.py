@@ -217,6 +217,7 @@ jsonCreateNoExist(EVENTS_HISTORY_FILE, [])
 jsonCreateNoExist(WORKSHOP_TEMPLATES_FILE, [])
 #jsonCreateNoExist(WORKSHOP_TEMPLATES_DELETED_FILE, [])
 jsonCreateNoExist(REMINDERS_FILE, {})
+jsonCreateNoExist(ROLE_RESERVATION_BLACKLIST_FILE, [])
 
 # try:
 #     with open("./.git/logs/refs/heads/main") as f:
@@ -829,6 +830,12 @@ class Schedule(commands.Cog):
                             event["reservableRoles"][btnRoleName] = None
 
             elif button.custom_id == "reserve":
+                with open(ROLE_RESERVATION_BLACKLIST_FILE) as f:
+                    blacklist = json.load(f)
+                if any(interaction.user.id == member["id"] for member in blacklist):
+                    await interaction.response.send_message(embed=Embed(title="❌ Sorry, seems like are not allowed to reserve any roles!", description="If you have any questions about this situation, please contact Unit Staff.", color=Color.red()), ephemeral=True, delete_after=60.0)
+                    return
+
                 event = eventList[0]
                 scheduleNeedsUpdate = False
 

@@ -367,9 +367,9 @@ class Staff(commands.Cog):
         else:
             await channelStaffChat.send(f"No Moderation Logs related to {targetMember.display_name} ({targetMember})")
 
-    @commands.command(name="disablerolereserve")
+    @commands.command(name="disablerolereservation")
     @commands.has_any_role(UNIT_STAFF, SNEK_LORD)
-    async def disableRoleReserve(self, ctx: commands.Context, *, member: str) -> None:
+    async def disableRoleReservation(self, ctx: commands.Context, *, member: str) -> None:
         """Add member to role reservation blacklist."""
         targetMember = self._getMember(member)
         if targetMember is None:
@@ -379,7 +379,7 @@ class Staff(commands.Cog):
 
         guild = self.bot.get_guild(GUILD_ID)
         if guild is None:
-            log.exception("Staff disableRoleReserve: guild is None")
+            log.exception("Staff disableRoleReservation: guild is None")
             return
 
         log.info(f"{targetMember.display_name} (id: {targetMember.id}) was added to role reservation blacklist by {ctx.author.display_name} (id: {ctx.author.id})")
@@ -405,9 +405,9 @@ class Staff(commands.Cog):
         embed.timestamp = datetime.now()
         await ctx.send(embed=embed)
 
-    @commands.command(name="enablerolereserve")
+    @commands.command(name="enablerolereservation")
     @commands.has_any_role(UNIT_STAFF, SNEK_LORD)
-    async def enableRoleReserve(self, ctx: commands.Context, *, member: str) -> None:
+    async def enableRoleReservation(self, ctx: commands.Context, *, member: str) -> None:
         """Remove member from role reservation blacklist."""
         targetMember = self._getMember(member)
         if targetMember is None:
@@ -417,7 +417,7 @@ class Staff(commands.Cog):
 
         guild = self.bot.get_guild(GUILD_ID)
         if guild is None:
-            log.exception("Staff enableRoleReserve: guild is None")
+            log.exception("Staff enableRoleReservation: guild is None")
             return
 
         log.info(f"{targetMember.display_name} (id: {targetMember.id}) was removed from role reservation blacklist by {ctx.author.display_name} (id: {ctx.author.id})")

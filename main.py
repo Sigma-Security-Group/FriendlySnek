@@ -19,11 +19,15 @@ if not os.path.exists("./secret.py"):
 TOKEN_DEV = ""
 DEBUG = True
 
+MOD_UPDATE_ACTIVE = False
+SME_REMINDER_ACTIVE = False
+
 SFTP = {
     "username": "",
     "password": ""
 }
 
+REDDIT_ACTIVE = False
 REDDIT = {
     "client_id": "",
     "client_secret": "",

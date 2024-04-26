@@ -27,7 +27,7 @@ class BotTasks(commands.Cog):
         log.debug(LOG_COG_READY.format("BotTasks"), flush=True)
         cogsReady["bottasks"] = True
 
-        if not self.checkModUpdates.is_running():
+        if secret.MOD_UPDATE_ACTIVE and not self.checkModUpdates.is_running():
             self.checkModUpdates.start()
 
         if not self.oneHourTasks.is_running():
@@ -273,8 +273,10 @@ Join Us:
 
     @tasks.loop(hours=1.0)
     async def oneHourTasks(self) -> None:
-        await self.redditRecruitmentPosts()
-        await self.smeReminder()
+        if secret.REDDIT_ACTIVE:
+            await self.redditRecruitmentPosts()
+        if secret.SME_REMINDER_ACTIVE:
+            await self.smeReminder()
 
 
 

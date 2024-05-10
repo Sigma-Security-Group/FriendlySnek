@@ -274,9 +274,15 @@ Join Us:
     @tasks.loop(hours=1.0)
     async def oneHourTasks(self) -> None:
         if secret.REDDIT_ACTIVE:
-            await self.redditRecruitmentPosts()
+            try:
+                await self.redditRecruitmentPosts()
+            except Exception as e:
+                log.exception(f"Reddit recruitment posts: {e}")
         if secret.SME_REMINDER_ACTIVE:
-            await self.smeReminder()
+            try:
+                await self.smeReminder()
+            except Exception as e:
+                log.exception(f"SME reminder: {e}")
 
 
 

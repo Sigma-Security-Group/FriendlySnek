@@ -1747,8 +1747,8 @@ class Schedule(commands.Cog):
 
         elif modal.custom_id == "modal_reservableRoles":
             reservableRoles = value.split("\n")
-            if len(reservableRoles) > 25:
-                await interaction.response.send_message(embed=Embed(title="❌ Ain't supporting over 25 roles bruh", color=Color.red()), ephemeral=True, delete_after=10.0)
+            if len(reservableRoles) > 20:
+                await interaction.response.send_message(embed=Embed(title="❌ Too many roles", description=f"Due to Discord character limitation, we've set the cap to 20 roles.\n\nYour roles:\n{value}"[:4096], color=Color.red()), ephemeral=True, delete_after=10.0)
                 return
 
             # No res roles or all roles are unoccupied

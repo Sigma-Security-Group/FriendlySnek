@@ -461,13 +461,12 @@ class Staff(commands.Cog):
             log.exception("Staff verify: roleProspect, roleVerified, roleMember is None")
             return
 
-        if roleProspect not in targetMember.roles:
-            await ctx.send(embed=Embed(title="❌ Failed to verify", description=f"{targetMember.mention} not a {roleProspect.mention}", color=Color.red()))
+        reason = "User verified"
+        if roleProspect in targetMember.roles:
+            await targetMember.remove_roles(roleProspect, reason=reason)
+            await targetMember.add_roles(roleVerified, reason=reason)
             return
 
-        reason = "User verified"
-        await targetMember.remove_roles(roleProspect, reason=reason)
-        await targetMember.add_roles(roleVerified, reason=reason)
         await targetMember.add_roles(roleMember, reason=reason)
         embed = Embed(title="✅ Member verified", description=f"{targetMember.mention} verified!", color=Color.green())
         embed.set_footer(text=f"ID: {targetMember.id}")

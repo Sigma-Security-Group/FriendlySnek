@@ -242,15 +242,15 @@ class Staff(commands.Cog):
                     log.exception("Staff promote: newRole is None")
                     return
 
-                # Promote member to Technician if they are a SME
-                if newRole.id == OPERATOR:
-                    isSME = False
-                    for role_ in targetMember.roles:
-                        if role_.id in SME_ROLES:
-                            isSME = True
-                            break
-                    if isSME:
-                        newRole = guild.get_role(TECHNICIAN)
+                ## Promote member to Technician if they are a SME
+                #if newRole.id == OPERATOR:
+                #    isSME = False
+                #    for role_ in targetMember.roles:
+                #        if role_.id in SME_ROLES:
+                #            isSME = True
+                #            break
+                #    if isSME:
+                #        newRole = guild.get_role(TECHNICIAN)
                 log.info(f"Promoting {targetMember.display_name} ({targetMember}) from {role} to {newRole}!")
                 await targetMember.remove_roles(role)
                 await targetMember.add_roles(newRole)

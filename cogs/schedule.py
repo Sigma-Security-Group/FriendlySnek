@@ -981,6 +981,7 @@ class Schedule(commands.Cog):
                             member = guild.get_member(memberId)
                             if member is not None:
                                 embed = Embed(title=f"🗑 {event.get('type', 'Operation')} deleted: {event['title']}!", description=f"The {event.get('type', 'Operation').lower()} was scheduled to run:\n{discord.utils.format_dt(UTC.localize(datetime.strptime(event['time'], TIME_FORMAT)), style='F')}", color=Color.red())
+                                embed.set_footer(text=f"By: {interaction.user}")
                                 try:
                                     await member.send(embed=embed)
                                 except Exception as e:
@@ -1806,6 +1807,7 @@ class Schedule(commands.Cog):
 
             previewEmbed = Embed(title=f":clock3: The starting time has changed for: {event['title']}!", description=f"From: {discord.utils.format_dt(UTC.localize(datetime.strptime(startTimeOld, TIME_FORMAT)), style='F')}\n\u2000\u2000To: {discord.utils.format_dt(UTC.localize(datetime.strptime(event['time'], TIME_FORMAT)), style='F')}", color=Color.orange())
             previewEmbed.add_field(name="\u200B", value=eventMsg.jump_url, inline=False)
+            previewEmbed.set_footer(text=f"By: {interaction.user}")
             for memberId in event["accepted"] + event["declined"] + event["tentative"]:
                 member = guild.get_member(memberId)
                 if member is not None:

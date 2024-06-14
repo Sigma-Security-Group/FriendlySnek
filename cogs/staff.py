@@ -465,7 +465,6 @@ class Staff(commands.Cog):
         if roleProspect in targetMember.roles:
             await targetMember.remove_roles(roleProspect, reason=reason)
             await targetMember.add_roles(roleVerified, reason=reason)
-            return
 
         await targetMember.add_roles(roleMember, reason=reason)
         embed = Embed(title="✅ Member verified", description=f"{targetMember.mention} verified!", color=Color.green())

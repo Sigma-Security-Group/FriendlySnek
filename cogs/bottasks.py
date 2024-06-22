@@ -76,7 +76,7 @@ class BotTasks(commands.Cog):
             utcTime = pytz.UTC.localize(dateTimeParse + timedelta(hours=7))  # Change this if output time is wrong: will cause double ping
 
             # Current time
-            now = pytz.UTC.localize(datetime.now(timezone.utc))
+            now = datetime.now(timezone.utc)
 
             # Check if update is new
             if utcTime > (now - timedelta(minutes=29.0, seconds=59.0)):  # Relative time checking

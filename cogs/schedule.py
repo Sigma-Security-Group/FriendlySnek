@@ -448,15 +448,16 @@ class Schedule(commands.Cog):
                 return
 
             embed = Embed(title="❌ Missing permissions", description=f"You do not have the permissions to refresh the schedule!\nThe permitted roles are: {', '.join([guild.get_role(role).name for role in (UNIT_STAFF, SERVER_HAMSTER, CURATOR)])}.", color=Color.red())
-            await interaction.response.send_message(embed=embed)
+            await interaction.response.send_message(embed=embed, ephemeral=True)
 
 # ===== </Refresh Schedule> =====
 # ===== <Zeus Commands> ====
 # Move from Deployed to Command
     @discord.app_commands.command(name="aar")
     @discord.app_commands.guilds(GUILD)
-    @discord.app_commands.checks.has_any_role(UNIT_STAFF, CURATOR, ZEUS, ZEUS_IN_TRAINING, SNEK_LORD)
+    @discord.app_commands.checks.has_any_role(CMD_AAR_LIMIT)
     async def aar(self, interaction: discord.Interaction) -> None:
+        """ Move all users in Deployed to Command voice channel. """
         log.info(f"{interaction.user.display_name} ({interaction.user}) is starting an AAR...")
 
         guild = self.bot.get_guild(GUILD_ID)
@@ -483,6 +484,25 @@ class Schedule(commands.Cog):
                 log.warning(f"Snek did a booboo moving {member.display_name}")
         await interaction.response.send_message("AAR has started, Thanks for running a bop!", ephemeral=True)
 
+    @aar.error
+    async def onaAarError(self, interaction: discord.Interaction, error: discord.app_commands.AppCommandError) -> None:
+        """aar errors - dedicated for the discord.app_commands.errors.MissingAnyRole error.
+
+        Parameters:
+        interaction (discord.Interaction): The Discord interaction.
+        error (discord.app_commands.AppCommandError): The end user error.
+
+        Returns:
+        None.
+        """
+        if type(error) == discord.app_commands.errors.MissingAnyRole:
+            guild = self.bot.get_guild(GUILD_ID)
+            if guild is None:
+                log.exception("OnAarError: guild is None")
+                return
+
+            embed = Embed(title="❌ Missing permissions", description=f"You do not have the permissions to move all users to command!\nThe permitted roles are: {', '.join([guild.get_role(role).name for role in CMD_AAR_LIMIT])}.", color=Color.red())
+            await interaction.response.send_message(embed=embed, ephemeral=True)
 
 # ===== <Schedule Functions> =====
 

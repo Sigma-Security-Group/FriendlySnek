@@ -38,7 +38,7 @@ class MissionUploader(commands.Cog):
 
     @discord.app_commands.command(name="uploadmission")
     @discord.app_commands.guilds(GUILD)
-    @discord.app_commands.checks.has_any_role(UNIT_STAFF, SERVER_HAMSTER, MISSION_BUILDER, CURATOR, SNEK_LORD)
+    @discord.app_commands.checks.has_any_role(CMD_UPLOADMISSION_LIMIT)
     async def uploadMission(self, interaction: discord.Interaction) -> None:
         """Upload a mission PBO file to the server."""
 
@@ -90,7 +90,7 @@ class MissionUploader(commands.Cog):
 
                 cnopts = pysftp.CnOpts()
                 cnopts.hostkeys = None
-                errorState = "connectionError"
+
                 try:
                     with pysftp.Connection(server["Host"], port=server["Port"], username=secret.SFTP["username"], password=secret.SFTP["password"], cnopts=cnopts, default_path=server["Directory"]) as sftp:
                         connectionError = "otherError"
@@ -122,7 +122,7 @@ class MissionUploader(commands.Cog):
                                 log.exception(f"{interaction.user} | {e}")
                 except Exception as e:
                     log.exception(f"{interaction.user} | {e}")
-                    if connectionError ==  "connectionError":
+                    if connectionError == "connectionError":
                         embed = Embed(title="❌ Connection error", description="There was an error connecting to the server. Please try again later!", color=Color.red())
                         await dmChannel.send(embed=embed)
                         attachmentOk = True
@@ -172,7 +172,7 @@ class MissionUploader(commands.Cog):
                 log.exception("onUploadMissionError: guild is None")
                 return
 
-            embed = Embed(title="❌ Missing permissions", description=f"You do not have the permissions to upload a mission file!\nThe permitted roles are: {', '.join([role.name for allowedRole in (UNIT_STAFF, SERVER_HAMSTER, MISSION_BUILDER, CURATOR) if (role := guild.get_role(allowedRole)) is not None])}.", color=Color.red())
+            embed = Embed(title="❌ Missing permissions", description=f"You do not have the permissions to upload a mission file!\nThe permitted roles are: {', '.join([role.name for allowedRole in CMD_UPLOADMISSION_LIMIT if (role := guild.get_role(allowedRole)) is not None])}.", color=Color.red())
             await interaction.response.send_message(embed=embed)
 
 

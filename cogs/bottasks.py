@@ -76,7 +76,7 @@ class BotTasks(commands.Cog):
             utcTime = pytz.UTC.localize(dateTimeParse + timedelta(hours=7))  # Change this if output time is wrong: will cause double ping
 
             # Current time
-            now = pytz.UTC.localize(datetime.utcnow())
+            now = pytz.UTC.localize(datetime.now(timezone.utc))
 
             # Check if update is new
             if utcTime > (now - timedelta(minutes=29.0, seconds=59.0)):  # Relative time checking
@@ -218,7 +218,7 @@ Join Us:
 
     async def smeReminder(self) -> None:
         """Reminds SMEs if they haven't hosten in the required time."""
-        utcNow = datetime.utcnow()
+        utcNow = datetime.now(timezone.utc)
 
         if utcNow.day != 1 or utcNow.hour != 0:  # Only execute function on 1st day of month around midnight UTC
             return

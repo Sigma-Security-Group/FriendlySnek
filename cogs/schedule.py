@@ -3,7 +3,7 @@ import pytz  # type: ignore
 
 from math import ceil
 from copy import deepcopy
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from dateutil.parser import parse as datetimeParse  # type: ignore
 
 from discord import Embed, Color
@@ -341,7 +341,7 @@ class Schedule(commands.Cog):
         try:
             with open(EVENTS_FILE) as f:
                 events = json.load(f)
-            utcNow = UTC.localize(datetime.utcnow())
+            utcNow = datetime.now(timezone.utc)
             deletedEvents = []
             for event in events:
                 endTime = UTC.localize(datetime.strptime(event["endTime"], TIME_FORMAT))
@@ -372,7 +372,7 @@ class Schedule(commands.Cog):
         try:
             with open(EVENTS_FILE) as f:
                 events = json.load(f)
-            utcNow = UTC.localize(datetime.utcnow())
+            utcNow = datetime.now(timezone.utc)
 
             channel = self.bot.get_channel(ARMA_DISCUSSION)
             if channel is None or not isinstance(channel, discord.channel.TextChannel):
@@ -508,7 +508,6 @@ class Schedule(commands.Cog):
 
     async def updateSchedule(self) -> None:
         """Updates the schedule channel with all messages."""
-        self.lastUpdate = datetime.utcnow()
         channel = self.bot.get_channel(SCHEDULE)
         if channel is None or not isinstance(channel, discord.channel.TextChannel):
             log.exception("updateSchedule: channel invalid type")
@@ -999,7 +998,7 @@ class Schedule(commands.Cog):
                     await interaction.followup.send(embed=Embed(title=f"✅ {event['type']} deleted!", color=Color.green()), ephemeral=True)
 
                     # Notify attendees
-                    utcNow = UTC.localize(datetime.utcnow())
+                    utcNow = datetime.now(timezone.utc)
                     startTime = UTC.localize(datetime.strptime(event["time"], TIME_FORMAT))
                     if event["maxPlayers"] != "hidden" and utcNow > startTime + timedelta(minutes=30):
                         await self.saveEventToHistory(event)
@@ -1104,9 +1103,9 @@ class Schedule(commands.Cog):
                             return
 
                         timeZone = pytz.timezone(memberTimeZones[str(interaction.user.id)])
-                        nextHalfHour = datetime.utcnow() + (datetime.min - datetime.utcnow()) % timedelta(minutes=30)
+                        nextHalfHour = datetime.now(timezone.utc) + (datetime.min.replace(tzinfo=timezone.utc) - datetime.now(timezone.utc)) % timedelta(minutes=30)
 
-                        placeholder = UTC.localize(nextHalfHour).astimezone(timeZone).strftime(TIME_FORMAT)
+                        placeholder = nextHalfHour.strftime(TIME_FORMAT)
                         default = ""
 
                         if previewEmbedDict["time"] is not None:

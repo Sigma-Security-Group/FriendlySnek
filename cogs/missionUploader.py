@@ -2,7 +2,7 @@ import contextlib
 import secret, asyncio
 import pysftp, pytz  # type: ignore
 
-from datetime import datetime
+from datetime import datetime, timezone
 from discord import Embed, Color
 from discord.ext import commands  # type: ignore
 
@@ -134,7 +134,7 @@ class MissionUploader(commands.Cog):
                     if sftp is not None:
                         sftp.close()
 
-        utcTime = UTC.localize(datetime.utcnow())
+        utcTime = datetime.now(timezone.utc)
         member = f"{interaction.user.display_name} ({interaction.user})"
 
         with open(MISSIONS_UPLOADED_FILE, "a") as f:
@@ -143,7 +143,7 @@ class MissionUploader(commands.Cog):
         embed = Embed(title="Uploaded mission file" + (" (Debug)" if secret.DEBUG else ""), color=Color.blue())
         embed.add_field(name="Filename", value=f"`{filename}`")
         embed.add_field(name="Server", value=f"`{server['Name']}`")
-        embed.add_field(name="Time", value=discord.utils.format_dt(pytz.timezone("UTC").localize(datetime.utcnow()).astimezone(UTC), style="F"))
+        embed.add_field(name="Time", value=discord.utils.format_dt(datetime.now(timezone.utc), style="F"))
         embed.add_field(name="Member", value=interaction.user.mention)
         embed.set_footer(text=f"Member ID: {interaction.user.id}")
 

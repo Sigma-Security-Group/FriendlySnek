@@ -1,6 +1,6 @@
 import re
 
-from datetime import datetime
+from datetime import datetime, timezone
 from discord import Embed, Color
 from discord.ext import commands  # type: ignore
 
@@ -69,7 +69,7 @@ class Poll(commands.Cog):
         }
         embed = Embed(title=title, description=f"{description}\n\n", color=Color.gold())
         embed.set_footer(text=f"Poll by {interaction.user.display_name}")
-        embed.timestamp = datetime.utcnow()
+        embed.timestamp = datetime.now(timezone.utc)
         if embed.description is None:
             log.exception("Poll: embed.description is None")
             return

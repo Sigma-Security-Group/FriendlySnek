@@ -1105,7 +1105,7 @@ class Schedule(commands.Cog):
                         timeZone = pytz.timezone(memberTimeZones[str(interaction.user.id)])
                         nextHalfHour = datetime.now(timezone.utc) + (datetime.min.replace(tzinfo=timezone.utc) - datetime.now(timezone.utc)) % timedelta(minutes=30)
 
-                        placeholder = nextHalfHour.strftime(TIME_FORMAT)
+                        placeholder = nextHalfHour.astimezone(timeZone).strftime(TIME_FORMAT)
                         default = ""
 
                         if previewEmbedDict["time"] is not None:

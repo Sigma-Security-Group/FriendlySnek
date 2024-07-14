@@ -1703,6 +1703,10 @@ class Schedule(commands.Cog):
 
                 case "reservable_roles":
                     previewEmbedDict["reservableRoles"] = None if value == "" else {role.strip(): None for role in value.split("\n") if role.strip() != ""}
+                    if len(previewEmbedDict["reservableRoles"]) > 20:
+                        previewEmbedDict["reservableRoles"] = None
+                        await interaction.response.send_message(embed=Embed(title="❌ Too many roles", description=f"Due to Discord character limitation, we've set the cap to 20 roles.\nLink your order, e.g. OPORD, under URL if you require more flexibility.\n\nYour roles:\n{value}"[:4096], color=Color.red()), ephemeral=True, delete_after=10.0)
+                        return
 
                 case "max_players":
                     valueLower = value.lower()
@@ -1779,7 +1783,7 @@ class Schedule(commands.Cog):
         elif modal.custom_id == "modal_reservableRoles":
             reservableRoles = value.split("\n")
             if len(reservableRoles) > 20:
-                await interaction.response.send_message(embed=Embed(title="❌ Too many roles", description=f"Due to Discord character limitation, we've set the cap to 20 roles.\n\nYour roles:\n{value}"[:4096], color=Color.red()), ephemeral=True, delete_after=10.0)
+                await interaction.response.send_message(embed=Embed(title="❌ Too many roles", description=f"Due to Discord character limitation, we've set the cap to 20 roles.\nLink your order, e.g. OPORD, under URL if you require more flexibility.\n\nYour roles:\n{value}"[:4096], color=Color.red()), ephemeral=True, delete_after=10.0)
                 return
 
             # No res roles or all roles are unoccupied

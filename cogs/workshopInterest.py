@@ -255,7 +255,7 @@ class WorkshopInterest(commands.Cog):
 
 
     @commands.command(name="clean-specific-workshop-interest-list")
-    @commands.has_any_role(CMD_CLEANWSINTEREST_LIMIT)
+    @commands.has_any_role(*CMD_CLEANWSINTEREST_LIMIT)
     async def cleanSpecificWorkshopInterestList(self, ctx: commands.Context, *, worskhopListName: str) -> None:
         """Clear specific workshop interest list, no confirmation."""
         with open(WORKSHOP_INTEREST_FILE) as f:

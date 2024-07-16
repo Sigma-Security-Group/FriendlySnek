@@ -38,7 +38,7 @@ class MissionUploader(commands.Cog):
 
     @discord.app_commands.command(name="uploadmission")
     @discord.app_commands.guilds(GUILD)
-    @discord.app_commands.checks.has_any_role(CMD_UPLOADMISSION_LIMIT)
+    @discord.app_commands.checks.has_any_role(*CMD_UPLOADMISSION_LIMIT)
     async def uploadMission(self, interaction: discord.Interaction) -> None:
         """Upload a mission PBO file to the server."""
 

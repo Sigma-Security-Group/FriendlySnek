@@ -455,7 +455,7 @@ class Schedule(commands.Cog):
 # Move from Deployed to Command
     @discord.app_commands.command(name="aar")
     @discord.app_commands.guilds(GUILD)
-    @discord.app_commands.checks.has_any_role(CMD_AAR_LIMIT)
+    @discord.app_commands.checks.has_any_role(*CMD_AAR_LIMIT)
     async def aar(self, interaction: discord.Interaction) -> None:
         """ Move all users in Deployed to Command voice channel. """
         log.info(f"{interaction.user.display_name} ({interaction.user}) is starting an AAR...")

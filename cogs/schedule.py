@@ -810,6 +810,23 @@ class Schedule(commands.Cog):
         """Is user allowed to edit event on schedule."""
         return (user.id == eventAuthorId) or (user.id in DEVELOPERS) or any(role.id == UNIT_STAFF or role.id == SERVER_HAMSTER for role in user.roles)
 
+    @staticmethod
+    def eventCollisionCheck(startTime: datetime, endTime: datetime) -> str | None:
+        """ Checks if inputted event (start- & endtime) collides with scheduled event with padding. """
+        with open(EVENTS_FILE) as f:
+            events = json.load(f)
+
+        for event in events:
+            if event.get("type", "Operation") == "Event":
+                continue
+            eventStartTime = UTC.localize(datetime.strptime(event["time"], TIME_FORMAT))
+            eventEndTime = UTC.localize(datetime.strptime(event["endTime"], TIME_FORMAT))
+            if (eventStartTime <= startTime < eventEndTime) or (eventStartTime <= endTime < eventEndTime) or (startTime <= eventStartTime < endTime):
+                return f"This time collides with the event `{event['title']}`.\nScheduled {discord.utils.format_dt(eventStartTime, style='F')} - {discord.utils.format_dt(eventEndTime, style='F')}"
+            elif eventEndTime < startTime and eventEndTime + timedelta(hours=1) > startTime:
+                return f"Your event would start less than an hour after the previous event (`{event['title']}`) ends!\nScheduled event: {discord.utils.format_dt(eventStartTime, style='F')} - {discord.utils.format_dt(eventEndTime, style='F')}"
+            elif endTime < eventStartTime and endTime + timedelta(hours=1) > eventStartTime:
+                return f"There is another event (`{event['title']}`) starting less than an hour after your event ends!\nScheduled event: {discord.utils.format_dt(eventStartTime, style='F')} - {discord.utils.format_dt(eventEndTime, style='F')}"
 
     async def buttonHandling(self, message: discord.Message | None, button: discord.ui.Button, interaction: discord.Interaction, authorId: int | None) -> None:
         """Handling all schedule button interactions.
@@ -1658,6 +1675,7 @@ class Schedule(commands.Cog):
 
         if modal.custom_id.startswith("modal_create_") and view is not None:
             infoLabel = modal.custom_id[len("modal_create_"):]
+            followupMsg = {}
 
             # Update embed
             previewEmbedDict = self.fromPreviewEmbedToDict(eventMsg.embeds[0])
@@ -1697,6 +1715,11 @@ class Schedule(commands.Cog):
                     if previewEmbedDict["duration"] is not None:
                         hours, minutes, delta = self.getDetailsFromDuration(previewEmbedDict["duration"])
                         previewEmbedDict["endTime"] = (startTime + delta).strftime(TIME_FORMAT)
+
+                    collision = Schedule.eventCollisionCheck(startTime, (startTime + delta) if previewEmbedDict["endTime"] else startTime+timedelta(minutes=30))
+                    if collision:
+                        followupMsg["embed"] = Embed(title="❌ There is a collision with another event!", description=collision, color=Color.red())
+                        followupMsg["embed"].set_footer(text="You may still continue with the provided time - but not recommended.")
 
                 case "external_url":
                     previewEmbedDict["externalURL"] = value or None
@@ -1769,6 +1792,8 @@ class Schedule(commands.Cog):
                     break
 
             await interaction.response.edit_message(embed=self.fromDictToPreviewEmbed(previewEmbedDict), view=view)
+            if followupMsg:
+                await interaction.followup.send(followupMsg["content"] if "content" in followupMsg else None, embed=(followupMsg["embed"] if "embed" in followupMsg else None), ephemeral=True)
             return
 
         # == Editing Event ==

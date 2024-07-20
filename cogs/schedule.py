@@ -958,7 +958,7 @@ class Schedule(commands.Cog):
                 ]
                 for item in items:
                     view.add_item(item)
-                await interaction.response.send_message(content=f"{interaction.user.mention} What would you like to configure?", view=view, ephemeral=True, delete_after=60.0)
+                await interaction.response.send_message(content=f"{interaction.user.mention} What would you like to configure?", view=view, ephemeral=True, delete_after=30.0)
 
             elif button.custom_id == "edit":
                 scheduleNeedsUpdate = False
@@ -967,6 +967,9 @@ class Schedule(commands.Cog):
                     return
 
                 event = [event for event in events if event["messageId"] == message.id][0]
+                if self.isAllowedToEdit(interaction.user, event["authorId"]) is False:
+                    await interaction.response.send_message("Restart the editing process.\nThe button points to an event you aren't allowed to edit.", ephemeral=True, delete_after=5.0)
+                    return
                 await self.editEvent(interaction, event, message)
 
             elif button.custom_id == "delete":
@@ -1912,6 +1915,12 @@ class Schedule(commands.Cog):
             with open(EVENTS_FILE, "w") as f:
                 json.dump(sortedEvents, f, indent=4)
             await interaction.response.send_message(interaction.user.mention, embed=Embed(title="✅ Event edited", color=Color.green()), ephemeral=True, delete_after=5.0)
+
+            # If events are reordered and user have elevated privileges and may edit other events than self-made - warn them
+            if anyEventChange and ((interaction.user.id in DEVELOPERS) or any(role.id == UNIT_STAFF or role.id == SERVER_HAMSTER for role in interaction.user.roles)):
+                embed = Embed(title="⚠️ Restart the editing process ⚠️", description="Delete all ephemeral messages, or you may risk editing some other event!", color=Color.yellow())
+                embed.set_footer(text=f"Only {guild.get_role(UNIT_STAFF).name}, {guild.get_role(SERVER_HAMSTER).name} & {guild.get_role(SNEK_LORD).name} have risk of causing this.")
+                await interaction.followup.send(embed=embed, ephemeral=True)
             return
 
 

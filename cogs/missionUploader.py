@@ -1,3 +1,4 @@
+import os
 import contextlib
 import secret, asyncio
 import pysftp, pytz  # type: ignore
@@ -110,14 +111,14 @@ class MissionUploader(commands.Cog):
                         # Saving file locally
                         attachment = attachments[0]
                         filename = attachment.filename
-                        with open(f"tmp/{filename}", "wb") as f:
+                        with open(f"tmp/missionUpload/{filename}", "wb") as f:
                             await attachment.save(f)
 
                         if not secret.DEBUG:
                             try:
                                 # Upload file from tmp
-                                with open(f"tmp/{filename}", "rb") as f:
-                                    sftp.put(f"tmp/{filename}")
+                                with open(f"tmp/missionUpload/{filename}", "rb") as f:
+                                    sftp.put(f"tmp/missionUpload/{filename}")
                             except Exception as e:
                                 log.exception(f"{interaction.user} | {e}")
                 except Exception as e:
@@ -133,6 +134,11 @@ class MissionUploader(commands.Cog):
                 with contextlib.suppress(Exception):
                     if sftp is not None:
                         sftp.close()
+
+            try:
+                os.remove(f"tmp/missionUpload/{filename}")
+            except Exception as e:
+                log.exception("Could not delete mission file after upload")
 
         utcTime = datetime.now(timezone.utc)
         member = f"{interaction.user.display_name} ({interaction.user})"

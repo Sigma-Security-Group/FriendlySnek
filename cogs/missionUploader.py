@@ -22,6 +22,12 @@ SERVERS = [
         "Directory": "148.251.192.96_2322/mpmissions",
         "Host": "148.251.192.96",
         "Port": 8822
+    },
+    {
+        "Name": "SSG - Event Server",
+        "Directory": "38.133.154.18_2322/mpmissions",
+        "Host": "38.133.154.18",
+        "Port": 8822
     }
 ]
 server = SERVERS[0]
@@ -48,6 +54,31 @@ class MissionUploader(commands.Cog):
 
         await interaction.response.send_message("Upload mission file in DMs...")
         log.debug(f"{interaction.user.display_name} ({interaction.user}) is uploading a mission file...")
+
+        # Server
+        if len(SERVERS) > 1:
+            serverSelectOk = False
+            color = Color.gold()
+            while not serverSelectOk:
+                embed = Embed(title="Which server would you like to upload to?", description="\n".join([f"{index}. {server['Name']}" for index, server in enumerate(SERVERS, 1)]), color=color)
+                embed.set_footer(text=SCHEDULE_CANCEL)
+                color = Color.red()
+                msg = await interaction.user.send(embed=embed)
+                dmChannel = msg.channel
+
+                try:
+                    response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, interaction=interaction, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == interaction.user)
+                    serverNumber = response.content.strip().lower()
+                    if serverNumber == "cancel":
+                        await dmChannel.send(embed=Embed(title="❌ Mission uploading canceled!", color=Color.red()))
+                        await interaction.edit_original_response(content="Mission uploading canceled!")
+                        return
+                    elif serverNumber in [str(idx[0]) for idx in enumerate(SERVERS, 1)]:
+                        serverSelectOk = True
+                        server = SERVERS[int(serverNumber) - 1]
+                except asyncio.TimeoutError:
+                    await dmChannel.send(embed=TIMEOUT_EMBED)
+                    return
 
         # Mission file
         color = Color.gold()
@@ -92,7 +123,7 @@ class MissionUploader(commands.Cog):
                 cnopts.hostkeys = None
 
                 try:
-                    with pysftp.Connection(server["Host"], port=server["Port"], username=secret.SFTP["username"], password=secret.SFTP["password"], cnopts=cnopts, default_path=server["Directory"]) as sftp:
+                    with pysftp.Connection(server["Host"], port=server["Port"], username=secret.SFTP[server["Host"]]["username"], password=secret.SFTP[server["Host"]]["password"], cnopts=cnopts, default_path=server["Directory"]) as sftp:
                         connectionError = "otherError"
                         missionFilesOnServer = [file.filename for file in sftp.listdir_attr()]
 

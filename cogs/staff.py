@@ -220,90 +220,90 @@ class Staff(commands.Cog):
             embed.timestamp = datetime.now()
             await ctx.send(embed=embed)
 
-    @commands.command(name="promote")
-    @commands.has_any_role(*CMD_STAFF_LIMIT)
-    async def promote(self, ctx: commands.Context, *, member: str) -> None:
-        """Promote a member to the next rank."""
-        targetMember = self._getMember(member)
-        if targetMember is None:
-            log.info(f"No member found for search term: {member}!")
-            await ctx.send(embed=Embed(title="❌ No member found", description=f"Searched for: `{member}`", color=Color.red()))
-            return
+    # @commands.command(name="promote")
+    # @commands.has_any_role(*CMD_STAFF_LIMIT)
+    # async def promote(self, ctx: commands.Context, *, member: str) -> None:
+    #     """Promote a member to the next rank."""
+    #     targetMember = self._getMember(member)
+    #     if targetMember is None:
+    #         log.info(f"No member found for search term: {member}!")
+    #         await ctx.send(embed=Embed(title="❌ No member found", description=f"Searched for: `{member}`", color=Color.red()))
+    #         return
 
-        guild = self.bot.get_guild(GUILD_ID)
-        if guild is None:
-            log.exception("Staff promote: guild is None")
-            return
+    #     guild = self.bot.get_guild(GUILD_ID)
+    #     if guild is None:
+    #         log.exception("Staff promote: guild is None")
+    #         return
 
-        for role in targetMember.roles:
-            if role.id in PROMOTIONS:
-                newRole = guild.get_role(PROMOTIONS[role.id])
-                if newRole is None:
-                    log.exception("Staff promote: newRole is None")
-                    return
+    #     for role in targetMember.roles:
+    #         if role.id in PROMOTIONS:
+    #             newRole = guild.get_role(PROMOTIONS[role.id])
+    #             if newRole is None:
+    #                 log.exception("Staff promote: newRole is None")
+    #                 return
 
-                ## Promote member to Technician if they are a SME
-                #if newRole.id == OPERATOR:
-                #    isSME = False
-                #    for role_ in targetMember.roles:
-                #        if role_.id in SME_ROLES:
-                #            isSME = True
-                #            break
-                #    if isSME:
-                #        newRole = guild.get_role(TECHNICIAN)
-                log.info(f"Promoting {targetMember.display_name} ({targetMember}) from {role} to {newRole}!")
-                await targetMember.remove_roles(role)
-                await targetMember.add_roles(newRole)
-                embed = Embed(title="✅ Member promoted", description=f"{targetMember.mention} promoted from {role.mention} to {newRole.mention}!", color=Color.green())
-                embed.set_footer(text=f"ID: {targetMember.id}")
-                embed.timestamp = datetime.now()
-                await ctx.send(embed=embed)
-                break
+    #             ## Promote member to Technician if they are a SME
+    #             #if newRole.id == OPERATOR:
+    #             #    isSME = False
+    #             #    for role_ in targetMember.roles:
+    #             #        if role_.id in SME_ROLES:
+    #             #            isSME = True
+    #             #            break
+    #             #    if isSME:
+    #             #        newRole = guild.get_role(TECHNICIAN)
+    #             log.info(f"Promoting {targetMember.display_name} ({targetMember}) from {role} to {newRole}!")
+    #             await targetMember.remove_roles(role)
+    #             await targetMember.add_roles(newRole)
+    #             embed = Embed(title="✅ Member promoted", description=f"{targetMember.mention} promoted from {role.mention} to {newRole.mention}!", color=Color.green())
+    #             embed.set_footer(text=f"ID: {targetMember.id}")
+    #             embed.timestamp = datetime.now()
+    #             await ctx.send(embed=embed)
+    #             break
 
-        else:
-            log.info(f"No promotion possible for {targetMember.display_name} ({targetMember})!")
-            embed = Embed(title="❌ No possible promotion", description=f"Member: {targetMember.mention}", color=Color.red())
-            embed.set_footer(text=f"ID: {targetMember.id}")
-            embed.timestamp = datetime.now()
-            await ctx.send(embed=embed)
+    #     else:
+    #         log.info(f"No promotion possible for {targetMember.display_name} ({targetMember})!")
+    #         embed = Embed(title="❌ No possible promotion", description=f"Member: {targetMember.mention}", color=Color.red())
+    #         embed.set_footer(text=f"ID: {targetMember.id}")
+    #         embed.timestamp = datetime.now()
+    #         await ctx.send(embed=embed)
 
-    @commands.command(name="demote")
-    @commands.has_any_role(*CMD_STAFF_LIMIT)
-    async def demote(self, ctx: commands.Context, *, member: str) -> None:
-        """Demote a member to the previous rank."""
-        targetMember = self._getMember(member)
-        if targetMember is None:
-            log.info(f"No member found for search term: {member}")
-            await ctx.send(embed=Embed(title="❌ No member found", description=f"Searched for: `{member}`", color=Color.red()))
-            return
+    # @commands.command(name="demote")
+    # @commands.has_any_role(*CMD_STAFF_LIMIT)
+    # async def demote(self, ctx: commands.Context, *, member: str) -> None:
+    #     """Demote a member to the previous rank."""
+    #     targetMember = self._getMember(member)
+    #     if targetMember is None:
+    #         log.info(f"No member found for search term: {member}")
+    #         await ctx.send(embed=Embed(title="❌ No member found", description=f"Searched for: `{member}`", color=Color.red()))
+    #         return
 
-        guild = self.bot.get_guild(GUILD_ID)
-        if guild is None:
-            log.exception("Staff promote: guild is None")
-            return
+    #     guild = self.bot.get_guild(GUILD_ID)
+    #     if guild is None:
+    #         log.exception("Staff promote: guild is None")
+    #         return
 
-        for role in targetMember.roles:
-            if role.id in DEMOTIONS:
-                newRole = guild.get_role(DEMOTIONS[role.id])
-                if newRole is None:
-                    log.exception("Staff promote: newRole is None")
-                    return
+    #     for role in targetMember.roles:
+    #         if role.id in DEMOTIONS:
+    #             newRole = guild.get_role(DEMOTIONS[role.id])
+    #             if newRole is None:
+    #                 log.exception("Staff promote: newRole is None")
+    #                 return
 
-                log.info(f"Demoting {targetMember.display_name} ({targetMember}) from {role} to {newRole}!")
-                await targetMember.remove_roles(role)
-                await targetMember.add_roles(newRole)
-                embed = Embed(title="✅ Member demoted", description=f"{targetMember.mention} demoted from {role.mention} to {newRole.mention}!", color=Color.green())
-                embed.set_footer(text=f"ID: {targetMember.id}")
-                embed.timestamp = datetime.now()
-                await ctx.send(embed=embed)
-                break
+    #             log.info(f"Demoting {targetMember.display_name} ({targetMember}) from {role} to {newRole}!")
+    #             await targetMember.remove_roles(role)
+    #             await targetMember.add_roles(newRole)
+    #             embed = Embed(title="✅ Member demoted", description=f"{targetMember.mention} demoted from {role.mention} to {newRole.mention}!", color=Color.green())
+    #             embed.set_footer(text=f"ID: {targetMember.id}")
+    #             embed.timestamp = datetime.now()
+    #             await ctx.send(embed=embed)
+    #             break
 
-        else:
-            log.info(f"No demotion possible for {targetMember.display_name} ({targetMember})!")
-            embed = Embed(title="❌ No possible demotion", description=f"Member: {targetMember.mention}", color=Color.red())
-            embed.set_footer(text=f"ID: {targetMember.id}")
-            embed.timestamp = datetime.now()
-            await ctx.send(embed=embed)
+    #     else:
+    #         log.info(f"No demotion possible for {targetMember.display_name} ({targetMember})!")
+    #         embed = Embed(title="❌ No possible demotion", description=f"Member: {targetMember.mention}", color=Color.red())
+    #         embed.set_footer(text=f"ID: {targetMember.id}")
+    #         embed.timestamp = datetime.now()
+    #         await ctx.send(embed=embed)
 
     @commands.command(name="searchmodlogs")
     @commands.has_any_role(*CMD_STAFF_LIMIT)

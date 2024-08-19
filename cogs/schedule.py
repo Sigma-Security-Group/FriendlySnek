@@ -190,6 +190,12 @@ SCHEDULE_EVENT_VIEW: dict[str, dict[str, discord.ButtonStyle | bool | int | None
         "startDisabled": True,
         "customStyle": None
     },
+    "Files": {
+        "required": False,
+        "row": 2,
+        "startDisabled": False,
+        "customStyle": None
+    },
 
     "Submit": {
         "required": True,
@@ -209,6 +215,8 @@ SCHEDULE_EVENT_PREVIEW_EMBED = {
     "title": "Create an event!",
     "description": "[Red buttons = Mandatory]\n[Gray = Optional]\n[Green = Done]\n\n[Markdown Syntax (Formatting)](https://support.discord.com/hc/en-us/articles/210298617-Markdown-Text-101-Chat-Formatting-Bold-Italic-Underline)"
 }
+
+FILE_UPLOAD_EXTENSION_BLACKLIST = ["exe", "pif", "application", "gadget", "msi", "msp", "com", "scr", "hta", "cpl", "msc", "jar", "bat", "cmd", "vb", "vbs", "vbe", "js", "jse", "ws", "wsf", "wsc", "wsh", "ps1", "ps1xml", "ps2", "ps2xml", "psc1", "psc2", "msh", "msh1", "msh2", "mshxml", "msh1xml", "msh2xml", "scf", "lnk", "inf", "reg", "doc", "xls", "ppt", "docm", "dotm", "xlsm", "xltm", "xlam", "pptm", "potm", "ppam", "ppsm", "sldm", "sh", "bash", "zsh"]
 
 def jsonCreateNoExist(filename: str, dump: list | dict) -> None:
     """Creates a JSON file with a dump if not exist.
@@ -619,9 +627,31 @@ class Schedule(commands.Cog):
         return view
 
     @staticmethod
-    def fromPreviewEmbedToDict(embed: discord.Embed) -> dict:
+    def getUserFileUploads(userId: str, isDiscordFormat=False) -> list[discord.File] | list[str]:
+        """Filters uploaded files to specified user id.
+
+        Parameters:
+        userId (str): User id for filter.
+        isDiscordFormat (bool): Return as list[discord.File]
+
+        Returns:
+        List[discord.File] | List[str]: A list of discord files or filenames.
+        """
+        files = []
+        for osFile in os.listdir("tmp/fileUpload"):
+            if userId in osFile:
+                if isDiscordFormat:
+                    with open(osFile) as f:
+                        files.append(discord.File(f))
+                else:
+                    files.append(osFile.split("_", 2)[2])
+        return files
+
+    def fromPreviewEmbedToDict(self, embed: discord.Embed) -> dict:
         """Generates event dict from preview embed."""
         # Finds a field's position if found (int), if none found (None)
+        print(f"fields {embed}")
+        print(f"fields {embed.fields} -- {len(embed.fields)}")
         findFieldPos = lambda fieldName : None if embed.fields is None else (
             indexes[0] if len(
                 indexes := [idx for idx, field in enumerate(embed.fields) if field.name is not None and field.name.startswith(fieldName)]
@@ -643,7 +673,8 @@ class Schedule(commands.Cog):
             "accepted": [],
             "declined": [],
             "tentative": [],
-            "type": [eventType for eventType in EVENT_TYPE_COLORS if EVENT_TYPE_COLORS[eventType] == embed.color][0] if embed.color in EVENT_TYPE_COLORS.values() else None
+            "type": [eventType for eventType in EVENT_TYPE_COLORS if EVENT_TYPE_COLORS[eventType] == embed.color][0] if embed.color in EVENT_TYPE_COLORS.values() else None,
+            "files": []
         }
 
         # Reservable Roles
@@ -671,7 +702,6 @@ class Schedule(commands.Cog):
         if fieldPos is not None:
             timeFieldValue = embed.fields[fieldPos].value
             if timeFieldValue is not None:
-
                 matches = re.findall(r"(?<=<t:)\d+(?=:\w>)", timeFieldValue)
                 outputDict["time"] = datetime.fromtimestamp(float(matches[0])).astimezone(pytz.utc).strftime(TIME_FORMAT)
                 if len(matches) > 1:
@@ -683,6 +713,13 @@ class Schedule(commands.Cog):
             if embed.author.name is not None:
                 workshop = embed.author.name[len("Linking: "):]
                 outputDict["workshopInterest"] = None if workshop == "None" else workshop
+
+        fieldPos = findFieldPos("Files")
+        print(f"files pos {fieldPos}")
+        if fieldPos is not None:
+            filesFieldValue = embed.fields[fieldPos].value
+            outputDict["files"] = filesFieldValue.split("\n")
+            print(f"files out {outputDict['files']}")
 
         return outputDict
 
@@ -723,6 +760,10 @@ class Schedule(commands.Cog):
             embed.add_field(name="External URL", value=previewDict["externalURL"], inline=False)
         embed.add_field(name="\u200B", value="\u200B", inline=False)
 
+        # Files
+        if previewDict["files"] is not None:
+            embed.add_field(name="Files", value="\n".join(previewDict["files"]), inline=False)
+
         # Author, Footer, Timestamp
         guild = self.bot.get_guild(GUILD_ID)
         if guild is None:
@@ -744,8 +785,8 @@ class Schedule(commands.Cog):
 
         fieldValue = "\u200B" if previewDict["maxPlayers"] == "anonymous" else "-"
         embed.add_field(name=f"Accepted (0{fieldNameNumberSuffix}) ✅", value=fieldValue, inline=True)
-        embed.add_field(name=f"Declined (0) ❌", value=fieldValue, inline=True)
-        embed.add_field(name=f"Tentative (0) ❓", value=fieldValue, inline=True)
+        embed.add_field(name="Declined (0) ❌", value=fieldValue, inline=True)
+        embed.add_field(name="Tentative (0) ❓", value=fieldValue, inline=True)
 
         return embed
 
@@ -980,10 +1021,6 @@ class Schedule(commands.Cog):
                 event = [event for event in events if event["messageId"] == message.id][0]
                 scheduleNeedsUpdate = False
 
-                if message is None:
-                    log.exception("buttonHandling delete: button message is None")
-                    return
-
                 embed = Embed(title=f"Are you sure you want to delete this {event['type'].lower()}: `{event['title']}`?", color=Color.orange())
                 view = ScheduleView()
                 items = [
@@ -1202,6 +1239,47 @@ class Schedule(commands.Cog):
                         )
 
 
+                    # FILES
+                    case "files":
+                        print("FILES")
+                        view = ScheduleView()
+                        items = [
+                            ScheduleButton(self, interaction.message, interaction.user.id, row=0, label="Add", style=discord.ButtonStyle.success, custom_id="event_schedule_files_add"),
+                            ScheduleButton(self, interaction.message, interaction.user.id, row=0, label="Remove", style=discord.ButtonStyle.danger, custom_id="event_schedule_files_remove"),
+                        ]
+                        for item in items:
+                            view.add_item(item)
+
+                        embed = Embed(title="Attaching files", description="You may attach up to 10 files to your event.\nUpload them first using the command `/fileupload`.", color=Color.gold())
+                        await interaction.response.send_message(interaction.user.mention, embed=embed, view=view, ephemeral=True, delete_after=300.0)
+                        print("---------")
+
+                    case "files_add":
+                        print("ADD")
+                        print(f"msg id {message.id}")
+                        previewEmbedDict = self.fromPreviewEmbedToDict(message.embeds[0])
+                        print(f"previewEmbedDict files: {previewEmbedDict['files']}")
+                        print(f"getUserFileUploads: {Schedule.getUserFileUploads(str(interaction.user.id))}")
+                        options = [discord.SelectOption(label=fileUpload) for fileUpload in Schedule.getUserFileUploads(str(interaction.user.id)) if fileUpload not in previewEmbedDict["files"]]
+                        if len(options) == 0:
+                            embed = Embed(title="Attaching files", description="You have not uploaded any files yet.\nTo upload new files; run the command `/fileupload`.", color=Color.red())
+                            view = ScheduleView()
+                        else:
+                            embed = Embed(title="Attaching files", description="Select a file to upload from the select menus below.\nTo upload new files; run the command `/fileupload`.", color=Color.gold())
+                            view = self.generateSelectView(options, False, None, message, "Select a file.", "select_create_files_add", discord.ui.View.from_message(message, timeout=None))
+                            print(f"message view: {discord.ui.View.from_message(message, timeout=None)}")
+
+                        view.add_item(ScheduleButton(self, message, interaction.user.id, row=4, label="Remove", style=discord.ButtonStyle.danger, custom_id="event_schedule_files_remove"))
+                        await interaction.response.edit_message(embed=embed, view=view)
+                        print("---------")
+
+                    case "files_remove":
+                        print("REMOVE")
+                        print("---------")
+                        return
+
+
+
                     # TEMPLATES
                     case "save_as_template":
                         if isAllRequiredInfoFilled() is False:
@@ -1361,7 +1439,7 @@ class Schedule(commands.Cog):
         except Exception as e:
             log.exception(f"{interaction.user} | {e}")
 
-    def generateSelectView(self, options: list[discord.SelectOption], noneOption: bool, setOptionLabel: str, eventMsg: discord.Message, placeholder: str, customId: str, eventMsgView: discord.ui.View | None = None):
+    def generateSelectView(self, options: list[discord.SelectOption], noneOption: bool, setOptionLabel: str | None, eventMsg: discord.Message, placeholder: str, customId: str, eventMsgView: discord.ui.View | None = None):
         """Generates good select menu view - ceil(len(options)/25) dropdowns.
 
         Parameters:
@@ -1378,10 +1456,11 @@ class Schedule(commands.Cog):
         """
 
         # Remove setOptionLabel from options
-        for idx, option in enumerate(options):
-            if option.label == setOptionLabel:
-                options.pop(idx)
-                break
+        if setOptionLabel is not None:
+            for idx, option in enumerate(options):
+                if option.label == setOptionLabel:
+                    options.pop(idx)
+                    break
 
         if noneOption:
             options.insert(0, discord.SelectOption(label="None", emoji="🚫"))
@@ -1433,81 +1512,96 @@ class Schedule(commands.Cog):
 
 
             # Do preview embed edits
-            if infoLabel == "type":
-                previewEmbedDict["type"] = selectedValue
+            match infoLabel:
+                case "type":
+                    previewEmbedDict["type"] = selectedValue
 
-                templateName = "None"
-                # Fetch templateName
-                for child in eventMsgView.children:
-                    if isinstance(child, discord.ui.Button) and child.label is not None and child.label.startswith("Select Template: "):
-                        templateName = ":".join(child.label.split(":")[1:]).strip()
-                        break
+                    templateName = "None"
+                    # Fetch templateName
+                    for child in eventMsgView.children:
+                        if isinstance(child, discord.ui.Button) and child.label is not None and child.label.startswith("Select Template: "):
+                            templateName = ":".join(child.label.split(":")[1:]).strip()
+                            break
 
-                # Update view
-                previewView = self.fromDictToPreviewView(previewEmbedDict, templateName)
-                eventMsgView.clear_items()
-                for item in previewView.children:
-                    eventMsgView.add_item(item)
+                    # Update view
+                    previewView = self.fromDictToPreviewView(previewEmbedDict, templateName)
+                    eventMsgView.clear_items()
+                    for item in previewView.children:
+                        eventMsgView.add_item(item)
 
-            elif infoLabel == "map":
-                previewEmbedDict["map"] = None if previewEmbedDict["map"] == "None" else selectedValue
+                case "map":
+                    previewEmbedDict["map"] = None if previewEmbedDict["map"] == "None" else selectedValue
 
-            elif infoLabel == "linking":
-                previewEmbedDict["workshopInterest"] = None if selectedValue == "None" else selectedValue
+                case "linking":
+                    previewEmbedDict["workshopInterest"] = None if selectedValue == "None" else selectedValue
 
-            elif infoLabel == "select_template":
-                # Update template buttons label & disabled
-                for child in eventMsgView.children:
-                    if not isinstance(child, discord.ui.Button) or child.label is None:
-                        continue
-                    if child.label.startswith("Select Template"):
-                        child.label = f"Select Template: {selectedValue}"
-                    elif child.label == "Update Template":
-                        child.disabled = (selectedValue == "None")
+                case "files_add":
+                    print(f"select_create_files_add")
+                    previewEmbedDict["files"].append(selectedValue)
+                    view = ScheduleView()
+                    items = [
+                        ScheduleButton(self, eventMsg, interaction.user.id, row=0, label="Add", style=discord.ButtonStyle.success, custom_id="event_schedule_files_add"),
+                        ScheduleButton(self, eventMsg, interaction.user.id, row=0, label="Remove", style=discord.ButtonStyle.danger, custom_id="event_schedule_files_remove"),
+                    ]
+                    for item in items:
+                        view.add_item(item)
 
-                # Insert template info into preview embed and view
-                filename = f"data/{previewEmbedDict['type'].lower()}Templates.json"
-                jsonCreateNoExist(filename, [])
-                with open(filename) as f:
-                    templates = json.load(f)
-                for template in templates:
-                    if template["templateName"] == selectedValue:
-                        template["authorId"] = interaction.user.id
-                        template["time"] = template["endTime"] = None
-                        template["type"] = previewEmbedDict['type']
-                        embed = self.fromDictToPreviewEmbed(template)
-                        for child in eventMsgView.children:
-                            if not isinstance(child, discord.ui.Button) or child.label is None:
-                                continue
+                    embed = Embed(title="Attaching files", description="You may attach up to 10 files to your event.\nUpload them first using the command `/fileupload`.", color=Color.gold())
+                    await interaction.edit_original_response(embed=embed, view=view)
+                    print("---------")
 
-                            # Time is required but will not be saved in templates
-                            if child.label == "Time":
-                                child.style = discord.ButtonStyle.danger
-                                continue
+                case "select_template":
+                    # Update template buttons label & disabled
+                    for child in eventMsgView.children:
+                        if not isinstance(child, discord.ui.Button) or child.label is None:
+                            continue
+                        if child.label.startswith("Select Template"):
+                            child.label = f"Select Template: {selectedValue}"
+                        elif child.label == "Update Template":
+                            child.disabled = (selectedValue == "None")
 
-                            # All required fields are already filled
-                            if child.style == discord.ButtonStyle.danger or child.label == "Type":
-                                child.style = discord.ButtonStyle.success
-                                continue
+                    # Insert template info into preview embed and view
+                    filename = f"data/{previewEmbedDict['type'].lower()}Templates.json"
+                    jsonCreateNoExist(filename, [])
+                    with open(filename) as f:
+                        templates = json.load(f)
+                    for template in templates:
+                        if template["templateName"] == selectedValue:
+                            template["authorId"] = interaction.user.id
+                            template["time"] = template["endTime"] = None
+                            template["type"] = previewEmbedDict['type']
+                            embed = self.fromDictToPreviewEmbed(template)
+                            for child in eventMsgView.children:
+                                if not isinstance(child, discord.ui.Button) or child.label is None:
+                                    continue
 
-                            # Linking
-                            if child.label == "Linking":
-                                if embed.footer.icon_url is not None:
+                                # Time is required but will not be saved in templates
+                                if child.label == "Time":
+                                    child.style = discord.ButtonStyle.danger
+                                    continue
+
+                                # All required fields are already filled
+                                if child.style == discord.ButtonStyle.danger or child.label == "Type":
                                     child.style = discord.ButtonStyle.success
                                     continue
 
-                            # Ignore template buttons
-                            if "Template" in child.label or child.style == discord.ButtonStyle.primary:
-                                continue
+                                # Linking
+                                if child.label == "Linking" and embed.footer.icon_url is not None:
+                                    child.style = discord.ButtonStyle.success
+                                    continue
 
-                            # Optional fields
-                            jsonKey = (child.label[0].lower() + child.label[1:]).replace(" ", "")
-                            if jsonKey == "linking":
-                                jsonKey = "workshopInterest"
-                            child.style = discord.ButtonStyle.secondary if template[jsonKey] is None else discord.ButtonStyle.success
+                                # Ignore template buttons
+                                if "Template" in child.label or child.style == discord.ButtonStyle.primary:
+                                    continue
 
-                        await eventMsg.edit(embed=embed, view=eventMsgView)
-                        return
+                                # Optional fields
+                                jsonKey = (child.label[0].lower() + child.label[1:]).replace(" ", "")
+                                if jsonKey == "linking":
+                                    jsonKey = "workshopInterest"
+                                child.style = discord.ButtonStyle.secondary if template[jsonKey] is None else discord.ButtonStyle.success
+
+                            await eventMsg.edit(embed=embed, view=eventMsgView)
+                            return
 
 
             # Update eventMsg button style
@@ -1518,7 +1612,7 @@ class Schedule(commands.Cog):
 
             # Edit preview embed & view
             await eventMsg.edit(embed=self.fromDictToPreviewEmbed(previewEmbedDict), view=eventMsgView)
-
+            print("EDITING NEW PREVIEW EMBED")
 
 
         elif select.custom_id == "reserve_role_select":
@@ -1570,84 +1664,86 @@ class Schedule(commands.Cog):
             eventType = event.get("type", "Operation")
 
             # Editing Type
-            if selectedValue == "Type":
-                options = [
-                    discord.SelectOption(emoji="🟩", label="Operation"),
-                    discord.SelectOption(emoji="🟦", label="Workshop"),
-                    discord.SelectOption(emoji="🟨", label="Event")
-                ]
-                view = self.generateSelectView(options, False, eventType, eventMsg, "Select event type.", "edit_select_type")
+            match selectedValue:
+                case "Type":
+                    options = [
+                        discord.SelectOption(emoji="🟩", label="Operation"),
+                        discord.SelectOption(emoji="🟦", label="Workshop"),
+                        discord.SelectOption(emoji="🟨", label="Event")
+                    ]
+                    view = self.generateSelectView(options, False, eventType, eventMsg, "Select event type.", "edit_select_type")
 
-                await interaction.response.send_message(view=view, ephemeral=True, delete_after=60.0)
+                    await interaction.response.send_message(view=view, ephemeral=True, delete_after=60.0)
 
-            # Editing Title
-            elif selectedValue == "Title":
-                modal = ScheduleModal(self, "Title", "modal_title", eventMsg)
-                modal.add_item(discord.ui.TextInput(label="Title", default=event["title"], placeholder="Operation Honda Civic", min_length=1, max_length=256))
-                await interaction.response.send_modal(modal)
+                # Editing Title
+                case "Title":
+                    modal = ScheduleModal(self, "Title", "modal_title", eventMsg)
+                    modal.add_item(discord.ui.TextInput(label="Title", default=event["title"], placeholder="Operation Honda Civic", min_length=1, max_length=256))
+                    await interaction.response.send_modal(modal)
 
-            # Editing Linking
-            elif selectedValue == "Linking":
-                with open(WORKSHOP_INTEREST_FILE) as f:
-                    wsIntOptions = json.load(f).keys()
+                # Editing Linking
+                case "Linking":
+                    with open(WORKSHOP_INTEREST_FILE) as f:
+                        wsIntOptions = json.load(f).keys()
 
-                options = [discord.SelectOption(label=wsName) for wsName in wsIntOptions]
-                view = self.generateSelectView(options, True, event["map"], eventMsg, "Link event to a workshop.", "edit_select_linking")
-                await interaction.response.send_message(view=view, ephemeral=True, delete_after=60.0)
+                    options = [discord.SelectOption(label=wsName) for wsName in wsIntOptions]
+                    view = self.generateSelectView(options, True, event["map"], eventMsg, "Link event to a workshop.", "edit_select_linking")
+                    await interaction.response.send_message(view=view, ephemeral=True, delete_after=60.0)
 
-            # Editing Description
-            elif selectedValue == "Description":
-                modal = ScheduleModal(self, "Description", "modal_description", eventMsg)
-                modal.add_item(discord.ui.TextInput(style=discord.TextStyle.long, label="Description", default=event["description"], placeholder="Bomb oogaboogas", min_length=1, max_length=4000))
-                await interaction.response.send_modal(modal)
+                # Editing Description
+                case "Description":
+                    modal = ScheduleModal(self, "Description", "modal_description", eventMsg)
+                    modal.add_item(discord.ui.TextInput(style=discord.TextStyle.long, label="Description", default=event["description"], placeholder="Bomb oogaboogas", min_length=1, max_length=4000))
+                    await interaction.response.send_modal(modal)
 
-            # Editing URL
-            elif selectedValue == "External URL":
-                modal = ScheduleModal(self, "External URL", "modal_externalURL", eventMsg)
-                modal.add_item(discord.ui.TextInput(style=discord.TextStyle.long, label="URL", default=event["externalURL"], placeholder="OPORD: https://www.gnu.org/", max_length=1024, required=False))
-                await interaction.response.send_modal(modal)
+                # Editing URL
+                case "External URL":
+                    modal = ScheduleModal(self, "External URL", "modal_externalURL", eventMsg)
+                    modal.add_item(discord.ui.TextInput(style=discord.TextStyle.long, label="URL", default=event["externalURL"], placeholder="OPORD: https://www.gnu.org/", max_length=1024, required=False))
+                    await interaction.response.send_modal(modal)
 
-            # Editing Reservable Roles
-            elif selectedValue == "Reservable Roles":
-                modal = ScheduleModal(self, "Reservable Roles", "modal_reservableRoles", eventMsg)
-                modal.add_item(discord.ui.TextInput(style=discord.TextStyle.long, label="Reservable Roles", default=(None if event["reservableRoles"] is None else "\n".join(event["reservableRoles"].keys())), placeholder="Co-Zeus\nActual\nJTAC\nF-35A Pilot", max_length=512, required=False))
-                await interaction.response.send_modal(modal)
+                # Editing Reservable Roles
+                case "Reservable Roles":
+                    modal = ScheduleModal(self, "Reservable Roles", "modal_reservableRoles", eventMsg)
+                    modal.add_item(discord.ui.TextInput(style=discord.TextStyle.long, label="Reservable Roles", default=(None if event["reservableRoles"] is None else "\n".join(event["reservableRoles"].keys())), placeholder="Co-Zeus\nActual\nJTAC\nF-35A Pilot", max_length=512, required=False))
+                    await interaction.response.send_modal(modal)
 
-            # Editing Map
-            elif selectedValue == "Map":
-                options = [discord.SelectOption(label=mapName) for mapName in MAPS]
-                view = self.generateSelectView(options, True, event["map"], eventMsg, "Select a map.", "edit_select_map")
-                await interaction.response.send_message(view=view, ephemeral=True, delete_after=60.0)
+                # Editing Map
+                case "Map":
+                    options = [discord.SelectOption(label=mapName) for mapName in MAPS]
+                    view = self.generateSelectView(options, True, event["map"], eventMsg, "Select a map.", "edit_select_map")
+                    await interaction.response.send_message(view=view, ephemeral=True, delete_after=60.0)
 
-            # Editing Attendence
-            elif selectedValue == "Max Players":
-                modal = ScheduleModal(self, "Attendees", "modal_maxPlayers", eventMsg)
-                modal.add_item(discord.ui.TextInput(label="Attendees", default=event["maxPlayers"], placeholder="Number / None / Anonymous / Hidden", min_length=1, max_length=9))
-                await interaction.response.send_modal(modal)
+                # Editing Attendence
+                case "Max Players":
+                    modal = ScheduleModal(self, "Attendees", "modal_maxPlayers", eventMsg)
+                    modal.add_item(discord.ui.TextInput(label="Attendees", default=event["maxPlayers"], placeholder="Number / None / Anonymous / Hidden", min_length=1, max_length=9))
+                    await interaction.response.send_modal(modal)
 
-            # Editing Duration
-            elif selectedValue == "Duration":
-                modal = ScheduleModal(self, "Duration", "modal_duration", eventMsg)
-                modal.add_item(discord.ui.TextInput(label="Duration", default=event["duration"], placeholder="2h30m", min_length=1, max_length=16))
-                await interaction.response.send_modal(modal)
+                # Editing Duration
+                case "Duration":
+                    modal = ScheduleModal(self, "Duration", "modal_duration", eventMsg)
+                    modal.add_item(discord.ui.TextInput(label="Duration", default=event["duration"], placeholder="2h30m", min_length=1, max_length=16))
+                    await interaction.response.send_modal(modal)
 
-            # Editing Time
-            elif selectedValue == "Time":
-                # Set user time zone
-                with open(MEMBER_TIME_ZONES_FILE) as f:
-                    memberTimeZones = json.load(f)
-                if str(interaction.user.id) not in memberTimeZones:
-                    await interaction.response.send_message("Please retry after you've set a time zone in DMs!", ephemeral=True, delete_after=60.0)
-                    timeZoneOutput = await self.changeTimeZone(interaction.user)
-                    if timeZoneOutput is False:
-                        await interaction.followup.send(embed=Embed(title="❌ Event Editing canceled", description="You must provide a time zone in your DMs!", color=Color.red()))
-                    return
+                # Editing Time
+                case "Time":
+                    # Set user time zone
+                    with open(MEMBER_TIME_ZONES_FILE) as f:
+                        memberTimeZones = json.load(f)
+                    if str(interaction.user.id) not in memberTimeZones:
+                        await interaction.response.send_message("Please retry after you've set a time zone in DMs!", ephemeral=True, delete_after=60.0)
+                        timeZoneOutput = await self.changeTimeZone(interaction.user)
+                        if timeZoneOutput is False:
+                            await interaction.followup.send(embed=Embed(title="❌ Event Editing canceled", description="You must provide a time zone in your DMs!", color=Color.red()))
+                        return
 
-                # Send modal
-                timeZone = pytz.timezone(memberTimeZones[str(interaction.user.id)])
-                modal = ScheduleModal(self, "Time", "modal_time", eventMsg)
-                modal.add_item(discord.ui.TextInput(label="Time", default=datetimeParse(event["time"]).replace(tzinfo=UTC).astimezone(timeZone).strftime(TIME_FORMAT), placeholder="2069-04-20 04:20 PM", min_length=1, max_length=32))
-                await interaction.response.send_modal(modal)
+                    # Send modal
+                    timeZone = pytz.timezone(memberTimeZones[str(interaction.user.id)])
+                    modal = ScheduleModal(self, "Time", "modal_time", eventMsg)
+                    modal.add_item(discord.ui.TextInput(label="Time", default=datetimeParse(event["time"]).replace(tzinfo=UTC).astimezone(timeZone).strftime(TIME_FORMAT), placeholder="2069-04-20 04:20 PM", min_length=1, max_length=32))
+                    await interaction.response.send_modal(modal)
+
 
             log.info(f"{interaction.user.display_name} ({interaction.user}) edited the event: {event['title'] if 'title' in event else event['templateName']}.")
 
@@ -2027,6 +2123,89 @@ class Schedule(commands.Cog):
 # ===== </Event> =====
 
 
+# ===== <Fileupload> =====
+
+    @discord.app_commands.command(name="fileupload")
+    @discord.app_commands.guilds(GUILD)
+    @discord.app_commands.describe(file="File to upload")
+    async def fileupload(self, interaction: discord.Interaction, file: discord.Attachment) -> None:
+        """Upload file for later attachment when scheduling.
+
+        Parameters:
+        interaction (discord.Interaction): The Discord interaction.
+        file (discord.File): The file.
+
+        Returns:
+        None.
+        """
+
+        # Cap file size to ~25 MB
+        if file.size > 26_250_000:
+            await interaction.response.send_message(embed=Embed(title="❌ Invalid filesize", description="Max allowed filesize is 25 MB!", color=Color.red()), ephemeral=True)
+            return
+
+        # Block files with file extension in blacklist
+        fileExtension = os.path.splitext(file.filename)[1][1:] # Get extension without dot
+        if not fileExtension or fileExtension.lower() in FILE_UPLOAD_EXTENSION_BLACKLIST:
+            log.warning(f"{interaction.user.display_name} ({interaction.user.id}) uploaded a blacklisted file extension '{file.filename}'.")
+
+            guild = self.bot.get_guild(GUILD_ID)
+            if guild is None:
+                log.exception("fileupload: guild is None")
+                return
+            roleSnekLord = guild.get_role(SNEK_LORD)
+            if roleSnekLord is None:
+                log.exception("fileupload: roleSnekLord is None")
+                return
+            channelBot = self.bot.get_channel(BOT)
+            if not isinstance(channelBot, discord.TextChannel):
+                log.exception("fileupload: channelBot not discord.TextChannel")
+                return
+
+            embed = Embed(title="❌ File upload blocked", description=f"User {interaction.user.mention} ({interaction.user.id}) uploaded the file '{file.filename}'.\nThis action has been blocked since the file extension is blacklisted.", color=Color.red())
+            await channelBot.send(roleSnekLord.mention, embed=embed)
+
+            await interaction.response.send_message(embed=Embed(title="❌ Invalid file extension", description="This file extension is blacklisted for security purposes.", color=Color.red()), ephemeral=True)
+            return
+
+
+        # Everything OK, save file
+
+        # Naming scheme: 'DATETIME_AUTHORID_NAME'
+        filenameCap = file.filename[:200]
+        filenameNew = f"{datetime.now().strftime('%Y%m%d%H%M%S')}_{interaction.user.id}_{filenameCap}"
+        with open(f"tmp/fileUpload/{filenameNew}", "wb") as f:
+            await file.save(f)
+
+        log.info(f"{interaction.user.display_name} ({interaction.user.id}) uploaded the file '{file.filename}' as '{filenameNew}'.")
+        embed = Embed(title="✅ File uploaded", description=f"Uploaded file as `{filenameCap}`.", color=Color.green())
+        await interaction.response.send_message(embed=embed)
+
+        # Clean up - global (MAX 400)
+        fileUploadFiles = os.listdir("tmp/fileUpload")
+        fileUploadFiles.sort()
+        for _ in range(len(fileUploadFiles) - 400):
+            try:
+                os.remove(fileUploadFiles[0])
+            except Exception as e:
+                log.warning(f"fileupload: Couldn't remove global file '{fileUploadFiles[0]}'. {e}")
+            finally:
+                fileUploadFiles.pop(0)
+
+        # Clean up - individual (MAX 50)
+        fileUploadFilesInd = [file for file in fileUploadFiles if str(interaction.user.id) in file]
+        while len(fileUploadFilesInd) > 50:
+            try:
+                os.remove(fileUploadFilesInd[0])
+            except Exception as e:
+                log.warning(f"fileupload: Couldn't remove ind file '{fileUploadFilesInd[0]}'. {e}")
+            finally:
+                fileUploadFilesInd.pop(0)
+
+
+# ===== </Fileupload> =====
+
+
 # ===== <Timestamp> =====
 
     @discord.app_commands.command(name="timestamp")
@@ -2061,7 +2240,7 @@ class Schedule(commands.Cog):
             with open(MEMBER_TIME_ZONES_FILE) as f:
                 memberTimeZones = json.load(f)
 
-            if not str(interaction.user.id) in memberTimeZones:
+            if str(interaction.user.id) not in memberTimeZones:
                 timeZoneOutput = await self.changeTimeZone(interaction.user, isCommand=False)
                 if not timeZoneOutput:
                     await self.cancelCommand(await self.checkDMChannel(interaction.user), "Timestamp creation")

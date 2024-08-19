@@ -416,7 +416,7 @@ class Schedule(commands.Cog):
 
     @discord.app_commands.command(name="refreshschedule")
     @discord.app_commands.guilds(GUILD)
-    @discord.app_commands.checks.has_any_role(UNIT_STAFF, SERVER_HAMSTER, CURATOR, SNEK_LORD)
+    @discord.app_commands.checks.has_any_role(*CMD_REFRESHSCHEDULE_LIMIT)
     async def refreshSchedule(self, interaction: discord.Interaction) -> None:
         """Refreshes the schedule - Use if an event was deleted without using the reaction.
 
@@ -451,8 +451,10 @@ class Schedule(commands.Cog):
             await interaction.response.send_message(embed=embed, ephemeral=True)
 
 # ===== </Refresh Schedule> =====
-# ===== <Zeus Commands> ====
-# Move from Deployed to Command
+
+
+# ===== <AAR> ====
+
     @discord.app_commands.command(name="aar")
     @discord.app_commands.guilds(GUILD)
     @discord.app_commands.checks.has_any_role(*CMD_AAR_LIMIT)
@@ -503,6 +505,9 @@ class Schedule(commands.Cog):
 
             embed = Embed(title="❌ Missing permissions", description=f"You do not have the permissions to move all users to command!\nThe permitted roles are: {', '.join([guild.get_role(role).name for role in CMD_AAR_LIMIT])}.", color=Color.red())
             await interaction.response.send_message(embed=embed, ephemeral=True)
+
+# ===== </AAR> ====
+
 
 # ===== <Schedule Functions> =====
 

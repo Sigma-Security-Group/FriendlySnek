@@ -19,6 +19,7 @@ WORKSHOP_TEMPLATES_FILE = "data/workshopTemplates.json"
 MEMBER_TIME_ZONES_FILE = "data/memberTimeZones.json"
 WORKSHOP_INTEREST_FILE = "data/workshopInterest.json"
 REMINDERS_FILE = "data/reminders.json"
+REPEATED_MSG_DATE_LOG_FILE = "data/repeatedMsgDateLog.json"
 
 # Staff
 ROLE_RESERVATION_BLACKLIST_FILE = "data/roleReservationBlacklist.json"

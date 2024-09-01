@@ -230,6 +230,7 @@ jsonCreateNoExist(WORKSHOP_TEMPLATES_FILE, [])
 #jsonCreateNoExist(WORKSHOP_TEMPLATES_DELETED_FILE, [])
 jsonCreateNoExist(REMINDERS_FILE, {})
 jsonCreateNoExist(ROLE_RESERVATION_BLACKLIST_FILE, [])
+jsonCreateNoExist(REPEATED_MSG_DATE_LOG_FILE, {})
 
 # try:
 #     with open("./.git/logs/refs/heads/main") as f:

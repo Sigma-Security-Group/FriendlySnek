@@ -292,12 +292,7 @@ Join Us:
             eventsHistory = json.load(f)
 
         searchTime = datetime.now(timezone.utc) - timedelta(weeks=26.0)  # Last 6 months
-        historyShortened = []
-        for index, event in enumerate(eventsHistory[::-1], 1):  # Newest to oldest
-            eventScheduled = pytz.utc.localize(datetime.strptime(event["time"], TIME_FORMAT))
-            if eventScheduled < searchTime:
-                historyShortened = eventsHistory[:len(eventsHistory)-index:-1]  # Cut off all items that are older than 6 months
-
+        eventsHistorySorted = sorted(eventsHistory, key=lambda event: event["time"], reverse=True)
         bigBrotherWatchList = {}
 
         # Iterate all SME roles
@@ -315,14 +310,15 @@ Join Us:
             for sme_person in smeRole.members:
                 # Search in old
                 isWsFound = False
-                for event in historyShortened:  # Newest to oldest
-                    if "workshopInterest" in event and event["workshopInterest"] == wsName and event["authorId"] == sme_person.id:
+                for event in eventsHistorySorted:  # Newest to oldest
+                    eventScheduled = pytz.utc.localize(datetime.strptime(event["time"], TIME_FORMAT))
+                    if "workshopInterest" in event and event["workshopInterest"] == wsName and event["authorId"] == sme_person.id and eventScheduled > searchTime:
                         isWsFound = True
-                        eventScheduled = discord.utils.format_dt(pytz.utc.localize(datetime.strptime(event["time"], TIME_FORMAT)), style="R")
+                        eventScheduledFormat = discord.utils.format_dt(eventScheduled, style="R")
                         if sme_person.display_name not in bigBrotherWatchList:
-                            bigBrotherWatchList[sme_person.display_name] = {smeRole.mention: {"count": 1, "time": eventScheduled}}
+                            bigBrotherWatchList[sme_person.display_name] = {smeRole.mention: {"count": 1, "time": eventScheduledFormat}}
                         elif smeRole.mention not in bigBrotherWatchList[sme_person.display_name]:
-                            bigBrotherWatchList[sme_person.display_name][smeRole.mention] = {"count": 1, "time": eventScheduled}
+                            bigBrotherWatchList[sme_person.display_name][smeRole.mention] = {"count": 1, "time": eventScheduledFormat}
                         else:
                             bigBrotherWatchList[sme_person.display_name][smeRole.mention]["count"] += 1
 

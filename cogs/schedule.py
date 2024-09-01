@@ -353,7 +353,7 @@ class Schedule(commands.Cog):
                     eventMessage = await self.bot.get_channel(SCHEDULE).fetch_message(event["messageId"])
                     await eventMessage.delete()
                     author = self.bot.get_guild(GUILD_ID).get_member(event["authorId"])
-                    embed = Embed(title="Event auto deleted", description=f"You forgot to delete your event: `{event['title']}`\nI have now done it for you. Don't do it again {PEPE_GUN}", color=Color.orange())
+                    embed = Embed(title="Event auto deleted", description=f"Your {event['type'].lower()} has ended: `{event['title']}`\nIt has been automatically removed from the schedule. {PEEPO_POP}", color=Color.orange())
                     await author.send(embed=embed)
             for event in deletedEvents:
                 events.remove(event)

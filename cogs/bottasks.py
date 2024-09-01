@@ -316,7 +316,7 @@ Join Us:
                 # Search in old
                 isWsFound = False
                 for event in historyShortened:  # Newest to oldest
-                    if "workshopInterest" in event and event["workshopInterest"] == wsName:
+                    if "workshopInterest" in event and event["workshopInterest"] == wsName and event["authorId"] == sme_person.id:
                         isWsFound = True
                         eventScheduled = discord.utils.format_dt(pytz.utc.localize(datetime.strptime(event["time"], TIME_FORMAT)), style="R")
                         if sme_person.display_name not in bigBrotherWatchList:

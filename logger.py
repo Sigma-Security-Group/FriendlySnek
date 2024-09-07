@@ -1,6 +1,6 @@
 import os, sys, traceback, pytz
 
-from datetime import datetime
+from datetime import datetime, timezone
 from colorama import Fore, Style  # type: ignore
 
 LOG_FILE = "./bot.log"
@@ -11,7 +11,7 @@ class Logger:
         if not os.path.exists("./logs"):
             os.mkdir("logs")
         if os.path.exists(LOG_FILE):
-            logFilename = f"./logs/bot.{datetime.now().astimezone(pytz.timezone('Europe/Paris')).strftime('%Y-%m-%d_%H-%M-%S')}.log"
+            logFilename = f"./logs/bot.{datetime.now(timezone.utc).strftime('%Y-%m-%d_%H-%M-%S')}.log"
             os.rename(LOG_FILE, logFilename)
         with open(LOG_FILE, "w") as f:
             f.write("")
@@ -30,7 +30,7 @@ class Logger:
         skipFileSwitchCheck (bool, optional): Whether or not to skip check for switching log file. Defaults to False.
         flush (bool, optional): Whether or not to flush buffers after writing the message. Defaults to False.
         """
-        now = datetime.now().astimezone(pytz.timezone("Europe/Paris")).strftime("%Y-%m-%d %H:%M:%S")
+        now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
         levelColors = {
             "DEBUG": Fore.CYAN,
             "INFO": Fore.GREEN,

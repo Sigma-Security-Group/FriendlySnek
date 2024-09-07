@@ -132,10 +132,10 @@ class BotTasks(commands.Cog):
         account = await reddit.redditor(username)  # Fetch our account
         submissions = account.submissions.new(limit=1)  # Get account submissions sorted by latest
         async for submission in submissions:  # Check the latest submission [break]
-            subCreated = datetime.fromtimestamp(submission.created_utc).replace(tzinfo=timezone.utc)  # Latest post timestamp
+            subCreated = datetime.fromtimestamp(submission.created_utc, timezone.utc)  # Latest post timestamp
             break
 
-        if datetime.now().replace(tzinfo=timezone.utc) < (subCreated + timedelta(weeks=1.0, minutes=30.0)):  # Dont post if now is less than ~1 week than last post
+        if datetime.now(timezone.utc) < (subCreated + timedelta(weeks=1.0, minutes=30.0)):  # Dont post if now is less than ~1 week than last post
             return
 
         # 1 week has passed, post new

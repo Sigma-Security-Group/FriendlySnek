@@ -33,6 +33,12 @@ SERVERS = [
 ]
 server = SERVERS[0]
 
+def convertBytes(size):
+    for unit in ["bytes", "KB", "MB", "GB", "TB"]:
+        if size < 1024.0:
+            return f'{size:.1f} {unit}'
+        size /= 1024.0
+
 class MissionUploader(commands.Cog):
     """Mission uploader cog."""
     def __init__(self, bot: commands.Bot) -> None:
@@ -144,6 +150,7 @@ class MissionUploader(commands.Cog):
                         filename = attachment.filename
                         with open(f"tmp/missionUpload/{filename}", "wb") as f:
                             await attachment.save(f)
+                        filesize = convertBytes(os.stat(f"tmp/missionUpload/{filename}").st_size)
 
                         if not secret.DEBUG:
                             try:
@@ -179,6 +186,7 @@ class MissionUploader(commands.Cog):
 
         embed = Embed(title="Uploaded mission file" + (" (Debug)" if secret.DEBUG else ""), color=Color.blue())
         embed.add_field(name="Filename", value=f"`{filename}`")
+        embed.add_field(name="Size", value=f"`{filesize}`")
         embed.add_field(name="Server", value=f"`{server['Name']}`")
         embed.add_field(name="Time", value=discord.utils.format_dt(datetime.now(timezone.utc), style="F"))
         embed.add_field(name="Member", value=interaction.user.mention)

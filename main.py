@@ -118,8 +118,10 @@ async def on_voice_state_update(member: discord.Member, before: discord.VoiceSta
         await member.move_to(newVoiceChannel, reason="User created new dynamic voice channel.")
 
     elif before.channel and before.channel.name.startswith("Room #") and len(before.channel.members) == 0:
-        await before.channel.delete(reason="No users left in dynamic voice channel.")
-
+        try:
+            await before.channel.delete(reason="No users left in dynamic voice channel.")
+        except Exception:
+            log.warning(f"on_voice_state_update: could not delete dynamic voice channel: '{before.channel.name}' ({member})")
 
 @client.event
 async def on_message(message: discord.Message) -> None:

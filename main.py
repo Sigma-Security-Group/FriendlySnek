@@ -222,24 +222,21 @@ async def on_command_error(ctx: commands.Context, error: commands.CommandError) 
 
 
 @client.command()
+@commands.has_any_role(SNEK_LORD)
 async def reload(ctx: commands.Context) -> None:
-    """ Reload bot cogs - Devs only. """
+    """Reload bot cogs."""
     log.info(f"{ctx.author.display_name} ({ctx.author}) Reloading bot cogs...")
-    if ctx.author.id not in DEVELOPERS:
-        return
     for cog in COGS:
         await client.reload_extension(f"cogs.{cog}")
     await client.tree.sync(guild=GUILD)
     await ctx.send("Cogs reloaded!")
 
 
-if secret.DEBUG:
-    @client.command()
-    async def stop(ctx: commands.Context) -> None:
-        """ Stops bot - Devs only. """
-        if ctx.author.id not in DEVELOPERS:
-            return
-        await client.close()
+@client.command()
+@commands.has_any_role(SNEK_LORD)
+async def stop(ctx: commands.Context) -> None:
+    """Stops bot."""
+    await client.close()
 
 
 if __name__ == "__main__":

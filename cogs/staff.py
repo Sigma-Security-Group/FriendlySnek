@@ -436,6 +436,16 @@ class Staff(commands.Cog):
         embed.timestamp = datetime.now()
         await ctx.send(embed=embed)
 
+    @commands.command(name="smebigbrother")
+    @commands.has_any_role(*CMD_STAFF_LIMIT)
+    async def smeBigBrother(self, ctx: commands.Context) -> None:
+        guild = self.bot.get_guild(GUILD_ID)
+        if guild is None:
+            log.exception("Staff smeBigBrother: guild is None")
+            return
+
+        from cogs.bottasks import BotTasks
+        await BotTasks.smeBigBrother(guild, True)
 
 
     # Advisor command

@@ -280,13 +280,9 @@ Join Us:
         if len(workshopsInTimeFrame) > 0:
             await smeCorner.send(":clap: Good job for keeping up the hosting " + ", ".join([f"`{wsName}`" for wsName in workshopsInTimeFrame]) + "! :clap:")
 
-    async def smeBigBrother(self) -> None:
+    @staticmethod
+    async def smeBigBrother(guild: discord.Guild, manuallyExecuted: bool) -> None:
         """Summarize each SMEs activity last 6 months for Unit Staff."""
-        guild = self.bot.get_guild(GUILD_ID)
-        if guild is None:
-            log.exception("bottasks smeBigBrother: guild is None")
-            return
-
         staffChat = guild.get_channel(STAFF_CHAT)
         if staffChat is None:
             log.exception("bottasks smeBigBrother: staffChat is None.")
@@ -339,12 +335,18 @@ Join Us:
             embedDescription = "\n".join([smeRoleMention + ("not hosting in the past 6 months!"*(statistics["count"] == 0)) + (f"hosted {statistics['time']} - host count ({statistics['count']})"*(statistics["count"] != 0)) for smeRoleMention, statistics in personDetails.items()])
             embedsToSend.append(Embed(title=person, color=Color.gold(), description=embedDescription))
 
+        embedTitle = f"SME Activity Report [{('Manual'*manuallyExecuted) + ('Automatic'*(not manuallyExecuted))}]"
+        embedDescription = "Here comes an activity report on all individual SMEs"
+        if not manuallyExecuted:
+            embedDescription += ", reoccuring every 6 months"
+        embedDescription += ".\nThis displays one embed for each SME; each row for each SME tag - last hosted workshop and total count."
+
         if len(embedsToSend) == 0:
             log.warning("bottasks smeBigBrother: no embeds sent.")
-            await staffChat.send(Embed(title="SME Activity Report", color=Color.red(), description="Nothing to send. Contact Snek Lords."))
+            await staffChat.send(Embed(title=embedTitle, color=Color.red(), description="Nothing to send. Contact Snek Lords."))
             return
 
-        embedsToSend.insert(0, Embed(title="SME Activity Report", color=Color.green(), description="Here comes an activity report on all individual SMEs, reoccuring every 6 months.\nThis displays one embed for each SME; each row for each SME tag - last hosted workshop and total count."))
+        embedsToSend.insert(0, Embed(title=embedTitle, color=Color.green(), description=embedDescription))
         for embedChunk in chunkList(embedsToSend, 10):
             log.info("bottasks smeBigBrother: sending chunk.")
             await staffChat.send(embeds=embedChunk)
@@ -382,8 +384,13 @@ Join Us:
             msgDateLog = json.load(f)
 
         if secret.SME_BIG_BROTHER and ("smeBigBrother" not in msgDateLog or (datetime.fromtimestamp(msgDateLog["smeBigBrother"], tz=pytz.utc) < datetime.now(timezone.utc))):
+            guild = self.bot.get_guild(GUILD_ID)
+            if guild is None:
+                log.exception("bottasks oneHourTasks: guild is None")
+                return
+
             try:
-                await self.smeBigBrother()
+                await BotTasks.smeBigBrother(guild, False)
             except Exception as e:
                 log.exception(f"oneHourTasks SME big brother: {e}")
 

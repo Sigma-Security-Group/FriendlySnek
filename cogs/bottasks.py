@@ -1,4 +1,4 @@
-import secret, os, random, json, re
+import secret, os, random, json, re, aiohttp
 import asyncpraw, requests, pytz  # type: ignore
 
 from datetime import datetime, timezone, timedelta
@@ -42,16 +42,20 @@ class BotTasks(commands.Cog):
             self.fiveMinTasks.start()
 
 
+    @staticmethod
+    async def fetchWebsiteText(url: str) -> str:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url) as response:
+                return await response.text()
+
+
     @tasks.loop(minutes=30.0)
     async def checkModUpdates(self) -> None:
         """Checks mod updates, pings hampters if detected."""
         output = []
         for modID in MOD_IDS:
-            # Fetch mod
-            response = requests.get(url=CHANGELOG_URL.format(modID))
-
-            # Parse HTML
-            soup = BS(response.text, "html.parser")
+            # Fetch mod & parse HTML
+            soup = BS(await BotTasks.fetchWebsiteText(CHANGELOG_URL.format(modID)), "html.parser")
 
             # Mod Title
             name = soup.find("div", class_="workshopItemTitle")

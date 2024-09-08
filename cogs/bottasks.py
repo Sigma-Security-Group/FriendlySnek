@@ -1,5 +1,5 @@
 import secret, os, random, json, re, aiohttp
-import asyncpraw, requests, pytz  # type: ignore
+import asyncpraw, pytz  # type: ignore
 
 from datetime import datetime, timezone, timedelta
 from dateutil.parser import parse as datetimeParse  # type: ignore
@@ -30,7 +30,7 @@ class BotTasks(commands.Cog):
     @commands.Cog.listener()
     async def on_ready(self) -> None:
         log.debug(LOG_COG_READY.format("BotTasks"), flush=True)
-        cogsReady["bottasks"] = True
+        cogsReady["botTasks"] = True
 
         if secret.MOD_UPDATE_ACTIVE and not self.checkModUpdates.is_running():
             self.checkModUpdates.start()
@@ -285,7 +285,7 @@ Join Us:
         """Summarize each SMEs activity last 6 months for Unit Staff."""
         staffChat = guild.get_channel(STAFF_CHAT)
         if staffChat is None:
-            log.exception("bottasks smeBigBrother: staffChat is None.")
+            log.exception("botTasks smeBigBrother: staffChat is None.")
             return
 
         with open(EVENTS_HISTORY_FILE) as f:
@@ -303,7 +303,7 @@ Join Us:
 
             smeRole = guild.get_role(wsDetails["role"])
             if smeRole is None:
-                log.exception(f"bottasks smeBigBrother: sme_role is None, id='{wsDetails['role']}'.")
+                log.exception(f"botTasks smeBigBrother: sme_role is None, id='{wsDetails['role']}'.")
                 continue
 
             # Iterate SME holders
@@ -342,13 +342,13 @@ Join Us:
         embedDescription += ".\nThis displays one embed for each SME; each row for each SME tag - last hosted workshop and total count."
 
         if len(embedsToSend) == 0:
-            log.warning("bottasks smeBigBrother: no embeds sent.")
+            log.warning("botTasks smeBigBrother: no embeds sent.")
             await staffChat.send(Embed(title=embedTitle, color=Color.red(), description="Nothing to send. Contact Snek Lords."))
             return
 
         embedsToSend.insert(0, Embed(title=embedTitle, color=Color.green(), description=embedDescription))
         for embedChunk in chunkList(embedsToSend, 10):
-            log.info("bottasks smeBigBrother: sending chunk.")
+            log.info("botTasks smeBigBrother: sending chunk.")
             await staffChat.send(embeds=embedChunk)
 
 
@@ -386,7 +386,7 @@ Join Us:
         if secret.SME_BIG_BROTHER and ("smeBigBrother" not in msgDateLog or (datetime.fromtimestamp(msgDateLog["smeBigBrother"], tz=pytz.utc) < datetime.now(timezone.utc))):
             guild = self.bot.get_guild(GUILD_ID)
             if guild is None:
-                log.exception("bottasks oneHourTasks: guild is None")
+                log.exception("botTasks oneHourTasks: guild is None")
                 return
 
             try:
@@ -412,7 +412,7 @@ Join Us:
             # Guild
             guild = self.bot.get_guild(GUILD_ID)
             if guild is None:
-                log.exception("bottasks fiveMinTasks: guild is None")
+                log.exception("botTasks fiveMinTasks: guild is None")
                 return
 
             # User
@@ -431,14 +431,14 @@ Join Us:
 
                 channelWelcome = guild.get_channel(WELCOME)
                 if not isinstance(channelWelcome, discord.TextChannel):
-                    log.exception("bottasks fiveMinTasks: welcomeChannel is not TextChannel")
+                    log.exception("botTasks fiveMinTasks: welcomeChannel is not TextChannel")
                     return
 
 
                 roleUnitStaff = guild.get_role(UNIT_STAFF)
                 roleAdvisor = guild.get_role(ADVISOR)
                 if roleUnitStaff is None or roleAdvisor is None:
-                    log.exception("bottasks fiveMinTasks: roleUnitStaff or roleAdvisor is None")
+                    log.exception("botTasks fiveMinTasks: roleUnitStaff or roleAdvisor is None")
                     return
 
                 hasUserPinged = len([
@@ -457,14 +457,14 @@ Join Us:
             ## REMINDERS
 
             if member is None:
-                log.warning("bottasks fiveMinTasks: user is None")
+                log.warning("botTasks fiveMinTasks: user is None")
                 removalList.append(time)
                 continue
 
             # Channel
             channel = self.bot.get_channel(details["channelID"])
             if channel is None or not isinstance(channel, discord.TextChannel):
-                log.warning("bottasks fiveMinTasks: channel not TextChannel")
+                log.warning("botTasks fiveMinTasks: channel not TextChannel")
                 removalList.append(time)
                 continue
 
@@ -611,7 +611,7 @@ class Reminders(commands.GroupCog, name="reminder"):
             return
 
         if interaction.channel is None:
-            log.warning("bottasks reminderSet: interaction.channel is None")
+            log.warning("botTasks reminderSet: interaction.channel is None")
             await interaction.response.send_message(embed=Embed(title="❌ Invalid channel.", color=Color.red()), ephemeral=True, delete_after=10.0)
             return
 

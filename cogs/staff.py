@@ -444,7 +444,7 @@ class Staff(commands.Cog):
             log.exception("Staff smeBigBrother: guild is None")
             return
 
-        from cogs.bottasks import BotTasks
+        from cogs.botTasks import BotTasks
         await BotTasks.smeBigBrother(guild, True)
 
 

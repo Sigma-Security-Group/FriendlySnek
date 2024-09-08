@@ -95,6 +95,9 @@ async def on_ready() -> None:
 @client.event
 async def on_voice_state_update(member: discord.Member, before: discord.VoiceState, after: discord.VoiceState) -> None:
     """On member voiceState change."""
+    if not ((before.channel and before.channel.guild.id == GUILD_ID) or (after.channel and after.channel.guild.id == GUILD_ID)):
+        return
+
     # User joined create channel vc; create new vc
     if after.channel and after.channel.id == CREATE_CHANNEL:
         guild = client.get_guild(GUILD_ID)

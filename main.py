@@ -96,12 +96,12 @@ async def on_ready() -> None:
 async def on_voice_state_update(member: discord.Member, before: discord.VoiceState, after: discord.VoiceState) -> None:
     """On member voiceState change."""
     # User joined create channel vc; create new vc
-    guild = client.get_guild(GUILD_ID)
-    if guild is None:
-        log.exception("on_voice_state_update: guild is None")
-        return
-
     if after.channel and after.channel.id == CREATE_CHANNEL:
+        guild = client.get_guild(GUILD_ID)
+        if guild is None:
+            log.exception("on_voice_state_update: guild is None")
+            return
+
         smokePitCategory = discord.utils.get(guild.categories, id=SMOKE_PIT)
         if smokePitCategory is None:
             log.exception("on_voice_state_update: smokePitCategory is None")

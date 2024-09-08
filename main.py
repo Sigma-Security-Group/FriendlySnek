@@ -1,5 +1,6 @@
 import os, re, asyncio, discord, datetime, json
 import pytz # type: ignore
+from itertools import count, filterfalse
 
 from logger import Logger
 log = Logger()
@@ -89,6 +90,35 @@ async def on_ready() -> None:
     client.ready = True
 
     log.info(f"Bot Ready! Logged in as {client.user}.")
+
+
+@client.event
+async def on_voice_state_update(member: discord.Member, before: discord.VoiceState, after: discord.VoiceState) -> None:
+    """On member voiceState change."""
+    # User joined create channel vc; create new vc
+    guild = client.get_guild(GUILD_ID)
+    if guild is None:
+        log.exception("on_voice_state_update: guild is None")
+        return
+
+    if after.channel and after.channel.id == CREATE_CHANNEL:
+        smokePitCategory = discord.utils.get(guild.categories, id=SMOKE_PIT)
+        if smokePitCategory is None:
+            log.exception("on_voice_state_update: smokePitCategory is None")
+            return
+
+        voiceNums = []
+        # Iterate all dynamic "Room" channels, extract digit(s)
+        for smokePitVoice in smokePitCategory.voice_channels:
+            if smokePitVoice.name.startswith("Room #"):
+                voiceNums.append(int("".join(c for c in smokePitVoice.name[len("Room #"):] if c.isdigit())))
+
+        newVoiceName = f"Room #{next(filterfalse(set(voiceNums).__contains__, count(1)))}"
+        newVoiceChannel = await guild.create_voice_channel(newVoiceName, reason="User created new dynamic voice channel.", category=smokePitCategory, user_limit=4)
+        await member.move_to(newVoiceChannel, reason="User created new dynamic voice channel.")
+
+    elif before.channel and before.channel.name.startswith("Room #") and len(before.channel.members) == 0:
+        await before.channel.delete(reason="No users left in dynamic voice channel.")
 
 
 @client.event

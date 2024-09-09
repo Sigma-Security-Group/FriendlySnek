@@ -47,19 +47,19 @@ class EmbedBuilder(commands.Cog):
         # Send preview embed (empty)
         view = BuilderView(channel.id)
         items = [
-            BuilderButton(self, None, row=0, label="Title", style=discord.ButtonStyle.secondary, custom_id="builder_button_title"),
-            BuilderButton(self, None, row=0, label="Description", style=discord.ButtonStyle.secondary, custom_id="builder_button_description"),
-            BuilderButton(self, None, row=0, label="URL", style=discord.ButtonStyle.secondary, custom_id="builder_button_url", disabled=True),
-            BuilderButton(self, None, row=0, label="Timestamp", style=discord.ButtonStyle.secondary, custom_id="builder_button_timestamp", disabled=True),
-            BuilderButton(self, None, row=0, label="Color", style=discord.ButtonStyle.secondary, custom_id="builder_button_color", disabled=True),
+            BuilderButton(self, authorId=interaction.user.id, row=0, label="Title", style=discord.ButtonStyle.secondary, custom_id="builder_button_title"),
+            BuilderButton(self, authorId=interaction.user.id, row=0, label="Description", style=discord.ButtonStyle.secondary, custom_id="builder_button_description"),
+            BuilderButton(self, authorId=interaction.user.id, row=0, label="URL", style=discord.ButtonStyle.secondary, custom_id="builder_button_url", disabled=True),
+            BuilderButton(self, authorId=interaction.user.id, row=0, label="Timestamp", style=discord.ButtonStyle.secondary, custom_id="builder_button_timestamp", disabled=True),
+            BuilderButton(self, authorId=interaction.user.id, row=0, label="Color", style=discord.ButtonStyle.secondary, custom_id="builder_button_color", disabled=True),
 
-            BuilderButton(self, None, row=1, label="Thumbnail", style=discord.ButtonStyle.secondary, custom_id="builder_button_thumbnail"),
-            BuilderButton(self, None, row=1, label="Image", style=discord.ButtonStyle.secondary, custom_id="builder_button_image"),
+            BuilderButton(self, authorId=interaction.user.id, row=1, label="Thumbnail", style=discord.ButtonStyle.secondary, custom_id="builder_button_thumbnail"),
+            BuilderButton(self, authorId=interaction.user.id, row=1, label="Image", style=discord.ButtonStyle.secondary, custom_id="builder_button_image"),
 
-            BuilderButton(self, None, row=1, label="Author", style=discord.ButtonStyle.secondary, custom_id="builder_button_author"),
-            BuilderButton(self, None, row=1, label="Footer", style=discord.ButtonStyle.secondary, custom_id="builder_button_footer"),
+            BuilderButton(self, authorId=interaction.user.id, row=1, label="Author", style=discord.ButtonStyle.secondary, custom_id="builder_button_author"),
+            BuilderButton(self, authorId=interaction.user.id, row=1, label="Footer", style=discord.ButtonStyle.secondary, custom_id="builder_button_footer"),
 
-            BuilderButton(self, None, row=2, label="Submit", style=discord.ButtonStyle.primary, custom_id="builder_button_submit", disabled=True),
+            BuilderButton(self, authorId=interaction.user.id, row=2, label="Submit", style=discord.ButtonStyle.primary, custom_id="builder_button_submit", disabled=True),
         ]
         for item in items:
             view.add_item(item)
@@ -90,7 +90,7 @@ class EmbedBuilder(commands.Cog):
 # ===== </Build Embed> =====
 
 
-    async def buttonHandling(self, message: discord.Message | None, button: discord.ui.Button, interaction: discord.Interaction, authorId: int | None) -> None:
+    async def buttonHandling(self, button: discord.ui.Button, interaction: discord.Interaction, authorId: int) -> None:
         """Handling all embedbuilder button interactions.
 
         Parameters:
@@ -102,6 +102,10 @@ class EmbedBuilder(commands.Cog):
         Returns:
         None.
         """
+        if interaction.user.id != authorId:
+            await interaction.response.send_message(f"{interaction.user.mention} Only the one who executed the command may interact with the buttons!", ephemeral=True, delete_after=15.0)
+            return
+
         if not isinstance(interaction.user, discord.Member):
             log.exception("ButtonHandling: user not discord.Member")
             return
@@ -171,22 +175,23 @@ class EmbedBuilder(commands.Cog):
                 ]
 
             case "submit":
-                discord.TextChannel | discord.VoiceChannel | discord.StageChannel
-
                 if not hasattr(button.view, "targetChannel"):
                     log.exception("ButtonHandling: targetChannel not set in button.view")
                     return
+
                 guild = self.bot.get_guild(GUILD_ID)
                 if not guild:
                     log.exception("ButtonHandling: guild is None")
                     return
+
                 targetChannel = guild.get_channel(button.view.targetChannel)
                 if not targetChannel:
                     log.exception("ButtonHandling: targetChannel is None")
                     return
 
+                log.info(f"{interaction.user.display_name} ({interaction.user}) built an embed and sent it to '{targetChannel.name}' ({targetChannel.id}).")
                 await targetChannel.send(embed=interaction.message.embeds[0])
-                await interaction.response.edit_message(content=f"Embed sent to <#{button.view.targetChannel}>!", embed=None, view=None)
+                await interaction.response.edit_message(content=f"Embed sent to <#{targetChannel.id}>!", embed=None, view=None)
                 return
 
 
@@ -199,11 +204,11 @@ class EmbedBuilder(commands.Cog):
 
 
     @staticmethod
-    def unLockDependents(view: discord.ui.View, dependencies: dict, value: str) -> None:
+    def unLockDependents(view: discord.ui.View, dependencies: dict, name: str, value: str) -> None:
         """(Un)locks view.button if other field that is a dependant is (in)active."""
         for item in view.children:
-            isItemActivatedByAnother = any([item.label in val["dependent"] and val["propertyValue"] for key, val in dependencies.items() if key != "description"])
-            if not isItemActivatedByAnother and isinstance(item, discord.ui.Button) and item.label in dependencies["description"]["dependent"]:
+            isItemActivatedByAnother = any([item.label in val["dependent"] and val["propertyValue"] for key, val in dependencies.items() if key != name])
+            if not isItemActivatedByAnother and isinstance(item, discord.ui.Button) and item.label in dependencies[name]["dependent"]:
                 item.disabled = (not value)
 
     async def modalHandling(self, modal: discord.ui.Modal, interaction: discord.Interaction, message: discord.Message, view: discord.ui.View | None) -> None:
@@ -250,31 +255,30 @@ class EmbedBuilder(commands.Cog):
         match name:
             case "title":
                 embed.title = value
-                EmbedBuilder.unLockDependents(view, dependencies, value)
+                EmbedBuilder.unLockDependents(view, dependencies, name, value)
             case "description":
                 embed.description = value
-                EmbedBuilder.unLockDependents(view, dependencies, value)
+                EmbedBuilder.unLockDependents(view, dependencies, name, value)
             case "timestamp":
                 try:
                     embed.timestamp = datetimeParse(value)
                 except Exception:
                     stderr = "Invalid timestamp format."
             case "color":
-                pattern1 = re.compile(r"#?[a-zA-Z0-9]{6}")
-                pattern2 = re.compile(r"(\d{1,3}(?:,| |, ))(\d{1,3}(?:,| |, ))(\d{1,3})")
+                patternRGB = re.compile(r"(\d{1,3}(?:,| |, ))(\d{1,3}(?:,| |, ))(\d{1,3})")
 
                 # Hex
-                if re.match(pattern1, value):
+                if re.match(r"#?[a-zA-Z0-9]{6}", value):
                     embed.color = int(value.lstrip("#"), 16)
 
                 # RGB
-                elif re.match(pattern2, value):
-                    rgb = re.findall(pattern2, value)[0]
+                elif re.match(patternRGB, value):
+                    rgb = re.findall(patternRGB, value)[0]
                     embed.color = discord.Color.from_rgb(int(rgb[0].rstrip(" ").rstrip(",")), int(rgb[1].rstrip(" ").rstrip(",")), int(rgb[2].rstrip(" ").rstrip(",")))
 
             case "url":
-                if not value.startswith("http"):
-                    stderr = "URL must be HTTP or HTTPS."
+                if not re.match(r"^https?:\/\/.*", value):
+                    stderr = "URL must be a valid HTTP or HTTP link."
                 else:
                     embed.url = value
 
@@ -283,13 +287,13 @@ class EmbedBuilder(commands.Cog):
                     embed = None
                 else:
                     embed.set_thumbnail(url=value)
-                    EmbedBuilder.unLockDependents(view, dependencies, value)
+                    EmbedBuilder.unLockDependents(view, dependencies, name, value)
             case "image":
                 if embed and not embed.title and not embed.description and not embed.thumbnail and not value and not embed.author and not embed.footer:
                     embed = None
                 else:
                     embed.set_image(url=value)
-                    EmbedBuilder.unLockDependents(view, dependencies, value)
+                    EmbedBuilder.unLockDependents(view, dependencies, name, value)
 
             case "author":
                 authorName = modal.children[0].value.strip()
@@ -301,7 +305,7 @@ class EmbedBuilder(commands.Cog):
                     embed = None
                 else:
                     embed.set_author(name=authorName, url=authorURL, icon_url=authorIconURL)
-                    EmbedBuilder.unLockDependents(view, dependencies, value)
+                    EmbedBuilder.unLockDependents(view, dependencies, name, value)
             case "footer":
                 footerText = modal.children[0].value.strip()
                 footerIconURL = modal.children[1].value.strip()
@@ -311,7 +315,7 @@ class EmbedBuilder(commands.Cog):
                     embed = None
                 else:
                     embed.set_footer(text=footerText, icon_url=footerIconURL)
-                    EmbedBuilder.unLockDependents(view, dependencies, value)
+                    EmbedBuilder.unLockDependents(view, dependencies, name, value)
 
 
         if stderr:
@@ -328,7 +332,9 @@ class EmbedBuilder(commands.Cog):
             await interaction.response.send_message(str(e), ephemeral=True, delete_after=15.0)
 
 
+
 # ===== <Views and Buttons> =====
+
 
 class BuilderView(discord.ui.View):
     """Handling all builder views."""
@@ -337,27 +343,17 @@ class BuilderView(discord.ui.View):
         self.timeout = None
         self.targetChannel = targetChannel
 
+
 class BuilderButton(discord.ui.Button):
     """Handling all builder buttons."""
-    def __init__(self, instance, message: discord.Message | None, authorId: int | None = None, *args, **kwargs):
+    def __init__(self, instance, authorId: int, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.instance = instance
-        self.message = message
         self.authorId = authorId
 
     async def callback(self, interaction: discord.Interaction):
-        await self.instance.buttonHandling(self.message, self, interaction, self.authorId)
+        await self.instance.buttonHandling(self, interaction, self.authorId)
 
-#class BuilderSelect(discord.ui.Select):
-#    """Handling all builder dropdowns."""
-#    def __init__(self, instance, eventMsg: discord.Message, placeholder: str, minValues: int, maxValues: int, customId: str, row: int, options: list[discord.SelectOption], disabled: bool = False, eventMsgView: discord.ui.View | None = None, *args, **kwargs):
-#        super().__init__(placeholder=placeholder, min_values=minValues, max_values=maxValues, custom_id=customId, row=row, options=options, disabled=disabled, *args, **kwargs)
-#        self.eventMsg = eventMsg
-#        self.instance = instance
-#        self.eventMsgView = eventMsgView
-
-#    async def callback(self, interaction: discord.Interaction) -> None:
-#        await self.instance.selectHandling(self, interaction, self.eventMsg, self.eventMsgView)
 
 class BuilderModal(discord.ui.Modal):
     """Handling all builder modals."""
@@ -368,14 +364,12 @@ class BuilderModal(discord.ui.Modal):
         self.view = view
 
     async def on_submit(self, interaction: discord.Interaction):
-        # try:
         await self.instance.modalHandling(self, interaction, self.message, self.view)
-        # except Exception as e:
-        #     log.exception(f"Modal Handling Failed\n{e}")
 
     async def on_error(self, interaction: discord.Interaction, error: Exception) -> None:
         # await interaction.response.send_message("Something went wrong. cope.", ephemeral=True)
         log.exception(error)
+
 
 # ===== </Views and Buttons> =====
 

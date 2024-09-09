@@ -1,7 +1,7 @@
 import discord
 import re
 
-from datetime import datetime, timedelta, timezone
+from datetime import datetime
 from dateutil.parser import parse as datetimeParse  # type: ignore
 
 from discord import Embed, Color
@@ -65,15 +65,6 @@ class EmbedBuilder(commands.Cog):
         await interaction.response.send_message("Embed builder!", view=view)
 
 
-        # TODO
-            # Add Field
-                # Extra message with view
-                    # Name
-                    # Value
-                    # Inline
-            # Remove Field
-
-
     @buildEmbed.error
     async def onBuildEmbedError(self, interaction: discord.Interaction, error: discord.app_commands.AppCommandError) -> None:
         """buildEmbed errors - dedicated for the discord.app_commands.errors.MissingAnyRole error.
@@ -119,7 +110,7 @@ class EmbedBuilder(commands.Cog):
 
 
         name = button.custom_id[len("builder_button_"):]
-        modal = BuilderModal(self, f"Set embed {name.lower()}", f"builder_modal_{name.lower()}", interaction.message)
+        modal = BuilderModal(self, f"Set embed {name.lower()}", f"builder_modal_{name.lower()}", interaction.message, button.view)
         modalConfig = {
             "style": discord.TextStyle.short,
             "placeholder": None,
@@ -198,12 +189,28 @@ class EmbedBuilder(commands.Cog):
         if len(message.embeds) > 0:
             embed = message.embeds[0]
 
+        # Values depend on (any) key to be filled
+        dependencies = {
+            "title": ("URL", "Timestamp", "Color"),
+            "description": ("URL", "Timestamp", "Color")
+        }
+
         name = modal.custom_id[len("builder_modal_"):]
         match name:
             case "title":
                 embed.title = value
+                if (not embed.description):
+                    for item in view.children:
+                        for dependency in dependencies["title"]:
+                            if isinstance(item, discord.ui.Button) and item.label == dependency:
+                                item.disabled = (not value)
             case "description":
                 embed.description = value
+                if (not embed.title):
+                    for item in view.children:
+                        for dependency in dependencies["description"]:
+                            if isinstance(item, discord.ui.Button) and item.disabled == (not not value) and item.label == dependency:
+                                item.disabled = (not value)
             case "timestamp":
                 try:
                     embed.timestamp = datetimeParse(value)
@@ -245,7 +252,7 @@ class EmbedBuilder(commands.Cog):
             return
 
         try:
-            await interaction.response.edit_message(embed=embed)
+            await interaction.response.edit_message(embed=embed, view=view)
         except Exception as e:
             await interaction.response.send_message(str(e), ephemeral=True, delete_after=15.0)
 

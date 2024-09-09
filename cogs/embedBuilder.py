@@ -49,9 +49,9 @@ class EmbedBuilder(commands.Cog):
         items = [
             BuilderButton(self, None, row=0, label="Title", style=discord.ButtonStyle.secondary, custom_id="builder_button_title"),
             BuilderButton(self, None, row=0, label="Description", style=discord.ButtonStyle.secondary, custom_id="builder_button_description"),
-            BuilderButton(self, None, row=0, label="URL", style=discord.ButtonStyle.secondary, custom_id="builder_button_url"),
-            BuilderButton(self, None, row=0, label="Timestamp", style=discord.ButtonStyle.secondary, custom_id="builder_button_timestamp"),
-            BuilderButton(self, None, row=0, label="Color", style=discord.ButtonStyle.secondary, custom_id="builder_button_color"),
+            BuilderButton(self, None, row=0, label="URL", style=discord.ButtonStyle.secondary, custom_id="builder_button_url", disabled=True),
+            BuilderButton(self, None, row=0, label="Timestamp", style=discord.ButtonStyle.secondary, custom_id="builder_button_timestamp", disabled=True),
+            BuilderButton(self, None, row=0, label="Color", style=discord.ButtonStyle.secondary, custom_id="builder_button_color", disabled=True),
 
             BuilderButton(self, None, row=1, label="Thumbnail", style=discord.ButtonStyle.secondary, custom_id="builder_button_thumbnail"),
             BuilderButton(self, None, row=1, label="Image", style=discord.ButtonStyle.secondary, custom_id="builder_button_image"),
@@ -158,12 +158,12 @@ class EmbedBuilder(commands.Cog):
 
             case "thumbnail":
                 modalConfig["placeholder"] = "https://www.gnu.org/graphics/gnu-head.jpg"
-                if embed:
-                    modalConfig["default"] = embed.thumbnail
+                if embed and embed.thumbnail:
+                    modalConfig["default"] = embed.thumbnail.url
             case "image":
                 modalConfig["placeholder"] = "https://www.gnu.org/graphics/gnu-head.jpg"
-                if embed:
-                    modalConfig["default"] = embed.image
+                if embed and embed.image:
+                    modalConfig["default"] = embed.image.url
 
             case "author":
                 modalConfig["customitems"] = [

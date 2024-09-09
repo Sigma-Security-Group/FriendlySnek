@@ -45,7 +45,7 @@ class EmbedBuilder(commands.Cog):
         log.info(f"{interaction.user.display_name} ({interaction.user}) is building an embed.")
 
         # Send preview embed (empty)
-        view = BuilderView()
+        view = BuilderView(channel.id)
         items = [
             BuilderButton(self, None, row=0, label="Title", style=discord.ButtonStyle.secondary, custom_id="builder_button_title"),
             BuilderButton(self, None, row=0, label="Description", style=discord.ButtonStyle.secondary, custom_id="builder_button_description"),
@@ -58,6 +58,8 @@ class EmbedBuilder(commands.Cog):
 
             BuilderButton(self, None, row=1, label="Author", style=discord.ButtonStyle.secondary, custom_id="builder_button_author"),
             BuilderButton(self, None, row=1, label="Footer", style=discord.ButtonStyle.secondary, custom_id="builder_button_footer"),
+
+            BuilderButton(self, None, row=2, label="Submit", style=discord.ButtonStyle.primary, custom_id="builder_button_submit", disabled=True),
         ]
         for item in items:
             view.add_item(item)
@@ -168,6 +170,25 @@ class EmbedBuilder(commands.Cog):
                     discord.ui.TextInput(label="Footer Icon URL", default=embed.footer.icon_url if embed and embed.footer and embed.footer.icon_url else None, required=False)
                 ]
 
+            case "submit":
+                discord.TextChannel | discord.VoiceChannel | discord.StageChannel
+
+                if not hasattr(button.view, "targetChannel"):
+                    log.exception("ButtonHandling: targetChannel not set in button.view")
+                    return
+                guild = self.bot.get_guild(GUILD_ID)
+                if not guild:
+                    log.exception("ButtonHandling: guild is None")
+                    return
+                targetChannel = guild.get_channel(button.view.targetChannel)
+                if not targetChannel:
+                    log.exception("ButtonHandling: targetChannel is None")
+                    return
+
+                await targetChannel.send(embed=interaction.message.embeds[0])
+                await interaction.response.edit_message(content=f"Embed sent to <#{button.view.targetChannel}>!", embed=None, view=None)
+                return
+
 
         if len(modalConfig["customitems"]) == 0:
             modal.add_item(discord.ui.TextInput(label=name, style=modalConfig["style"], placeholder=modalConfig["placeholder"], default=modalConfig["default"], required=False, max_length=modalConfig["maxLength"]))
@@ -200,27 +221,27 @@ class EmbedBuilder(commands.Cog):
         # Values depend on (any) key to be filled
         dependencies = {
             "title": {
-                "dependent": ("URL", "Timestamp", "Color"),
+                "dependent": ("URL", "Timestamp", "Color", "Submit"),
                 "propertyValue": embed.title
             },
             "description": {
-                "dependent": ("Timestamp", "Color"),
+                "dependent": ("Timestamp", "Color", "Submit"),
                 "propertyValue": embed.description
             },
             "thumbnail": {
-                "dependent": ("Timestamp", "Color"),
+                "dependent": ("Timestamp", "Color", "Submit"),
                 "propertyValue": embed.thumbnail.url if embed.thumbnail else None
             },
             "image": {
-                "dependent": ("Timestamp", "Color"),
+                "dependent": ("Timestamp", "Color", "Submit"),
                 "propertyValue": embed.image.url if embed.image else None
             },
             "author": {
-                "dependent": ("Timestamp", "Color"),
+                "dependent": ("Timestamp", "Color", "Submit"),
                 "propertyValue": embed.author.name if embed.author else None
             },
             "footer": {
-                "dependent": ("Timestamp", "Color"),
+                "dependent": ("Timestamp", "Color", "Submit"),
                 "propertyValue": embed.footer.text if embed.footer else None
             },
         }
@@ -311,9 +332,10 @@ class EmbedBuilder(commands.Cog):
 
 class BuilderView(discord.ui.View):
     """Handling all builder views."""
-    def __init__(self, *args, **kwargs):
+    def __init__(self, targetChannel: int, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.timeout = None
+        self.targetChannel = targetChannel
 
 class BuilderButton(discord.ui.Button):
     """Handling all builder buttons."""

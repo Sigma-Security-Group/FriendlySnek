@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 from discord import utils, Embed, Color
 from discord.ext import commands  # type: ignore
 from unidecode import unidecode
+from textwrap import wrap
 
 from secret import DEBUG
 from constants import *
@@ -504,9 +505,13 @@ class Staff(commands.Cog):
 
         alphanumerics = re.compile(r"[\W_]+", re.UNICODE)
         cmdline = ";".join(sorted(["@" + re.sub(alphanumerics, "", mod) for mod in mods], key=str.casefold))  # Casefold = caseinsensitive
-        cmdline = unidecode(cmdline)
+        cmdline = wrap(unidecode(cmdline), 1990)  # Max content len == 2000
 
-        await msg.edit(content=f"```{cmdline}```")
+        for index, chunk in enumerate(cmdline):
+            if index == 0:
+                await msg.edit(content=f"```{chunk}```")
+                continue
+            await ctx.send(f"```{chunk}```")
 
 
 async def setup(bot: commands.Bot) -> None:

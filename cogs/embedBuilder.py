@@ -177,6 +177,14 @@ class EmbedBuilder(commands.Cog):
         await interaction.response.send_modal(modal)
 
 
+    @staticmethod
+    def unLockDependents(view: discord.ui.View, dependencies: dict, value: str) -> None:
+        """(Un)locks view.button if other field that is a dependant is (in)active."""
+        for item in view.children:
+            isItemActivatedByAnother = any([item.label in val["dependent"] and val["propertyValue"] for key, val in dependencies.items() if key != "description"])
+            if not isItemActivatedByAnother and isinstance(item, discord.ui.Button) and item.label in dependencies["description"]["dependent"]:
+                item.disabled = (not value)
+
     async def modalHandling(self, modal: discord.ui.Modal, interaction: discord.Interaction, message: discord.Message, view: discord.ui.View | None) -> None:
         if not isinstance(interaction.user, discord.Member):
             log.exception("ButtonHandling modalHandling: interaction.user is not discord.Member")
@@ -221,16 +229,10 @@ class EmbedBuilder(commands.Cog):
         match name:
             case "title":
                 embed.title = value
-                for item in view.children:
-                    isItemActivatedByAnother = any([item.label in val["dependent"] and val["propertyValue"] for key, val in dependencies.items() if key != "title"])
-                    if not isItemActivatedByAnother and isinstance(item, discord.ui.Button) and item.label in dependencies["title"]["dependent"]:
-                        item.disabled = (not value)
+                EmbedBuilder.unLockDependents(view, dependencies, value)
             case "description":
                 embed.description = value
-                for item in view.children:
-                    isItemActivatedByAnother = any([item.label in val["dependent"] and val["propertyValue"] for key, val in dependencies.items() if key != "description"])
-                    if not isItemActivatedByAnother and isinstance(item, discord.ui.Button) and item.label in dependencies["description"]["dependent"]:
-                        item.disabled = (not value)
+                EmbedBuilder.unLockDependents(view, dependencies, value)
             case "timestamp":
                 try:
                     embed.timestamp = datetimeParse(value)
@@ -256,18 +258,48 @@ class EmbedBuilder(commands.Cog):
                     embed.url = value
 
             case "thumbnail":
-                embed.set_thumbnail(url=value)
+                if embed and not embed.title and not embed.description and not value and not embed.image and not embed.author and not embed.footer:
+                    embed = None
+                else:
+                    embed.set_thumbnail(url=value)
+                    EmbedBuilder.unLockDependents(view, dependencies, value)
             case "image":
-                embed.set_image(url=value)
+                if embed and not embed.title and not embed.description and not embed.thumbnail and not value and not embed.author and not embed.footer:
+                    embed = None
+                else:
+                    embed.set_image(url=value)
+                    EmbedBuilder.unLockDependents(view, dependencies, value)
 
             case "author":
-                embed.set_author(name=modal.children[0].value.strip(), url=modal.children[1].value.strip(), icon_url=modal.children[2].value.strip())
+                authorName = modal.children[0].value.strip()
+                authorURL = modal.children[1].value.strip()
+                authorIconURL = modal.children[2].value.strip()
+                if not authorName and (authorURL or authorIconURL):
+                    stderr = "Must set Author Name if using Author URL or Author Icon URL."
+                elif embed and not embed.title and not embed.description and not embed.thumbnail and not embed.image and not authorName and not embed.footer:
+                    embed = None
+                else:
+                    embed.set_author(name=authorName, url=authorURL, icon_url=authorIconURL)
+                    EmbedBuilder.unLockDependents(view, dependencies, value)
             case "footer":
-                embed.set_footer(text=modal.children[0].value.strip(), icon_url=modal.children[1].value.strip())
+                footerText = modal.children[0].value.strip()
+                footerIconURL = modal.children[1].value.strip()
+                if not footerText and footerIconURL:
+                    stderr = "Must set Footer Text if using Footer Icon URL."
+                elif embed and not embed.title and not embed.description and not embed.thumbnail and not embed.image and not embed.author and not footerText:
+                    embed = None
+                else:
+                    embed.set_footer(text=footerText, icon_url=footerIconURL)
+                    EmbedBuilder.unLockDependents(view, dependencies, value)
+
 
         if stderr:
             await interaction.response.send_message(stderr, ephemeral=True, delete_after=15.0)
             return
+
+        # Delete embed
+        if embed and not embed.title and not embed.description and not embed.thumbnail and not embed.image and not embed.author and not embed.footer:
+            embed = None
 
         try:
             await interaction.response.edit_message(embed=embed, view=view)

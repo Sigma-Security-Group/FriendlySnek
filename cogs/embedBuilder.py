@@ -191,26 +191,46 @@ class EmbedBuilder(commands.Cog):
 
         # Values depend on (any) key to be filled
         dependencies = {
-            "title": ("URL", "Timestamp", "Color"),
-            "description": ("URL", "Timestamp", "Color")
+            "title": {
+                "dependent": ("URL", "Timestamp", "Color"),
+                "propertyValue": embed.title
+            },
+            "description": {
+                "dependent": ("Timestamp", "Color"),
+                "propertyValue": embed.description
+            },
+            "thumbnail": {
+                "dependent": ("Timestamp", "Color"),
+                "propertyValue": embed.thumbnail.url if embed.thumbnail else None
+            },
+            "image": {
+                "dependent": ("Timestamp", "Color"),
+                "propertyValue": embed.image.url if embed.image else None
+            },
+            "author": {
+                "dependent": ("Timestamp", "Color"),
+                "propertyValue": embed.author.name if embed.author else None
+            },
+            "footer": {
+                "dependent": ("Timestamp", "Color"),
+                "propertyValue": embed.footer.text if embed.footer else None
+            },
         }
 
         name = modal.custom_id[len("builder_modal_"):]
         match name:
             case "title":
                 embed.title = value
-                if (not embed.description):
-                    for item in view.children:
-                        for dependency in dependencies["title"]:
-                            if isinstance(item, discord.ui.Button) and item.label == dependency:
-                                item.disabled = (not value)
+                for item in view.children:
+                    isItemActivatedByAnother = any([item.label in val["dependent"] and val["propertyValue"] for key, val in dependencies.items() if key != "title"])
+                    if not isItemActivatedByAnother and isinstance(item, discord.ui.Button) and item.label in dependencies["title"]["dependent"]:
+                        item.disabled = (not value)
             case "description":
                 embed.description = value
-                if (not embed.title):
-                    for item in view.children:
-                        for dependency in dependencies["description"]:
-                            if isinstance(item, discord.ui.Button) and item.disabled == (not not value) and item.label == dependency:
-                                item.disabled = (not value)
+                for item in view.children:
+                    isItemActivatedByAnother = any([item.label in val["dependent"] and val["propertyValue"] for key, val in dependencies.items() if key != "description"])
+                    if not isItemActivatedByAnother and isinstance(item, discord.ui.Button) and item.label in dependencies["description"]["dependent"]:
+                        item.disabled = (not value)
             case "timestamp":
                 try:
                     embed.timestamp = datetimeParse(value)
@@ -230,9 +250,7 @@ class EmbedBuilder(commands.Cog):
                     embed.color = discord.Color.from_rgb(int(rgb[0].rstrip(" ").rstrip(",")), int(rgb[1].rstrip(" ").rstrip(",")), int(rgb[2].rstrip(" ").rstrip(",")))
 
             case "url":
-                if not embed.title:
-                    stderr = "Embed title must be set."
-                elif not value.startswith("http"):
+                if not value.startswith("http"):
                     stderr = "URL must be HTTP or HTTPS."
                 else:
                     embed.url = value

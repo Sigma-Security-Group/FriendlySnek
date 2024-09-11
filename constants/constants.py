@@ -20,6 +20,7 @@ MEMBER_TIME_ZONES_FILE = "data/memberTimeZones.json"
 WORKSHOP_INTEREST_FILE = "data/workshopInterest.json"
 REMINDERS_FILE = "data/reminders.json"
 REPEATED_MSG_DATE_LOG_FILE = "data/repeatedMsgDateLog.json"
+GENERIC_DATA_FILE = "data/genericData.json"
 
 # Staff
 ROLE_RESERVATION_BLACKLIST_FILE = "data/roleReservationBlacklist.json"
@@ -62,6 +63,9 @@ CHANGELOG = 654420151353081866
 
 # Doormat
 WELCOME = 743624201692250183
+
+# Knowledgebase
+SERVER_INFO = 312620388154867714
 
 # Command
 STAFF_CHAT = 740368938239524995

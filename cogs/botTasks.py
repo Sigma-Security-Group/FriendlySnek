@@ -15,8 +15,6 @@ if secret.DEBUG:
     from constants.debug import *
 
 
-MOD_IDS = [450814997, 497660133, 843425103, 843577117, 463939057, 497661914, 843632231, 843593391, 583496184, 2397360831, 1779063631, 751965892, 1224892496, 1858075458, 333310405, 2397376046, 1862208264, 1858070328, 1251859358, 1808238502, 623475643, 721359761, 1883956552, 3099644041, 3099651040, 3099648860, 2021778690, 753946944, 1388192893, 2522638637, 541888371, 1523363834, 1638341685, 2020940806, 2041057379, 1963617777, 2377329491, 2264863911, 1703187116, 1187306764, 2397371875, 2018593688, 1850026051, 1393769392, 1393776620, 3048818056, 2955691343, 2128676112, 2735613231, 2787531417, 2447965207, 3135187540, 2955627408, 1369691841, 1643720957, 1118982882, 583544987, 2983546566, 2917444360, 3043043427, 2950257727, 2645015212, 718649903, 1926513010, 1252091296, 3078351739, 2266710560, 2214384530, 837729515]  # Just take it from the modpack HTML, ez clap (Updated: 16th June 2024)
-# (?<=\"https:\/\/steamcommunity\.com\/sharedfiles\/filedetails\/\?id=)\d+
 
 def chunkList(lst: list, n: int):
     """Yield successive n-sized chunks from lst."""
@@ -52,8 +50,15 @@ class BotTasks(commands.Cog):
     @tasks.loop(minutes=30.0)
     async def checkModUpdates(self) -> None:
         """Checks mod updates, pings hampters if detected."""
+
         output = []
-        for modID in MOD_IDS:
+        with open(GENERIC_DATA_FILE) as f:
+            genericData = json.load(f)
+            if "modpackIds" not in genericData:
+                log.warning("checkModUpdates: modpackIds not in genericData.")
+                return
+
+        for modID in genericData["modpackIds"]:
             # Fetch mod & parse HTML
             soup = BS(await BotTasks.fetchWebsiteText(CHANGELOG_URL.format(modID)), "html.parser")
 

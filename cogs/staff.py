@@ -1,5 +1,6 @@
 import re
 import json
+import os
 
 from datetime import datetime, timezone
 from discord import utils, Embed, Color
@@ -512,6 +513,51 @@ class Staff(commands.Cog):
                 await msg.edit(content=f"```{chunk}```")
                 continue
             await ctx.send(f"```{chunk}```")
+
+    @commands.command(name="updatemodpack")
+    @commands.has_any_role(*CMD_GIBCMDLINE_LIMIT)
+    async def updatemodpack(self, ctx: commands.Context, sendtoserverinfo: bool = False) -> None:
+        """Update snek mod list, for which mods to check on updates. Optional send modpack to #server-info."""
+
+        # No modpack / no HTML
+        if len(ctx.message.attachments) == 0 or ctx.message.attachments[0].content_type is None or not ctx.message.attachments[0].content_type.startswith("text/html"):
+            await ctx.send(":moyai: I need a modpack file to generate the cmdline :moyai:")
+            return
+
+        msgAttachment = ctx.message.attachments[0]
+
+        # Parse modpack
+        msg = await ctx.send("https://tenor.com/view/rat-rodent-vermintide-vermintide2-skaven-gif-20147931")
+        html = (await msgAttachment.read()).decode("utf-8")
+
+        modpackIds = [int(id) for id in re.findall(r"(?<=\"https:\/\/steamcommunity\.com\/sharedfiles\/filedetails\/\?id=)\d+", html)]
+
+        # Save output
+        with open(GENERIC_DATA_FILE) as f:
+            genericData = json.load(f)
+        genericData["modpackIds"] = modpackIds
+        with open(GENERIC_DATA_FILE, "w") as f:
+            json.dump(genericData, f, indent=4)
+
+        responseContent = "Modpack updated"
+
+        # Optionally send
+        if sendtoserverinfo:
+            guild = self.bot.get_guild(GUILD_ID)
+            if guild is None:
+                log.exception("Staff updatemodpack: guild is None")
+                return
+            channelServerInfo = guild.get_channel(SERVER_INFO)
+            if not isinstance(channelServerInfo, discord.TextChannel):
+                log.exception("Staff updatemodpack: channelServerInfo is not discord.TextChannel")
+                return
+
+            attachmentAsFile = await ctx.message.attachments[0].to_file()
+            await channelServerInfo.send(os.path.splitext(msgAttachment.filename)[0], file=attachmentAsFile)
+            responseContent += f", and sent to {channelServerInfo.mention}"
+
+        responseContent += "!"
+        await msg.edit(content=responseContent)
 
 
 async def setup(bot: commands.Bot) -> None:

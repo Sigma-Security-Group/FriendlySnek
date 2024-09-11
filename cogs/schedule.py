@@ -6,7 +6,6 @@ from copy import deepcopy
 from datetime import datetime, timedelta, timezone
 from dateutil.parser import parse as datetimeParse  # type: ignore
 
-from discord import Embed, Color
 from discord.ext import commands, tasks  # type: ignore
 
 from .workshopInterest import WorkshopInterest  # type: ignore
@@ -17,8 +16,8 @@ if DEBUG:
     from constants.debug import *
 
 
-EMBED_TIMEOUT = Embed(title=ERROR_TIMEOUT, color=Color.red())
-EMBED_INVALID = Embed(title="❌ Invalid input", color=Color.red())
+EMBED_TIMEOUT = discord.Embed(title=ERROR_TIMEOUT, color=discord.Color.red())
+EMBED_INVALID = discord.Embed(title="❌ Invalid input", color=discord.Color.red())
 
 OPERATION_NAME_ADJECTIVES = "constants/opAdjectives.txt"
 OPERATION_NAME_NOUNS = "constants/opNouns.txt"
@@ -104,9 +103,9 @@ TIMESTAMP_STYLES = {
 }
 
 EVENT_TYPE_COLORS = {
-    "Operation": Color.green(),
-    "Workshop": Color.blue(),
-    "Event": Color.gold()
+    "Operation": discord.Color.green(),
+    "Workshop": discord.Color.blue(),
+    "Event": discord.Color.gold()
 }
 
 SCHEDULE_EVENT_VIEW: dict[str, dict[str, discord.ButtonStyle | bool | int | None]] = {
@@ -264,7 +263,7 @@ class Schedule(commands.Cog):
         Returns:
         None.
         """
-        await channel.send(embed=Embed(title=f"❌ {abortText} canceled!", color=Color.red()))
+        await channel.send(embed=discord.Embed(title=f"❌ {abortText} canceled!", color=discord.Color.red()))
 
     @staticmethod
     async def checkDMChannel(user: discord.User | discord.Member) -> discord.channel.DMChannel:
@@ -354,7 +353,7 @@ class Schedule(commands.Cog):
                     eventMessage = await self.bot.get_channel(SCHEDULE).fetch_message(event["messageId"])
                     await eventMessage.delete()
                     author = self.bot.get_guild(GUILD_ID).get_member(event["authorId"])
-                    embed = Embed(title="Event auto deleted", description=f"Your {event['type'].lower()} has ended: `{event['title']}`\nIt has been automatically removed from the schedule. {PEEPO_POP}", color=Color.orange())
+                    embed = discord.Embed(title="Event auto deleted", description=f"Your {event['type'].lower()} has ended: `{event['title']}`\nIt has been automatically removed from the schedule. {PEEPO_POP}", color=discord.Color.orange())
                     await author.send(embed=embed)
             for event in deletedEvents:
                 events.remove(event)
@@ -448,7 +447,7 @@ class Schedule(commands.Cog):
                 log.exception("OnRefreshScheduleError: guild is None")
                 return
 
-            embed = Embed(title="❌ Missing permissions", description=f"You do not have the permissions to refresh the schedule!\nThe permitted roles are: {', '.join([guild.get_role(role).name for role in (UNIT_STAFF, SERVER_HAMSTER, CURATOR)])}.", color=Color.red())
+            embed = discord.Embed(title="❌ Missing permissions", description=f"You do not have the permissions to refresh the schedule!\nThe permitted roles are: {', '.join([guild.get_role(role).name for role in (UNIT_STAFF, SERVER_HAMSTER, CURATOR)])}.", color=discord.Color.red())
             await interaction.response.send_message(embed=embed, ephemeral=True)
 
 # ===== </Refresh Schedule> =====
@@ -504,7 +503,7 @@ class Schedule(commands.Cog):
                 log.exception("OnAarError: guild is None")
                 return
 
-            embed = Embed(title="❌ Missing permissions", description=f"You do not have the permissions to move all users to command!\nThe permitted roles are: {', '.join([guild.get_role(role).name for role in CMD_AAR_LIMIT])}.", color=Color.red())
+            embed = discord.Embed(title="❌ Missing permissions", description=f"You do not have the permissions to move all users to command!\nThe permitted roles are: {', '.join([guild.get_role(role).name for role in CMD_AAR_LIMIT])}.", color=discord.Color.red())
             await interaction.response.send_message(embed=embed, ephemeral=True)
 
 # ===== </AAR> ====
@@ -544,21 +543,21 @@ class Schedule(commands.Cog):
         except Exception as e:
             log.exception(e)
 
-    def getEventEmbed(self, event: dict) -> Embed:
+    def getEventEmbed(self, event: dict) -> discord.Embed:
         """Generates an embed from the given event.
 
         Parameters:
         event (dict): The event.
 
         Returns:
-        Embed: The generated embed.
+        discord.Embed: The generated embed.
         """
         guild = self.bot.get_guild(GUILD_ID)
         if guild is None:
             log.exception("Schedule getEventEmbed: guild is None")
-            return Embed()
+            return discord.Embed()
 
-        embed = Embed(title=event["title"], description=event["description"], color=EVENT_TYPE_COLORS[event.get("type", "Operation")])
+        embed = discord.Embed(title=event["title"], description=event["description"], color=EVENT_TYPE_COLORS[event.get("type", "Operation")])
 
         if event["reservableRoles"] is not None:
             embed.add_field(name="\u200B", value="\u200B", inline=False)
@@ -695,7 +694,7 @@ class Schedule(commands.Cog):
     def fromDictToPreviewEmbed(self, previewDict: dict) -> discord.Embed:
         """Generates event dict from preview embed."""
         # Title, Description, Color
-        embed = Embed(title=previewDict["title"], description=previewDict["description"], color=None if previewDict["type"] is None else EVENT_TYPE_COLORS[previewDict["type"]])
+        embed = discord.Embed(title=previewDict["title"], description=previewDict["description"], color=None if previewDict["type"] is None else EVENT_TYPE_COLORS[previewDict["type"]])
 
         # Reservable Roles
         if previewDict["reservableRoles"] is not None:
@@ -733,7 +732,7 @@ class Schedule(commands.Cog):
         guild = self.bot.get_guild(GUILD_ID)
         if guild is None:
             log.exception("Schedule fromDictToPreviewEmbed: guild is None")
-            return Embed(title="Error")
+            return discord.Embed(title="Error")
         if previewDict["type"] == "Workshop" and "workshopInterest" in previewDict:
             embed.set_author(name=f"Linking: {previewDict['workshopInterest']}")
         embed.set_footer(text="Created by Unknown User" if (author := guild.get_member(previewDict["authorId"])) is None else f"Created by {author.display_name}")
@@ -887,14 +886,14 @@ class Schedule(commands.Cog):
                 with open(ROLE_RESERVATION_BLACKLIST_FILE) as f:
                     blacklist = json.load(f)
                 if any(interaction.user.id == member["id"] for member in blacklist):
-                    await interaction.response.send_message(embed=Embed(title="❌ Sorry, seems like are not allowed to reserve any roles!", description="If you have any questions about this situation, please contact Unit Staff.", color=Color.red()), ephemeral=True, delete_after=60.0)
+                    await interaction.response.send_message(embed=discord.Embed(title="❌ Sorry, seems like are not allowed to reserve any roles!", description="If you have any questions about this situation, please contact Unit Staff.", color=discord.Color.red()), ephemeral=True, delete_after=60.0)
                     return
 
                 event = eventList[0]
                 scheduleNeedsUpdate = False
 
                 if isinstance(event["maxPlayers"], int) and len(event["accepted"]) >= event["maxPlayers"] and (interaction.user.id not in event["accepted"] or event["accepted"].index(interaction.user.id) >= event["maxPlayers"]):
-                    await interaction.response.send_message(embed=Embed(title="❌ Sorry, seems like there's no space left in the :b:op!", color=Color.red()), ephemeral=True, delete_after=60.0)
+                    await interaction.response.send_message(embed=discord.Embed(title="❌ Sorry, seems like there's no space left in the :b:op!", color=discord.Color.red()), ephemeral=True, delete_after=60.0)
                     return
 
                 if not isinstance(interaction.user, discord.Member):
@@ -945,7 +944,7 @@ class Schedule(commands.Cog):
                 for roleName in event["reservableRoles"]:
                     if event["reservableRoles"][roleName] == interaction.user.id:
                         event["reservableRoles"][roleName] = None
-                        await interaction.followup.send(embed=Embed(title=f"✅ Role unreserved: `{roleName}`", color=Color.green()), ephemeral=True)
+                        await interaction.followup.send(embed=discord.Embed(title=f"✅ Role unreserved: `{roleName}`", color=discord.Color.green()), ephemeral=True)
                         await message.edit(embed=self.getEventEmbed(event))
                         break
 
@@ -990,7 +989,7 @@ class Schedule(commands.Cog):
                     log.exception("buttonHandling delete: button message is None")
                     return
 
-                embed = Embed(title=f"Are you sure you want to delete this {event['type'].lower()}: `{event['title']}`?", color=Color.orange())
+                embed = discord.Embed(title=f"Are you sure you want to delete this {event['type'].lower()}: `{event['title']}`?", color=discord.Color.orange())
                 view = ScheduleView()
                 items = [
                     ScheduleButton(self, message, row=0, label="Delete", style=discord.ButtonStyle.success, custom_id="delete_event_confirm"),
@@ -1021,7 +1020,7 @@ class Schedule(commands.Cog):
                 await message.delete()
                 try:
                     log.info(f"{interaction.user.display_name} ({interaction.user}) deleted the event: {event['title']}")
-                    await interaction.followup.send(embed=Embed(title=f"✅ {event['type']} deleted!", color=Color.green()), ephemeral=True)
+                    await interaction.followup.send(embed=discord.Embed(title=f"✅ {event['type']} deleted!", color=discord.Color.green()), ephemeral=True)
 
                     # Notify attendees
                     utcNow = datetime.now(timezone.utc)
@@ -1037,7 +1036,7 @@ class Schedule(commands.Cog):
                         for memberId in event["accepted"] + event["declined"] + event["tentative"]:
                             member = guild.get_member(memberId)
                             if member is not None:
-                                embed = Embed(title=f"🗑 {event.get('type', 'Operation')} deleted: {event['title']}!", description=f"The {event.get('type', 'Operation').lower()} was scheduled to run:\n{discord.utils.format_dt(UTC.localize(datetime.strptime(event['time'], TIME_FORMAT)), style='F')}", color=Color.red())
+                                embed = discord.Embed(title=f"🗑 {event.get('type', 'Operation')} deleted: {event['title']}!", description=f"The {event.get('type', 'Operation').lower()} was scheduled to run:\n{discord.utils.format_dt(UTC.localize(datetime.strptime(event['time'], TIME_FORMAT)), style='F')}", color=discord.Color.red())
                                 embed.set_footer(text=f"By: {interaction.user}")
                                 try:
                                     await member.send(embed=embed)
@@ -1055,7 +1054,7 @@ class Schedule(commands.Cog):
                 for item in button.view.children:
                     item.disabled = True
                 await interaction.response.edit_message(view=button.view)
-                await interaction.followup.send(embed=Embed(title=f"❌ Event deletion canceled!", color=Color.red()), ephemeral=True)
+                await interaction.followup.send(embed=discord.Embed(title=f"❌ Event deletion canceled!", color=discord.Color.red()), ephemeral=True)
                 return
 
             elif button.custom_id is not None and button.custom_id.startswith("event_schedule_"):
@@ -1125,7 +1124,7 @@ class Schedule(commands.Cog):
                             await interaction.response.send_message(f"{interaction.user.mention} Please retry after you've set a time zone in DMs!", ephemeral=True, delete_after=10.0)
                             timeZoneOutput = await self.changeTimeZone(interaction.user)
                             if timeZoneOutput is False:
-                                await interaction.followup.send(embed=Embed(title="❌ Timezone configuration canceled", description="You must provide a time zone in your DMs!", color=Color.red()))
+                                await interaction.followup.send(embed=discord.Embed(title="❌ Timezone configuration canceled", description="You must provide a time zone in your DMs!", color=discord.Color.red()))
                             return
 
                         timeZone = pytz.timezone(memberTimeZones[str(interaction.user.id)])
@@ -1287,7 +1286,7 @@ class Schedule(commands.Cog):
                         await self.updateSchedule()
 
                     case "cancel":
-                        embed = Embed(title="Are you sure you want to cancel this event scheduling?", color=Color.orange())
+                        embed = discord.Embed(title="Are you sure you want to cancel this event scheduling?", color=discord.Color.orange())
                         view = ScheduleView()
                         items = [
                             ScheduleButton(self, interaction.message, interaction.user.id, row=0, label="Cancel", style=discord.ButtonStyle.success, custom_id="event_schedule_cancel_confirm"),
@@ -1548,7 +1547,7 @@ class Schedule(commands.Cog):
 
             # Reserve desired role
             event["reservableRoles"][selectedValue] = interaction.user.id
-            await interaction.followup.send(embed=Embed(title=f"✅ Role reserved: `{selectedValue}`", color=Color.green()), ephemeral=True)
+            await interaction.followup.send(embed=discord.Embed(title=f"✅ Role reserved: `{selectedValue}`", color=discord.Color.green()), ephemeral=True)
 
             # Put the user in accepted
             if interaction.user.id in event["declined"]:
@@ -1646,7 +1645,7 @@ class Schedule(commands.Cog):
                     await interaction.response.send_message("Please retry after you've set a time zone in DMs!", ephemeral=True, delete_after=60.0)
                     timeZoneOutput = await self.changeTimeZone(interaction.user)
                     if timeZoneOutput is False:
-                        await interaction.followup.send(embed=Embed(title="❌ Event Editing canceled", description="You must provide a time zone in your DMs!", color=Color.red()))
+                        await interaction.followup.send(embed=discord.Embed(title="❌ Event Editing canceled", description="You must provide a time zone in your DMs!", color=discord.Color.red()))
                     return
 
                 # Send modal
@@ -1672,7 +1671,7 @@ class Schedule(commands.Cog):
                 json.dump(events, f, indent=4)
 
             await eventMsg.edit(embed=self.getEventEmbed(event))
-            await interaction.response.send_message(embed=Embed(title="✅ Event edited", color=Color.green()), ephemeral=True, delete_after=5.0)
+            await interaction.response.send_message(embed=discord.Embed(title="✅ Event edited", color=discord.Color.green()), ephemeral=True, delete_after=5.0)
 
     async def modalHandling(self, modal: discord.ui.Modal, interaction: discord.Interaction, eventMsg: discord.Message, view: discord.ui.View | None) -> None:
         if not isinstance(interaction.user, discord.Member):
@@ -1727,7 +1726,7 @@ class Schedule(commands.Cog):
 
                     collision = Schedule.eventCollisionCheck(startTime, (startTime + delta) if previewEmbedDict["endTime"] else startTime+timedelta(minutes=30))
                     if collision:
-                        followupMsg["embed"] = Embed(title="❌ There is a collision with another event!", description=collision, color=Color.red())
+                        followupMsg["embed"] = discord.Embed(title="❌ There is a collision with another event!", description=collision, color=discord.Color.red())
                         followupMsg["embed"].set_footer(text="You may still continue with the provided time - but not recommended.")
 
                 case "external_url":
@@ -1737,7 +1736,7 @@ class Schedule(commands.Cog):
                     previewEmbedDict["reservableRoles"] = None if value == "" else {role.strip(): None for role in value.split("\n") if role.strip() != ""}
                     if len(previewEmbedDict["reservableRoles"]) > 20:
                         previewEmbedDict["reservableRoles"] = None
-                        await interaction.response.send_message(embed=Embed(title="❌ Too many roles", description=f"Due to Discord character limitation, we've set the cap to 20 roles.\nLink your order, e.g. OPORD, under URL if you require more flexibility.\n\nYour roles:\n{value}"[:4096], color=Color.red()), ephemeral=True, delete_after=10.0)
+                        await interaction.response.send_message(embed=discord.Embed(title="❌ Too many roles", description=f"Due to Discord character limitation, we've set the cap to 20 roles.\nLink your order, e.g. OPORD, under URL if you require more flexibility.\n\nYour roles:\n{value}"[:4096], color=discord.Color.red()), ephemeral=True, delete_after=10.0)
                         return
 
                 case "max_players":
@@ -1817,7 +1816,7 @@ class Schedule(commands.Cog):
         elif modal.custom_id == "modal_reservableRoles":
             reservableRoles = value.split("\n")
             if len(reservableRoles) > 20:
-                await interaction.response.send_message(embed=Embed(title="❌ Too many roles", description=f"Due to Discord character limitation, we've set the cap to 20 roles.\nLink your order, e.g. OPORD, under URL if you require more flexibility.\n\nYour roles:\n{value}"[:4096], color=Color.red()), ephemeral=True, delete_after=10.0)
+                await interaction.response.send_message(embed=discord.Embed(title="❌ Too many roles", description=f"Due to Discord character limitation, we've set the cap to 20 roles.\nLink your order, e.g. OPORD, under URL if you require more flexibility.\n\nYour roles:\n{value}"[:4096], color=discord.Color.red()), ephemeral=True, delete_after=10.0)
                 return
 
             # No res roles or all roles are unoccupied
@@ -1874,7 +1873,7 @@ class Schedule(commands.Cog):
                 log.exception("editEvent: guild is None")
                 return None
 
-            previewEmbed = Embed(title=f":clock3: The starting time has changed for: {event['title']}!", description=f"From: {discord.utils.format_dt(UTC.localize(datetime.strptime(startTimeOld, TIME_FORMAT)), style='F')}\n\u2000\u2000To: {discord.utils.format_dt(UTC.localize(datetime.strptime(event['time'], TIME_FORMAT)), style='F')}", color=Color.orange())
+            previewEmbed = discord.Embed(title=f":clock3: The starting time has changed for: {event['title']}!", description=f"From: {discord.utils.format_dt(UTC.localize(datetime.strptime(startTimeOld, TIME_FORMAT)), style='F')}\n\u2000\u2000To: {discord.utils.format_dt(UTC.localize(datetime.strptime(event['time'], TIME_FORMAT)), style='F')}", color=discord.Color.orange())
             previewEmbed.add_field(name="\u200B", value=eventMsg.jump_url, inline=False)
             previewEmbed.set_footer(text=f"By: {interaction.user}")
             for memberId in event["accepted"] + event["declined"] + event["tentative"]:
@@ -1920,11 +1919,11 @@ class Schedule(commands.Cog):
 
             with open(EVENTS_FILE, "w") as f:
                 json.dump(sortedEvents, f, indent=4)
-            await interaction.response.send_message(interaction.user.mention, embed=Embed(title="✅ Event edited", color=Color.green()), ephemeral=True, delete_after=5.0)
+            await interaction.response.send_message(interaction.user.mention, embed=discord.Embed(title="✅ Event edited", color=discord.Color.green()), ephemeral=True, delete_after=5.0)
 
             # If events are reordered and user have elevated privileges and may edit other events than self-made - warn them
             if anyEventChange and ((interaction.user.id in DEVELOPERS) or any(role.id == UNIT_STAFF or role.id == SERVER_HAMSTER for role in interaction.user.roles)):
-                embed = Embed(title="⚠️ Restart the editing process ⚠️", description="Delete all ephemeral messages, or you may risk editing some other event!", color=Color.yellow())
+                embed = discord.Embed(title="⚠️ Restart the editing process ⚠️", description="Delete all ephemeral messages, or you may risk editing some other event!", color=discord.Color.yellow())
                 embed.set_footer(text=f"Only {guild.get_role(UNIT_STAFF).name}, {guild.get_role(SERVER_HAMSTER).name} & {guild.get_role(SNEK_LORD).name} have risk of causing this.")
                 await interaction.followup.send(embed=embed, ephemeral=True)
             return
@@ -1937,7 +1936,7 @@ class Schedule(commands.Cog):
             json.dump(events, f, indent=4)
 
         await eventMsg.edit(embed=self.getEventEmbed(event), view=self.getEventView(event))
-        await interaction.response.send_message(interaction.user.mention, embed=Embed(title="✅ Event edited", color=Color.green()), ephemeral=True, delete_after=5.0)
+        await interaction.response.send_message(interaction.user.mention, embed=discord.Embed(title="✅ Event edited", color=discord.Color.green()), ephemeral=True, delete_after=5.0)
 
     @staticmethod
     def getDetailsFromDuration(duration: str) -> tuple:
@@ -2024,7 +2023,7 @@ class Schedule(commands.Cog):
         }
         view = self.fromDictToPreviewView(previewDict, "None")
 
-        embed=Embed(title=SCHEDULE_EVENT_PREVIEW_EMBED["title"], description=SCHEDULE_EVENT_PREVIEW_EMBED["description"], color=EVENT_TYPE_COLORS[preselectedType])
+        embed=discord.Embed(title=SCHEDULE_EVENT_PREVIEW_EMBED["title"], description=SCHEDULE_EVENT_PREVIEW_EMBED["description"], color=EVENT_TYPE_COLORS[preselectedType])
         embed.add_field(name="\u200B", value="\u200B", inline=False)
         embed.set_footer(text=f"Created by {interaction.user.display_name}")
         await interaction.response.send_message("Schedule an event using the buttons, and get a live preview!", embed=embed, view=view)
@@ -2057,7 +2056,7 @@ class Schedule(commands.Cog):
         try:
             timeParsed = datetimeParse(time)
         except ValueError:
-            await interaction.response.send_message(embed=Embed(title="❌ Invalid time", description="Provide a valid time!", color=Color.red()), ephemeral=True)
+            await interaction.response.send_message(embed=discord.Embed(title="❌ Invalid time", description="Provide a valid time!", color=discord.Color.red()), ephemeral=True)
             return
 
         await interaction.response.defer()
@@ -2071,7 +2070,7 @@ class Schedule(commands.Cog):
                 timeZoneOutput = await self.changeTimeZone(interaction.user, isCommand=False)
                 if not timeZoneOutput:
                     await self.cancelCommand(await self.checkDMChannel(interaction.user), "Timestamp creation")
-                    await interaction.edit_original_response(embed=Embed(title="❌ Timestamp creation canceled", description="You must provide a time zone in your DMs!", color=Color.red()))
+                    await interaction.edit_original_response(embed=discord.Embed(title="❌ Timestamp creation canceled", description="You must provide a time zone in your DMs!", color=discord.Color.red()))
                     return
                 with open(MEMBER_TIME_ZONES_FILE) as f:
                     memberTimeZones = json.load(f)
@@ -2081,14 +2080,14 @@ class Schedule(commands.Cog):
             try:
                 timeZone = pytz.timezone(timezone)
             except pytz.exceptions.UnknownTimeZoneError:
-                await interaction.edit_original_response(embed=Embed(title="❌ Invalid time zone", description="Provide a valid time zone!", color=Color.red()))
+                await interaction.edit_original_response(embed=discord.Embed(title="❌ Invalid time zone", description="Provide a valid time zone!", color=discord.Color.red()))
                 return
 
         # Output timestamp
         timeParsed = timeZone.localize(timeParsed.replace(tzinfo=None))
         await interaction.edit_original_response(content = f"{message} {discord.utils.format_dt(timeParsed, 'F')}")
         if informative is not None:
-            embed = Embed(color=Color.green())
+            embed = discord.Embed(color=discord.Color.green())
             embed.set_footer(text=f"Local time: {timeParsed.strftime(TIME_FORMAT)}\nTime zone: {memberTimeZones[str(interaction.user.id)] if not timezone else timeZone}")
             timestamps = [discord.utils.format_dt(timeParsed, style=timestampStyle[0]) for timestampStyle in TIMESTAMP_STYLES.items()]
             embed.add_field(name="Timestamp", value="\n".join(timestamps), inline=True)
@@ -2126,16 +2125,16 @@ class Schedule(commands.Cog):
             memberTimeZones = json.load(f)
 
         timezoneOk = False
-        color = Color.gold()
+        color = discord.Color.gold()
         while not timezoneOk:
-            embed = Embed(
+            embed = discord.Embed(
                 title=":clock1: What's your preferred time zone?",
                 description=(f"Your current time zone preference is `{memberTimeZones[str(author.id)]}`." if str(author.id) in memberTimeZones else "You don't have a preferred time zone set.") + "\n\nEnter a number from the list below.\nEnter any time zone name from the column \"**TZ DATABASE NAME**\" in this [Wikipedia article](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones)." + "\nEnter `none` to erase current preferences." * isCommand,
                 color=color
             )
             embed.add_field(name="Popular Time Zones", value="\n".join(f"**{idx}.** {tz}" for idx, tz in enumerate(TIME_ZONES, 1)))
             embed.set_footer(text="Enter `cancel` to abort this command.")
-            color = Color.red()
+            color = discord.Color.red()
             try:
                 msg = await author.send(embed=embed)
             except Exception as e:
@@ -2172,7 +2171,7 @@ class Schedule(commands.Cog):
 
         with open(MEMBER_TIME_ZONES_FILE, "w") as f:
             json.dump(memberTimeZones, f, indent=4)
-        embed = Embed(title=f"✅ Time zone preferences changed!", description=f"Updated to `{timeZone.zone}`!" if isInputNotNone else "Preference removed!", color=Color.green())
+        embed = discord.Embed(title=f"✅ Time zone preferences changed!", description=f"Updated to `{timeZone.zone}`!" if isInputNotNone else "Preference removed!", color=discord.Color.green())
         await dmChannel.send(embed=embed)
         return True
 

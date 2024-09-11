@@ -1,6 +1,6 @@
 import os
 import contextlib
-import secret, asyncio
+import secret
 import pysftp, pytz  # type: ignore
 
 from datetime import datetime, timezone

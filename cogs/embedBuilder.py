@@ -4,7 +4,6 @@ import re
 from datetime import datetime
 from dateutil.parser import parse as datetimeParse  # type: ignore
 
-from discord import Embed, Color
 from discord.ext import commands # type: ignore
 
 from secret import DEBUG
@@ -55,7 +54,7 @@ class EmbedBuilder(commands.Cog):
                 messageid = int(messageid)
                 messageEdit = await channel.fetch_message(messageid)
             except Exception:
-                embed = Embed(title="❌ Invalid data", description=f"Message with id `{messageid}` could not be found in channel `{channel.mention}`!", color=Color.red())
+                embed = discord.Embed(title="❌ Invalid data", description=f"Message with id `{messageid}` could not be found in channel `{channel.mention}`!", color=discord.Color.red())
                 await interaction.response.send_message(embed=embed, ephemeral=True, delete_after=15.0)
                 return
 
@@ -68,7 +67,7 @@ class EmbedBuilder(commands.Cog):
                 stderr = f"Message is not sent by me ({self.bot.user.mention})!"
 
             if stderr:
-                embed = Embed(title="❌ Invalid message", description=stderr, color=Color.red())
+                embed = discord.Embed(title="❌ Invalid message", description=stderr, color=discord.Color.red())
                 await interaction.response.send_message(embed=embed, ephemeral=True, delete_after=15.0)
                 return
 
@@ -124,7 +123,7 @@ class EmbedBuilder(commands.Cog):
                 log.exception("onBuildEmbedError: guild is None")
                 return
 
-            embed = Embed(title="❌ Missing permissions", description=f"You do not have the permissions to build embeds!\nThe permitted roles are: {', '.join([guild.get_role(role).name for role in CMD_STAFF_LIMIT])}.", color=Color.red())
+            embed = discord.Embed(title="❌ Missing permissions", description=f"You do not have the permissions to build embeds!\nThe permitted roles are: {', '.join([guild.get_role(role).name for role in CMD_STAFF_LIMIT])}.", color=discord.Color.red())
             await interaction.response.send_message(embed=embed, ephemeral=True, delete_after=15.0)
 
 # ===== </Build Embed> =====
@@ -236,7 +235,7 @@ class EmbedBuilder(commands.Cog):
                     try:
                         targetMessage = await targetChannel.fetch_message(button.view.messageId)
                     except Exception:
-                        embed = Embed(title="❌ Invalid messageid", description=f"Message with id `{button.view.messageId}` could not be found in channel `{targetChannel.mention}`!", color=Color.red())
+                        embed = discord.Embed(title="❌ Invalid messageid", description=f"Message with id `{button.view.messageId}` could not be found in channel `{targetChannel.mention}`!", color=discord.Color.red())
                         await interaction.response.send_message(embed=embed, ephemeral=True, delete_after=15.0)
                         return
 
@@ -329,7 +328,7 @@ class EmbedBuilder(commands.Cog):
         value: str = modal.children[0].value.strip()
 
         stderr = None
-        embed = Embed()
+        embed = discord.Embed()
         if len(message.embeds) > 0:
             embed = message.embeds[0]
 

@@ -16,7 +16,6 @@ if DEBUG:
     from constants.debug import *
 
 
-EMBED_TIMEOUT = discord.Embed(title=ERROR_TIMEOUT, color=discord.Color.red())
 EMBED_INVALID = discord.Embed(title="❌ Invalid input", color=discord.Color.red())
 
 OPERATION_NAME_ADJECTIVES = "constants/opAdjectives.txt"
@@ -174,7 +173,6 @@ def jsonCreateNoExist(filename: str, dump: list | dict) -> None:
 jsonCreateNoExist(MEMBER_TIME_ZONES_FILE, {})
 jsonCreateNoExist(EVENTS_HISTORY_FILE, [])
 jsonCreateNoExist(WORKSHOP_TEMPLATES_FILE, [])
-#jsonCreateNoExist(WORKSHOP_TEMPLATES_DELETED_FILE, [])
 jsonCreateNoExist(REMINDERS_FILE, {})
 jsonCreateNoExist(ROLE_RESERVATION_BLACKLIST_FILE, [])
 jsonCreateNoExist(REPEATED_MSG_DATE_LOG_FILE, {})
@@ -2126,7 +2124,7 @@ class Schedule(commands.Cog):
                             timezoneOk = True
 
             except asyncio.TimeoutError:
-                await dmChannel.send(embed=EMBED_TIMEOUT)
+                await dmChannel.send(embed=discord.Embed(title=":clock3: You were too slow, aborting!", color=discord.Color.red()))
                 return False
 
         with open(MEMBER_TIME_ZONES_FILE, "w") as f:

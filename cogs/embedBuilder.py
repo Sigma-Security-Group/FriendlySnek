@@ -322,7 +322,7 @@ class EmbedBuilder(commands.Cog):
 
     async def modalHandling(self, modal: discord.ui.Modal, interaction: discord.Interaction, message: discord.Message, view: discord.ui.View | None) -> None:
         if not isinstance(interaction.user, discord.Member):
-            log.exception("ButtonHandling modalHandling: interaction.user is not discord.Member")
+            log.exception("EmbedBuilder modalHandling: interaction.user is not discord.Member")
             return
 
         value: str = modal.children[0].value.strip()

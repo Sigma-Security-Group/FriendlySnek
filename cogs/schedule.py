@@ -24,58 +24,6 @@ OPERATION_NAME_NOUNS = "constants/opNouns.txt"
 
 MAX_SERVER_ATTENDANCE = 50
 
-# Training map first, then the rest in alphabetical order
-MAPS = [
-    "Training Map",
-    "Altis",
-    "Bukovina",
-    "Bystrica",
-    "Chernarus (Autumn)",
-    "Chernarus (Summer)",
-    "Chernarus (Winter)",
-    "Colombia",
-    "Desert",
-    "Dingor",
-    "Farabad",
-    "Fjord",
-    # "Front Amazonia",
-    "Green Sea",
-    "Isla Pera",
-    # "Kardazak",
-    "Korsac",
-    "Korsac (Winter)",
-    # "Kunduz, Afghanistan",
-    "Kunduz River",
-    "Lingor",
-    "Livonia",
-    "Malden 2035",
-    # "Mutambara",
-    # "Niakala",
-    # "Novogorsk",
-    "Porto",
-    "Proving Grounds",
-    "Rahmadi",
-    # "Rosche, Germany",
-    # "Sa'hatra",
-    "Sahrani",
-    # "Saint Kapaulio",
-    "Scottish Highlands",
-    "Shapur",
-    "Southern Sahrani",
-    "Stratis",
-    # "Sumava",
-    "Takistan",
-    "Takistan Mountains",
-    "Tanoa",
-    "Tembelan Island",
-    "United Sahrani",
-    "Utes",
-    # "Uzbin Valley",
-    "Virolahti",
-    "Virtual Reality",
-    "Yulakia",
-    "Zargabad"
-]
 
 UTC = pytz.utc
 TIME_ZONES = {
@@ -1160,7 +1108,13 @@ class Schedule(commands.Cog):
                         await interaction.response.send_modal(generateModal(discord.TextStyle.long, placeholder, default, False, 1, 512))
 
                     case "map":
-                        options = [discord.SelectOption(label=mapName) for mapName in MAPS]
+                        with open(GENERIC_DATA_FILE) as f:
+                            genericData = json.load(f)
+                            if "modpackMaps" not in genericData:
+                                log.warning("Schedule buttonHandling: modpackMaps not in genericData.")
+                                return
+
+                        options = [discord.SelectOption(label=mapName) for mapName in genericData["modpackMaps"]]
                         await interaction.response.send_message(interaction.user.mention, view=self.generateSelectView(
                             options,
                             True,
@@ -1621,7 +1575,12 @@ class Schedule(commands.Cog):
 
             # Editing Map
             elif selectedValue == "Map":
-                options = [discord.SelectOption(label=mapName) for mapName in MAPS]
+                with open(GENERIC_DATA_FILE) as f:
+                    genericData = json.load(f)
+                    if "modpackMaps" not in genericData:
+                        log.warning("Schedule buttonHandling: modpackMaps not in genericData.")
+                        return
+                options = [discord.SelectOption(label=mapName) for mapName in genericData["modpackMaps"]]
                 view = self.generateSelectView(options, True, event["map"], eventMsg, "Select a map.", "edit_select_map")
                 await interaction.response.send_message(view=view, ephemeral=True, delete_after=60.0)
 

@@ -514,22 +514,15 @@ class Staff(commands.Cog):
                 continue
             await ctx.send(f"```{chunk}```")
 
-    @commands.command(name="updatemodpack")
-    @commands.has_any_role(*CMD_GIBCMDLINE_LIMIT)
-    async def updatemodpack(self, ctx: commands.Context, sendtoserverinfo: bool = False) -> None:
-        """Update snek mod list, for which mods to check on updates. Optional send modpack to #server-info."""
-
-        # No modpack / no HTML
-        if len(ctx.message.attachments) == 0 or ctx.message.attachments[0].content_type is None or not ctx.message.attachments[0].content_type.startswith("text/html"):
-            await ctx.send(":moyai: I need a modpack file to generate the cmdline :moyai:")
-            return
-
-        msgAttachment = ctx.message.attachments[0]
+    @discord.app_commands.command(name="updatemodpack")
+    @discord.app_commands.guilds(GUILD)
+    @discord.app_commands.checks.has_any_role(*CMD_GIBCMDLINE_LIMIT)
+    @discord.app_commands.describe(modpack = "Updated modpack.", sendtoserverinfo = "Optional boolean if sending modpack to #server-info.")
+    async def updatemodpack(self, interaction: discord.Interaction, modpack: discord.Attachment, sendtoserverinfo: bool = False) -> None:
+        """Update snek mod list, for which mods to check on updates."""
 
         # Parse modpack
-        msg = await ctx.send("https://tenor.com/view/rat-rodent-vermintide-vermintide2-skaven-gif-20147931")
-        html = (await msgAttachment.read()).decode("utf-8")
-
+        html = (await modpack.read()).decode("utf-8")
         modpackIds = [int(id) for id in re.findall(r"(?<=\"https:\/\/steamcommunity\.com\/sharedfiles\/filedetails\/\?id=)\d+", html)]
 
         # Save output
@@ -538,8 +531,6 @@ class Staff(commands.Cog):
         genericData["modpackIds"] = modpackIds
         with open(GENERIC_DATA_FILE, "w") as f:
             json.dump(genericData, f, indent=4)
-
-        responseContent = "Modpack updated"
 
         # Optionally send
         if sendtoserverinfo:
@@ -552,12 +543,48 @@ class Staff(commands.Cog):
                 log.exception("Staff updatemodpack: channelServerInfo is not discord.TextChannel")
                 return
 
-            attachmentAsFile = await ctx.message.attachments[0].to_file()
-            await channelServerInfo.send(os.path.splitext(msgAttachment.filename)[0], file=attachmentAsFile)
-            responseContent += f", and sent to {channelServerInfo.mention}"
+            await channelServerInfo.send(os.path.splitext(modpack.filename)[0], file=await modpack.to_file())
 
-        responseContent += "!"
-        await msg.edit(content=responseContent)
+
+        mapsDefault = "\n".join(genericData["modpackMaps"]) if "modpackMaps" in genericData else None
+
+        modal = StaffModal(self, f"Modpack updated! Now optionally change maps", f"staff_modal_maps")
+        modal.add_item(discord.ui.TextInput(label="Maps (Click \"Submit\" to not change anything!)", style=discord.TextStyle.long, placeholder="Training Map\nAltis\nVirolahti", default=mapsDefault, required=True))
+        await interaction.response.send_modal(modal)
+        await interaction.followup.send("Modpack updated!", ephemeral=True)
+
+
+    async def modalHandling(self, modal: discord.ui.Modal, interaction: discord.Interaction) -> None:
+        if not isinstance(interaction.user, discord.Member):
+            log.exception("Staff modalHandling: interaction.user is not discord.Member")
+            return
+
+        if modal.custom_id != "staff_modal_maps":
+            log.exception("Staff modalHandling: modal.custom_id != staff_modal_maps")
+            return
+
+        value: str = modal.children[0].value.strip().split("\n")
+
+        with open(GENERIC_DATA_FILE) as f:
+            genericData = json.load(f)
+        genericData["modpackMaps"] = value
+        with open(GENERIC_DATA_FILE, "w") as f:
+            json.dump(genericData, f, indent=4)
+
+        await interaction.response.send_message(f"Maps updated!", ephemeral=True, delete_after=30.0)
+
+
+class StaffModal(discord.ui.Modal):
+    """Handling all staff modals."""
+    def __init__(self, instance, title: str, customId: str) -> None:
+        super().__init__(title=title, custom_id=customId)
+        self.instance = instance
+
+    async def on_submit(self, interaction: discord.Interaction):
+        await self.instance.modalHandling(self, interaction)
+
+    async def on_error(self, interaction: discord.Interaction, error: Exception) -> None:
+        log.exception(error)
 
 
 async def setup(bot: commands.Bot) -> None:

@@ -228,7 +228,7 @@ class EmbedBuilder(commands.Cog):
                     log.exception("ButtonHandling: targetChannel is None")
                     return
 
-                if hasattr(button.view, "messageId"):
+                if hasattr(button.view, "messageId") and button.view.messageId:
                     try:
                         targetMessage = await targetChannel.fetch_message(button.view.messageId)
                     except Exception:

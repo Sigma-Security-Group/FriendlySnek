@@ -95,6 +95,7 @@ class EmbedBuilder(commands.Cog):
             BuilderButton(self, authorId=interaction.user.id, row=1, label="Author", style=discord.ButtonStyle.secondary, custom_id="builder_button_author"),
             BuilderButton(self, authorId=interaction.user.id, row=1, label="Footer", style=discord.ButtonStyle.secondary, custom_id="builder_button_footer"),
 
+            BuilderButton(self, authorId=interaction.user.id, row=2, label="Cancel", style=discord.ButtonStyle.danger, custom_id="builder_button_cancel"),
             BuilderButton(self, authorId=interaction.user.id, row=2, label="Submit", style=discord.ButtonStyle.primary, custom_id="builder_button_submit", disabled=True),
         ]
         for item in items:
@@ -213,6 +214,9 @@ class EmbedBuilder(commands.Cog):
                     discord.ui.TextInput(label="Footer Icon URL", default=embed.footer.icon_url if embed and embed.footer and embed.footer.icon_url else None, required=False)
                 ]
 
+            case "cancel":
+                await interaction.response.edit_message(content=f"Cancelled command!", embed=None, view=None)
+                return
             case "submit":
                 if not hasattr(button.view, "targetChannel"):
                     log.exception("ButtonHandling: targetChannel not set in button.view")

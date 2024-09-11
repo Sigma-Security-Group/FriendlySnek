@@ -2085,7 +2085,7 @@ class Schedule(commands.Cog):
                 return
 
         # Output timestamp
-        timeParsed = timeZone.localize(timeParsed)
+        timeParsed = timeZone.localize(timeParsed.replace(tzinfo=None))
         await interaction.edit_original_response(content = f"{message} {discord.utils.format_dt(timeParsed, 'F')}")
         if informative is not None:
             embed = Embed(color=Color.green())

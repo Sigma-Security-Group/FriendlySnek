@@ -14,7 +14,6 @@ if secret.DEBUG:
 
 
 MISSIONS_UPLOADED_FILE = "data/missionsUploaded.log"
-TIMEOUT_EMBED = Embed(title=ERROR_TIMEOUT, color=Color.red())
 UTC = pytz.utc
 
 SERVERS = [

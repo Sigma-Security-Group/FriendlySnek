@@ -2,7 +2,5 @@
     "editor.insertSpaces": true,
     "editor.wordWrap": "on",
     "files.trimTrailingWhitespace": true,
-    "diffEditor.ignoreTrimWhitespace": false,
-    "python.linting.mypyEnabled": true,
-    "python.linting.enabled": true
+    "diffEditor.ignoreTrimWhitespace": false
 }

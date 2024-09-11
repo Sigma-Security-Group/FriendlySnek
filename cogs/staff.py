@@ -554,6 +554,19 @@ class Staff(commands.Cog):
         await interaction.followup.send("Modpack updated!", ephemeral=True)
 
 
+    @updatemodpack.error
+    async def onUpdatemodpackError(self, interaction: discord.Interaction, error: discord.app_commands.AppCommandError) -> None:
+        """updatemodpack errors - dedicated for the discord.app_commands.errors.MissingAnyRole error."""
+        if type(error) == discord.app_commands.errors.MissingAnyRole:
+            guild = self.bot.get_guild(GUILD_ID)
+            if guild is None:
+                log.exception("onUpdatemodpackError: guild is None")
+                return
+
+            embed = Embed(title="❌ Missing permissions", description=f"You do not have the permissions to upload a mission file!\nThe permitted roles are: {', '.join([role.name for allowedRole in CMD_GIBCMDLINE_LIMIT if (role := guild.get_role(allowedRole)) is not None])}.", color=Color.red())
+            await interaction.response.send_message(embed=embed, ephemeral=True, delete_after=30.0)
+
+
     async def modalHandling(self, modal: discord.ui.Modal, interaction: discord.Interaction) -> None:
         if not isinstance(interaction.user, discord.Member):
             log.exception("Staff modalHandling: interaction.user is not discord.Member")

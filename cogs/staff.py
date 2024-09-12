@@ -441,6 +441,7 @@ class Staff(commands.Cog):
     @commands.command(name="smebigbrother")
     @commands.has_any_role(*CMD_STAFF_LIMIT)
     async def smeBigBrother(self, ctx: commands.Context) -> None:
+        """Summarize each SMEs activity last 6 months for Unit Staff."""
         guild = self.bot.get_guild(GUILD_ID)
         if guild is None:
             log.exception("Staff smeBigBrother: guild is None")
@@ -552,6 +553,7 @@ class Staff(commands.Cog):
         modal.add_item(discord.ui.TextInput(label="Maps (Click \"Submit\" to not change anything!)", style=discord.TextStyle.long, placeholder="Training Map\nAltis\nVirolahti", default=mapsDefault, required=True))
         await interaction.response.send_modal(modal)
         await interaction.followup.send("Modpack updated!", ephemeral=True)
+        log.info(f"{interaction.user.display_name} ({interaction.user}) updated modpack id listing.")
 
 
     @updatemodpack.error
@@ -585,6 +587,7 @@ class Staff(commands.Cog):
             json.dump(genericData, f, indent=4)
 
         await interaction.response.send_message(f"Maps updated!", ephemeral=True, delete_after=30.0)
+        log.info(f"{interaction.user.display_name} ({interaction.user}) updated modpack maps listing.")
 
 
 class StaffModal(discord.ui.Modal):

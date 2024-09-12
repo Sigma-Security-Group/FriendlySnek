@@ -550,7 +550,7 @@ class Staff(commands.Cog):
         mapsDefault = "\n".join(genericData["modpackMaps"]) if "modpackMaps" in genericData else None
 
         modal = StaffModal(self, f"Modpack updated! Now optionally change maps", f"staff_modal_maps")
-        modal.add_item(discord.ui.TextInput(label="Maps (Click \"Submit\" to not change anything!)", style=discord.TextStyle.long, placeholder="Training Map\nAltis\nVirolahti", default=mapsDefault, required=True))
+        modal.add_item(discord.ui.TextInput(label="Maps (Click \"Cancel\" to not change anything!)", style=discord.TextStyle.long, placeholder="Training Map\nAltis\nVirolahti", default=mapsDefault, required=True))
         await interaction.response.send_modal(modal)
         await interaction.followup.send("Modpack updated!", ephemeral=True)
         log.info(f"{interaction.user.display_name} ({interaction.user}) updated modpack id listing.")

@@ -569,6 +569,20 @@ class Staff(commands.Cog):
             await interaction.response.send_message(embed=embed, ephemeral=True, delete_after=30.0)
 
 
+    # Snek Lord command
+    @commands.command(name="sneklord")
+    @commands.has_any_role(SNEK_LORD)
+    async def sneklord(self, ctx: commands.Context) -> None:
+        """Snek lord prod test command."""
+        guild = self.bot.get_guild(GUILD_ID)
+        if guild is None:
+            log.exception("Staff sneklord: guild is None")
+            return
+        for role in guild.roles:
+            print(f"ROLE: {role.name} - {hex(role.color.value)}")
+
+
+
     async def modalHandling(self, modal: discord.ui.Modal, interaction: discord.Interaction) -> None:
         if not isinstance(interaction.user, discord.Member):
             log.exception("Staff modalHandling: interaction.user is not discord.Member")

@@ -30,8 +30,12 @@ class EmbedBuilder(commands.Cog):
     @discord.app_commands.command(name="build-embed")
     @discord.app_commands.guilds(GUILD)
     @discord.app_commands.checks.has_any_role(*CMD_STAFF_LIMIT)
-    @discord.app_commands.describe(channel = "Target channel for later sending embed, or fetching message from.", messageid = "Optional target message id for editing embed.")
-    async def buildEmbed(self, interaction: discord.Interaction, channel: discord.TextChannel, messageid: str = None) -> None:
+    @discord.app_commands.describe(
+        channel = "Target channel for later sending embed, or fetching message from.",
+        messageid = "Optional target message id for editing embed.",
+        attachment = "Optional attachment (file)."
+    )
+    async def buildEmbed(self, interaction: discord.Interaction, channel: discord.TextChannel, messageid: str = "", attachment: discord.Attachment = None) -> None:
         """Builds embeds.
 
         Parameters:
@@ -43,7 +47,7 @@ class EmbedBuilder(commands.Cog):
         None.
         """
 
-        messageEdit = None
+        messageEdit = discord.utils.MISSING
         if messageid:
             guild = self.bot.get_guild(GUILD_ID)
             if guild is None:
@@ -95,15 +99,22 @@ class EmbedBuilder(commands.Cog):
             BuilderButton(self, authorId=interaction.user.id, row=1, label="Footer", style=discord.ButtonStyle.secondary, custom_id="builder_button_footer"),
 
             BuilderButton(self, authorId=interaction.user.id, row=2, label="Cancel", style=discord.ButtonStyle.danger, custom_id="builder_button_cancel"),
-            BuilderButton(self, authorId=interaction.user.id, row=2, label="Submit", style=discord.ButtonStyle.primary, custom_id="builder_button_submit", disabled=True),
+            BuilderButton(self, authorId=interaction.user.id, row=2, label="Submit", style=discord.ButtonStyle.primary, custom_id="builder_button_submit", disabled=(not attachment)),
         ]
         for item in items:
             view.add_item(item)
 
-        if messageEdit:
+        if messageEdit is not discord.utils.MISSING:
             EmbedBuilder.adaptViewAfterEmbed(view, EmbedBuilder.getDependencies(messageEdit))
 
-        await interaction.response.send_message("Embed builder!", embed=messageEdit, view=view)
+        attachment = await attachment.to_file() if attachment else discord.utils.MISSING
+
+        await interaction.response.send_message(
+            "Embed builder!",
+            embed=messageEdit,
+            view=view,
+            file=attachment
+        )
 
 
     @buildEmbed.error
@@ -125,6 +136,8 @@ class EmbedBuilder(commands.Cog):
 
             embed = discord.Embed(title="❌ Missing permissions", description=f"You do not have the permissions to build embeds!\nThe permitted roles are: {', '.join([guild.get_role(role).name for role in CMD_STAFF_LIMIT])}.", color=discord.Color.red())
             await interaction.response.send_message(embed=embed, ephemeral=True, delete_after=15.0)
+            return
+        log.exception(error)
 
 # ===== </Build Embed> =====
 
@@ -214,7 +227,12 @@ class EmbedBuilder(commands.Cog):
                 ]
 
             case "cancel":
-                await interaction.response.edit_message(content=f"Cancelled command!", embed=None, view=None)
+                await interaction.response.edit_message(
+                    content=f"Cancelled command!",
+                    embed=None,
+                    attachments=[],
+                    view=None
+                )
                 return
             case "submit":
                 if not hasattr(button.view, "targetChannel"):
@@ -240,13 +258,29 @@ class EmbedBuilder(commands.Cog):
                         return
 
                     log.info(f"{interaction.user.display_name} ({interaction.user}) edited the embed on message '{button.view.messageId}' in '{targetChannel.name}' ({targetChannel.id}).")
-                    await targetMessage.edit(embed=interaction.message.embeds[0])
-                    await interaction.response.edit_message(content=f"Message embed edited, {targetMessage.jump_url}!", embed=None, view=None)
+                    await targetMessage.edit(
+                        embed=interaction.message.embeds[0] if len(interaction.message.embeds) > 0 else None,
+                        attachments=(await interaction.message.attachments[0].to_file()) if len(interaction.message.attachments) > 0 else []
+                    )
+                    await interaction.response.edit_message(
+                        content=f"Message embed edited, {targetMessage.jump_url}!",
+                        embed=None,
+                        attachments=[],
+                        view=None
+                    )
                     return
 
                 log.info(f"{interaction.user.display_name} ({interaction.user}) built an embed and sent it to '{targetChannel.name}' ({targetChannel.id}).")
-                await targetChannel.send(embed=interaction.message.embeds[0])
-                await interaction.response.edit_message(content=f"Embed sent to <#{targetChannel.id}>!", embed=None, view=None)
+                await targetChannel.send(
+                    embed=interaction.message.embeds[0] if len(interaction.message.embeds) > 0 else None,
+                    file=(await interaction.message.attachments[0].to_file()) if len(interaction.message.attachments) > 0 else None
+                )
+                await interaction.response.edit_message(
+                    content=f"Embed sent to <#{targetChannel.id}>!",
+                    embed=None,
+                    attachments=[],
+                    view=None
+                )
                 return
 
 
@@ -452,7 +486,6 @@ class BuilderModal(discord.ui.Modal):
         await self.instance.modalHandling(self, interaction, self.message, self.view)
 
     async def on_error(self, interaction: discord.Interaction, error: Exception) -> None:
-        # await interaction.response.send_message("Something went wrong. cope.", ephemeral=True)
         log.exception(error)
 
 

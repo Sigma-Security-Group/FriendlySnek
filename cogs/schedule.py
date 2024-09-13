@@ -1489,10 +1489,16 @@ class Schedule(commands.Cog):
                 child.disabled = True
             await interaction.response.edit_message(view=select.view)
 
-            # Remove user from any reserved roles
             with open(EVENTS_FILE) as f:
                 events = json.load(f)
             event = [event for event in events if event["messageId"] == eventMsg.id][0]
+
+            # Fail if role got reserved
+            if event["reservableRoles"][selectedValue] is not None:
+                await interaction.followup.send(embed=discord.Embed(title=f"❌ Role is already reserved!", color=discord.Color.red()), ephemeral=True)
+                return
+
+            # Remove user from any reserved roles
             for roleName in event["reservableRoles"]:
                 if event["reservableRoles"][roleName] == interaction.user.id:
                     event["reservableRoles"][roleName] = None

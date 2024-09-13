@@ -579,7 +579,7 @@ class Staff(commands.Cog):
             log.exception("Staff sneklord: guild is None")
             return
         for role in guild.roles:
-            print(f"ROLE: {role.name} - {hex(role.color.value)}")
+            log.debug(f"ROLE: {role.name} - {hex(role.color.value)}")
 
 
 

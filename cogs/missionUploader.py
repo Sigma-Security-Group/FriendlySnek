@@ -152,7 +152,8 @@ class MissionUploader(commands.Cog):
 
             embed = Embed(title="❌ Missing permissions", description=f"You do not have the permissions to upload a mission file!\nThe permitted roles are: {', '.join([role.name for allowedRole in CMD_UPLOADMISSION_LIMIT if (role := guild.get_role(allowedRole)) is not None])}.", color=Color.red())
             await interaction.response.send_message(embed=embed, ephemeral=True, delete_after=30.0)
-
+            return
+        log.exception(error)
 
 async def setup(bot: commands.Bot) -> None:
     await bot.add_cog(MissionUploader(bot))

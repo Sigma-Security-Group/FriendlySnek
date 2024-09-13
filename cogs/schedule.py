@@ -394,8 +394,10 @@ class Schedule(commands.Cog):
                 log.exception("OnRefreshScheduleError: guild is None")
                 return
 
-            embed = discord.Embed(title="❌ Missing permissions", description=f"You do not have the permissions to refresh the schedule!\nThe permitted roles are: {', '.join([guild.get_role(role).name for role in (UNIT_STAFF, SERVER_HAMSTER, CURATOR)])}.", color=discord.Color.red())
+            embed = discord.Embed(title="❌ Missing permissions", description=f"You do not have the permissions to refresh the schedule!\nThe permitted roles are: {', '.join([guild.get_role(role).name for role in CMD_REFRESHSCHEDULE_LIMIT])}.", color=discord.Color.red())
             await interaction.response.send_message(embed=embed, ephemeral=True)
+            return
+        log.exception(error)
 
 # ===== </Refresh Schedule> =====
 
@@ -452,6 +454,8 @@ class Schedule(commands.Cog):
 
             embed = discord.Embed(title="❌ Missing permissions", description=f"You do not have the permissions to move all users to command!\nThe permitted roles are: {', '.join([guild.get_role(role).name for role in CMD_AAR_LIMIT])}.", color=discord.Color.red())
             await interaction.response.send_message(embed=embed, ephemeral=True)
+            return
+        log.exception(error)
 
 # ===== </AAR> ====
 

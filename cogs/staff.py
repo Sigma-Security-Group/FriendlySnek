@@ -489,7 +489,7 @@ class Staff(commands.Cog):
 
     # Hampter command
     @commands.command(name="gibcmdline")
-    @commands.has_any_role(*CMD_GIBCMDLINE_LIMIT)
+    @commands.has_any_role(*CMD_DATACENTER_LIMIT)
     async def gibcmdline(self, ctx: commands.Context) -> None:
         """Generates commandline from attached HTML modpack file."""
 
@@ -517,7 +517,7 @@ class Staff(commands.Cog):
 
     @discord.app_commands.command(name="updatemodpack")
     @discord.app_commands.guilds(GUILD)
-    @discord.app_commands.checks.has_any_role(*CMD_GIBCMDLINE_LIMIT)
+    @discord.app_commands.checks.has_any_role(*CMD_DATACENTER_LIMIT)
     @discord.app_commands.describe(modpack = "Updated modpack.", sendtoserverinfo = "Optional boolean if sending modpack to #server-info.")
     async def updatemodpack(self, interaction: discord.Interaction, modpack: discord.Attachment, sendtoserverinfo: bool = False) -> None:
         """Update snek mod list, for which mods to check on updates."""
@@ -565,8 +565,10 @@ class Staff(commands.Cog):
                 log.exception("onUpdatemodpackError: guild is None")
                 return
 
-            embed = Embed(title="❌ Missing permissions", description=f"You do not have the permissions to upload a mission file!\nThe permitted roles are: {', '.join([role.name for allowedRole in CMD_GIBCMDLINE_LIMIT if (role := guild.get_role(allowedRole)) is not None])}.", color=Color.red())
+            embed = Embed(title="❌ Missing permissions", description=f"You do not have the permissions to upload a mission file!\nThe permitted roles are: {', '.join([role.name for allowedRole in CMD_DATACENTER_LIMIT if (role := guild.get_role(allowedRole)) is not None])}.", color=Color.red())
             await interaction.response.send_message(embed=embed, ephemeral=True, delete_after=30.0)
+            return
+        log.exception(error)
 
 
     # Snek Lord command

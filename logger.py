@@ -1,4 +1,4 @@
-import os, sys, traceback, pytz
+import os, sys, traceback
 
 from datetime import datetime, timezone
 from colorama import Fore, Style  # type: ignore

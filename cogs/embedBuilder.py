@@ -260,7 +260,7 @@ class EmbedBuilder(commands.Cog):
                     log.info(f"{interaction.user.display_name} ({interaction.user}) edited the embed on message '{button.view.messageId}' in '{targetChannel.name}' ({targetChannel.id}).")
                     await targetMessage.edit(
                         embed=interaction.message.embeds[0] if len(interaction.message.embeds) > 0 else None,
-                        attachments=(await interaction.message.attachments[0].to_file()) if len(interaction.message.attachments) > 0 else []
+                        attachments=([await interaction.message.attachments[0].to_file()]) if len(interaction.message.attachments) > 0 else []
                     )
                     await interaction.response.edit_message(
                         content=f"Message embed edited, {targetMessage.jump_url}!",

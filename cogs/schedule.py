@@ -650,8 +650,6 @@ class Schedule(commands.Cog):
     def fromPreviewEmbedToDict(self, embed: discord.Embed) -> dict:
         """Generates event dict from preview embed."""
         # Finds a field's position if found (int), if none found (None)
-        print("<fromPreviewEmbedToDict>")
-        print(f"fields:{embed.fields} -- len:{len(embed.fields)}")
         findFieldPos = lambda fieldName : None if embed.fields is None else (
             indexes[0] if len(
                 indexes := [idx for idx, field in enumerate(embed.fields) if field.name is not None and field.name.startswith(fieldName)]
@@ -715,12 +713,9 @@ class Schedule(commands.Cog):
                 outputDict["workshopInterest"] = None if workshop == "None" else workshop
 
         fieldPos = findFieldPos("Files")
-        print(f"files pos:{fieldPos}")
         if fieldPos is not None:
             filesFieldValue = embed.fields[fieldPos].value
             outputDict["files"] = filesFieldValue.split("\n")
-            print(f"files out {outputDict['files']}")
-        print("</fromPreviewEmbedToDict>")
 
         return outputDict
 
@@ -882,7 +877,6 @@ class Schedule(commands.Cog):
         Returns:
         None.
         """
-        print("<buttonHandling>")
         if not isinstance(interaction.user, discord.Member):
             log.exception("ButtonHandling: user not discord.Member")
             return
@@ -1243,8 +1237,7 @@ class Schedule(commands.Cog):
 
                     # FILES
                     case "files":
-                        print("<files>")
-                        view = ScheduleView()
+                        view = ScheduleView(previousMessageView=button.view)
                         items = [
                             ScheduleButton(self, interaction.message, interaction.user.id, row=0, label="Add", style=discord.ButtonStyle.success, custom_id="event_schedule_files_add"),
                             ScheduleButton(self, interaction.message, interaction.user.id, row=0, label="Remove", style=discord.ButtonStyle.danger, custom_id="event_schedule_files_remove"),
@@ -1254,37 +1247,26 @@ class Schedule(commands.Cog):
 
                         embed = Embed(title="Attaching files", description="You may attach up to 10 files to your event.\nUpload them first using the command `/fileupload`.", color=Color.gold())
                         await interaction.response.send_message(interaction.user.mention, embed=embed, view=view, ephemeral=True, delete_after=300.0)
-                        print("</files>")
 
                     case "files_add":
-                        print("<files_add>")
-                        print(f"msg id {message.id}")
-                        print(f"previewEmbedDict OLD files: {previewEmbedDict['files']}")
                         messageNew = await interaction.channel.fetch_message(message.id)
                         if not isinstance(messageNew, discord.Message):
                             log.exception("Schedule ButtonHandling: messageNew is not discord.Message")
                             return
                         previewEmbedDict = self.fromPreviewEmbedToDict(messageNew.embeds[0])
-                        print("BUTTONHANDLING > FILES ADD > previewEmbedDict")
-                        print(previewEmbedDict)
-                        print(f"previewEmbedDict NEW files: {previewEmbedDict['files']}")
-                        print(f"getUserFileUploads: {Schedule.getUserFileUploads(str(interaction.user.id))}")
                         options = [discord.SelectOption(label=fileUpload) for fileUpload in Schedule.getUserFileUploads(str(interaction.user.id)) if fileUpload not in previewEmbedDict["files"]]
                         if len(options) == 0:
                             embed = Embed(title="Attaching files", description="You have not uploaded any files yet.\nTo upload new files; run the command `/fileupload`.", color=Color.red())
-                            view = ScheduleView()
+                            view = ScheduleView(previousMessageView=button.view.previousMessageView)
                         else:
                             embed = Embed(title="Attaching files", description="Select a file to upload from the select menus below.\nTo upload new files; run the command `/fileupload`.", color=Color.gold())
-                            view = self.generateSelectView(options, False, None, messageNew, "Select a file.", "select_create_files", discord.ui.View.from_message(messageNew, timeout=None))
-                            print(f"message view: {discord.ui.View.from_message(messageNew, timeout=None)}")
+                            view = self.generateSelectView(options, False, None, messageNew, "Select a file.", "select_create_files", button.view.previousMessageView)
 
                         view.add_item(ScheduleButton(self, messageNew, interaction.user.id, row=4, label="Remove", style=discord.ButtonStyle.danger, custom_id="event_schedule_files_remove"))
                         await interaction.response.edit_message(embed=embed, view=view)
-                        print("</files_add>")
 
                     case "files_remove":
                         print("<files_remove>")
-                        print("</files_remove>")
                         return
 
 
@@ -1524,8 +1506,6 @@ class Schedule(commands.Cog):
                 return
 
             previewEmbedDict = self.fromPreviewEmbedToDict(eventMsgNew.embeds[0])
-            print("SELECTHANDLING > previewEmbedDict")
-            print(previewEmbedDict)
             previewEmbedDict["authorId"] = interaction.user.id
 
 
@@ -1554,8 +1534,6 @@ class Schedule(commands.Cog):
                     previewEmbedDict["workshopInterest"] = None if selectedValue == "None" else selectedValue
 
                 case "files":
-                    print("<select files>")
-                    print(f"Appending '{selectedValue}' to dict files '{previewEmbedDict['files']}'")
                     previewEmbedDict["files"].append(selectedValue)
                     view = ScheduleView()
                     items = [
@@ -1567,7 +1545,6 @@ class Schedule(commands.Cog):
 
                     embed = Embed(title="Attaching files", description="You may attach up to 10 files to your event.\nUpload them first using the command `/fileupload`.", color=Color.gold())
                     await interaction.response.edit_message(embed=embed, view=view)
-                    print("</select files>")
 
                 case "select_template":
                     # Update template buttons label & disabled
@@ -1631,7 +1608,6 @@ class Schedule(commands.Cog):
 
             # Edit preview embed & view
             await eventMsgNew.edit(embed=self.fromDictToPreviewEmbed(previewEmbedDict), view=eventMsgView)
-            print("EDITING NEW PREVIEW EMBED")
 
 
         elif select.custom_id == "reserve_role_select":
@@ -2197,7 +2173,7 @@ class Schedule(commands.Cog):
             await file.save(f)
 
         log.info(f"{interaction.user.display_name} ({interaction.user.id}) uploaded the file '{file.filename}' as '{filenameNew}'.")
-        embed = Embed(title="✅ File uploaded", description=f"Uploaded file as `{filenameCap}`.", color=Color.green())
+        embed = Embed(title="✅ File uploaded", description=f"Uploaded file as `{filenameCap}`", color=Color.green())
         await interaction.response.send_message(embed=embed)
 
         # Clean up - global (MAX 400)
@@ -2375,9 +2351,10 @@ class Schedule(commands.Cog):
 
 class ScheduleView(discord.ui.View):
     """Handling all schedule views."""
-    def __init__(self, *args, **kwargs):
+    def __init__(self, previousMessageView = None, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.timeout = None
+        self.previousMessageView = previousMessageView
 
 class ScheduleButton(discord.ui.Button):
     """Handling all schedule buttons."""

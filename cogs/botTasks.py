@@ -232,10 +232,6 @@ Join Us:
 
     async def smeReminder(self) -> None:
         """Pings SME role if workshops haven't been hosted in required time."""
-        utcNow = datetime.now(timezone.utc)
-
-        if utcNow.day != 1 or utcNow.hour != 0:  # Only execute function on 1st day of month around midnight UTC
-            return
 
         with open(EVENTS_HISTORY_FILE) as f:
             eventsHistory = json.load(f)
@@ -284,6 +280,19 @@ Join Us:
 
         if len(workshopsInTimeFrame) > 0:
             await smeCorner.send(":clap: Good job for keeping up the hosting " + ", ".join([f"`{wsName}`" for wsName in workshopsInTimeFrame]) + "! :clap:")
+
+
+        # Update next execution time
+        with open(REPEATED_MSG_DATE_LOG_FILE) as f:
+            msgDateLog = json.load(f)
+
+        # Get datetime for next time in 6 months
+        nextTime = Reminders.getFirstDayNextMonth()
+
+        msgDateLog["smeReminder"] = datetime.timestamp(nextTime)
+        with open(REPEATED_MSG_DATE_LOG_FILE, "w") as f:
+            json.dump(msgDateLog, f, indent=4)
+
 
     @staticmethod
     async def smeBigBrother(guild: discord.Guild, manuallyExecuted: bool) -> None:
@@ -373,21 +382,24 @@ Join Us:
 
     @tasks.loop(hours=1.0)
     async def oneHourTasks(self) -> None:
+        # redditRecruitmentPosts
         if secret.REDDIT_ACTIVE:
             try:
                 await self.redditRecruitmentPosts()
             except Exception as e:
                 log.exception(f"oneHourTasks Reddit recruitment posts: {e}")
 
-        if secret.SME_REMINDER_ACTIVE:
+        # smeReminder
+        with open(REPEATED_MSG_DATE_LOG_FILE) as f:
+            msgDateLog = json.load(f)
+
+        if secret.SME_REMINDER_ACTIVE and ("smeReminder" not in msgDateLog or (datetime.fromtimestamp(msgDateLog["smeReminder"], tz=pytz.utc) < datetime.now(timezone.utc))):
             try:
                 await self.smeReminder()
             except Exception as e:
                 log.exception(f"oneHourTasks SME reminder: {e}")
 
-        with open(REPEATED_MSG_DATE_LOG_FILE) as f:
-            msgDateLog = json.load(f)
-
+        # smeBigBrother
         if secret.SME_BIG_BROTHER and ("smeBigBrother" not in msgDateLog or (datetime.fromtimestamp(msgDateLog["smeBigBrother"], tz=pytz.utc) < datetime.now(timezone.utc))):
             guild = self.bot.get_guild(GUILD_ID)
             if guild is None:

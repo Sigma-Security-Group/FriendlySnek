@@ -2234,7 +2234,7 @@ class Schedule(commands.Cog):
         # Everything OK, save file
 
         # Naming scheme: 'DATETIME_AUTHORID_NAME'
-        filenameNew = f"{datetime.now().strftime('%Y%m%d%H%M%S')}_{interaction.user.id}_{filenameCap}"
+        filenameNew = f"{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}_{interaction.user.id}_{filenameCap}"
         with open(f"tmp/fileUpload/{filenameNew}", "wb") as f:
             await file.save(f)
 
@@ -2242,26 +2242,39 @@ class Schedule(commands.Cog):
         embed = Embed(title="✅ File uploaded", description=f"Uploaded file as `{filenameCap}`", color=Color.green())
         await interaction.response.send_message(embed=embed)
 
-        # Clean up - global (MAX 400)
+        # NEW CLEANUP METHOD (Date)
         fileUploadFiles = os.listdir("tmp/fileUpload")
-        fileUploadFiles.sort()
-        for _ in range(len(fileUploadFiles) - 400):
-            try:
-                os.remove(fileUploadFiles[0])
-            except Exception as e:
-                log.warning(f"fileupload: Couldn't remove global file '{fileUploadFiles[0]}'. {e}")
-            finally:
-                fileUploadFiles.pop(0)
+        #fileUploadFiles.sort()
+        for fileUploadFile in fileUploadFiles:
+            fileUploadFileTime = datetime.strptime(fileUploadFile.split("_")[0], "%Y%m%d%H%M%S")
+            if fileUploadFileTime < (datetime.now(timezone.utc) - timedelta(weeks=20)):
+                try:
+                    os.remove(f"tmp/fileUpload/{fileUploadFile}")
+                except Exception as e:
+                    log.warning(f"fileupload: Couldn't remove file '{fileUploadFile}'. {e}")
 
-        # Clean up - individual (MAX 50)
-        fileUploadFilesInd = [file for file in fileUploadFiles if str(interaction.user.id) in file]
-        while len(fileUploadFilesInd) > 50:
-            try:
-                os.remove(fileUploadFilesInd[0])
-            except Exception as e:
-                log.warning(f"fileupload: Couldn't remove ind file '{fileUploadFilesInd[0]}'. {e}")
-            finally:
-                fileUploadFilesInd.pop(0)
+
+        # OLD CLEANUP METHOD (Count)
+        ## Clean up - global (MAX 400)
+        #fileUploadFiles = os.listdir("tmp/fileUpload")
+        #fileUploadFiles.sort()
+        #for _ in range(len(fileUploadFiles) - 400):
+        #    try:
+        #        os.remove(fileUploadFiles[0])
+        #    except Exception as e:
+        #        log.warning(f"fileupload: Couldn't remove global file '{fileUploadFiles[0]}'. {e}")
+        #    finally:
+        #        fileUploadFiles.pop(0)
+
+        ## Clean up - individual (MAX 50)
+        #fileUploadFilesInd = [file for file in fileUploadFiles if str(interaction.user.id) in file]
+        #while len(fileUploadFilesInd) > 50:
+        #    try:
+        #        os.remove(fileUploadFilesInd[0])
+        #    except Exception as e:
+        #        log.warning(f"fileupload: Couldn't remove ind file '{fileUploadFilesInd[0]}'. {e}")
+        #    finally:
+        #        fileUploadFilesInd.pop(0)
 
 
 # ===== </Fileupload> =====

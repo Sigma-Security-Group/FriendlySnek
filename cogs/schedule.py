@@ -2188,10 +2188,17 @@ class Schedule(commands.Cog):
             return
 
 
+        # Block files with same name per user
+        filenameCap = file.filename[:200]
+        filenameExists = any([re.match(fr"\d+_{interaction.user.id}_{filenameCap}", file) for file in os.listdir("tmp/fileUpload/")])
+        if filenameExists:
+            await interaction.response.send_message(embed=Embed(title="❌ Invalid filename", description="You have already uploaded a file with this name before!", color=Color.red()), ephemeral=True)
+            return
+
+
         # Everything OK, save file
 
         # Naming scheme: 'DATETIME_AUTHORID_NAME'
-        filenameCap = file.filename[:200]
         filenameNew = f"{datetime.now().strftime('%Y%m%d%H%M%S')}_{interaction.user.id}_{filenameCap}"
         with open(f"tmp/fileUpload/{filenameNew}", "wb") as f:
             await file.save(f)

@@ -1270,8 +1270,8 @@ class Schedule(commands.Cog):
                     case "files":
                         view = ScheduleView(previousMessageView=button.view)
                         items = [
-                            ScheduleButton(self, interaction.message, interaction.user.id, row=0, label="Add", style=discord.ButtonStyle.success, custom_id="event_schedule_files_add"),
-                            ScheduleButton(self, interaction.message, interaction.user.id, row=0, label="Remove", style=discord.ButtonStyle.danger, custom_id="event_schedule_files_remove"),
+                            ScheduleButton(self, interaction.message, interaction.user.id, row=0, label="Add", style=discord.ButtonStyle.success, custom_id="event_schedule_files_add", disabled=(len(previewEmbedDict["files"]) == 10)),
+                            ScheduleButton(self, interaction.message, interaction.user.id, row=0, label="Remove", style=discord.ButtonStyle.danger, custom_id="event_schedule_files_remove", disabled=(len(previewEmbedDict["files"]) == 0)),
                         ]
                         for item in items:
                             view.add_item(item)
@@ -1640,16 +1640,18 @@ class Schedule(commands.Cog):
 
 
             if infoLabel == "files_add":
-                previewEmbedDict["files"].append(selectedValue)
+                if len(previewEmbedDict["files"]) < 10:
+                    previewEmbedDict["files"].append(selectedValue)
             elif infoLabel == "files_remove":
-                previewEmbedDict["files"].remove(selectedValue)
+                if selectedValue in previewEmbedDict["files"]:
+                    previewEmbedDict["files"].remove(selectedValue)
 
 
             if infoLabel.startswith("files"):
                 view = ScheduleView(previousMessageView=eventMsgView)
                 items = [
-                    ScheduleButton(self, eventMsgNew, interaction.user.id, row=0, label="Add", style=discord.ButtonStyle.success, custom_id="event_schedule_files_add"),
-                    ScheduleButton(self, eventMsgNew, interaction.user.id, row=0, label="Remove", style=discord.ButtonStyle.danger, custom_id="event_schedule_files_remove")
+                    ScheduleButton(self, eventMsgNew, interaction.user.id, row=0, label="Add", style=discord.ButtonStyle.success, custom_id="event_schedule_files_add", disabled=(len(previewEmbedDict["files"]) == 10)),
+                    ScheduleButton(self, eventMsgNew, interaction.user.id, row=0, label="Remove", style=discord.ButtonStyle.danger, custom_id="event_schedule_files_remove", disabled=(len(previewEmbedDict["files"]) == 0))
                 ]
                 for item in items:
                     view.add_item(item)

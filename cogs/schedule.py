@@ -538,7 +538,7 @@ class Schedule(commands.Cog):
             with open(EVENTS_FILE, "w") as f:
                 json.dump(newEvents, f, indent=4)
             for event in sorted(events, key=lambda e: datetime.strptime(e["time"], TIME_FORMAT), reverse=True):
-                msg = await channel.send(embed=self.getEventEmbed(event), view=self.getEventView(event))
+                msg = await channel.send(embed=self.getEventEmbed(event), view=self.getEventView(event), files=self.getEventFiles(event))
                 event["messageId"] = msg.id
                 newEvents.append(event)
                 with open(EVENTS_FILE, "w") as f:
@@ -625,6 +625,30 @@ class Schedule(commands.Cog):
             view.add_item(item)
 
         return view
+
+    def getEventFiles(self, event: dict) -> list[discord.File]:
+        """Generates a list of files from the given event.
+
+        Parameters:
+        event (dict): The event.
+
+        Returns:
+        list[discord.File]: The list of files.
+        """
+
+        if "files" not in event or not event["files"]:
+            return None
+
+        discordFiles = []
+        for eventFile in event["files"]:
+            try:
+                with open(f"tmp/fileUpload/{eventFile}", "rb") as f:
+                    discordFiles.append(discord.File(f, filename=eventFile.split("_", 2)[2]))
+            except Exception as e:
+                pass
+
+        return discordFiles
+
 
     @staticmethod
     def getUserFileUploads(userId: str, isDiscordFormat=False) -> list[discord.File] | list[str]:
@@ -1353,11 +1377,20 @@ class Schedule(commands.Cog):
                             await interaction.response.send_message(f"{interaction.user.mention} Before creating the event, you need to fill out the mandatory (red buttons) information!", ephemeral=True, delete_after=10.0)
                             return
 
+                        # Final fixup
+                        previewEmbedDict["authorId"] = interaction.user.id
+                        filesRealName = []
+                        for filenameShort in previewEmbedDict["files"]:
+                            for osFile in os.listdir("tmp/fileUpload"):
+                                if str(interaction.user.id) in osFile and filenameShort in osFile:
+                                    filesRealName.append(osFile)
+                        previewEmbedDict["files"] = filesRealName
+
+
                         # Append event to JSON
                         jsonCreateNoExist(EVENTS_FILE, [])
                         with open(EVENTS_FILE) as f:
                             events = json.load(f)
-                        previewEmbedDict["authorId"] = interaction.user.id
                         events.append(previewEmbedDict)
                         with open(EVENTS_FILE, "w") as f:
                             json.dump(events, f, indent=4)

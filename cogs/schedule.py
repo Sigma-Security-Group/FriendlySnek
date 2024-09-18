@@ -757,7 +757,14 @@ class Schedule(commands.Cog):
         embed.add_field(name="\u200B", value="\u200B", inline=False)
 
         # Files
-        if previewDict["files"] is not None:
+
+        if previewDict["files"] == []:
+            for index, field in enumerate(embed.fields):
+                if field.name == "Files":
+                    embed.remove_field(index)
+                    break
+
+        elif previewDict["files"] is not None:
             embed.add_field(name="Files", value="\n".join(previewDict["files"]), inline=False)
 
         # Author, Footer, Timestamp
@@ -1251,24 +1258,36 @@ class Schedule(commands.Cog):
                     case "files_add":
                         messageNew = await interaction.channel.fetch_message(message.id)
                         if not isinstance(messageNew, discord.Message):
-                            log.exception("Schedule ButtonHandling: messageNew is not discord.Message")
+                            log.exception("Schedule ButtonHandling files_add: messageNew is not discord.Message")
                             return
                         previewEmbedDict = self.fromPreviewEmbedToDict(messageNew.embeds[0])
                         options = [discord.SelectOption(label=fileUpload) for fileUpload in Schedule.getUserFileUploads(str(interaction.user.id)) if fileUpload not in previewEmbedDict["files"]]
-                        if len(options) == 0:
-                            embed = Embed(title="Attaching files", description="You have not uploaded any files yet.\nTo upload new files; run the command `/fileupload`.", color=Color.red())
-                            view = ScheduleView(previousMessageView=button.view.previousMessageView)
-                        else:
-                            embed = Embed(title="Attaching files", description="Select a file to upload from the select menus below.\nTo upload new files; run the command `/fileupload`.", color=Color.gold())
-                            view = self.generateSelectView(options, False, None, messageNew, "Select a file.", "select_create_files", button.view.previousMessageView)
 
-                        view.add_item(ScheduleButton(self, messageNew, interaction.user.id, row=4, label="Remove", style=discord.ButtonStyle.danger, custom_id="event_schedule_files_remove"))
+                        if len(options) == 0:
+                            embed = Embed(title="Attaching files [Add]", description="You have not uploaded any files yet.\nTo upload new files; run the command `/fileupload`.", color=Color.red())
+                            view = None
+                        else:
+                            embed = Embed(title="Attaching files [Add]", description="Select a file to upload from the select menus below.\nTo upload new files; run the command `/fileupload`.", color=Color.gold())
+                            view = self.generateSelectView(options, False, None, messageNew, "Select a file.", "select_create_files_add", button.view.previousMessageView)
+
                         await interaction.response.edit_message(embed=embed, view=view)
 
                     case "files_remove":
-                        print("<files_remove>")
-                        return
+                        messageNew = await interaction.channel.fetch_message(message.id)
+                        if not isinstance(messageNew, discord.Message):
+                            log.exception("Schedule ButtonHandling files_remove: messageNew is not discord.Message")
+                            return
+                        previewEmbedDict = self.fromPreviewEmbedToDict(messageNew.embeds[0])
+                        options = [discord.SelectOption(label=fileUpload) for fileUpload in Schedule.getUserFileUploads(str(interaction.user.id)) if fileUpload in previewEmbedDict["files"]]
 
+                        if len(options) == 0:
+                            embed = Embed(title="Attaching files [Remove]", description="You have not selected any file to be attached.\nTo select a file, press the `Add` button.", color=Color.red())
+                            view = None
+                        else:
+                            embed = Embed(title="Attaching files [Remove]", description="Select a file to remove from the select menus below.", color=Color.gold())
+                            view = self.generateSelectView(options, False, None, messageNew, "Select a file.", "select_create_files_remove", button.view.previousMessageView)
+
+                        await interaction.response.edit_message(embed=embed, view=view)
 
 
                     # TEMPLATES
@@ -1457,7 +1476,7 @@ class Schedule(commands.Cog):
             options.insert(0, discord.SelectOption(label="None", emoji="🚫"))
 
         # Generate view
-        view = ScheduleView()
+        view = ScheduleView(previousMessageView=(eventMsgView.previousMessageView if hasattr(eventMsgView, "previousMessageView") else None))
         for i in range(ceil(len(options) / 25)):
             view.add_item(ScheduleSelect(instance=self, eventMsg=eventMsg, placeholder=placeholder, minValues=1, maxValues=1, customId=f"{customId}_REMOVE{i}", row=i, options=options[:25], eventMsgView=eventMsgView))
             options = options[25:]
@@ -1491,7 +1510,7 @@ class Schedule(commands.Cog):
             infoLabel = select.custom_id[len("select_create_"):].split("_REMOVE")[0]  # e.g. "type"
 
             # Disable all discord.ui.Item if not in blacklist
-            CASES_WHEN_SELECT_MENU_EDITS_AWAY = ("files", )  # TODO check if this is necessary
+            CASES_WHEN_SELECT_MENU_EDITS_AWAY = ("files_add", "files_remove")
             if infoLabel not in CASES_WHEN_SELECT_MENU_EDITS_AWAY:
                 if select.view is None:
                     log.exception("Schedule SelectHandling: select.view is None")
@@ -1532,19 +1551,6 @@ class Schedule(commands.Cog):
 
                 case "linking":
                     previewEmbedDict["workshopInterest"] = None if selectedValue == "None" else selectedValue
-
-                case "files":
-                    previewEmbedDict["files"].append(selectedValue)
-                    view = ScheduleView()
-                    items = [
-                        ScheduleButton(self, eventMsgNew, interaction.user.id, row=0, label="Add", style=discord.ButtonStyle.success, custom_id="event_schedule_files_add"),
-                        ScheduleButton(self, eventMsgNew, interaction.user.id, row=0, label="Remove", style=discord.ButtonStyle.danger, custom_id="event_schedule_files_remove")
-                    ]
-                    for item in items:
-                        view.add_item(item)
-
-                    embed = Embed(title="Attaching files", description="You may attach up to 10 files to your event.\nUpload them first using the command `/fileupload`.", color=Color.gold())
-                    await interaction.response.edit_message(embed=embed, view=view)
 
                 case "select_template":
                     # Update template buttons label & disabled
@@ -1599,6 +1605,24 @@ class Schedule(commands.Cog):
                             await eventMsgNew.edit(embed=embed, view=eventMsgView)
                             return
 
+
+            if infoLabel == "files_add":
+                previewEmbedDict["files"].append(selectedValue)
+            elif infoLabel == "files_remove":
+                previewEmbedDict["files"].remove(selectedValue)
+
+
+            if infoLabel.startswith("files"):
+                view = ScheduleView(previousMessageView=eventMsgView)
+                items = [
+                    ScheduleButton(self, eventMsgNew, interaction.user.id, row=0, label="Add", style=discord.ButtonStyle.success, custom_id="event_schedule_files_add"),
+                    ScheduleButton(self, eventMsgNew, interaction.user.id, row=0, label="Remove", style=discord.ButtonStyle.danger, custom_id="event_schedule_files_remove")
+                ]
+                for item in items:
+                    view.add_item(item)
+
+                embed = Embed(title="Attaching files", description="You may attach up to 10 files to your event.\nUpload them first using the command `/fileupload`.", color=Color.gold())
+                await interaction.response.edit_message(embed=embed, view=view)
 
             # Update eventMsg button style
             for child in eventMsgView.children:

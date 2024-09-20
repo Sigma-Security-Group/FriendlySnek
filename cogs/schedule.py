@@ -2334,7 +2334,7 @@ class Schedule(commands.Cog):
         fileUploadFiles = os.listdir("tmp/fileUpload")
         #fileUploadFiles.sort()
         for fileUploadFile in fileUploadFiles:
-            fileUploadFileTime = datetime.strptime(fileUploadFile.split("_")[0], "%Y%m%d%H%M%S")
+            fileUploadFileTime = UTC.localize(datetime.strptime(fileUploadFile.split("_")[0], "%Y%m%d%H%M%S"))
             if fileUploadFileTime < (datetime.now(timezone.utc) - timedelta(weeks=20)):
                 try:
                     os.remove(f"tmp/fileUpload/{fileUploadFile}")

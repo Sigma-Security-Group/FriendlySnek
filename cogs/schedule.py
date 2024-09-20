@@ -650,24 +650,26 @@ class Schedule(commands.Cog):
 
 
     @staticmethod
-    def getUserFileUploads(userId: str, isDiscordFormat=False) -> list[discord.File] | list[str]:
+    def getUserFileUploads(userId: str, isDiscordFormat = False, fullFilename = False) -> list[discord.File] | list[str]:
         """Filters uploaded files to specified user id.
 
         Parameters:
         userId (str): User id for filter.
         isDiscordFormat (bool): Return as list[discord.File]
+        fullFilename (bool): Filename is "DATETIME_AUTHORID_FILENAME", or "FILENAME"
 
         Returns:
         List[discord.File] | List[str]: A list of discord files or filenames.
         """
         files = []
         for osFile in os.listdir("tmp/fileUpload"):
+            outName = osFile if fullFilename else osFile.split("_", 2)[2]
             if userId in osFile:
                 if isDiscordFormat:
                     with open(osFile) as f:
-                        files.append(discord.File(f))
+                        files.append(discord.File(f, filename=outName))
                 else:
-                    files.append(osFile.split("_", 2)[2])
+                    files.append(outName)
         return files
 
     def fromPreviewEmbedToDict(self, embed: discord.Embed) -> dict:
@@ -1301,7 +1303,7 @@ class Schedule(commands.Cog):
                             log.exception("Schedule ButtonHandling files_remove: messageNew is not discord.Message")
                             return
                         previewEmbedDict = self.fromPreviewEmbedToDict(messageNew.embeds[0])
-                        options = [discord.SelectOption(label=fileUpload) for fileUpload in Schedule.getUserFileUploads(str(interaction.user.id)) if fileUpload in previewEmbedDict["files"]]
+                        options = [discord.SelectOption(label=previewFile) for previewFile in previewEmbedDict["files"]]
 
                         if len(options) == 0:
                             embed = Embed(title="Attaching files [Remove]", description="You have not selected any file to be attached.\nTo select a file, press the `Add` button.", color=Color.red())
@@ -1457,6 +1459,46 @@ class Schedule(commands.Cog):
                     )
 
 
+                return
+
+            elif button.custom_id == "event_edit_files_add":
+                messageNew = await interaction.channel.fetch_message(message.id)
+                if not isinstance(messageNew, discord.Message):
+                    log.exception("Schedule ButtonHandling event_edit_files_add: messageNew is not discord.Message")
+                    return
+
+                attachmentFilenames = [attachment.filename for attachment in messageNew.attachments]
+
+                # Load all files uploaded by user, that isn't already attached to message
+                options = [discord.SelectOption(label=fileUpload) for fileUpload in Schedule.getUserFileUploads(str(interaction.user.id)) if fileUpload not in attachmentFilenames]
+
+                if len(options) == 0:
+                    embed = Embed(title="Attaching files [Add]", description="You do not have any new files to attach.\nTo upload new files; run the command `/fileupload`.", color=Color.red())
+                    view = None
+                else:
+                    embed = Embed(title="Attaching files [Add]", description="Select a file to upload from the select menus below.\nTo upload new files; run the command `/fileupload`.", color=Color.gold())
+                    view = self.generateSelectView(options, False, None, messageNew, "Select a file.", "edit_select_files_add", button.view.previousMessageView)
+
+                await interaction.response.edit_message(embed=embed, view=view)
+                return
+
+            elif button.custom_id == "event_edit_files_remove":
+                messageNew = await interaction.channel.fetch_message(message.id)
+                if not isinstance(messageNew, discord.Message):
+                    log.exception("Schedule ButtonHandling event_edit_files_remove: messageNew is not discord.Message")
+                    return
+
+                attachmentFilenames = [attachment.filename for attachment in messageNew.attachments]
+                options = [discord.SelectOption(label=fileUpload) for fileUpload in Schedule.getUserFileUploads(str(interaction.user.id)) if fileUpload in attachmentFilenames]
+
+                if len(options) == 0:
+                    embed = Embed(title="Attaching files [Remove]", description="You have not selected any file to be attached.\nTo select a file, press the `Add` button.", color=Color.red())
+                    view = None
+                else:
+                    embed = Embed(title="Attaching files [Remove]", description="Select a file to remove from the select menus below.", color=Color.gold())
+                    view = self.generateSelectView(options, False, None, messageNew, "Select a file.", "edit_select_files_remove", button.view.previousMessageView)
+
+                await interaction.response.edit_message(embed=embed, view=view)
                 return
 
 
@@ -1796,19 +1838,69 @@ class Schedule(commands.Cog):
                     modal.add_item(discord.ui.TextInput(label="Time", default=datetimeParse(event["time"]).replace(tzinfo=UTC).astimezone(timeZone).strftime(TIME_FORMAT), placeholder="2069-04-20 04:20 PM", min_length=1, max_length=32))
                     await interaction.response.send_modal(modal)
 
+                # Editing Files
+                case "Files":
+                    view = ScheduleView()
+                    items = [
+                        ScheduleButton(self, eventMsg, interaction.user.id, row=0, label="Add", style=discord.ButtonStyle.success, custom_id="event_edit_files_add"),
+                        ScheduleButton(self, eventMsg, interaction.user.id, row=0, label="Remove", style=discord.ButtonStyle.danger, custom_id="event_edit_files_remove"),
+                    ]
+                    for item in items:
+                        view.add_item(item)
+
+                    embed = Embed(title="Attaching files", description="You may attach up to 10 files to your event.\nUpload them first using the command `/fileupload`.", color=Color.gold())
+                    await interaction.response.send_message(interaction.user.mention, embed=embed, view=view, ephemeral=True, delete_after=300.0)
 
             log.info(f"{interaction.user.display_name} ({interaction.user}) edited the event: {event['title'] if 'title' in event else event['templateName']}.")
 
         # All select menu options in edit_select
         elif select.custom_id.startswith("edit_select_"):
+            eventKey = select.custom_id[len("edit_select_"):].split("_REMOVE")[0]  # e.g. "files_add"
+
             with open(EVENTS_FILE) as f:
                 events = json.load(f)
-
-            eventKey = select.custom_id[len("edit_select_"):].split("_REMOVE")[0]
-            eventValue = None if selectedValue == "None" else selectedValue
-
             event = [event for event in events if event["messageId"] == eventMsg.id][0]
-            event[eventKey] = eventValue
+
+            match eventKey:
+                case "files_add":
+                    allUserFiles = Schedule.getUserFileUploads(str(interaction.user.id), fullFilename=True)
+                    specifiedFileList = [file for file in allUserFiles if file.split("_", 2)[2] == selectedValue]
+                    if not specifiedFileList:
+                        log.warning(f"selectHandling files_add: Could not find '{selectedValue}' in specifiedFileList")
+                        await interaction.response.send_message(embed=Embed(title="❌ Interaction failed", description="Could not find file in fileuploads!", color=Color.red()), ephemeral=True, delete_after=5.0)
+                        return
+
+                    filenameFull = specifiedFileList[0]
+                    if filenameFull in event["files"]:
+                        await interaction.response.send_message(embed=Embed(title="❌ File already added", color=Color.red()), ephemeral=True, delete_after=5.0)
+                        return
+
+                    filenameShort = filenameFull.split("_", 2)[2]
+                    event["files"].append(filenameFull)
+                    eventMsgNew = await interaction.channel.fetch_message(eventMsg.id)
+                    with open(f"tmp/fileUpload/{filenameFull}", "rb") as f:
+                        await eventMsgNew.add_files(discord.File(f, filename=filenameShort))
+
+                case "files_remove":
+                    eventMsgNew = await interaction.channel.fetch_message(eventMsg.id)
+                    eventAttachmentDict = {eventAttachment.filename: eventAttachment for eventAttachment in eventMsgNew.attachments}
+                    if selectedValue not in eventAttachmentDict:
+                        log.warning(f"selectHandling files_remove: Could not find '{selectedValue}' in eventMsg.attachments")
+                        await interaction.response.send_message(embed=Embed(title="❌ Interaction failed", description="Could not find attachment in message!", color=Color.red()), ephemeral=True, delete_after=5.0)
+                        return
+
+                    allUserFiles = Schedule.getUserFileUploads(str(interaction.user.id), fullFilename=True)
+                    filenameFull = [file for file in allUserFiles if file.split("_", 2)[2] == selectedValue][0]
+                    if filenameFull not in event["files"]:
+                        log.warning(f"selectHandling files_remove: filenameFull '{filenameFull}' not in event['files']")
+                        await interaction.response.send_message(embed=Embed(title="❌ File already removed", color=Color.red()), ephemeral=True, delete_after=5.0)
+                        return
+
+                    event["files"].remove(filenameFull)
+                    await eventMsgNew.remove_attachments(eventAttachmentDict[selectedValue])
+
+                case _:
+                    event[eventKey] = None if selectedValue == "None" else selectedValue
 
             with open(EVENTS_FILE, "w") as f:
                 json.dump(events, f, indent=4)
@@ -2108,7 +2200,6 @@ class Schedule(commands.Cog):
         Returns:
         None.
         """
-
         editOptions = (
             "Type",
             "Title",
@@ -2118,7 +2209,8 @@ class Schedule(commands.Cog):
             "Map",
             "Max Players",
             "Duration",
-            "Time"
+            "Time",
+            "Files"
         )
         log.info(f"{interaction.user.display_name} ({interaction.user}) is editing the event: {event['title']}")
         options = []

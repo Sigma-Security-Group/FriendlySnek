@@ -1,5 +1,6 @@
 import os, re, asyncio, discord, datetime, json
 import pytz # type: ignore
+from itertools import count, filterfalse
 
 from logger import Logger
 log = Logger()
@@ -8,7 +9,6 @@ import platform  # Set appropriate event loop policy to avoid runtime errors on 
 if platform.system() == "Windows":
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
-from discord import Embed, Color
 from discord.ext import commands  # type: ignore
 
 if not os.path.exists("./secret.py"):
@@ -21,10 +21,13 @@ DEBUG = True
 
 MOD_UPDATE_ACTIVE = False
 SME_REMINDER_ACTIVE = False
+SME_BIG_BROTHER = False
 
 SFTP = {
-    "username": "",
-    "password": ""
+    "0.0.0.0": {
+        "username": "",
+        "password": ""
+    },
 }
 
 REDDIT_ACTIVE = False
@@ -97,6 +100,40 @@ async def on_ready() -> None:
 
 
 @client.event
+async def on_voice_state_update(member: discord.Member, before: discord.VoiceState, after: discord.VoiceState) -> None:
+    """On member voiceState change."""
+    if not ((before.channel and before.channel.guild.id == GUILD_ID) or (after.channel and after.channel.guild.id == GUILD_ID)):
+        return
+
+    # User joined create channel vc; create new vc
+    if after.channel and after.channel.id == CREATE_CHANNEL:
+        guild = client.get_guild(GUILD_ID)
+        if guild is None:
+            log.exception("on_voice_state_update: guild is None")
+            return
+
+        smokePitCategory = discord.utils.get(guild.categories, id=SMOKE_PIT)
+        if smokePitCategory is None:
+            log.exception("on_voice_state_update: smokePitCategory is None")
+            return
+
+        voiceNums = []
+        # Iterate all dynamic "Room" channels, extract digit(s)
+        for smokePitVoice in smokePitCategory.voice_channels:
+            if smokePitVoice.name.startswith("Room #"):
+                voiceNums.append(int("".join(c for c in smokePitVoice.name[len("Room #"):] if c.isdigit())))
+
+        newVoiceName = f"Room #{next(filterfalse(set(voiceNums).__contains__, count(1)))}"
+        newVoiceChannel = await guild.create_voice_channel(newVoiceName, reason="User created new dynamic voice channel.", category=smokePitCategory, user_limit=4)
+        await member.move_to(newVoiceChannel, reason="User created new dynamic voice channel.")
+
+    if before.channel and before.channel.name.startswith("Room #") and len(before.channel.members) == 0:
+        try:
+            await before.channel.delete(reason="No users left in dynamic voice channel.")
+        except Exception:
+            log.warning(f"on_voice_state_update: could not delete dynamic voice channel: '{before.channel.name}' ({member})")
+
+@client.event
 async def on_message(message: discord.Message) -> None:
     """On message client event."""
     if message.author.id == FRIENDLY_SNEK:  # Ignore messages from itself
@@ -147,7 +184,7 @@ async def analyzeChannel(client, message: discord.Message, channelID: int, attac
         log.info(f"Removed message in #{client.get_channel(channelID)} from {message.author.display_name} ({message.author}). Message content: {message.content}")
         DEVS = ", ".join([f"**{message.guild.get_member(name)}**" for name in DEVELOPERS if message.guild is not None and message.guild.get_member(name) is not None])
 
-        await message.author.send(embed=Embed(title="❌ Message removed", description=f"The message you just posted in <#{channelID}> was deleted because no {attachmentContentType} was detected in it.\n\nIf this is an error, then please ask **staff** to post the {attachmentContentType} for you, and inform: {DEVS}", color=Color.red()))
+        await message.author.send(embed=discord.Embed(title="❌ Message removed", description=f"The message you just posted in <#{channelID}> was deleted because no {attachmentContentType} was detected in it.\n\nIf this is an error, then please ask **staff** to post the {attachmentContentType} for you, and inform: {DEVS}", color=discord.Color.red()))
     except Exception as e:
         log.exception(f"{message.author} | {e}")
 
@@ -197,24 +234,21 @@ async def on_command_error(ctx: commands.Context, error: commands.CommandError) 
 
 
 @client.command()
+@commands.has_any_role(SNEK_LORD)
 async def reload(ctx: commands.Context) -> None:
-    """ Reload bot cogs - Devs only. """
+    """Reload bot cogs."""
     log.info(f"{ctx.author.display_name} ({ctx.author}) Reloading bot cogs...")
-    if ctx.author.id not in DEVELOPERS:
-        return
     for cog in COGS:
         await client.reload_extension(f"cogs.{cog}")
     await client.tree.sync(guild=GUILD)
     await ctx.send("Cogs reloaded!")
 
 
-if secret.DEBUG:
-    @client.command()
-    async def stop(ctx: commands.Context) -> None:
-        """ Stops bot - Devs only. """
-        if ctx.author.id not in DEVELOPERS:
-            return
-        await client.close()
+@client.command()
+@commands.has_any_role(SNEK_LORD)
+async def stop(ctx: commands.Context) -> None:
+    """Stops bot."""
+    await client.close()
 
 
 if __name__ == "__main__":

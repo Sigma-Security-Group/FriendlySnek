@@ -1,5 +1,5 @@
-import secret, os, random, json, re
-import asyncpraw, requests, pytz  # type: ignore
+import secret, os, random, json, re, aiohttp
+import asyncpraw, pytz  # type: ignore
 
 from datetime import datetime, timezone, timedelta
 from dateutil.parser import parse as datetimeParse  # type: ignore
@@ -15,8 +15,11 @@ if secret.DEBUG:
     from constants.debug import *
 
 
-MOD_IDS = [450814997, 497660133, 843425103, 843577117, 463939057, 497661914, 843632231, 843593391, 583496184, 2397360831, 1779063631, 751965892, 1224892496, 1858075458, 333310405, 2397376046, 1862208264, 1858070328, 1251859358, 1808238502, 623475643, 721359761, 1883956552, 3099644041, 3099651040, 3099648860, 2021778690, 753946944, 1388192893, 2522638637, 541888371, 1523363834, 1638341685, 2020940806, 2041057379, 1963617777, 2377329491, 2264863911, 1703187116, 1187306764, 2397371875, 2018593688, 1850026051, 1393769392, 1393776620, 3048818056, 2955691343, 2128676112, 2735613231, 2787531417, 2447965207, 3135187540, 2955627408, 1369691841, 1643720957, 1118982882, 583544987, 2983546566, 2917444360, 3043043427, 2950257727, 2645015212, 718649903, 1926513010, 1252091296, 3078351739, 2266710560, 2214384530, 837729515]  # Just take it from the modpack HTML, ez clap (Updated: 16th June 2024)
-# (?<=\"https:\/\/steamcommunity\.com\/sharedfiles\/filedetails\/\?id=)\d+
+
+def chunkList(lst: list, n: int):
+    """Yield successive n-sized chunks from lst."""
+    for i in range(0, len(lst), n):
+        yield lst[i:i + n]
 
 class BotTasks(commands.Cog):
     def __init__(self, bot: commands.Bot) -> None:
@@ -25,7 +28,7 @@ class BotTasks(commands.Cog):
     @commands.Cog.listener()
     async def on_ready(self) -> None:
         log.debug(LOG_COG_READY.format("BotTasks"), flush=True)
-        cogsReady["bottasks"] = True
+        cogsReady["botTasks"] = True
 
         if secret.MOD_UPDATE_ACTIVE and not self.checkModUpdates.is_running():
             self.checkModUpdates.start()
@@ -37,16 +40,27 @@ class BotTasks(commands.Cog):
             self.fiveMinTasks.start()
 
 
+    @staticmethod
+    async def fetchWebsiteText(url: str) -> str:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url) as response:
+                return await response.text()
+
+
     @tasks.loop(minutes=30.0)
     async def checkModUpdates(self) -> None:
         """Checks mod updates, pings hampters if detected."""
-        output = []
-        for modID in MOD_IDS:
-            # Fetch mod
-            response = requests.get(url=CHANGELOG_URL.format(modID))
 
-            # Parse HTML
-            soup = BS(response.text, "html.parser")
+        output = []
+        with open(GENERIC_DATA_FILE) as f:
+            genericData = json.load(f)
+            if "modpackIds" not in genericData:
+                log.warning("checkModUpdates: modpackIds not in genericData.")
+                return
+
+        for modID in genericData["modpackIds"]:
+            # Fetch mod & parse HTML
+            soup = BS(await BotTasks.fetchWebsiteText(CHANGELOG_URL.format(modID)), "html.parser")
 
             # Mod Title
             name = soup.find("div", class_="workshopItemTitle")
@@ -127,10 +141,10 @@ class BotTasks(commands.Cog):
         account = await reddit.redditor(username)  # Fetch our account
         submissions = account.submissions.new(limit=1)  # Get account submissions sorted by latest
         async for submission in submissions:  # Check the latest submission [break]
-            subCreated = datetime.fromtimestamp(submission.created_utc).replace(tzinfo=timezone.utc)  # Latest post timestamp
+            subCreated = datetime.fromtimestamp(submission.created_utc, timezone.utc)  # Latest post timestamp
             break
 
-        if datetime.now().replace(tzinfo=timezone.utc) < (subCreated + timedelta(weeks=1.0, minutes=30.0)):  # Dont post if now is less than ~1 week than last post
+        if datetime.now(timezone.utc) < (subCreated + timedelta(weeks=1.0, minutes=30.0)):  # Dont post if now is less than ~1 week than last post
             return
 
         # 1 week has passed, post new
@@ -217,11 +231,7 @@ Join Us:
         return " ".join([role.mention for role in roles])  # type: ignore
 
     async def smeReminder(self) -> None:
-        """Reminds SMEs if they haven't hosten in the required time."""
-        utcNow = datetime.now(timezone.utc)
-
-        if utcNow.day != 1 or utcNow.hour != 0:  # Only execute function on 1st day of month around midnight UTC
-            return
+        """Pings SME role if workshops haven't been hosted in required time."""
 
         with open(EVENTS_HISTORY_FILE) as f:
             eventsHistory = json.load(f)
@@ -271,19 +281,135 @@ Join Us:
         if len(workshopsInTimeFrame) > 0:
             await smeCorner.send(":clap: Good job for keeping up the hosting " + ", ".join([f"`{wsName}`" for wsName in workshopsInTimeFrame]) + "! :clap:")
 
+
+        # Update next execution time
+        with open(REPEATED_MSG_DATE_LOG_FILE) as f:
+            msgDateLog = json.load(f)
+
+        # Get datetime for next time in 6 months
+        nextTime = Reminders.getFirstDayNextMonth()
+
+        msgDateLog["smeReminder"] = datetime.timestamp(nextTime)
+        with open(REPEATED_MSG_DATE_LOG_FILE, "w") as f:
+            json.dump(msgDateLog, f, indent=4)
+
+
+    @staticmethod
+    async def smeBigBrother(guild: discord.Guild, manuallyExecuted: bool) -> None:
+        """Summarize each SMEs activity last 6 months for Unit Staff."""
+        staffChat = guild.get_channel(STAFF_CHAT)
+        if staffChat is None:
+            log.exception("botTasks smeBigBrother: staffChat is None.")
+            return
+
+        with open(EVENTS_HISTORY_FILE) as f:
+            eventsHistory = json.load(f)
+
+        searchTime = datetime.now(timezone.utc) - timedelta(weeks=26.0)  # Last 6 months
+        eventsHistorySorted = sorted(eventsHistory, key=lambda event: event["time"], reverse=True)
+        bigBrotherWatchList = {}
+
+        # Iterate all SME roles
+        for wsName, wsDetails in WORKSHOP_INTEREST_LIST.items():
+            # Skip all non SME specific role (e.g. newcomer ws)
+            if wsDetails["role"] not in SME_ROLES:
+                continue
+
+            smeRole = guild.get_role(wsDetails["role"])
+            if smeRole is None:
+                log.exception(f"botTasks smeBigBrother: sme_role is None, id='{wsDetails['role']}'.")
+                continue
+
+            # Iterate SME holders
+            for sme_person in smeRole.members:
+                # Search in old
+                isWsFound = False
+                for event in eventsHistorySorted:  # Newest to oldest
+                    eventScheduled = pytz.utc.localize(datetime.strptime(event["time"], TIME_FORMAT))
+                    if "workshopInterest" in event and event["workshopInterest"] == wsName and event["authorId"] == sme_person.id and eventScheduled > searchTime:
+                        isWsFound = True
+                        eventScheduledFormat = discord.utils.format_dt(eventScheduled, style="R")
+                        if sme_person.display_name not in bigBrotherWatchList:
+                            bigBrotherWatchList[sme_person.display_name] = {smeRole.mention: {"count": 1, "time": eventScheduledFormat}}
+                        elif smeRole.mention not in bigBrotherWatchList[sme_person.display_name]:
+                            bigBrotherWatchList[sme_person.display_name][smeRole.mention] = {"count": 1, "time": eventScheduledFormat}
+                        else:
+                            bigBrotherWatchList[sme_person.display_name][smeRole.mention]["count"] += 1
+
+
+                if not isWsFound:  # No workshop found
+                    if sme_person.display_name not in bigBrotherWatchList:
+                        bigBrotherWatchList[sme_person.display_name] = {smeRole.mention: {"count": 0, "time": None}}
+                    else:
+                        bigBrotherWatchList[sme_person.display_name][smeRole.mention] = {"count": 0, "time": None}
+
+
+        embedsToSend = []
+        for person, personDetails in bigBrotherWatchList.items():
+            embedDescription = "\n".join([smeRoleMention + ("not hosting in the past 6 months!"*(statistics["count"] == 0)) + (f"hosted {statistics['time']} - host count ({statistics['count']})"*(statistics["count"] != 0)) for smeRoleMention, statistics in personDetails.items()])
+            embedsToSend.append(Embed(title=person, color=Color.gold(), description=embedDescription))
+
+        embedTitle = f"SME Activity Report [{('Manual'*manuallyExecuted) + ('Automatic'*(not manuallyExecuted))}]"
+        embedDescription = "Here comes an activity report on all individual SMEs"
+        if not manuallyExecuted:
+            embedDescription += ", reoccuring every 6 months"
+        embedDescription += ".\nThis displays one embed for each SME; each row for each SME tag - last hosted workshop and total count."
+
+        if len(embedsToSend) == 0:
+            log.warning("botTasks smeBigBrother: no embeds sent.")
+            await staffChat.send(Embed(title=embedTitle, color=Color.red(), description="Nothing to send. Contact Snek Lords."))
+            return
+
+        embedsToSend.insert(0, Embed(title=embedTitle, color=Color.green(), description=embedDescription))
+        for embedChunk in chunkList(embedsToSend, 10):
+            log.info("botTasks smeBigBrother: sending chunk.")
+            await staffChat.send(embeds=embedChunk)
+
+
+        # Update next execution time
+        with open(REPEATED_MSG_DATE_LOG_FILE) as f:
+            msgDateLog = json.load(f)
+
+        # Get datetime for next time in 6 months
+        nextTime = Reminders.getFirstDayNextMonth()
+        for _ in range(5):
+            nextTime = Reminders.getFirstDayNextMonth(nextTime)
+
+        msgDateLog["smeBigBrother"] = datetime.timestamp(nextTime)
+        with open(REPEATED_MSG_DATE_LOG_FILE, "w") as f:
+            json.dump(msgDateLog, f, indent=4)
+
+
     @tasks.loop(hours=1.0)
     async def oneHourTasks(self) -> None:
+        # redditRecruitmentPosts
         if secret.REDDIT_ACTIVE:
             try:
                 await self.redditRecruitmentPosts()
             except Exception as e:
-                log.exception(f"Reddit recruitment posts: {e}")
-        if secret.SME_REMINDER_ACTIVE:
+                log.exception(f"oneHourTasks Reddit recruitment posts: {e}")
+
+        # smeReminder
+        with open(REPEATED_MSG_DATE_LOG_FILE) as f:
+            msgDateLog = json.load(f)
+
+        if secret.SME_REMINDER_ACTIVE and ("smeReminder" not in msgDateLog or (datetime.fromtimestamp(msgDateLog["smeReminder"], tz=pytz.utc) < datetime.now(timezone.utc))):
             try:
                 await self.smeReminder()
             except Exception as e:
-                log.exception(f"SME reminder: {e}")
+                log.exception(f"oneHourTasks SME reminder: {e}")
 
+        # smeBigBrother
+        if secret.SME_BIG_BROTHER and ("smeBigBrother" not in msgDateLog or (datetime.fromtimestamp(msgDateLog["smeBigBrother"], tz=pytz.utc) < datetime.now(timezone.utc))):
+            guild = self.bot.get_guild(GUILD_ID)
+            if guild is None:
+                log.exception("botTasks oneHourTasks: guild is None")
+                return
+
+            try:
+                await BotTasks.smeBigBrother(guild, False)
+            except Exception as e:
+                log.exception(f"oneHourTasks SME big brother: {e}")
 
 
     @tasks.loop(minutes=5)
@@ -303,7 +429,7 @@ Join Us:
             # Guild
             guild = self.bot.get_guild(GUILD_ID)
             if guild is None:
-                log.warning("bottasks fiveMinTasks: guild is None")
+                log.exception("botTasks fiveMinTasks: guild is None")
                 return
 
             # User
@@ -322,14 +448,14 @@ Join Us:
 
                 channelWelcome = guild.get_channel(WELCOME)
                 if not isinstance(channelWelcome, discord.TextChannel):
-                    log.warning("bottasks fiveMinTasks: welcomeChannel is not TextChannel")
+                    log.exception("botTasks fiveMinTasks: welcomeChannel is not TextChannel")
                     return
 
 
                 roleUnitStaff = guild.get_role(UNIT_STAFF)
                 roleAdvisor = guild.get_role(ADVISOR)
                 if roleUnitStaff is None or roleAdvisor is None:
-                    log.warning("bottasks fiveMinTasks: roleUnitStaff or roleAdvisor is None")
+                    log.exception("botTasks fiveMinTasks: roleUnitStaff or roleAdvisor is None")
                     return
 
                 hasUserPinged = len([
@@ -348,14 +474,14 @@ Join Us:
             ## REMINDERS
 
             if member is None:
-                log.warning("bottasks fiveMinTasks: user is None")
+                log.warning("botTasks fiveMinTasks: user is None")
                 removalList.append(time)
                 continue
 
             # Channel
             channel = self.bot.get_channel(details["channelID"])
             if channel is None or not isinstance(channel, discord.TextChannel):
-                log.warning("bottasks fiveMinTasks: channel not TextChannel")
+                log.warning("botTasks fiveMinTasks: channel not TextChannel")
                 removalList.append(time)
                 continue
 
@@ -396,6 +522,10 @@ class Reminders(commands.GroupCog, name="reminder"):
     def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
         super().__init__()
+
+    @staticmethod
+    def getFirstDayNextMonth(startDate: datetime = datetime.now(timezone.utc)) -> datetime:
+        return (startDate.replace(day=1) + timedelta(days=32)).replace(day=1, hour=12, minute=0, second=0, microsecond=0)
 
     @staticmethod
     def getFutureDate(datetimeDict: dict[str, int | None]) -> datetime:
@@ -498,7 +628,7 @@ class Reminders(commands.GroupCog, name="reminder"):
             return
 
         if interaction.channel is None:
-            log.warning("bottasks reminderSet: interaction.channel is None")
+            log.warning("botTasks reminderSet: interaction.channel is None")
             await interaction.response.send_message(embed=Embed(title="❌ Invalid channel.", color=Color.red()), ephemeral=True, delete_after=10.0)
             return
 

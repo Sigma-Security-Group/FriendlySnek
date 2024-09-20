@@ -1,10 +1,12 @@
 import re
 import json
+import os
 
 from datetime import datetime, timezone
 from discord import utils, Embed, Color
 from discord.ext import commands  # type: ignore
 from unidecode import unidecode
+from textwrap import wrap
 
 from secret import DEBUG
 from constants import *
@@ -175,7 +177,7 @@ class Staff(commands.Cog):
         embed.timestamp = datetime.now()
         await msg.edit(embed=embed)
         lastActivityPerMember = [(f"{member.display_name} ({member})", f"{member.mention}\n{utils.format_dt(lastMessage.created_at, style='F')}\n[Last Message]({lastMessage.jump_url})" if lastMessage is not None else f"{member.mention}\nNot Found!")
-        for member, lastMessage in sorted(lastMessagePerMember.items(), key=lambda x: x[1].created_at if x[1] is not None else datetime(1970, 1, 1).replace(tzinfo=timezone.utc))]
+        for member, lastMessage in sorted(lastMessagePerMember.items(), key=lambda x: x[1].created_at if x[1] is not None else datetime(1970, 1, 1, tzinfo=timezone.utc))]
         for i in range(0, len(lastActivityPerMember), 25):
             embed = Embed(title=f"Last activity per member ({i + 1} - {min(i + 25, len(lastActivityPerMember))} / {len(lastActivityPerMember)})", color=Color.dark_green())
             for j in range(i, min(i + 25, len(lastActivityPerMember))):
@@ -220,90 +222,90 @@ class Staff(commands.Cog):
             embed.timestamp = datetime.now()
             await ctx.send(embed=embed)
 
-    # @commands.command(name="promote")
-    # @commands.has_any_role(*CMD_STAFF_LIMIT)
-    # async def promote(self, ctx: commands.Context, *, member: str) -> None:
-    #     """Promote a member to the next rank."""
-    #     targetMember = self._getMember(member)
-    #     if targetMember is None:
-    #         log.info(f"No member found for search term: {member}!")
-    #         await ctx.send(embed=Embed(title="❌ No member found", description=f"Searched for: `{member}`", color=Color.red()))
-    #         return
+    @commands.command(name="promote")
+    @commands.has_any_role(*CMD_STAFF_LIMIT)
+    async def promote(self, ctx: commands.Context, *, member: str) -> None:
+        """Promote a member to the next rank."""
+        targetMember = self._getMember(member)
+        if targetMember is None:
+            log.info(f"No member found for search term: {member}!")
+            await ctx.send(embed=Embed(title="❌ No member found", description=f"Searched for: `{member}`", color=Color.red()))
+            return
 
-    #     guild = self.bot.get_guild(GUILD_ID)
-    #     if guild is None:
-    #         log.exception("Staff promote: guild is None")
-    #         return
+        guild = self.bot.get_guild(GUILD_ID)
+        if guild is None:
+            log.exception("Staff promote: guild is None")
+            return
 
-    #     for role in targetMember.roles:
-    #         if role.id in PROMOTIONS:
-    #             newRole = guild.get_role(PROMOTIONS[role.id])
-    #             if newRole is None:
-    #                 log.exception("Staff promote: newRole is None")
-    #                 return
+        for role in targetMember.roles:
+            if role.id in PROMOTIONS:
+                newRole = guild.get_role(PROMOTIONS[role.id])
+                if newRole is None:
+                    log.exception("Staff promote: newRole is None")
+                    return
 
-    #             ## Promote member to Technician if they are a SME
-    #             #if newRole.id == OPERATOR:
-    #             #    isSME = False
-    #             #    for role_ in targetMember.roles:
-    #             #        if role_.id in SME_ROLES:
-    #             #            isSME = True
-    #             #            break
-    #             #    if isSME:
-    #             #        newRole = guild.get_role(TECHNICIAN)
-    #             log.info(f"Promoting {targetMember.display_name} ({targetMember}) from {role} to {newRole}!")
-    #             await targetMember.remove_roles(role)
-    #             await targetMember.add_roles(newRole)
-    #             embed = Embed(title="✅ Member promoted", description=f"{targetMember.mention} promoted from {role.mention} to {newRole.mention}!", color=Color.green())
-    #             embed.set_footer(text=f"ID: {targetMember.id}")
-    #             embed.timestamp = datetime.now()
-    #             await ctx.send(embed=embed)
-    #             break
+                ## Promote member to Technician if they are a SME
+                #if newRole.id == OPERATOR:
+                #    isSME = False
+                #    for role_ in targetMember.roles:
+                #        if role_.id in SME_ROLES:
+                #            isSME = True
+                #            break
+                #    if isSME:
+                #        newRole = guild.get_role(TECHNICIAN)
+                log.info(f"Promoting {targetMember.display_name} ({targetMember}) from {role} to {newRole}!")
+                await targetMember.remove_roles(role)
+                await targetMember.add_roles(newRole)
+                embed = Embed(title="✅ Member promoted", description=f"{targetMember.mention} promoted from {role.mention} to {newRole.mention}!", color=Color.green())
+                embed.set_footer(text=f"ID: {targetMember.id}")
+                embed.timestamp = datetime.now()
+                await ctx.send(embed=embed)
+                break
 
-    #     else:
-    #         log.info(f"No promotion possible for {targetMember.display_name} ({targetMember})!")
-    #         embed = Embed(title="❌ No possible promotion", description=f"Member: {targetMember.mention}", color=Color.red())
-    #         embed.set_footer(text=f"ID: {targetMember.id}")
-    #         embed.timestamp = datetime.now()
-    #         await ctx.send(embed=embed)
+        else:
+            log.info(f"No promotion possible for {targetMember.display_name} ({targetMember})!")
+            embed = Embed(title="❌ No possible promotion", description=f"Member: {targetMember.mention}", color=Color.red())
+            embed.set_footer(text=f"ID: {targetMember.id}")
+            embed.timestamp = datetime.now()
+            await ctx.send(embed=embed)
 
-    # @commands.command(name="demote")
-    # @commands.has_any_role(*CMD_STAFF_LIMIT)
-    # async def demote(self, ctx: commands.Context, *, member: str) -> None:
-    #     """Demote a member to the previous rank."""
-    #     targetMember = self._getMember(member)
-    #     if targetMember is None:
-    #         log.info(f"No member found for search term: {member}")
-    #         await ctx.send(embed=Embed(title="❌ No member found", description=f"Searched for: `{member}`", color=Color.red()))
-    #         return
+    @commands.command(name="demote")
+    @commands.has_any_role(*CMD_STAFF_LIMIT)
+    async def demote(self, ctx: commands.Context, *, member: str) -> None:
+        """Demote a member to the previous rank."""
+        targetMember = self._getMember(member)
+        if targetMember is None:
+            log.info(f"No member found for search term: {member}")
+            await ctx.send(embed=Embed(title="❌ No member found", description=f"Searched for: `{member}`", color=Color.red()))
+            return
 
-    #     guild = self.bot.get_guild(GUILD_ID)
-    #     if guild is None:
-    #         log.exception("Staff promote: guild is None")
-    #         return
+        guild = self.bot.get_guild(GUILD_ID)
+        if guild is None:
+            log.exception("Staff promote: guild is None")
+            return
 
-    #     for role in targetMember.roles:
-    #         if role.id in DEMOTIONS:
-    #             newRole = guild.get_role(DEMOTIONS[role.id])
-    #             if newRole is None:
-    #                 log.exception("Staff promote: newRole is None")
-    #                 return
+        for role in targetMember.roles:
+            if role.id in DEMOTIONS:
+                newRole = guild.get_role(DEMOTIONS[role.id])
+                if newRole is None:
+                    log.exception("Staff promote: newRole is None")
+                    return
 
-    #             log.info(f"Demoting {targetMember.display_name} ({targetMember}) from {role} to {newRole}!")
-    #             await targetMember.remove_roles(role)
-    #             await targetMember.add_roles(newRole)
-    #             embed = Embed(title="✅ Member demoted", description=f"{targetMember.mention} demoted from {role.mention} to {newRole.mention}!", color=Color.green())
-    #             embed.set_footer(text=f"ID: {targetMember.id}")
-    #             embed.timestamp = datetime.now()
-    #             await ctx.send(embed=embed)
-    #             break
+                log.info(f"Demoting {targetMember.display_name} ({targetMember}) from {role} to {newRole}!")
+                await targetMember.remove_roles(role)
+                await targetMember.add_roles(newRole)
+                embed = Embed(title="✅ Member demoted", description=f"{targetMember.mention} demoted from {role.mention} to {newRole.mention}!", color=Color.green())
+                embed.set_footer(text=f"ID: {targetMember.id}")
+                embed.timestamp = datetime.now()
+                await ctx.send(embed=embed)
+                break
 
-    #     else:
-    #         log.info(f"No demotion possible for {targetMember.display_name} ({targetMember})!")
-    #         embed = Embed(title="❌ No possible demotion", description=f"Member: {targetMember.mention}", color=Color.red())
-    #         embed.set_footer(text=f"ID: {targetMember.id}")
-    #         embed.timestamp = datetime.now()
-    #         await ctx.send(embed=embed)
+        else:
+            log.info(f"No demotion possible for {targetMember.display_name} ({targetMember})!")
+            embed = Embed(title="❌ No possible demotion", description=f"Member: {targetMember.mention}", color=Color.red())
+            embed.set_footer(text=f"ID: {targetMember.id}")
+            embed.timestamp = datetime.now()
+            await ctx.send(embed=embed)
 
     @commands.command(name="searchmodlogs")
     @commands.has_any_role(*CMD_STAFF_LIMIT)
@@ -436,6 +438,17 @@ class Staff(commands.Cog):
         embed.timestamp = datetime.now()
         await ctx.send(embed=embed)
 
+    @commands.command(name="smebigbrother")
+    @commands.has_any_role(*CMD_STAFF_LIMIT)
+    async def smeBigBrother(self, ctx: commands.Context) -> None:
+        """Summarize each SMEs activity last 6 months for Unit Staff."""
+        guild = self.bot.get_guild(GUILD_ID)
+        if guild is None:
+            log.exception("Staff smeBigBrother: guild is None")
+            return
+
+        from cogs.botTasks import BotTasks
+        await BotTasks.smeBigBrother(guild, True)
 
 
     # Advisor command
@@ -476,7 +489,7 @@ class Staff(commands.Cog):
 
     # Hampter command
     @commands.command(name="gibcmdline")
-    @commands.has_any_role(*CMD_GIBCMDLINE_LIMIT)
+    @commands.has_any_role(*CMD_DATACENTER_LIMIT)
     async def gibcmdline(self, ctx: commands.Context) -> None:
         """Generates commandline from attached HTML modpack file."""
 
@@ -494,9 +507,116 @@ class Staff(commands.Cog):
 
         alphanumerics = re.compile(r"[\W_]+", re.UNICODE)
         cmdline = ";".join(sorted(["@" + re.sub(alphanumerics, "", mod) for mod in mods], key=str.casefold))  # Casefold = caseinsensitive
-        cmdline = unidecode(cmdline)
+        cmdline = wrap(unidecode(cmdline), 1990)  # Max content len == 2000
 
-        await msg.edit(content=f"```{cmdline}```")
+        for index, chunk in enumerate(cmdline):
+            if index == 0:
+                await msg.edit(content=f"```{chunk}```")
+                continue
+            await ctx.send(f"```{chunk}```")
+
+    @discord.app_commands.command(name="updatemodpack")
+    @discord.app_commands.guilds(GUILD)
+    @discord.app_commands.checks.has_any_role(*CMD_DATACENTER_LIMIT)
+    @discord.app_commands.describe(modpack = "Updated modpack.", sendtoserverinfo = "Optional boolean if sending modpack to #server-info.")
+    async def updatemodpack(self, interaction: discord.Interaction, modpack: discord.Attachment, sendtoserverinfo: bool = False) -> None:
+        """Update snek mod list, for which mods to check on updates."""
+
+        # Parse modpack
+        html = (await modpack.read()).decode("utf-8")
+        modpackIds = [int(id) for id in re.findall(r"(?<=\"https:\/\/steamcommunity\.com\/sharedfiles\/filedetails\/\?id=)\d+", html)]
+
+        # Save output
+        with open(GENERIC_DATA_FILE) as f:
+            genericData = json.load(f)
+        genericData["modpackIds"] = modpackIds
+        with open(GENERIC_DATA_FILE, "w") as f:
+            json.dump(genericData, f, indent=4)
+
+        # Optionally send
+        if sendtoserverinfo:
+            guild = self.bot.get_guild(GUILD_ID)
+            if guild is None:
+                log.exception("Staff updatemodpack: guild is None")
+                return
+            channelServerInfo = guild.get_channel(SERVER_INFO)
+            if not isinstance(channelServerInfo, discord.TextChannel):
+                log.exception("Staff updatemodpack: channelServerInfo is not discord.TextChannel")
+                return
+
+            await channelServerInfo.send(os.path.splitext(modpack.filename)[0], file=await modpack.to_file())
+
+
+        mapsDefault = "\n".join(genericData["modpackMaps"]) if "modpackMaps" in genericData else None
+
+        modal = StaffModal(self, f"Modpack updated! Now optionally change maps", f"staff_modal_maps")
+        modal.add_item(discord.ui.TextInput(label="Maps (Click \"Cancel\" to not change anything!)", style=discord.TextStyle.long, placeholder="Training Map\nAltis\nVirolahti", default=mapsDefault, required=True))
+        await interaction.response.send_modal(modal)
+        await interaction.followup.send("Modpack updated!", ephemeral=True)
+        log.info(f"{interaction.user.display_name} ({interaction.user}) updated modpack id listing.")
+
+
+    @updatemodpack.error
+    async def onUpdatemodpackError(self, interaction: discord.Interaction, error: discord.app_commands.AppCommandError) -> None:
+        """updatemodpack errors - dedicated for the discord.app_commands.errors.MissingAnyRole error."""
+        if type(error) == discord.app_commands.errors.MissingAnyRole:
+            guild = self.bot.get_guild(GUILD_ID)
+            if guild is None:
+                log.exception("onUpdatemodpackError: guild is None")
+                return
+
+            embed = Embed(title="❌ Missing permissions", description=f"You do not have the permissions to upload a mission file!\nThe permitted roles are: {', '.join([role.name for allowedRole in CMD_DATACENTER_LIMIT if (role := guild.get_role(allowedRole)) is not None])}.", color=Color.red())
+            await interaction.response.send_message(embed=embed, ephemeral=True, delete_after=30.0)
+            return
+        log.exception(error)
+
+
+    # Snek Lord command
+    @commands.command(name="sneklord")
+    @commands.has_any_role(SNEK_LORD)
+    async def sneklord(self, ctx: commands.Context) -> None:
+        """Snek lord prod test command."""
+        guild = self.bot.get_guild(GUILD_ID)
+        if guild is None:
+            log.exception("Staff sneklord: guild is None")
+            return
+        for role in guild.roles:
+            log.debug(f"ROLE: {role.name} - {hex(role.color.value)}")
+
+
+
+    async def modalHandling(self, modal: discord.ui.Modal, interaction: discord.Interaction) -> None:
+        if not isinstance(interaction.user, discord.Member):
+            log.exception("Staff modalHandling: interaction.user is not discord.Member")
+            return
+
+        if modal.custom_id != "staff_modal_maps":
+            log.exception("Staff modalHandling: modal.custom_id != staff_modal_maps")
+            return
+
+        value: str = modal.children[0].value.strip().split("\n")
+
+        with open(GENERIC_DATA_FILE) as f:
+            genericData = json.load(f)
+        genericData["modpackMaps"] = value
+        with open(GENERIC_DATA_FILE, "w") as f:
+            json.dump(genericData, f, indent=4)
+
+        await interaction.response.send_message(f"Maps updated!", ephemeral=True, delete_after=30.0)
+        log.info(f"{interaction.user.display_name} ({interaction.user}) updated modpack maps listing.")
+
+
+class StaffModal(discord.ui.Modal):
+    """Handling all staff modals."""
+    def __init__(self, instance, title: str, customId: str) -> None:
+        super().__init__(title=title, custom_id=customId)
+        self.instance = instance
+
+    async def on_submit(self, interaction: discord.Interaction):
+        await self.instance.modalHandling(self, interaction)
+
+    async def on_error(self, interaction: discord.Interaction, error: Exception) -> None:
+        log.exception(error)
 
 
 async def setup(bot: commands.Bot) -> None:

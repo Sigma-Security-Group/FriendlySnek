@@ -1243,7 +1243,7 @@ class Schedule(commands.Cog):
                         for item in items:
                             view.add_item(item)
 
-                        embed = Embed(title="Attaching files", description="You may attach up to 10 files to your event.\nUpload them first using the command `/fileupload`.", color=Color.gold())
+                        embed = discord.Embed(title="Attaching files", description="You may attach up to 10 files to your event.\nUpload them first using the command `/fileupload`.", color=discord.Color.gold())
                         await interaction.response.send_message(interaction.user.mention, embed=embed, view=view, ephemeral=True, delete_after=300.0)
 
                     case "files_add":
@@ -1255,10 +1255,10 @@ class Schedule(commands.Cog):
                         options = [discord.SelectOption(label=fileUpload) for fileUpload in Schedule.getUserFileUploads(str(interaction.user.id)) if fileUpload not in previewEmbedDict["files"]]
 
                         if len(options) == 0:
-                            embed = Embed(title="Attaching files [Add]", description="You have not uploaded any files yet.\nTo upload new files; run the command `/fileupload`.", color=Color.red())
+                            embed = discord.Embed(title="Attaching files [Add]", description="You have not uploaded any files yet.\nTo upload new files; run the command `/fileupload`.", color=discord.Color.red())
                             view = None
                         else:
-                            embed = Embed(title="Attaching files [Add]", description="Select a file to upload from the select menus below.\nTo upload new files; run the command `/fileupload`.", color=Color.gold())
+                            embed = discord.Embed(title="Attaching files [Add]", description="Select a file to upload from the select menus below.\nTo upload new files; run the command `/fileupload`.", color=discord.Color.gold())
                             view = self.generateSelectView(options, False, None, messageNew, "Select a file.", "select_create_files_add", button.view.previousMessageView)
 
                         await interaction.response.edit_message(embed=embed, view=view)
@@ -1272,10 +1272,10 @@ class Schedule(commands.Cog):
                         options = [discord.SelectOption(label=previewFile) for previewFile in previewEmbedDict["files"]]
 
                         if len(options) == 0:
-                            embed = Embed(title="Attaching files [Remove]", description="You have not selected any file to be attached.\nTo select a file, press the `Add` button.", color=Color.red())
+                            embed = discord.Embed(title="Attaching files [Remove]", description="You have not selected any file to be attached.\nTo select a file, press the `Add` button.", color=discord.Color.red())
                             view = None
                         else:
-                            embed = Embed(title="Attaching files [Remove]", description="Select a file to remove from the select menus below.", color=Color.gold())
+                            embed = discord.Embed(title="Attaching files [Remove]", description="Select a file to remove from the select menus below.", color=discord.Color.gold())
                             view = self.generateSelectView(options, False, None, messageNew, "Select a file.", "select_create_files_remove", button.view.previousMessageView)
 
                         await interaction.response.edit_message(embed=embed, view=view)
@@ -1439,10 +1439,10 @@ class Schedule(commands.Cog):
                 options = [discord.SelectOption(label=fileUpload) for fileUpload in Schedule.getUserFileUploads(str(interaction.user.id)) if fileUpload not in attachmentFilenames]
 
                 if len(options) == 0:
-                    embed = Embed(title="Attaching files [Add]", description="You do not have any new files to attach.\nTo upload new files; run the command `/fileupload`.", color=Color.red())
+                    embed = discord.Embed(title="Attaching files [Add]", description="You do not have any new files to attach.\nTo upload new files; run the command `/fileupload`.", color=discord.Color.red())
                     view = None
                 else:
-                    embed = Embed(title="Attaching files [Add]", description="Select a file to upload from the select menus below.\nTo upload new files; run the command `/fileupload`.", color=Color.gold())
+                    embed = discord.Embed(title="Attaching files [Add]", description="Select a file to upload from the select menus below.\nTo upload new files; run the command `/fileupload`.", color=discord.Color.gold())
                     view = self.generateSelectView(options, False, None, messageNew, "Select a file.", "edit_select_files_add", button.view.previousMessageView)
 
                 await interaction.response.edit_message(embed=embed, view=view)
@@ -1458,10 +1458,10 @@ class Schedule(commands.Cog):
                 options = [discord.SelectOption(label=fileUpload) for fileUpload in Schedule.getUserFileUploads(str(interaction.user.id)) if fileUpload in attachmentFilenames]
 
                 if len(options) == 0:
-                    embed = Embed(title="Attaching files [Remove]", description="You have not selected any file to be attached.\nTo select a file, press the `Add` button.", color=Color.red())
+                    embed = discord.Embed(title="Attaching files [Remove]", description="You have not selected any file to be attached.\nTo select a file, press the `Add` button.", color=discord.Color.red())
                     view = None
                 else:
-                    embed = Embed(title="Attaching files [Remove]", description="Select a file to remove from the select menus below.", color=Color.gold())
+                    embed = discord.Embed(title="Attaching files [Remove]", description="Select a file to remove from the select menus below.", color=discord.Color.gold())
                     view = self.generateSelectView(options, False, None, messageNew, "Select a file.", "edit_select_files_remove", button.view.previousMessageView)
 
                 await interaction.response.edit_message(embed=embed, view=view)
@@ -1662,7 +1662,7 @@ class Schedule(commands.Cog):
                 for item in items:
                     view.add_item(item)
 
-                embed = Embed(title="Attaching files", description="You may attach up to 10 files to your event.\nUpload them first using the command `/fileupload`.", color=Color.gold())
+                embed = discord.Embed(title="Attaching files", description="You may attach up to 10 files to your event.\nUpload them first using the command `/fileupload`.", color=discord.Color.gold())
                 await interaction.response.edit_message(embed=embed, view=view)
 
             # Update eventMsg button style
@@ -1825,7 +1825,7 @@ class Schedule(commands.Cog):
                     for item in items:
                         view.add_item(item)
 
-                    embed = Embed(title="Attaching files", description="You may attach up to 10 files to your event.\nUpload them first using the command `/fileupload`.", color=Color.gold())
+                    embed = discord.Embed(title="Attaching files", description="You may attach up to 10 files to your event.\nUpload them first using the command `/fileupload`.", color=discord.Color.gold())
                     await interaction.response.send_message(interaction.user.mention, embed=embed, view=view, ephemeral=True, delete_after=300.0)
 
             log.info(f"{interaction.user.display_name} ({interaction.user}) edited the event: {event['title'] if 'title' in event else event['templateName']}.")
@@ -1844,12 +1844,12 @@ class Schedule(commands.Cog):
                     specifiedFileList = [file for file in allUserFiles if file.split("_", 2)[2] == selectedValue]
                     if not specifiedFileList:
                         log.warning(f"selectHandling files_add: Could not find '{selectedValue}' in specifiedFileList")
-                        await interaction.response.send_message(embed=Embed(title="❌ Interaction failed", description="Could not find file in fileuploads!", color=Color.red()), ephemeral=True, delete_after=5.0)
+                        await interaction.response.send_message(embed=discord.Embed(title="❌ Interaction failed", description="Could not find file in fileuploads!", color=discord.Color.red()), ephemeral=True, delete_after=5.0)
                         return
 
                     filenameFull = specifiedFileList[0]
                     if filenameFull in event["files"]:
-                        await interaction.response.send_message(embed=Embed(title="❌ File already added", color=Color.red()), ephemeral=True, delete_after=5.0)
+                        await interaction.response.send_message(embed=discord.Embed(title="❌ File already added", color=discord.Color.red()), ephemeral=True, delete_after=5.0)
                         return
 
                     filenameShort = filenameFull.split("_", 2)[2]
@@ -1863,14 +1863,14 @@ class Schedule(commands.Cog):
                     eventAttachmentDict = {eventAttachment.filename: eventAttachment for eventAttachment in eventMsgNew.attachments}
                     if selectedValue not in eventAttachmentDict:
                         log.warning(f"selectHandling files_remove: Could not find '{selectedValue}' in eventMsg.attachments")
-                        await interaction.response.send_message(embed=Embed(title="❌ Interaction failed", description="Could not find attachment in message!", color=Color.red()), ephemeral=True, delete_after=5.0)
+                        await interaction.response.send_message(embed=discord.Embed(title="❌ Interaction failed", description="Could not find attachment in message!", color=discord.Color.red()), ephemeral=True, delete_after=5.0)
                         return
 
                     allUserFiles = Schedule.getUserFileUploads(str(interaction.user.id), fullFilename=True)
                     filenameFull = [file for file in allUserFiles if file.split("_", 2)[2] == selectedValue][0]
                     if filenameFull not in event["files"]:
                         log.warning(f"selectHandling files_remove: filenameFull '{filenameFull}' not in event['files']")
-                        await interaction.response.send_message(embed=Embed(title="❌ File already removed", color=Color.red()), ephemeral=True, delete_after=5.0)
+                        await interaction.response.send_message(embed=discord.Embed(title="❌ File already removed", color=discord.Color.red()), ephemeral=True, delete_after=5.0)
                         return
 
                     event["files"].remove(filenameFull)
@@ -2260,7 +2260,7 @@ class Schedule(commands.Cog):
         """
         # Cap file size to ~25 MB
         if file.size > 26_250_000:
-            await interaction.response.send_message(embed=Embed(title="❌ Invalid filesize", description="Max allowed filesize is 25 MB!", color=Color.red()), ephemeral=True)
+            await interaction.response.send_message(embed=discord.Embed(title="❌ Invalid filesize", description="Max allowed filesize is 25 MB!", color=discord.Color.red()), ephemeral=True)
             return
 
         # Block files with file extension in blacklist
@@ -2281,10 +2281,10 @@ class Schedule(commands.Cog):
                 log.exception("fileupload: channelBot not discord.TextChannel")
                 return
 
-            embed = Embed(title="❌ File upload blocked", description=f"User {interaction.user.mention} ({interaction.user.id}) uploaded the file '{file.filename}'.\nThis action has been blocked since the file extension is blacklisted.", color=Color.red())
+            embed = discord.Embed(title="❌ File upload blocked", description=f"User {interaction.user.mention} ({interaction.user.id}) uploaded the file '{file.filename}'.\nThis action has been blocked since the file extension is blacklisted.", color=discord.Color.red())
             await channelBot.send(roleSnekLord.mention, embed=embed)
 
-            await interaction.response.send_message(embed=Embed(title="❌ Invalid file extension", description="This file extension is blacklisted for security purposes.", color=Color.red()), ephemeral=True)
+            await interaction.response.send_message(embed=discord.Embed(title="❌ Invalid file extension", description="This file extension is blacklisted for security purposes.", color=discord.Color.red()), ephemeral=True)
             return
 
 
@@ -2292,7 +2292,7 @@ class Schedule(commands.Cog):
         filenameCap = file.filename[:200]
         filenameExists = any([re.match(fr"\d+_{interaction.user.id}_{filenameCap}", file) for file in os.listdir("tmp/fileUpload/")])
         if filenameExists:
-            await interaction.response.send_message(embed=Embed(title="❌ Invalid filename", description="You have already uploaded a file with this name before!", color=Color.red()), ephemeral=True)
+            await interaction.response.send_message(embed=discord.Embed(title="❌ Invalid filename", description="You have already uploaded a file with this name before!", color=discord.Color.red()), ephemeral=True)
             return
 
 
@@ -2304,7 +2304,7 @@ class Schedule(commands.Cog):
             await file.save(f)
 
         log.info(f"{interaction.user.display_name} ({interaction.user.id}) uploaded the file '{file.filename}' as '{filenameNew}'.")
-        embed = Embed(title="✅ File uploaded", description=f"Uploaded file as `{filenameCap}`", color=Color.green())
+        embed = discord.Embed(title="✅ File uploaded", description=f"Uploaded file as `{filenameCap}`", color=discord.Color.green())
         await interaction.response.send_message(embed=embed)
 
         # NEW CLEANUP METHOD (Date)

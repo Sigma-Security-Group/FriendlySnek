@@ -1842,8 +1842,8 @@ class Schedule(commands.Cog):
                 case "Files":
                     view = ScheduleView()
                     items = [
-                        ScheduleButton(self, eventMsg, interaction.user.id, row=0, label="Add", style=discord.ButtonStyle.success, custom_id="event_edit_files_add"),
-                        ScheduleButton(self, eventMsg, interaction.user.id, row=0, label="Remove", style=discord.ButtonStyle.danger, custom_id="event_edit_files_remove"),
+                        ScheduleButton(self, eventMsg, interaction.user.id, row=0, label="Add", style=discord.ButtonStyle.success, custom_id="event_edit_files_add", disabled=(len(eventMsg.attachments) == 10)),
+                        ScheduleButton(self, eventMsg, interaction.user.id, row=0, label="Remove", style=discord.ButtonStyle.danger, custom_id="event_edit_files_remove", disabled=(not eventMsg.attachments)),
                     ]
                     for item in items:
                         view.add_item(item)

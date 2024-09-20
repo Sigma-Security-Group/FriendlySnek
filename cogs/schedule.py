@@ -465,7 +465,7 @@ class Schedule(commands.Cog):
     @discord.app_commands.guilds(GUILD)
     @discord.app_commands.checks.has_any_role(*CMD_AAR_LIMIT)
     async def aar(self, interaction: discord.Interaction) -> None:
-        """ Move all users in Deployed to Command voice channel. """
+        """Move all users in Deployed to Command voice channel."""
         log.info(f"{interaction.user.display_name} ({interaction.user}) is starting an AAR...")
 
         guild = self.bot.get_guild(GUILD_ID)
@@ -635,7 +635,6 @@ class Schedule(commands.Cog):
         Returns:
         list[discord.File]: The list of files.
         """
-
         if "files" not in event or not event["files"]:
             return None
 
@@ -880,7 +879,7 @@ class Schedule(commands.Cog):
 
     @staticmethod
     def eventCollisionCheck(startTime: datetime, endTime: datetime) -> str | None:
-        """ Checks if inputted event (start- & endtime) collides with scheduled event with padding. """
+        """Checks if inputted event (start- & endtime) collides with scheduled event with padding."""
         with open(EVENTS_FILE) as f:
             events = json.load(f)
 
@@ -1528,7 +1527,6 @@ class Schedule(commands.Cog):
         Returns:
         None.
         """
-
         if not isinstance(interaction.user, discord.Member):
             log.exception("Schedule SelectHandling: interaction.user is not discord.Member")
             return
@@ -2093,7 +2091,6 @@ class Schedule(commands.Cog):
         Returns:
         tuple: tuple with hours, minutes, delta zipped.
         """
-
         duration = duration.lower()
         hours = int(duration.split("h")[0].strip()) if "h" in duration else 0
         minutes = int(duration.split("h")[-1].replace("m", "").strip()) if duration.strip()[-1] != "h" else 0
@@ -2192,7 +2189,6 @@ class Schedule(commands.Cog):
         Returns:
         None.
         """
-
         # Cap file size to ~25 MB
         if file.size > 26_250_000:
             await interaction.response.send_message(embed=Embed(title="❌ Invalid filesize", description="Max allowed filesize is 25 MB!", color=Color.red()), ephemeral=True)
@@ -2299,7 +2295,6 @@ class Schedule(commands.Cog):
         Returns:
         None.
         """
-
         # Get the inputted time
         try:
             timeParsed = datetimeParse(time)
@@ -2351,7 +2346,7 @@ class Schedule(commands.Cog):
     @discord.app_commands.command(name="changetimezone")
     @discord.app_commands.guilds(GUILD)
     async def timeZoneCmd(self, interaction: discord.Interaction) -> None:
-        """Change your time zone preferences for your next scheduled event. """
+        """Change your time zone preferences for your next scheduled event."""
         await interaction.response.send_message("Changing time zone preferences...")
         timeZoneOutput = await self.changeTimeZone(interaction.user, isCommand=True)
         if not timeZoneOutput:

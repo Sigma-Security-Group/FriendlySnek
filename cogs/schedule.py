@@ -26,6 +26,7 @@ OPERATION_NAME_NOUNS = "constants/opNouns.txt"
 MAX_SERVER_ATTENDANCE = 50
 
 # Training map first, then the rest in alphabetical order
+# Reference https://atlas.plan-ops.fr/maps/arma3
 MAPS = [
     "Training Map",
     "Altis",

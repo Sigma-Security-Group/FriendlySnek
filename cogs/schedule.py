@@ -236,7 +236,6 @@ def jsonCreateNoExist(filename: str, dump: list | dict) -> None:
 jsonCreateNoExist(MEMBER_TIME_ZONES_FILE, {})
 jsonCreateNoExist(EVENTS_HISTORY_FILE, [])
 jsonCreateNoExist(WORKSHOP_TEMPLATES_FILE, [])
-#jsonCreateNoExist(WORKSHOP_TEMPLATES_DELETED_FILE, [])
 jsonCreateNoExist(REMINDERS_FILE, {})
 jsonCreateNoExist(ROLE_RESERVATION_BLACKLIST_FILE, [])
 

@@ -49,9 +49,17 @@ if not os.path.exists("./data"):
     log.info("Creating a data directory!")
     os.mkdir("data")
 
-if not os.path.exists("./tmp"):  # Mission missionUploader stuff- TODO maybe create it if it's needed?
+if not os.path.exists("./tmp"):
     log.info("Creating a tmp directory!")
     os.mkdir("tmp")
+
+if not os.path.exists("./tmp/missionUpload"):
+    log.info("Creating a tmp/missionUpload directory!")
+    os.mkdir("tmp/missionUpload")
+
+if not os.path.exists("./tmp/fileUpload"):
+    log.info("Creating a tmp/fileUpload directory!")
+    os.mkdir("tmp/fileUpload")
 
 COGS = [cog[:-3] for cog in os.listdir("cogs/") if cog.endswith(".py")]
 # COGS = ["schedule"]  # DEBUG: Faster startup

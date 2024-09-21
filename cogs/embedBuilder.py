@@ -327,7 +327,6 @@ class EmbedBuilder(commands.Cog):
     def unLockDependents(view: discord.ui.View, dependencies: dict, name: str, value: str) -> None:
         """(Un)locks view.button if other field that is a dependant is (in)active."""
         for item in view.children:
-            print(item)
             # Skip if item is not dependent on the field identified by `name`
             if item.label not in dependencies.get(name, {}).get("dependent", ()):
                 continue

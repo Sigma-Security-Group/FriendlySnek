@@ -17,17 +17,12 @@ class Logger:
             f.write("")
 
     @staticmethod
-    def stop() -> None:
-        STD_OUT.flush()
-
-    @staticmethod
     def _log(level: str, message: str, flush=False) -> None:
         """Log message.
 
         Parameters:
         level (str): (DEBUG | INFO | WARNING | ERROR | CRITICAL).
         message (str): Message to log.
-        skipFileSwitchCheck (bool, optional): Whether or not to skip check for switching log file. Defaults to False.
         flush (bool, optional): Whether or not to flush buffers after writing the message. Defaults to False.
         """
         now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
@@ -48,26 +43,32 @@ class Logger:
         except Exception:
             pass
 
-    def debug(self, message: str, flush=False) -> None:
+    @staticmethod
+    def debug(message: str, flush=False) -> None:
         """ Log debug message """
-        self._log("DEBUG", message, flush)
+        Logger._log("DEBUG", message, flush)
 
-    def info(self, message: str, flush=False) -> None:
+    @staticmethod
+    def info(message: str, flush=False) -> None:
         """ Log info message """
-        self._log("INFO", message, flush)
+        Logger._log("INFO", message, flush)
 
-    def warning(self, message: str, flush=False) -> None:
+    @staticmethod
+    def warning(message: str, flush=False) -> None:
         """ Log warning message """
-        self._log("WARNING", message, flush)
+        Logger._log("WARNING", message, flush)
 
-    def error(self, message: str, flush=False) -> None:
+    @staticmethod
+    def error(message: str, flush=False) -> None:
         """ Log error message """
-        self._log("ERROR", message, flush)
+        Logger._log("ERROR", message, flush)
 
-    def critical(self, message: str, flush=False) -> None:
+    @staticmethod
+    def critical(message: str, flush=False) -> None:
         """ Log critical message """
-        self._log("CRITICAL", message, flush)
+        Logger._log("CRITICAL", message, flush)
 
-    def exception(self, message: str | Exception, flush=False) -> None:
+    @staticmethod
+    def exception(message: str | Exception, flush=False) -> None:
         """ Log error message followed by traceback """
-        self._log("ERROR", f"{message}\n{traceback.format_exc()}", flush)
+        Logger._log("ERROR", f"{message}\n{traceback.format_exc()}", flush)

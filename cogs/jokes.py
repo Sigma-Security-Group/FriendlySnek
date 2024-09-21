@@ -5,9 +5,10 @@ from asyncio import sleep
 from discord import app_commands
 from discord.ext import commands  # type: ignore
 
+from logger import Logger
 from secret import DEBUG
 from constants import *
-from __main__ import log, cogsReady
+from __main__ import cogsReady
 if DEBUG:
     from constants.debug import *
 
@@ -21,7 +22,7 @@ class Jokes(commands.Cog):
 
     @commands.Cog.listener()
     async def on_ready(self) -> None:
-        log.debug(LOG_COG_READY.format("Jokes"), flush=True)
+        Logger.debug(LOG_COG_READY.format("Jokes"), flush=True)
         cogsReady["jokes"] = True
 
     @app_commands.command(name="dadjoke")

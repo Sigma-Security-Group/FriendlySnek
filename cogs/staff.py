@@ -8,9 +8,10 @@ from discord.ext import commands  # type: ignore
 from unidecode import unidecode
 from textwrap import wrap
 
+from logger import Logger
 from secret import DEBUG
 from constants import *
-from __main__ import log, cogsReady
+from __main__ import cogsReady
 if DEBUG:
     from constants.debug import *
 
@@ -21,7 +22,7 @@ class Staff(commands.Cog):
 
     @commands.Cog.listener()
     async def on_ready(self) -> None:
-        log.debug(LOG_COG_READY.format("Staff"), flush=True)
+        Logger.debug(LOG_COG_READY.format("Staff"), flush=True)
         cogsReady["staff"] = True
 
     def _getMember(self, searchTerm: str) -> discord.Member | None:
@@ -35,7 +36,7 @@ class Staff(commands.Cog):
         """
         guild = self.bot.get_guild(GUILD_ID)
         if guild is None:
-            log.exception("Staff _getMember: guild is None")
+            Logger.exception("Staff _getMember: guild is None")
             return None
 
         member = None
@@ -105,28 +106,28 @@ class Staff(commands.Cog):
         """Purges all messages from a specific member."""
         tagetMember = self._getMember(member)
         if tagetMember is None:
-            log.info(f"No member found for search term: {member}")
+            Logger.info(f"No member found for search term: {member}")
             await ctx.send(embed=Embed(title="❌ No member found", description=f"Searched for: `{member}`", color=Color.red()))
             return
 
         guild = self.bot.get_guild(GUILD_ID)
         if guild is None:
-            log.exception("Staff purgeMessagesFromMember: guild is None")
+            Logger.exception("Staff purgeMessagesFromMember: guild is None")
             return
 
-        log.critical(f"\n---------\n{ctx.author.display_name} ({ctx.author}) is purging all messages from {member}: {tagetMember.display_name} ({tagetMember})\n---------")
+        Logger.critical(f"\n---------\n{ctx.author.display_name} ({ctx.author}) is purging all messages from {member}: {tagetMember.display_name} ({tagetMember})\n---------")
         embed = Embed(title="Purging messages", description=f"Member: {tagetMember.mention}\nThis may take a while!", color=Color.orange())
         embed.set_footer(text=f"ID: {tagetMember.id}")
         embed.timestamp = datetime.now()
         await ctx.send(embed=embed)
 
         for channel in guild.text_channels:
-            log.debug(f"Purging {tagetMember.display_name} ({tagetMember}) messages in {channel.mention}.")
+            Logger.debug(f"Purging {tagetMember.display_name} ({tagetMember}) messages in {channel.mention}.")
             try:
                 await channel.purge(limit=None, check=lambda m: m.author.id == tagetMember.id)
             except (discord.Forbidden, discord.HTTPException):
-                log.warning(f"Could not purge {tagetMember.display_name} ({tagetMember}) messages from {channel.mention}!")
-        log.info(f"Done purging {tagetMember.display_name} ({tagetMember}) messages!")
+                Logger.warning(f"Could not purge {tagetMember.display_name} ({tagetMember}) messages from {channel.mention}!")
+        Logger.info(f"Done purging {tagetMember.display_name} ({tagetMember}) messages!")
         embed = Embed(title="✅ Messages purged", description=f"Member: {tagetMember.mention}", color=Color.green())
         embed.set_footer(text=f"ID: {tagetMember.id}")
         embed.timestamp = datetime.now()
@@ -138,10 +139,10 @@ class Staff(commands.Cog):
         """Get last activity (message) for all members."""
         guild = self.bot.get_guild(GUILD_ID)
         if guild is None:
-            log.exception("Staff lastactivity: guild is None")
+            Logger.exception("Staff lastactivity: guild is None")
             return
 
-        log.info(f"Analyzing members' last activity")
+        Logger.info(f"Analyzing members' last activity")
         embed = Embed(title="Analyzing members' last activity", color=Color.orange())
         embed.timestamp = datetime.now()
         await ctx.send(embed=embed)
@@ -171,7 +172,7 @@ class Staff(commands.Cog):
                         lastMessagePerMember[message.author] = message
                 if len(membersNotChecked) == 0:
                     break
-        log.info("Message searching done!")
+        Logger.info("Message searching done!")
         embed = Embed(title="✅ Channel checking", color=Color.green())
         embed.set_footer(text=f"Run by: {ctx.author}")
         embed.timestamp = datetime.now()
@@ -193,13 +194,13 @@ class Staff(commands.Cog):
         """Get last activity (message) for a specific member."""
         targetMember = self._getMember(member)
         if targetMember is None:
-            log.info(f"No member found for search term: {member}!")
+            Logger.info(f"No member found for search term: {member}!")
             await ctx.send(embed=Embed(title="❌ No member found", description=f"Searched for: `{member}`", color=Color.red()))
             return
 
         guild = self.bot.get_guild(GUILD_ID)
         if guild is None:
-            log.exception("Staff lastactivitymember: guild is None")
+            Logger.exception("Staff lastactivitymember: guild is None")
             return
 
         lastMessage = None
@@ -211,8 +212,8 @@ class Staff(commands.Cog):
                 if lastMessage is None or lastMessageInChannel.created_at > lastMessage.created_at:
                     lastMessage = lastMessageInChannel
             except Exception:
-                log.warning(f"Could not search messages from channel #{channel.name}!")
-        log.debug("Done searching messages!")
+                Logger.warning(f"Could not search messages from channel #{channel.name}!")
+        Logger.debug("Done searching messages!")
         if lastMessage is None:
             embed = Embed(title="❌ Last activity", description=f"Activity not found!\nMember: {targetMember.mention}", color=Color.red())
             embed.timestamp = datetime.now()
@@ -228,20 +229,20 @@ class Staff(commands.Cog):
         """Promote a member to the next rank."""
         targetMember = self._getMember(member)
         if targetMember is None:
-            log.info(f"No member found for search term: {member}!")
+            Logger.info(f"No member found for search term: {member}!")
             await ctx.send(embed=Embed(title="❌ No member found", description=f"Searched for: `{member}`", color=Color.red()))
             return
 
         guild = self.bot.get_guild(GUILD_ID)
         if guild is None:
-            log.exception("Staff promote: guild is None")
+            Logger.exception("Staff promote: guild is None")
             return
 
         for role in targetMember.roles:
             if role.id in PROMOTIONS:
                 newRole = guild.get_role(PROMOTIONS[role.id])
                 if newRole is None:
-                    log.exception("Staff promote: newRole is None")
+                    Logger.exception("Staff promote: newRole is None")
                     return
 
                 ## Promote member to Technician if they are a SME
@@ -253,7 +254,7 @@ class Staff(commands.Cog):
                 #            break
                 #    if isSME:
                 #        newRole = guild.get_role(TECHNICIAN)
-                log.info(f"Promoting {targetMember.display_name} ({targetMember}) from {role} to {newRole}!")
+                Logger.info(f"Promoting {targetMember.display_name} ({targetMember}) from {role} to {newRole}!")
                 await targetMember.remove_roles(role)
                 await targetMember.add_roles(newRole)
                 embed = Embed(title="✅ Member promoted", description=f"{targetMember.mention} promoted from {role.mention} to {newRole.mention}!", color=Color.green())
@@ -263,7 +264,7 @@ class Staff(commands.Cog):
                 break
 
         else:
-            log.info(f"No promotion possible for {targetMember.display_name} ({targetMember})!")
+            Logger.info(f"No promotion possible for {targetMember.display_name} ({targetMember})!")
             embed = Embed(title="❌ No possible promotion", description=f"Member: {targetMember.mention}", color=Color.red())
             embed.set_footer(text=f"ID: {targetMember.id}")
             embed.timestamp = datetime.now()
@@ -275,23 +276,23 @@ class Staff(commands.Cog):
         """Demote a member to the previous rank."""
         targetMember = self._getMember(member)
         if targetMember is None:
-            log.info(f"No member found for search term: {member}")
+            Logger.info(f"No member found for search term: {member}")
             await ctx.send(embed=Embed(title="❌ No member found", description=f"Searched for: `{member}`", color=Color.red()))
             return
 
         guild = self.bot.get_guild(GUILD_ID)
         if guild is None:
-            log.exception("Staff promote: guild is None")
+            Logger.exception("Staff promote: guild is None")
             return
 
         for role in targetMember.roles:
             if role.id in DEMOTIONS:
                 newRole = guild.get_role(DEMOTIONS[role.id])
                 if newRole is None:
-                    log.exception("Staff promote: newRole is None")
+                    Logger.exception("Staff promote: newRole is None")
                     return
 
-                log.info(f"Demoting {targetMember.display_name} ({targetMember}) from {role} to {newRole}!")
+                Logger.info(f"Demoting {targetMember.display_name} ({targetMember}) from {role} to {newRole}!")
                 await targetMember.remove_roles(role)
                 await targetMember.add_roles(newRole)
                 embed = Embed(title="✅ Member demoted", description=f"{targetMember.mention} demoted from {role.mention} to {newRole.mention}!", color=Color.green())
@@ -301,7 +302,7 @@ class Staff(commands.Cog):
                 break
 
         else:
-            log.info(f"No demotion possible for {targetMember.display_name} ({targetMember})!")
+            Logger.info(f"No demotion possible for {targetMember.display_name} ({targetMember})!")
             embed = Embed(title="❌ No possible demotion", description=f"Member: {targetMember.mention}", color=Color.red())
             embed.set_footer(text=f"ID: {targetMember.id}")
             embed.timestamp = datetime.now()
@@ -314,13 +315,13 @@ class Staff(commands.Cog):
         channelStaffChat = self.bot.get_channel(STAFF_CHAT)
         channelModerationLog = self.bot.get_channel(MODERATION_LOG)
         if not isinstance(channelStaffChat, discord.TextChannel) or not isinstance(channelModerationLog, discord.TextChannel):
-            log.exception("Staff searchmodlogs: channelStaffChat or channelModerationLog not discord.TextChannel")
+            Logger.exception("Staff searchmodlogs: channelStaffChat or channelModerationLog not discord.TextChannel")
             return
 
         targetMember = self._getMember(member)
         if targetMember is None:
-            log.info(f"No member found for search term: {member}")
-            log.debug(f"Searching Moderation Logs for search term: {member}")
+            Logger.info(f"No member found for search term: {member}")
+            Logger.debug(f"Searching Moderation Logs for search term: {member}")
             await channelStaffChat.send(f"Searching Moderation Logs for search term: {member}")
             messageLinksList = []
             numMessages = 0
@@ -328,7 +329,7 @@ class Staff(commands.Cog):
                 numMessages += 1
                 if member in message.content.lower():
                     messageLinksList.append(message.jump_url)
-            log.debug(f"Checked {numMessages} message{'s' * (numMessages != 1)}")
+            Logger.debug(f"Checked {numMessages} message{'s' * (numMessages != 1)}")
             if len(messageLinksList) > 0:
                 messageLinks = "\n".join(messageLinksList[::-1])
                 await channelStaffChat.send(f"Moderation Logs related to search term: {member}\n{messageLinks}")
@@ -337,7 +338,7 @@ class Staff(commands.Cog):
             return
 
 
-        log.debug(f"Searching Moderation Logs for {targetMember.display_name} ({targetMember})")
+        Logger.debug(f"Searching Moderation Logs for {targetMember.display_name} ({targetMember})")
         await channelStaffChat.send(f"Searching Moderation Logs for {targetMember.display_name} ({targetMember})")
         messageLinksList = []
         numMessages = 0
@@ -361,8 +362,8 @@ class Staff(commands.Cog):
                         str(targetMember.id) in message.content:
                         messageLinksList.append(message.jump_url)
                 except Exception:
-                    log.exception(f"Message:\n\n{message.content}\n")
-        log.debug(f"Checked {numMessages} message{'s' * (numMessages != 1)}")
+                    Logger.exception(f"Message:\n\n{message.content}\n")
+        Logger.debug(f"Checked {numMessages} message{'s' * (numMessages != 1)}")
         if len(messageLinksList) > 0:
             messageLinks = "\n".join(messageLinksList[::-1])
             await channelStaffChat.send(f"Moderation Logs related to {targetMember.display_name} ({targetMember}):\n{messageLinks}")
@@ -375,16 +376,16 @@ class Staff(commands.Cog):
         """Add member to role reservation blacklist."""
         targetMember = self._getMember(member)
         if targetMember is None:
-            log.info(f"No member found for search term: {member}")
+            Logger.info(f"No member found for search term: {member}")
             await ctx.send(embed=Embed(title="❌ No member found", description=f"Searched for: `{member}`", color=Color.red()))
             return
 
         guild = self.bot.get_guild(GUILD_ID)
         if guild is None:
-            log.exception("Staff disableRoleReservation: guild is None")
+            Logger.exception("Staff disableRoleReservation: guild is None")
             return
 
-        log.info(f"{targetMember.display_name} (id: {targetMember.id}) was added to role reservation blacklist by {ctx.author.display_name} (id: {ctx.author.id})")
+        Logger.info(f"{targetMember.display_name} (id: {targetMember.id}) was added to role reservation blacklist by {ctx.author.display_name} (id: {ctx.author.id})")
 
         with open(ROLE_RESERVATION_BLACKLIST_FILE) as f:
             blacklist = json.load(f)
@@ -413,16 +414,16 @@ class Staff(commands.Cog):
         """Remove member from role reservation blacklist."""
         targetMember = self._getMember(member)
         if targetMember is None:
-            log.info(f"No member found for search term: {member}")
+            Logger.info(f"No member found for search term: {member}")
             await ctx.send(embed=Embed(title="❌ No member found", description=f"Searched for: `{member}`", color=Color.red()))
             return
 
         guild = self.bot.get_guild(GUILD_ID)
         if guild is None:
-            log.exception("Staff enableRoleReservation: guild is None")
+            Logger.exception("Staff enableRoleReservation: guild is None")
             return
 
-        log.info(f"{targetMember.display_name} (id: {targetMember.id}) was removed from role reservation blacklist by {ctx.author.display_name} (id: {ctx.author.id})")
+        Logger.info(f"{targetMember.display_name} (id: {targetMember.id}) was removed from role reservation blacklist by {ctx.author.display_name} (id: {ctx.author.id})")
 
         with open(ROLE_RESERVATION_BLACKLIST_FILE) as f:
             blacklist = json.load(f)
@@ -444,7 +445,7 @@ class Staff(commands.Cog):
         """Summarize each SMEs activity last 6 months for Unit Staff."""
         guild = self.bot.get_guild(GUILD_ID)
         if guild is None:
-            log.exception("Staff smeBigBrother: guild is None")
+            Logger.exception("Staff smeBigBrother: guild is None")
             return
 
         from cogs.botTasks import BotTasks
@@ -458,20 +459,20 @@ class Staff(commands.Cog):
         """Verifies a Prospect (passed interview)."""
         targetMember = self._getMember(member)
         if targetMember is None:
-            log.info(f"No member found for search term: {member}")
+            Logger.info(f"No member found for search term: {member}")
             await ctx.send(embed=Embed(title="❌ No member found", description=f"Searched for: `{member}`", color=Color.red()))
             return
 
         guild = self.bot.get_guild(GUILD_ID)
         if guild is None:
-            log.exception("Staff verify: guild is None")
+            Logger.exception("Staff verify: guild is None")
             return
 
         roleProspect = guild.get_role(PROSPECT)
         roleVerified = guild.get_role(VERIFIED)
         roleMember = guild.get_role(MEMBER)
         if roleProspect is None or roleVerified is None or roleMember is None:
-            log.exception("Staff verify: roleProspect, roleVerified, roleMember is None")
+            Logger.exception("Staff verify: roleProspect, roleVerified, roleMember is None")
             return
 
         reason = "User verified"
@@ -537,11 +538,11 @@ class Staff(commands.Cog):
         if sendtoserverinfo:
             guild = self.bot.get_guild(GUILD_ID)
             if guild is None:
-                log.exception("Staff updatemodpack: guild is None")
+                Logger.exception("Staff updatemodpack: guild is None")
                 return
             channelServerInfo = guild.get_channel(SERVER_INFO)
             if not isinstance(channelServerInfo, discord.TextChannel):
-                log.exception("Staff updatemodpack: channelServerInfo is not discord.TextChannel")
+                Logger.exception("Staff updatemodpack: channelServerInfo is not discord.TextChannel")
                 return
 
             await channelServerInfo.send(os.path.splitext(modpack.filename)[0], file=await modpack.to_file())
@@ -553,7 +554,7 @@ class Staff(commands.Cog):
         modal.add_item(discord.ui.TextInput(label="Maps (Click \"Cancel\" to not change anything!)", style=discord.TextStyle.long, placeholder="Training Map\nAltis\nVirolahti", default=mapsDefault, required=True))
         await interaction.response.send_modal(modal)
         await interaction.followup.send("Modpack updated!", ephemeral=True)
-        log.info(f"{interaction.user.display_name} ({interaction.user}) updated modpack id listing.")
+        Logger.info(f"{interaction.user.display_name} ({interaction.user}) updated modpack id listing.")
 
 
     @updatemodpack.error
@@ -562,13 +563,13 @@ class Staff(commands.Cog):
         if type(error) == discord.app_commands.errors.MissingAnyRole:
             guild = self.bot.get_guild(GUILD_ID)
             if guild is None:
-                log.exception("onUpdatemodpackError: guild is None")
+                Logger.exception("onUpdatemodpackError: guild is None")
                 return
 
             embed = Embed(title="❌ Missing permissions", description=f"You do not have the permissions to upload a mission file!\nThe permitted roles are: {', '.join([role.name for allowedRole in CMD_DATACENTER_LIMIT if (role := guild.get_role(allowedRole)) is not None])}.", color=Color.red())
             await interaction.response.send_message(embed=embed, ephemeral=True, delete_after=30.0)
             return
-        log.exception(error)
+        Logger.exception(error)
 
 
     # Snek Lord command
@@ -578,20 +579,20 @@ class Staff(commands.Cog):
         """Snek lord prod test command."""
         guild = self.bot.get_guild(GUILD_ID)
         if guild is None:
-            log.exception("Staff sneklord: guild is None")
+            Logger.exception("Staff sneklord: guild is None")
             return
         for role in guild.roles:
-            log.debug(f"ROLE: {role.name} - {hex(role.color.value)}")
+            Logger.debug(f"ROLE: {role.name} - {hex(role.color.value)}")
 
 
 
     async def modalHandling(self, modal: discord.ui.Modal, interaction: discord.Interaction) -> None:
         if not isinstance(interaction.user, discord.Member):
-            log.exception("Staff modalHandling: interaction.user is not discord.Member")
+            Logger.exception("Staff modalHandling: interaction.user is not discord.Member")
             return
 
         if modal.custom_id != "staff_modal_maps":
-            log.exception("Staff modalHandling: modal.custom_id != staff_modal_maps")
+            Logger.exception("Staff modalHandling: modal.custom_id != staff_modal_maps")
             return
 
         value: str = modal.children[0].value.strip().split("\n")
@@ -603,7 +604,7 @@ class Staff(commands.Cog):
             json.dump(genericData, f, indent=4)
 
         await interaction.response.send_message(f"Maps updated!", ephemeral=True, delete_after=30.0)
-        log.info(f"{interaction.user.display_name} ({interaction.user}) updated modpack maps listing.")
+        Logger.info(f"{interaction.user.display_name} ({interaction.user}) updated modpack maps listing.")
 
 
 class StaffModal(discord.ui.Modal):
@@ -616,7 +617,7 @@ class StaffModal(discord.ui.Modal):
         await self.instance.modalHandling(self, interaction)
 
     async def on_error(self, interaction: discord.Interaction, error: Exception) -> None:
-        log.exception(error)
+        Logger.exception(error)
 
 
 async def setup(bot: commands.Bot) -> None:

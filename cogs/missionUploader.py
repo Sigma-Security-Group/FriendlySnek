@@ -7,8 +7,9 @@ from datetime import datetime, timezone
 from discord import Embed, Color
 from discord.ext import commands  # type: ignore
 
+from logger import Logger
 from constants import *
-from __main__ import log, cogsReady
+from __main__ import cogsReady
 if secret.DEBUG:
     from constants.debug import *
 
@@ -44,7 +45,7 @@ class MissionUploader(commands.Cog):
 
     @commands.Cog.listener()
     async def on_ready(self) -> None:
-        log.debug(LOG_COG_READY.format("MissionUploader"), flush=True)
+        Logger.debug(LOG_COG_READY.format("MissionUploader"), flush=True)
         cogsReady["missionUploader"] = True
 
     @discord.app_commands.command(name="uploadmission")
@@ -59,10 +60,10 @@ class MissionUploader(commands.Cog):
         """Upload a mission PBO file to the server."""
 
         # await interaction.response.send_message("Mission uploading is temporarily disabled. Please contact Unit Staff or Server Hampters for assistance.", ephemeral=True, delete_after=30.0)
-        # log.debug(f"{interaction.user.display_name} ({interaction.user}) attempted to upload a mission file while upload was disabled.")
+        # Logger.debug(f"{interaction.user.display_name} ({interaction.user}) attempted to upload a mission file while upload was disabled.")
         # return
 
-        log.debug(f"{interaction.user.display_name} ({interaction.user}) is uploading a mission file...")
+        Logger.debug(f"{interaction.user.display_name} ({interaction.user}) is uploading a mission file...")
 
         # Only allow .pbo files
         if not missionfile.filename.endswith(".pbo"):
@@ -97,9 +98,9 @@ class MissionUploader(commands.Cog):
                         with open(f"tmp/missionUpload/{missionfile.filename}", "rb") as f:
                             sftp.put(f"tmp/missionUpload/{missionfile.filename}")
                     except Exception as e:
-                        log.exception(f"{interaction.user} | {e}")
+                        Logger.exception(f"{interaction.user} | {e}")
         except Exception as e:
-            log.exception(f"{interaction.user} | {e}")
+            Logger.exception(f"{interaction.user} | {e}")
             await interaction.response.send_message(embed=Embed(title="❌ Connection error", description="There was an error connecting to the server. Please try again later!", color=Color.red()), ephemeral=True, delete_after=30.0)
             return
 
@@ -111,7 +112,7 @@ class MissionUploader(commands.Cog):
         try:
             os.remove(f"tmp/missionUpload/{missionfile.filename}")
         except Exception as e:
-            log.exception("missionUploader uploadMission: Could not delete mission file after upload.")
+            Logger.exception("missionUploader uploadMission: Could not delete mission file after upload.")
 
         with open(MISSIONS_UPLOADED_FILE, "a") as f:
             f.write(f"\nFilename: {missionfile.filename}\n"
@@ -132,12 +133,12 @@ class MissionUploader(commands.Cog):
         # Send the log message in the Bot channel
         botChannel = self.bot.get_channel(BOT)
         if not isinstance(botChannel, discord.channel.TextChannel):
-            log.exception("UploadMission: botChanel is not discord.channel.TextChannel")
+            Logger.exception("UploadMission: botChanel is not discord.channel.TextChannel")
             return
 
         await botChannel.send(embed=embed)
 
-        log.info(f"{interaction.user.display_name} ({interaction.user}) uploaded the mission file: {missionfile.filename}!")
+        Logger.info(f"{interaction.user.display_name} ({interaction.user}) uploaded the mission file: {missionfile.filename}!")
         await interaction.edit_original_response(content=f"Mission file successfully uploaded: `{missionfile.filename}`" + (" (DEBUG)"*secret.DEBUG), embed=None)
 
 
@@ -147,13 +148,13 @@ class MissionUploader(commands.Cog):
         if type(error) == discord.app_commands.errors.MissingAnyRole:
             guild = self.bot.get_guild(GUILD_ID)
             if guild is None:
-                log.exception("onUploadMissionError: guild is None")
+                Logger.exception("onUploadMissionError: guild is None")
                 return
 
             embed = Embed(title="❌ Missing permissions", description=f"You do not have the permissions to upload a mission file!\nThe permitted roles are: {', '.join([role.name for allowedRole in CMD_UPLOADMISSION_LIMIT if (role := guild.get_role(allowedRole)) is not None])}.", color=Color.red())
             await interaction.response.send_message(embed=embed, ephemeral=True, delete_after=30.0)
             return
-        log.exception(error)
+        Logger.exception(error)
 
 async def setup(bot: commands.Bot) -> None:
     await bot.add_cog(MissionUploader(bot))

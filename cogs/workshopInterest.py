@@ -3,9 +3,10 @@ import os, json
 from discord import Embed, Color
 from discord.ext import commands  # type: ignore
 
+from logger import Logger
 from secret import DEBUG
 from constants import *
-from __main__ import log, cogsReady
+from __main__ import cogsReady
 if DEBUG:
     from constants.debug import *
 
@@ -76,7 +77,7 @@ class WorkshopInterest(commands.Cog):
 
     @commands.Cog.listener()
     async def on_ready(self) -> None:
-        log.debug(LOG_COG_READY.format("WorkshopInterest"), flush=True)
+        Logger.debug(LOG_COG_READY.format("WorkshopInterest"), flush=True)
         cogsReady["workshopInterest"] = True
 
         if not os.path.exists(WORKSHOP_INTEREST_FILE):
@@ -107,14 +108,14 @@ class WorkshopInterest(commands.Cog):
 
         wsIntChannel = self.bot.get_channel(WORKSHOP_INTEREST)
         if not isinstance(wsIntChannel, discord.channel.TextChannel):
-            log.exception("WSINT updateChannel: wsInt is not discord.channel.TextChannel")
+            Logger.exception("WSINT updateChannel: wsInt is not discord.channel.TextChannel")
             return
 
         await wsIntChannel.purge(limit=None, check=lambda message: message.author.id in FRIENDLY_SNEKS)
 
         guild = self.bot.get_guild(GUILD_ID)
         if guild is None:
-            log.exception("WSINT updateChannel: guild is None")
+            Logger.exception("WSINT updateChannel: guild is None")
             return
 
         with open(WORKSHOP_INTEREST_FILE) as f:
@@ -215,12 +216,12 @@ class WorkshopInterest(commands.Cog):
                 workshopInterest = json.load(f)
 
             if interaction.message is None:
-                log.exception("WSINT UpdateInterestList: interaction.message is None")
+                Logger.exception("WSINT UpdateInterestList: interaction.message is None")
                 return
 
             wsTitle = interaction.message.embeds[0].title
             if wsTitle is None:
-                log.exception("WSINT UpdateInterestList: wsTitle is None")
+                Logger.exception("WSINT UpdateInterestList: wsTitle is None")
                 return
 
             # Brute force emoji removal, produces title
@@ -248,15 +249,15 @@ class WorkshopInterest(commands.Cog):
                 json.dump(workshopInterest, f, indent=4)
 
             if interaction.guild is None:
-                log.exception("WSINT updateInterestList: interaction.guild is None")
+                Logger.exception("WSINT updateInterestList: interaction.guild is None")
                 return
             try:
                 await interaction.response.edit_message(embed=self.getWorkshopEmbed(interaction.guild, wsTitle))
             except Exception as e:
-                log.exception(f"{interaction.user} | {e}")
+                Logger.exception(f"{interaction.user} | {e}")
 
         except Exception as e:
-            log.exception(f"{interaction.user} | {e}")
+            Logger.exception(f"{interaction.user} | {e}")
 
 
     @commands.command(name="clean-specific-workshop-interest-list")
@@ -274,14 +275,14 @@ class WorkshopInterest(commands.Cog):
 
                 guild = self.bot.get_guild(GUILD_ID)
                 if guild is None:
-                    log.exception("clean-specific-workshop-interest-list: guild is None")
+                    Logger.exception("clean-specific-workshop-interest-list: guild is None")
                     return
                 channel = self.bot.get_channel(WORKSHOP_INTEREST)
                 msg = await channel.fetch_message(workshopInterest[workshop]["messageId"])
                 try:
                     await msg.edit(embed=self.getWorkshopEmbed(guild, workshop))
                 except Exception as e:
-                    log.exception(f"{ctx.author} | {e}")
+                    Logger.exception(f"{ctx.author} | {e}")
                 await ctx.send(embed=Embed(title="✅ Cleared workshop list!", description=f"Cleared workshop list '{worskhopListName}'.", color=Color.green()))
                 break
         else:

@@ -4,9 +4,10 @@ from datetime import datetime, timezone
 from discord import Embed, Color
 from discord.ext import commands  # type: ignore
 
+from logger import Logger
 from secret import DEBUG
 from constants import *
-from __main__ import log, cogsReady
+from __main__ import cogsReady
 if DEBUG:
     from constants.debug import *
 
@@ -19,7 +20,7 @@ class Poll(commands.Cog):
 
     @commands.Cog.listener()
     async def on_ready(self) -> None:
-        log.debug(LOG_COG_READY.format("Poll"), flush=True)
+        Logger.debug(LOG_COG_READY.format("Poll"), flush=True)
         cogsReady["poll"] = True
 
     @discord.app_commands.command(name="poll")
@@ -62,7 +63,7 @@ class Poll(commands.Cog):
         Returns:
         None.
         """
-        log.info(f"{interaction.user.display_name} ({interaction.user}) Created a poll!")
+        Logger.info(f"{interaction.user.display_name} ({interaction.user}) Created a poll!")
         group = {
             "Creator": interaction.user.display_name,
             "Multivote": True if multivote.value == "Yes" else False
@@ -71,7 +72,7 @@ class Poll(commands.Cog):
         embed.set_footer(text=f"Poll by {interaction.user.display_name}")
         embed.timestamp = datetime.now(timezone.utc)
         if embed.description is None:
-            log.exception("Poll: embed.description is None")
+            Logger.exception("Poll: embed.description is None")
             return
 
         options = [option1, option2, option3, option4, option5, option6, option7, option8, option9, option10]
@@ -94,7 +95,7 @@ class Poll(commands.Cog):
             row.add_item(item=buttons[-1])
             await interaction.response.send_message(embed=embed, view=row)
         except Exception as e:
-            log.exception(f"{interaction.user} | {e}")
+            Logger.exception(f"{interaction.user} | {e}")
 
     @staticmethod
     async def buttonHandling(button: discord.ui.Button, interaction: discord.Interaction, group: dict) -> None:
@@ -119,23 +120,23 @@ class Poll(commands.Cog):
 
         try:
             if interaction.channel is None or isinstance(interaction.channel, discord.channel.ForumChannel) or isinstance(interaction.channel, discord.channel.CategoryChannel):
-                log.exception("Poll ButtonHandling: interaction.channel is invalid type")
+                Logger.exception("Poll ButtonHandling: interaction.channel is invalid type")
                 return
             if interaction.message is None:
-                log.exception("Poll ButtonHandling: interaction.message is None")
+                Logger.exception("Poll ButtonHandling: interaction.message is None")
                 return
 
             msg = await interaction.channel.fetch_message(interaction.message.id)
 
             embed = msg.embeds[0]
             if embed.description is None:
-                log.exception("Poll ButtonHandling: embed.description is None")
+                Logger.exception("Poll ButtonHandling: embed.description is None")
                 return
 
             optionRows = (emojiNumbers[0] + embed.description.split(emojiNumbers[0])[1]).split("\n")
 
             if button.view is None:
-                log.exception("Poll ButtonHandling: button.view is None")
+                Logger.exception("Poll ButtonHandling: button.view is None")
                 return
             row = button.view
 
@@ -177,7 +178,7 @@ class Poll(commands.Cog):
             await interaction.followup.send(("(Multi-vote poll)" if group["Multivote"] else "(Single vote poll)") + f"\nYou've voted for:\n{userVotes if len(userVotes) > 0 else 'Nothing.'}", ephemeral=True)
 
         except Exception as e:
-            log.exception(f"{interaction.user} | {e}")
+            Logger.exception(f"{interaction.user} | {e}")
 
 
 class PollView(discord.ui.View):

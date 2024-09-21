@@ -3,7 +3,6 @@ import pytz # type: ignore
 from itertools import count, filterfalse
 
 from logger import Logger
-log = Logger()
 
 import platform  # Set appropriate event loop policy to avoid runtime errors on windows
 if platform.system() == "Windows":
@@ -12,7 +11,7 @@ if platform.system() == "Windows":
 from discord.ext import commands  # type: ignore
 
 if not os.path.exists("./secret.py"):
-    log.info("Creating a secret.py file!")
+    Logger.info("Creating a secret.py file!")
     with open("secret.py", "w") as f:
         f.write(  # Write secret.py template
             """TOKEN = ""
@@ -46,19 +45,19 @@ if secret.DEBUG:
     from constants.debug import *
 
 if not os.path.exists("./data"):
-    log.info("Creating a data directory!")
+    Logger.info("Creating a data directory!")
     os.mkdir("data")
 
 if not os.path.exists("./tmp"):
-    log.info("Creating a tmp directory!")
+    Logger.info("Creating a tmp directory!")
     os.mkdir("tmp")
 
 if not os.path.exists("./tmp/missionUpload"):
-    log.info("Creating a tmp/missionUpload directory!")
+    Logger.info("Creating a tmp/missionUpload directory!")
     os.mkdir("tmp/missionUpload")
 
 if not os.path.exists("./tmp/fileUpload"):
-    log.info("Creating a tmp/fileUpload directory!")
+    Logger.info("Creating a tmp/fileUpload directory!")
     os.mkdir("tmp/fileUpload")
 
 COGS = [cog[:-3] for cog in os.listdir("cogs/") if cog.endswith(".py")]
@@ -96,7 +95,7 @@ async def on_ready() -> None:
         await asyncio.sleep(1)
     client.ready = True
 
-    log.info(f"Bot Ready! Logged in as {client.user}.")
+    Logger.info(f"Bot Ready! Logged in as {client.user}.")
 
 
 @client.event
@@ -109,12 +108,12 @@ async def on_voice_state_update(member: discord.Member, before: discord.VoiceSta
     if after.channel and after.channel.id == CREATE_CHANNEL:
         guild = client.get_guild(GUILD_ID)
         if guild is None:
-            log.exception("on_voice_state_update: guild is None")
+            Logger.exception("on_voice_state_update: guild is None")
             return
 
         smokePitCategory = discord.utils.get(guild.categories, id=SMOKE_PIT)
         if smokePitCategory is None:
-            log.exception("on_voice_state_update: smokePitCategory is None")
+            Logger.exception("on_voice_state_update: smokePitCategory is None")
             return
 
         voiceNums = []
@@ -131,7 +130,7 @@ async def on_voice_state_update(member: discord.Member, before: discord.VoiceSta
         try:
             await before.channel.delete(reason="No users left in dynamic voice channel.")
         except Exception:
-            log.warning(f"on_voice_state_update: could not delete dynamic voice channel: '{before.channel.name}' ({member})")
+            Logger.warning(f"on_voice_state_update: could not delete dynamic voice channel: '{before.channel.name}' ({member})")
 
 @client.event
 async def on_message(message: discord.Message) -> None:
@@ -146,7 +145,7 @@ async def on_message(message: discord.Message) -> None:
 
     # Execute commands
     if message.content.startswith(COMMAND_PREFIX):
-        log.debug(f"{message.author.display_name} ({message.author}) > {message.content}")
+        Logger.debug(f"{message.author.display_name} ({message.author}) > {message.content}")
         message.content = message.content.lower()
         await client.process_commands(message)
 
@@ -178,15 +177,15 @@ async def analyzeChannel(client, message: discord.Message, channelID: int, attac
     try:
         await message.delete()
     except Exception as e:
-        log.exception(f"{message.author} | {e}")
+        Logger.exception(f"{message.author} | {e}")
 
     try:
-        log.info(f"Removed message in #{client.get_channel(channelID)} from {message.author.display_name} ({message.author}). Message content: {message.content}")
+        Logger.info(f"Removed message in #{client.get_channel(channelID)} from {message.author.display_name} ({message.author}). Message content: {message.content}")
         DEVS = ", ".join([f"**{message.guild.get_member(name)}**" for name in DEVELOPERS if message.guild is not None and message.guild.get_member(name) is not None])
 
         await message.author.send(embed=discord.Embed(title="❌ Message removed", description=f"The message you just posted in <#{channelID}> was deleted because no {attachmentContentType} was detected in it.\n\nIf this is an error, then please ask **staff** to post the {attachmentContentType} for you, and inform: {DEVS}", color=discord.Color.red()))
     except Exception as e:
-        log.exception(f"{message.author} | {e}")
+        Logger.exception(f"{message.author} | {e}")
 
 
 @client.event
@@ -203,7 +202,7 @@ async def on_member_join(member: discord.Member) -> None:
     if guild.id != GUILD_ID:
         return
 
-    log.debug(f"Newcomer joined the server: {member}")
+    Logger.debug(f"Newcomer joined the server: {member}")
 
     remindTime = datetime.datetime.now() + datetime.timedelta(days=1)
     with open(REMINDERS_FILE) as f:
@@ -220,7 +219,7 @@ async def on_member_join(member: discord.Member) -> None:
 @client.event
 async def on_error(event, *args, **kwargs) -> None:
     """  """
-    log.exception(f"An error occured! {event}")
+    Logger.exception(f"An error occured! {event}")
 
 
 @client.event
@@ -230,14 +229,14 @@ async def on_command_error(ctx: commands.Context, error: commands.CommandError) 
     if errorType is commands.errors.MissingRequiredArgument:
         await ctx.send_help(ctx.command)
     elif not errorType is commands.CommandNotFound:
-        log.exception(f"{ctx.author} | {error}")
+        Logger.exception(f"{ctx.author} | {error}")
 
 
 @client.command()
 @commands.has_any_role(SNEK_LORD)
 async def reload(ctx: commands.Context) -> None:
     """Reload bot cogs."""
-    log.info(f"{ctx.author.display_name} ({ctx.author}) Reloading bot cogs...")
+    Logger.info(f"{ctx.author.display_name} ({ctx.author}) Reloading bot cogs...")
     for cog in COGS:
         await client.reload_extension(f"cogs.{cog}")
     await client.tree.sync(guild=GUILD)
@@ -254,6 +253,6 @@ async def stop(ctx: commands.Context) -> None:
 if __name__ == "__main__":
     try:
         client.run(secret.TOKEN_DEV if secret.DEBUG else secret.TOKEN)
-        log.info("Bot stopped!")
+        Logger.info("Bot stopped!")
     except Exception as e:
-        log.exception(e)
+        Logger.exception(e)

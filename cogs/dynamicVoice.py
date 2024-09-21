@@ -1,9 +1,10 @@
 import discord
 from discord.ext import commands  # type: ignore
 
+from logger import Logger
 from secret import DEBUG
 from constants import *
-from __main__ import log, cogsReady
+from __main__ import cogsReady
 if DEBUG:
     from constants.debug import *
 
@@ -14,7 +15,7 @@ class DynamicVoice(commands.Cog):
 
     @commands.Cog.listener()
     async def on_ready(self) -> None:
-        log.debug(LOG_COG_READY.format("DynamicVoice"), flush=True)
+        Logger.debug(LOG_COG_READY.format("DynamicVoice"), flush=True)
         cogsReady["dynamicVoice"] = True
 
 
@@ -39,7 +40,7 @@ class DynamicVoice(commands.Cog):
             await interaction.response.send_message("New limit must be greater than 0 and less than 99!", ephemeral=True, delete_after=15.0)
             return
 
-        log.debug(f"{interaction.user.display_name} ({interaction.user}) changed the limit from '{interaction.user.voice.channel.user_limit}' to '{newlimit}'")
+        Logger.debug(f"{interaction.user.display_name} ({interaction.user}) changed the limit from '{interaction.user.voice.channel.user_limit}' to '{newlimit}'")
         await interaction.user.voice.channel.edit(user_limit=newlimit)
         await interaction.response.send_message(f"Changed <#{interaction.user.voice.channel.id}> user limit to `{newlimit}`", ephemeral=True, delete_after=15.0)
 

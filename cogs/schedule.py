@@ -1584,7 +1584,6 @@ class Schedule(commands.Cog):
                             template["authorId"] = interaction.user.id
                             template["time"] = template["endTime"] = None
                             template["type"] = previewEmbedDict["type"]
-                            print(f"template 1 {template}")
                             embed = self.fromDictToPreviewEmbed(template)
                             for child in eventMsgView.children:
                                 if not isinstance(child, discord.ui.Button) or child.label is None:
@@ -1646,7 +1645,6 @@ class Schedule(commands.Cog):
                     break
 
             # Edit preview embed & view
-            print(f"previewEmbedDict 2 {previewEmbedDict}")
             await eventMsgNew.edit(embed=self.fromDictToPreviewEmbed(previewEmbedDict), view=eventMsgView)
 
 
@@ -1989,7 +1987,6 @@ class Schedule(commands.Cog):
                         child.style = discord.ButtonStyle.success
                     break
 
-            print(f"previewEmbedDict 3 {previewEmbedDict}")
             await interaction.response.edit_message(embed=self.fromDictToPreviewEmbed(previewEmbedDict), view=view)
             if followupMsg:
                 await interaction.followup.send(followupMsg["content"] if "content" in followupMsg else None, embed=(followupMsg["embed"] if "embed" in followupMsg else None), ephemeral=True)

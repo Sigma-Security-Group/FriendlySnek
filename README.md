@@ -20,11 +20,18 @@ TOKEN = ""
 TOKEN_DEV = ""
 DEBUG = True
 
+MOD_UPDATE_ACTIVE = False
+SME_REMINDER_ACTIVE = False
+SME_BIG_BROTHER = False
+
 SFTP = {
-    "username": "",
-    "password": ""
+    "0.0.0.0": {
+        "username": "",
+        "password": ""
+    },
 }
 
+REDDIT_ACTIVE = False
 REDDIT = {
     "client_id": "",
     "client_secret": "",

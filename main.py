@@ -44,21 +44,41 @@ from constants import *
 if secret.DEBUG:
     from constants.debug import *
 
-if not os.path.exists("./data"):
-    Logger.info("Creating a data directory!")
-    os.mkdir("data")
+# Set up directories
+def setupDirectory(dirName: str) -> None:
+    if not os.path.exists(dirName):
+        # Logger.info(f"Creating directory '{dirName}'")
+        os.mkdir(dirName)
 
-if not os.path.exists("./tmp"):
-    Logger.info("Creating a tmp directory!")
-    os.mkdir("tmp")
+usedDirectories = ("data", "tmp", "tmp/missionUpload", "tmp/fileUpload")
+for directory in usedDirectories:
+    setupDirectory(directory)
 
-if not os.path.exists("./tmp/missionUpload"):
-    Logger.info("Creating a tmp/missionUpload directory!")
-    os.mkdir("tmp/missionUpload")
 
-if not os.path.exists("./tmp/fileUpload"):
-    Logger.info("Creating a tmp/fileUpload directory!")
-    os.mkdir("tmp/fileUpload")
+# Set up data JSON files
+def setupJSONDataFile(filename: str, dump: list | dict) -> None:
+    if not os.path.exists(filename):
+        # Logger.info(f"Creating data file '{filename}'")
+        with open(filename, "w") as f:
+            json.dump(dump, f, indent=4)
+
+DATA_FILES = {
+    EVENTS_FILE: [],
+    EVENTS_HISTORY_FILE: [],
+    WORKSHOP_TEMPLATES_FILE: [],
+    ROLE_RESERVATION_BLACKLIST_FILE: [],
+    "data/operationTemplates.json": [],
+    "data/workshopTemplates.json": [],
+    "data/eventTemplates.json": [],
+    MEMBER_TIME_ZONES_FILE: {},
+    REMINDERS_FILE: {},
+    REPEATED_MSG_DATE_LOG_FILE: {},
+    GENERIC_DATA_FILE: {}
+}
+for filePath, dump in DATA_FILES.items():
+    setupJSONDataFile(filePath, dump)
+
+
 
 COGS = [cog[:-3] for cog in os.listdir("cogs/") if cog.endswith(".py")]
 # COGS = ["schedule"]  # DEBUG: Faster startup

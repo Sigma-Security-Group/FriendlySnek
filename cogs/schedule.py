@@ -165,27 +165,6 @@ SCHEDULE_EVENT_PREVIEW_EMBED = {
 
 FILE_UPLOAD_EXTENSION_BLACKLIST = ["exe", "pif", "application", "gadget", "msi", "msp", "com", "scr", "hta", "cpl", "msc", "jar", "bat", "cmd", "vb", "vbs", "vbe", "js", "jse", "ws", "wsf", "wsc", "wsh", "ps1", "ps1xml", "ps2", "ps2xml", "psc1", "psc2", "msh", "msh1", "msh2", "mshxml", "msh1xml", "msh2xml", "scf", "lnk", "inf", "reg", "doc", "xls", "ppt", "docm", "dotm", "xlsm", "xltm", "xlam", "pptm", "potm", "ppam", "ppsm", "sldm", "sh", "bash", "zsh"]
 
-def jsonCreateNoExist(filename: str, dump: list | dict) -> None:
-    """Creates a JSON file with a dump if not exist.
-
-    Parameters:
-    filename (str): The files name.
-    dump (list | dict): What to dump.
-
-    Returns:
-    None.
-    """
-    if not os.path.exists(filename):
-        with open(filename, "w") as f:
-            json.dump(dump, f, indent=4)
-
-jsonCreateNoExist(MEMBER_TIME_ZONES_FILE, {})
-jsonCreateNoExist(EVENTS_HISTORY_FILE, [])
-jsonCreateNoExist(WORKSHOP_TEMPLATES_FILE, [])
-jsonCreateNoExist(REMINDERS_FILE, {})
-jsonCreateNoExist(ROLE_RESERVATION_BLACKLIST_FILE, [])
-jsonCreateNoExist(REPEATED_MSG_DATE_LOG_FILE, {})
-jsonCreateNoExist(GENERIC_DATA_FILE, {})
 
 # try:
 #     with open("./.git/logs/refs/heads/main") as f:
@@ -482,7 +461,6 @@ class Schedule(commands.Cog):
 
         await channel.send(f"__Welcome to the schedule channel!__\n🟩 Schedule operations: `/operation` (`/bop`)\n🟦 Workshops: `/workshop` (`/ws`)\n🟨 Generic events: `/event`\n\nThe datetime you see in here are based on __your local time zone__.\nChange timezone when scheduling events with `/changetimezone`.\n\nSuggestions/bugs contact: {', '.join([f'**{developerName.display_name}**' for name in DEVELOPERS if (developerName := channel.guild.get_member(name)) is not None])} -- <https://github.com/Sigma-Security-Group/FriendlySnek>")  #  `{commitHash}`")
 
-        jsonCreateNoExist(EVENTS_FILE, [])
         try:
             with open(EVENTS_FILE) as f:
                 events = json.load(f)
@@ -814,7 +792,6 @@ class Schedule(commands.Cog):
                 else:
                     # Disable if no templates exist
                     filename = f"data/{previewDict['type'].lower()}Templates.json"
-                    jsonCreateNoExist(filename, [])
                     with open(filename) as f:
                         templates = json.load(f)
                     button.disabled = len(templates) == 0
@@ -1314,7 +1291,6 @@ class Schedule(commands.Cog):
                         Logger.info(f"{interaction.user} updated the template: {templateName}")
                         # Write to file
                         filename = f"data/{previewEmbedDict['type'].lower()}Templates.json"
-                        jsonCreateNoExist(filename, [])
                         with open(filename) as f:
                             templates = json.load(f)
 
@@ -1356,7 +1332,6 @@ class Schedule(commands.Cog):
 
 
                         # Append event to JSON
-                        jsonCreateNoExist(EVENTS_FILE, [])
                         with open(EVENTS_FILE) as f:
                             events = json.load(f)
                         events.append(previewEmbedDict)
@@ -1402,7 +1377,6 @@ class Schedule(commands.Cog):
 
                 if buttonLabel.startswith("select_template"):
                     filename = f"data/{previewEmbedDict['type'].lower()}Templates.json"
-                    jsonCreateNoExist(filename, [])
                     with open(filename) as f:
                         templates = json.load(f)
 
@@ -1604,7 +1578,6 @@ class Schedule(commands.Cog):
 
                     # Insert template info into preview embed and view
                     filename = f"data/{previewEmbedDict['type'].lower()}Templates.json"
-                    jsonCreateNoExist(filename, [])
                     with open(filename) as f:
                         templates = json.load(f)
                     for template in templates:
@@ -1974,7 +1947,6 @@ class Schedule(commands.Cog):
 
                     # Write to file
                     filename = f"data/{previewEmbedDict['type'].lower()}Templates.json"
-                    jsonCreateNoExist(filename, [])
                     with open(filename) as f:
                         templates = json.load(f)
                     templateOverwritten = (False, 0)

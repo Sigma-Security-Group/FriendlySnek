@@ -1941,6 +1941,10 @@ class Schedule(commands.Cog):
                         followupMsg["embed"] = discord.Embed(title="❌ There is a collision with another event!", description=collision, color=discord.Color.red())
                         followupMsg["embed"].set_footer(text="You may still continue with the provided time - but not recommended.")
 
+                    if startTime < datetime.now(timezone.utc):
+                        followupMsg["content"] = interaction.user.mention
+                        followupMsg["embed"] = discord.Embed(title="⚠️ Operation set in the past!", description="You've entered a time that is in the past!", color=discord.Color.orange())
+
                 case "external_url":
                     previewEmbedDict["externalURL"] = value or None
 

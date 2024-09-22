@@ -1,10 +1,10 @@
 import os
 import contextlib
 import secret
+import discord
 import pysftp, pytz  # type: ignore
 
 from datetime import datetime, timezone
-from discord import Embed, Color
 from discord.ext import commands  # type: ignore
 
 from logger import Logger
@@ -67,15 +67,15 @@ class MissionUploader(commands.Cog):
 
         # Only allow .pbo files
         if not missionfile.filename.endswith(".pbo"):
-            await interaction.response.send_message(embed=Embed(title="❌ Invalid file type", description="This is not a PBO file. Please upload a PBO file!", color=Color.red()), ephemeral=True, delete_after=30.0)
+            await interaction.response.send_message(embed=discord.Embed(title="❌ Invalid file type", description="This is not a PBO file. Please upload a PBO file!", color=discord.Color.red()), ephemeral=True, delete_after=30.0)
             return
 
         # Cap file size to ~25 MB
         if missionfile.size > 26_250_000:
-            await interaction.response.send_message(embed=Embed(title="❌ Invalid filesize", description="Max allowed filesize is 25 MB!", color=Color.red()), ephemeral=True, delete_after=30.0)
+            await interaction.response.send_message(embed=discord.Embed(title="❌ Invalid filesize", description="Max allowed filesize is 25 MB!", color=discord.Color.red()), ephemeral=True, delete_after=30.0)
             return
 
-        await interaction.response.send_message(embed=Embed(title="Uploading mission file...", description="Standby, this can take a minute...", color=Color.green()))
+        await interaction.response.send_message(embed=discord.Embed(title="Uploading mission file...", description="Standby, this can take a minute...", color=discord.Color.green()))
         serverDict = [srv for srv in SERVERS if srv["Host"] == server.value][0]
         sftp = None
         cnopts = pysftp.CnOpts()
@@ -85,7 +85,7 @@ class MissionUploader(commands.Cog):
             with pysftp.Connection(serverDict["Host"], port=serverDict["Port"], username=secret.SFTP[serverDict["Host"]]["username"], password=secret.SFTP[serverDict["Host"]]["password"], cnopts=cnopts, default_path=serverDict["Directory"]) as sftp:
                 missionFilesOnServer = [file.filename for file in sftp.listdir_attr()]
                 if missionfile.filename in missionFilesOnServer:
-                    await interaction.edit_original_response(embed=Embed(title="❌ Invalid filename", description=f"This file already exists. Please rename the file and reupload it!\nFilename: `{missionfile.filename}`", color=Color.red()))
+                    await interaction.edit_original_response(embed=discord.Embed(title="❌ Invalid filename", description=f"This file already exists. Please rename the file and reupload it!\nFilename: `{missionfile.filename}`", color=discord.Color.red()))
                     return
 
                 # Saving file locally
@@ -101,7 +101,7 @@ class MissionUploader(commands.Cog):
                         Logger.exception(f"{interaction.user} | {e}")
         except Exception as e:
             Logger.exception(f"{interaction.user} | {e}")
-            await interaction.response.send_message(embed=Embed(title="❌ Connection error", description="There was an error connecting to the server. Please try again later!", color=Color.red()), ephemeral=True, delete_after=30.0)
+            await interaction.response.send_message(embed=discord.Embed(title="❌ Connection error", description="There was an error connecting to the server. Please try again later!", color=discord.Color.red()), ephemeral=True, delete_after=30.0)
             return
 
         finally:
@@ -122,7 +122,7 @@ class MissionUploader(commands.Cog):
                 f"Member ID: {interaction.user.id}\n"
             )
 
-        embed = Embed(title="Uploaded mission file" + (" (Debug)" if secret.DEBUG else ""), color=Color.blue())
+        embed = discord.Embed(title="Uploaded mission file" + (" (Debug)" if secret.DEBUG else ""), color=discord.Color.blue())
         embed.add_field(name="Filename", value=f"`{missionfile.filename}`")
         embed.add_field(name="Size", value=f"`{convertBytes(missionfile.size)}`")
         embed.add_field(name="Server", value=f"`{serverDict['Name']}`")
@@ -151,7 +151,7 @@ class MissionUploader(commands.Cog):
                 Logger.exception("onUploadMissionError: guild is None")
                 return
 
-            embed = Embed(title="❌ Missing permissions", description=f"You do not have the permissions to upload a mission file!\nThe permitted roles are: {', '.join([role.name for allowedRole in CMD_UPLOADMISSION_LIMIT if (role := guild.get_role(allowedRole)) is not None])}.", color=Color.red())
+            embed = discord.Embed(title="❌ Missing permissions", description=f"You do not have the permissions to upload a mission file!\nThe permitted roles are: {', '.join([role.name for allowedRole in CMD_UPLOADMISSION_LIMIT if (role := guild.get_role(allowedRole)) is not None])}.", color=discord.Color.red())
             await interaction.response.send_message(embed=embed, ephemeral=True, delete_after=30.0)
             return
         Logger.exception(error)

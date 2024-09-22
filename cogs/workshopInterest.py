@@ -1,6 +1,5 @@
-import os, json, re
+import os, json, re, discord
 
-from discord import Embed, Color
 from discord.ext import commands  # type: ignore
 
 from logger import Logger
@@ -161,7 +160,7 @@ class WorkshopInterest(commands.Cog):
 
 
     @staticmethod
-    def getWorkshopEmbed(guild: discord.Guild, workshopName: str) -> Embed:
+    def getWorkshopEmbed(guild: discord.Guild, workshopName: str) -> discord.Embed:
         """Generates an embed from the given workshop.
 
         Parameters:
@@ -171,7 +170,7 @@ class WorkshopInterest(commands.Cog):
         Returns:
         discord.Embed: The generated embed.
         """
-        embed = Embed(title=f"{WORKSHOP_INTEREST_LIST[workshopName]['emoji']} {workshopName}", description=WORKSHOP_INTEREST_LIST[workshopName]["description"], color=Color.dark_blue())
+        embed = discord.Embed(title=f"{WORKSHOP_INTEREST_LIST[workshopName]['emoji']} {workshopName}", description=WORKSHOP_INTEREST_LIST[workshopName]["description"], color=discord.Color.dark_blue())
 
         with open(WORKSHOP_INTEREST_FILE) as f:
             workshopInterest = json.load(f)
@@ -302,10 +301,10 @@ class WorkshopInterest(commands.Cog):
                     await msg.edit(embed=self.getWorkshopEmbed(guild, workshop))
                 except Exception as e:
                     Logger.exception(f"{ctx.author} | {e}")
-                await ctx.send(embed=Embed(title="✅ Cleared workshop list!", description=f"Cleared workshop list '{worskhopListName}'.", color=Color.green()))
+                await ctx.send(embed=discord.Embed(title="✅ Cleared workshop list!", description=f"Cleared workshop list '{worskhopListName}'.", color=discord.Color.green()))
                 break
         else:
-            await ctx.send(embed=Embed(title="❌ Invalid workshop name", description=f"Could not find workshop '{worskhopListName}'.", color=Color.red()))
+            await ctx.send(embed=discord.Embed(title="❌ Invalid workshop name", description=f"Could not find workshop '{worskhopListName}'.", color=discord.Color.red()))
 
 
 class WorkshopInterestButton(discord.ui.DynamicItem[discord.ui.Button], template=r"workshopinterest_(?P<action>add|remove)"):

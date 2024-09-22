@@ -1,4 +1,4 @@
-import secret, os, random, json, re, aiohttp
+import secret, os, random, json, re, aiohttp, discord
 import asyncpraw, pytz  # type: ignore
 
 from datetime import datetime, timezone, timedelta
@@ -6,7 +6,6 @@ from dateutil.parser import parse as datetimeParse  # type: ignore
 from bs4 import BeautifulSoup as BS  # type: ignore
 from .workshopInterest import WORKSHOP_INTEREST_LIST  # type: ignore
 
-from discord import Embed, Color
 from discord.ext import commands, tasks  # type: ignore
 
 from logger import Logger
@@ -123,7 +122,7 @@ class BotTasks(commands.Cog):
             # Each mod update will be sent in a separate message
             msgContent: str | None = hampter.mention + (f" ({len(output)})" if len(output) > 1 else "") + "\n\n"  # Ping for first message
             for mod in output:
-                await changelog.send(msgContent, embed=Embed(title=mod["name"], url=CHANGELOG_URL.format(mod['modID']), timestamp=mod["datetime"], color=Color.dark_blue()))
+                await changelog.send(msgContent, embed=discord.Embed(title=mod["name"], url=CHANGELOG_URL.format(mod['modID']), timestamp=mod["datetime"], color=discord.Color.dark_blue()))
                 msgContent = None  # Only 1 ping
 
 
@@ -244,9 +243,9 @@ Join Us:
             Logger.exception("Bottasks smeReminder: smeCorner is not discord.TextChannel")
             return
 
-        pingEmbed = Embed(
+        pingEmbed = discord.Embed(
             title="Workshop Reminder",
-            color=Color.orange()
+            color=discord.Color.orange()
         )
 
         workshopsInTimeFrame = []
@@ -348,7 +347,7 @@ Join Us:
         embedsToSend = []
         for person, personDetails in bigBrotherWatchList.items():
             embedDescription = "\n".join([smeRoleMention + ("not hosting in the past 6 months!"*(statistics["count"] == 0)) + (f"hosted {statistics['time']} - host count ({statistics['count']})"*(statistics["count"] != 0)) for smeRoleMention, statistics in personDetails.items()])
-            embedsToSend.append(Embed(title=person, color=Color.gold(), description=embedDescription))
+            embedsToSend.append(discord.Embed(title=person, color=discord.Color.gold(), description=embedDescription))
 
         embedTitle = f"SME Activity Report [{('Manual'*manuallyExecuted) + ('Automatic'*(not manuallyExecuted))}]"
         embedDescription = "Here comes an activity report on all individual SMEs"
@@ -358,10 +357,10 @@ Join Us:
 
         if len(embedsToSend) == 0:
             Logger.warning("botTasks smeBigBrother: no embeds sent.")
-            await staffChat.send(Embed(title=embedTitle, color=Color.red(), description="Nothing to send. Contact Snek Lords."))
+            await staffChat.send(discord.Embed(title=embedTitle, color=discord.Color.red(), description="Nothing to send. Contact Snek Lords."))
             return
 
-        embedsToSend.insert(0, Embed(title=embedTitle, color=Color.green(), description=embedDescription))
+        embedsToSend.insert(0, discord.Embed(title=embedTitle, color=discord.Color.green(), description=embedDescription))
         for embedChunk in chunkList(embedsToSend, 10):
             Logger.info("botTasks smeBigBrother: sending chunk.")
             await staffChat.send(embeds=embedChunk)
@@ -488,7 +487,7 @@ Join Us:
 
             # Embed
             setTime = datetime.fromtimestamp(details["setTime"])
-            embed = Embed(title="Reminder", description=details["message"], timestamp=setTime, color=Color.dark_blue())
+            embed = discord.Embed(title="Reminder", description=details["message"], timestamp=setTime, color=discord.Color.dark_blue())
             embed.set_footer(text="Set")
 
             # Repeat
@@ -616,21 +615,21 @@ class Reminders(commands.GroupCog, name="reminder"):
     async def reminderSet(self, interaction: discord.Interaction, when: str, text: str | None = None, repeat: bool | None = None) -> None:
         """Sets a reminder to remind you of something at a specific time."""
         if when.strip() == "":
-            await interaction.response.send_message(embed=Embed(title="❌ Input e.g. 'in 5 minutes' or '1 hour'.", color=Color.red()), ephemeral=True, delete_after=10.0)
+            await interaction.response.send_message(embed=discord.Embed(title="❌ Input e.g. 'in 5 minutes' or '1 hour'.", color=discord.Color.red()), ephemeral=True, delete_after=10.0)
             return
 
         reminderTime = self.parseRelativeTime(when)
         if reminderTime is None:
-            await interaction.response.send_message(embed=Embed(title="❌ Could not parse the given time.", color=Color.red()), ephemeral=True, delete_after=10.0)
+            await interaction.response.send_message(embed=discord.Embed(title="❌ Could not parse the given time.", color=discord.Color.red()), ephemeral=True, delete_after=10.0)
             return
 
         if repeat and ((reminderTime - datetime.now()) < timedelta(minutes=1)):
-            await interaction.response.send_message(embed=Embed(title="❌ I will not spam-remind you.", color=Color.red()), ephemeral=True, delete_after=10.0)
+            await interaction.response.send_message(embed=discord.Embed(title="❌ I will not spam-remind you.", color=discord.Color.red()), ephemeral=True, delete_after=10.0)
             return
 
         if interaction.channel is None:
             Logger.warning("botTasks reminderSet: interaction.channel is None")
-            await interaction.response.send_message(embed=Embed(title="❌ Invalid channel.", color=Color.red()), ephemeral=True, delete_after=10.0)
+            await interaction.response.send_message(embed=discord.Embed(title="❌ Invalid channel.", color=discord.Color.red()), ephemeral=True, delete_after=10.0)
             return
 
         with open(REMINDERS_FILE) as f:
@@ -648,7 +647,7 @@ class Reminders(commands.GroupCog, name="reminder"):
         with open(REMINDERS_FILE, "w", encoding="utf-8") as f:
             json.dump(reminders, f, indent=4)
 
-        embed=Embed(description=f"I will remind you {discord.utils.format_dt(reminderTime, style='R')}", color=Color.green())
+        embed=discord.Embed(description=f"I will remind you {discord.utils.format_dt(reminderTime, style='R')}", color=discord.Color.green())
         embed.set_author(name=interaction.user, icon_url=interaction.user.display_avatar)
         await interaction.response.send_message(embed=embed)
 
@@ -660,7 +659,7 @@ class Reminders(commands.GroupCog, name="reminder"):
         with open(REMINDERS_FILE) as f:
             reminders = json.load(f)
 
-        embed = Embed(title="Reminders", color=Color.dark_blue())
+        embed = discord.Embed(title="Reminders", color=discord.Color.dark_blue())
 
         desc = ""
         reminderCount = 0
@@ -738,10 +737,10 @@ class Reminders(commands.GroupCog, name="reminder"):
         with open(REMINDERS_FILE) as f:
             reminders = json.load(f)
 
-        embed = Embed(
+        embed = discord.Embed(
             title="Reminder Deleted",
             description=reminders[reminder]["message"],
-            color=Color.red(),
+            color=discord.Color.red(),
             timestamp=datetime.fromtimestamp(float(reminder), tz=pytz.utc)
         )
         embed.set_footer(text="Reminder set")

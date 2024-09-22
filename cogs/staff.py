@@ -1,9 +1,9 @@
 import re
 import json
 import os
+import discord
 
 from datetime import datetime, timezone
-from discord import utils, Embed, Color
 from discord.ext import commands  # type: ignore
 from unidecode import unidecode
 from textwrap import wrap
@@ -63,12 +63,12 @@ class Staff(commands.Cog):
             await ctx.send(f"No member found for search term: `{member}`")
             return
 
-        embed = Embed(description=targetMember.mention, color=targetMember.color)
+        embed = discord.Embed(description=targetMember.mention, color=targetMember.color)
         avatar = targetMember.avatar if targetMember.avatar else targetMember.display_avatar
         embed.set_author(icon_url=targetMember.display_avatar, name=targetMember)
         embed.set_thumbnail(url=avatar)
-        embed.add_field(name="Joined", value="`Unknown`" if targetMember.joined_at is None else utils.format_dt(targetMember.joined_at, style="f"), inline=True)
-        embed.add_field(name="Registered", value=utils.format_dt(targetMember.created_at, style="f"), inline=True)
+        embed.add_field(name="Joined", value="`Unknown`" if targetMember.joined_at is None else discord.utils.format_dt(targetMember.joined_at, style="f"), inline=True)
+        embed.add_field(name="Registered", value=discord.utils.format_dt(targetMember.created_at, style="f"), inline=True)
 
         roles = [role.mention for role in targetMember.roles]  # Fetch all member roles
         roles.pop(0)  # Remove @everyone role
@@ -107,7 +107,7 @@ class Staff(commands.Cog):
         tagetMember = self._getMember(member)
         if tagetMember is None:
             Logger.info(f"No member found for search term: {member}")
-            await ctx.send(embed=Embed(title="❌ No member found", description=f"Searched for: `{member}`", color=Color.red()))
+            await ctx.send(embed=discord.Embed(title="❌ No member found", description=f"Searched for: `{member}`", color=discord.Color.red()))
             return
 
         guild = self.bot.get_guild(GUILD_ID)
@@ -116,7 +116,7 @@ class Staff(commands.Cog):
             return
 
         Logger.critical(f"\n---------\n{ctx.author.display_name} ({ctx.author}) is purging all messages from {member}: {tagetMember.display_name} ({tagetMember})\n---------")
-        embed = Embed(title="Purging messages", description=f"Member: {tagetMember.mention}\nThis may take a while!", color=Color.orange())
+        embed = discord.Embed(title="Purging messages", description=f"Member: {tagetMember.mention}\nThis may take a while!", color=discord.Color.orange())
         embed.set_footer(text=f"ID: {tagetMember.id}")
         embed.timestamp = datetime.now()
         await ctx.send(embed=embed)
@@ -128,7 +128,7 @@ class Staff(commands.Cog):
             except (discord.Forbidden, discord.HTTPException):
                 Logger.warning(f"Could not purge {tagetMember.display_name} ({tagetMember}) messages from {channel.mention}!")
         Logger.info(f"Done purging {tagetMember.display_name} ({tagetMember}) messages!")
-        embed = Embed(title="✅ Messages purged", description=f"Member: {tagetMember.mention}", color=Color.green())
+        embed = discord.Embed(title="✅ Messages purged", description=f"Member: {tagetMember.mention}", color=discord.Color.green())
         embed.set_footer(text=f"ID: {tagetMember.id}")
         embed.timestamp = datetime.now()
         await ctx.send(embed=embed)
@@ -143,12 +143,12 @@ class Staff(commands.Cog):
             return
 
         Logger.info(f"Analyzing members' last activity")
-        embed = Embed(title="Analyzing members' last activity", color=Color.orange())
+        embed = discord.Embed(title="Analyzing members' last activity", color=discord.Color.orange())
         embed.timestamp = datetime.now()
         await ctx.send(embed=embed)
 
         lastMessagePerMember = {member: None for member in guild.members}
-        embed = Embed(title="Channel checking", color=Color.orange())
+        embed = discord.Embed(title="Channel checking", color=discord.Color.orange())
         embed.add_field(name="Channel", value="Loading...", inline=True)
         embed.add_field(name="Progress", value="0 / 0", inline=True)
         embed.set_footer(text=f"Run by: {ctx.author}")
@@ -173,14 +173,14 @@ class Staff(commands.Cog):
                 if len(membersNotChecked) == 0:
                     break
         Logger.info("Message searching done!")
-        embed = Embed(title="✅ Channel checking", color=Color.green())
+        embed = discord.Embed(title="✅ Channel checking", color=discord.Color.green())
         embed.set_footer(text=f"Run by: {ctx.author}")
         embed.timestamp = datetime.now()
         await msg.edit(embed=embed)
-        lastActivityPerMember = [(f"{member.display_name} ({member})", f"{member.mention}\n{utils.format_dt(lastMessage.created_at, style='F')}\n[Last Message]({lastMessage.jump_url})" if lastMessage is not None else f"{member.mention}\nNot Found!")
+        lastActivityPerMember = [(f"{member.display_name} ({member})", f"{member.mention}\n{discord.utils.format_dt(lastMessage.created_at, style='F')}\n[Last Message]({lastMessage.jump_url})" if lastMessage is not None else f"{member.mention}\nNot Found!")
         for member, lastMessage in sorted(lastMessagePerMember.items(), key=lambda x: x[1].created_at if x[1] is not None else datetime(1970, 1, 1, tzinfo=timezone.utc))]
         for i in range(0, len(lastActivityPerMember), 25):
-            embed = Embed(title=f"Last activity per member ({i + 1} - {min(i + 25, len(lastActivityPerMember))} / {len(lastActivityPerMember)})", color=Color.dark_green())
+            embed = discord.Embed(title=f"Last activity per member ({i + 1} - {min(i + 25, len(lastActivityPerMember))} / {len(lastActivityPerMember)})", color=discord.Color.dark_green())
             for j in range(i, min(i + 25, len(lastActivityPerMember))):
                 embed.add_field(name=lastActivityPerMember[j][0], value=lastActivityPerMember[j][1], inline=False)
             await ctx.send(embed=embed)
@@ -195,7 +195,7 @@ class Staff(commands.Cog):
         targetMember = self._getMember(member)
         if targetMember is None:
             Logger.info(f"No member found for search term: {member}!")
-            await ctx.send(embed=Embed(title="❌ No member found", description=f"Searched for: `{member}`", color=Color.red()))
+            await ctx.send(embed=discord.Embed(title="❌ No member found", description=f"Searched for: `{member}`", color=discord.Color.red()))
             return
 
         guild = self.bot.get_guild(GUILD_ID)
@@ -215,11 +215,11 @@ class Staff(commands.Cog):
                 Logger.warning(f"Could not search messages from channel #{channel.name}!")
         Logger.debug("Done searching messages!")
         if lastMessage is None:
-            embed = Embed(title="❌ Last activity", description=f"Activity not found!\nMember: {targetMember.mention}", color=Color.red())
+            embed = discord.Embed(title="❌ Last activity", description=f"Activity not found!\nMember: {targetMember.mention}", color=discord.Color.red())
             embed.timestamp = datetime.now()
             await ctx.send(embed=embed)
         else:
-            embed = Embed(title="✅ Last activity", description=f"Activity found: {utils.format_dt(lastMessage.created_at.timestamp(), style='F')}!\nMember: {targetMember.mention}", color=Color.green())
+            embed = discord.Embed(title="✅ Last activity", description=f"Activity found: {discord.utils.format_dt(lastMessage.created_at.timestamp(), style='F')}!\nMember: {targetMember.mention}", color=discord.Color.green())
             embed.timestamp = datetime.now()
             await ctx.send(embed=embed)
 
@@ -230,7 +230,7 @@ class Staff(commands.Cog):
         targetMember = self._getMember(member)
         if targetMember is None:
             Logger.info(f"No member found for search term: {member}!")
-            await ctx.send(embed=Embed(title="❌ No member found", description=f"Searched for: `{member}`", color=Color.red()))
+            await ctx.send(embed=discord.Embed(title="❌ No member found", description=f"Searched for: `{member}`", color=discord.Color.red()))
             return
 
         guild = self.bot.get_guild(GUILD_ID)
@@ -257,7 +257,7 @@ class Staff(commands.Cog):
                 Logger.info(f"Promoting {targetMember.display_name} ({targetMember}) from {role} to {newRole}!")
                 await targetMember.remove_roles(role)
                 await targetMember.add_roles(newRole)
-                embed = Embed(title="✅ Member promoted", description=f"{targetMember.mention} promoted from {role.mention} to {newRole.mention}!", color=Color.green())
+                embed = discord.Embed(title="✅ Member promoted", description=f"{targetMember.mention} promoted from {role.mention} to {newRole.mention}!", color=discord.Color.green())
                 embed.set_footer(text=f"ID: {targetMember.id}")
                 embed.timestamp = datetime.now()
                 await ctx.send(embed=embed)
@@ -265,7 +265,7 @@ class Staff(commands.Cog):
 
         else:
             Logger.info(f"No promotion possible for {targetMember.display_name} ({targetMember})!")
-            embed = Embed(title="❌ No possible promotion", description=f"Member: {targetMember.mention}", color=Color.red())
+            embed = discord.Embed(title="❌ No possible promotion", description=f"Member: {targetMember.mention}", color=discord.Color.red())
             embed.set_footer(text=f"ID: {targetMember.id}")
             embed.timestamp = datetime.now()
             await ctx.send(embed=embed)
@@ -277,7 +277,7 @@ class Staff(commands.Cog):
         targetMember = self._getMember(member)
         if targetMember is None:
             Logger.info(f"No member found for search term: {member}")
-            await ctx.send(embed=Embed(title="❌ No member found", description=f"Searched for: `{member}`", color=Color.red()))
+            await ctx.send(embed=discord.Embed(title="❌ No member found", description=f"Searched for: `{member}`", color=discord.Color.red()))
             return
 
         guild = self.bot.get_guild(GUILD_ID)
@@ -295,7 +295,7 @@ class Staff(commands.Cog):
                 Logger.info(f"Demoting {targetMember.display_name} ({targetMember}) from {role} to {newRole}!")
                 await targetMember.remove_roles(role)
                 await targetMember.add_roles(newRole)
-                embed = Embed(title="✅ Member demoted", description=f"{targetMember.mention} demoted from {role.mention} to {newRole.mention}!", color=Color.green())
+                embed = discord.Embed(title="✅ Member demoted", description=f"{targetMember.mention} demoted from {role.mention} to {newRole.mention}!", color=discord.Color.green())
                 embed.set_footer(text=f"ID: {targetMember.id}")
                 embed.timestamp = datetime.now()
                 await ctx.send(embed=embed)
@@ -303,7 +303,7 @@ class Staff(commands.Cog):
 
         else:
             Logger.info(f"No demotion possible for {targetMember.display_name} ({targetMember})!")
-            embed = Embed(title="❌ No possible demotion", description=f"Member: {targetMember.mention}", color=Color.red())
+            embed = discord.Embed(title="❌ No possible demotion", description=f"Member: {targetMember.mention}", color=discord.Color.red())
             embed.set_footer(text=f"ID: {targetMember.id}")
             embed.timestamp = datetime.now()
             await ctx.send(embed=embed)
@@ -377,7 +377,7 @@ class Staff(commands.Cog):
         targetMember = self._getMember(member)
         if targetMember is None:
             Logger.info(f"No member found for search term: {member}")
-            await ctx.send(embed=Embed(title="❌ No member found", description=f"Searched for: `{member}`", color=Color.red()))
+            await ctx.send(embed=discord.Embed(title="❌ No member found", description=f"Searched for: `{member}`", color=discord.Color.red()))
             return
 
         guild = self.bot.get_guild(GUILD_ID)
@@ -403,7 +403,7 @@ class Staff(commands.Cog):
                 json.dump(events, f, indent=4)
             await self.bot.get_cog("Schedule").updateSchedule()
 
-        embed = Embed(title="✅ Member blacklisted", description=f"{targetMember.mention} is no longer allowed to reserve roles!", color=Color.green())
+        embed = discord.Embed(title="✅ Member blacklisted", description=f"{targetMember.mention} is no longer allowed to reserve roles!", color=discord.Color.green())
         embed.set_footer(text=f"ID: {targetMember.id}")
         embed.timestamp = datetime.now()
         await ctx.send(embed=embed)
@@ -415,7 +415,7 @@ class Staff(commands.Cog):
         targetMember = self._getMember(member)
         if targetMember is None:
             Logger.info(f"No member found for search term: {member}")
-            await ctx.send(embed=Embed(title="❌ No member found", description=f"Searched for: `{member}`", color=Color.red()))
+            await ctx.send(embed=discord.Embed(title="❌ No member found", description=f"Searched for: `{member}`", color=discord.Color.red()))
             return
 
         guild = self.bot.get_guild(GUILD_ID)
@@ -434,7 +434,7 @@ class Staff(commands.Cog):
             with open(ROLE_RESERVATION_BLACKLIST_FILE, "w") as f:
                 json.dump(blacklist, f, indent=4)
 
-        embed = Embed(title="✅ Member removed from blacklist", description=f"{targetMember.mention} is now allowed to reserve roles!", color=Color.green())
+        embed = discord.Embed(title="✅ Member removed from blacklist", description=f"{targetMember.mention} is now allowed to reserve roles!", color=discord.Color.green())
         embed.set_footer(text=f"ID: {targetMember.id}")
         embed.timestamp = datetime.now()
         await ctx.send(embed=embed)
@@ -460,7 +460,7 @@ class Staff(commands.Cog):
         targetMember = self._getMember(member)
         if targetMember is None:
             Logger.info(f"No member found for search term: {member}")
-            await ctx.send(embed=Embed(title="❌ No member found", description=f"Searched for: `{member}`", color=Color.red()))
+            await ctx.send(embed=discord.Embed(title="❌ No member found", description=f"Searched for: `{member}`", color=discord.Color.red()))
             return
 
         guild = self.bot.get_guild(GUILD_ID)
@@ -481,7 +481,7 @@ class Staff(commands.Cog):
             await targetMember.add_roles(roleVerified, reason=reason)
 
         await targetMember.add_roles(roleMember, reason=reason)
-        embed = Embed(title="✅ Member verified", description=f"{targetMember.mention} verified!", color=Color.green())
+        embed = discord.Embed(title="✅ Member verified", description=f"{targetMember.mention} verified!", color=discord.Color.green())
         embed.set_footer(text=f"ID: {targetMember.id}")
         embed.timestamp = datetime.now()
         await ctx.send(embed=embed)
@@ -566,7 +566,7 @@ class Staff(commands.Cog):
                 Logger.exception("onUpdatemodpackError: guild is None")
                 return
 
-            embed = Embed(title="❌ Missing permissions", description=f"You do not have the permissions to upload a mission file!\nThe permitted roles are: {', '.join([role.name for allowedRole in CMD_DATACENTER_LIMIT if (role := guild.get_role(allowedRole)) is not None])}.", color=Color.red())
+            embed = discord.Embed(title="❌ Missing permissions", description=f"You do not have the permissions to upload a mission file!\nThe permitted roles are: {', '.join([role.name for allowedRole in CMD_DATACENTER_LIMIT if (role := guild.get_role(allowedRole)) is not None])}.", color=discord.Color.red())
             await interaction.response.send_message(embed=embed, ephemeral=True, delete_after=30.0)
             return
         Logger.exception(error)

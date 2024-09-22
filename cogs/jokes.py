@@ -1,8 +1,6 @@
 import requests  # type: ignore
-from random import choice
-from asyncio import sleep
 
-from discord import app_commands
+import discord
 from discord.ext import commands  # type: ignore
 
 from logger import Logger
@@ -25,8 +23,8 @@ class Jokes(commands.Cog):
         Logger.debug(LOG_COG_READY.format("Jokes"), flush=True)
         cogsReady["jokes"] = True
 
-    @app_commands.command(name="dadjoke")
-    @app_commands.guilds(GUILD)
+    @discord.app_commands.command(name="dadjoke")
+    @discord.app_commands.guilds(GUILD)
     async def dadjoke(self, interaction: discord.Interaction) -> None:
         """Receive a hilarious dad joke."""
         response = requests.get(url=URL, headers=HEADERS)

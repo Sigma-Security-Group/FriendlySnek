@@ -18,7 +18,6 @@ if DEBUG:
 
 
 EMBED_INVALID = discord.Embed(title="❌ Invalid input", color=discord.Color.red())
-
 MAX_SERVER_ATTENDANCE = 50
 
 

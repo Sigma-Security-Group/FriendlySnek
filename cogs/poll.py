@@ -1,7 +1,6 @@
-import re
+import re, discord
 
 from datetime import datetime, timezone
-from discord import Embed, Color
 from discord.ext import commands  # type: ignore
 
 from logger import Logger
@@ -68,7 +67,7 @@ class Poll(commands.Cog):
             "Creator": interaction.user.display_name,
             "Multivote": True if multivote.value == "Yes" else False
         }
-        embed = Embed(title=title, description=f"{description}\n\n", color=Color.gold())
+        embed = discord.Embed(title=title, description=f"{description}\n\n", color=discord.Color.gold())
         embed.set_footer(text=f"Poll by {interaction.user.display_name}")
         embed.timestamp = datetime.now(timezone.utc)
         if embed.description is None:
@@ -110,7 +109,7 @@ class Poll(commands.Cog):
         None.
         """
         if button.custom_id == "results":
-            embed = Embed(title="Poll results", color=Color.green())
+            embed = discord.Embed(title="Poll results", color=discord.Color.green())
             for key, value in group.items():
                 if key.startswith("poll_vote_"):
                     embed.add_field(name=emojiNumbers[int(key.split("_")[-1])], value="\n".join([member.mention for voterId in value if interaction.guild is not None and (member := interaction.guild.get_member(voterId)) is not None]) if len(value) > 0 else "No votes", inline=True)

@@ -1,4 +1,4 @@
-import os, json
+import os, json, re
 
 from discord import Embed, Color
 from discord.ext import commands  # type: ignore
@@ -80,20 +80,44 @@ class WorkshopInterest(commands.Cog):
         Logger.debug(LOG_COG_READY.format("WorkshopInterest"), flush=True)
         cogsReady["workshopInterest"] = True
 
+        isUpdateChannel = False
+
         if not os.path.exists(WORKSHOP_INTEREST_FILE):
-            # JSON dump template
+            isUpdateChannel = True
             workshopInterest = {}
             for name in WORKSHOP_INTEREST_LIST.keys():
                 workshopInterest[name] = {
                     "members": [],
                     "messageId": 0
                 }
-
-            # Write to file
             with open(WORKSHOP_INTEREST_FILE, "w") as f:
                 json.dump(workshopInterest, f, indent=4)
 
-        await self.updateChannel()
+        else:
+            with open(WORKSHOP_INTEREST_FILE) as f:
+                wsIntFile = json.load(f)
+
+            # Mismatch in file/dict
+            mismatches = set(WORKSHOP_INTEREST_LIST) - set(wsIntFile)
+            if mismatches:
+                isUpdateChannel = True
+                for mismatch in mismatches:
+                    wsIntFile[mismatch] = {
+                        "members": [],
+                        "messageId": 0
+                    }
+                with open(WORKSHOP_INTEREST_FILE, "w") as f:
+                    json.dump(wsIntFile, f, indent=4)
+
+            # File entry msg.id == 0
+            for _, workshopDetails in wsIntFile.items():
+                if workshopDetails.get("messageId", 0) == 0:
+                    isUpdateChannel = True
+
+
+        if isUpdateChannel:
+            await self.updateChannel()
+
 
     async def updateChannel(self) -> None:
         """Updates the interest channel with all messages.
@@ -104,8 +128,6 @@ class WorkshopInterest(commands.Cog):
         Returns:
         None.
         """
-        # TODO Goddamnit I hate this fucking resend shit. Please implement persistent views
-
         wsIntChannel = self.bot.get_channel(WORKSHOP_INTEREST)
         if not isinstance(wsIntChannel, discord.channel.TextChannel):
             Logger.exception("WSINT updateChannel: wsInt is not discord.channel.TextChannel")
@@ -126,22 +148,22 @@ class WorkshopInterest(commands.Cog):
             embed = self.getWorkshopEmbed(guild, workshopName)
 
             # Do button stuff
-            row = discord.ui.View()
-            row.timeout = None
+            view = discord.ui.View(timeout=None)
             buttons = (
-                WorkshopInterestButton(self, row=0, label="Interested", style=discord.ButtonStyle.success, custom_id="add"),
-                WorkshopInterestButton(self, row=0, label="Not Interested", style=discord.ButtonStyle.danger, custom_id="remove")
+                WorkshopInterestButton(custom_id="workshopinterest_add", row=0, label="Interested", style=discord.ButtonStyle.success),
+                WorkshopInterestButton(custom_id="workshopinterest_remove", row=0, label="Not Interested", style=discord.ButtonStyle.danger)
             )
             for button in buttons:
-                row.add_item(item=button)
+                view.add_item(item=button)
 
-            msg = await wsIntChannel.send(embed=embed, view=row)
+            msg = await wsIntChannel.send(embed=embed, view=view)
 
             # Set embed messageId - used for removing people once workshop is done
             wsIntFile[workshopName]["messageId"] = msg.id
 
         with open(WORKSHOP_INTEREST_FILE, "w", encoding="utf-8") as f:
             json.dump(wsIntFile, f, indent=4)
+
 
     @staticmethod
     def getWorkshopEmbed(guild: discord.Guild, workshopName: str) -> Embed:
@@ -201,7 +223,9 @@ class WorkshopInterest(commands.Cog):
 
         return embed
 
-    async def updateInterestList(self, button: discord.ui.Button, interaction: discord.Interaction) -> None:
+
+    @staticmethod
+    async def updateInterestList(button: discord.ui.Button, interaction: discord.Interaction) -> None:
         """Handling all workshop interest button interactions.
 
         Parameters:
@@ -231,14 +255,14 @@ class WorkshopInterest(commands.Cog):
                     break
             wsMembers = workshopInterest[wsTitle]["members"]
 
-            if button.custom_id == "add":
+            if button.custom_id == "workshopinterest_add":
                 if interaction.user.id not in wsMembers:
                     wsMembers.append(interaction.user.id)  # Add member to WS
                 else:
                     await interaction.response.send_message("You are already interested!", ephemeral=True)
                     return
 
-            elif button.custom_id == "remove":
+            elif button.custom_id == "workshopinterest_remove":
                 if interaction.user.id in wsMembers:
                     wsMembers.remove(interaction.user.id)  # Remove member from WS
                 else:
@@ -252,7 +276,7 @@ class WorkshopInterest(commands.Cog):
                 Logger.exception("WSINT updateInterestList: interaction.guild is None")
                 return
             try:
-                await interaction.response.edit_message(embed=self.getWorkshopEmbed(interaction.guild, wsTitle))
+                await interaction.response.edit_message(embed=WorkshopInterest.getWorkshopEmbed(interaction.guild, wsTitle))
             except Exception as e:
                 Logger.exception(f"{interaction.user} | {e}")
 
@@ -289,15 +313,19 @@ class WorkshopInterest(commands.Cog):
             await ctx.send(embed=Embed(title="❌ Invalid workshop name", description=f"Could not find workshop '{worskhopListName}'.", color=Color.red()))
 
 
-class WorkshopInterestButton(discord.ui.Button):
+class WorkshopInterestButton(discord.ui.DynamicItem[discord.ui.Button], template=r"workshopinterest_(?P<action>add|remove)"):
     """Handling all workshop interest buttons."""
-    def __init__(self, instance, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.instance = instance
+    def __init__(self, custom_id="", *args, **kwargs):
+        super().__init__(discord.ui.Button(custom_id=custom_id, *args, **kwargs))
+
+    @classmethod
+    async def from_custom_id(cls, interaction: discord.Interaction, item: discord.ui.Button, match: re.Match[str], /):
+        return cls(item.custom_id)
 
     async def callback(self, interaction: discord.Interaction):
-        await self.instance.updateInterestList(self, interaction)
+        await WorkshopInterest.updateInterestList(self, interaction)
 
 
 async def setup(bot: commands.Bot) -> None:
     await bot.add_cog(WorkshopInterest(bot))
+    bot.add_dynamic_items(WorkshopInterestButton)

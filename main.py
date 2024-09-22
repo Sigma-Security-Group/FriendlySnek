@@ -72,7 +72,8 @@ DATA_FILES = {
     MEMBER_TIME_ZONES_FILE: {},
     REMINDERS_FILE: {},
     REPEATED_MSG_DATE_LOG_FILE: {},
-    GENERIC_DATA_FILE: {}
+    GENERIC_DATA_FILE: {},
+    WORKSHOP_INTEREST_FILE: {},
 }
 for filePath, dump in DATA_FILES.items():
     setupJSONDataFile(filePath, dump)

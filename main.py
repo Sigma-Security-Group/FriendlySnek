@@ -67,7 +67,6 @@ DATA_FILES = {
     EVENTS_HISTORY_FILE: [],
     WORKSHOP_TEMPLATES_FILE: [],
     ROLE_RESERVATION_BLACKLIST_FILE: [],
-    "data/operationTemplates.json": [],
     "data/workshopTemplates.json": [],
     "data/eventTemplates.json": [],
     MEMBER_TIME_ZONES_FILE: {},

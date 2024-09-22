@@ -516,7 +516,7 @@ Join Us:
             json.dump(reminders, f, indent=4)
 
 
-
+@discord.app_commands.guilds(GUILD)
 class Reminders(commands.GroupCog, name="reminder"):
     """Reminders Cog."""
     def __init__(self, bot: commands.Bot) -> None:
@@ -606,7 +606,6 @@ class Reminders(commands.GroupCog, name="reminder"):
 
 
     @discord.app_commands.command(name="set")
-    @discord.app_commands.guilds(GUILD)
     @discord.app_commands.describe(
         when = "When to be reminded of something.",
         text = "What to be reminded of.",
@@ -653,7 +652,6 @@ class Reminders(commands.GroupCog, name="reminder"):
 
 
     @discord.app_commands.command(name="list")
-    @discord.app_commands.guilds(GUILD)
     async def reminderList(self, interaction: discord.Interaction) -> None:
         """Shows the currently running reminders."""
         with open(REMINDERS_FILE) as f:
@@ -679,7 +677,6 @@ class Reminders(commands.GroupCog, name="reminder"):
 
 
     @discord.app_commands.command(name="clear")
-    @discord.app_commands.guilds(GUILD)
     async def reminderClear(self, interaction: discord.Interaction) -> None:
         """Clears all reminders you have set."""
         with open(REMINDERS_FILE) as f:
@@ -726,7 +723,6 @@ class Reminders(commands.GroupCog, name="reminder"):
             ][:25]
 
     @discord.app_commands.command(name="delete")
-    @discord.app_commands.guilds(GUILD)
     @discord.app_commands.autocomplete(reminder=reminderDeleteAutocomplete)
     async def reminderDelete(self, interaction: discord.Interaction, reminder: str) -> None:
         """Delete a reminder."""

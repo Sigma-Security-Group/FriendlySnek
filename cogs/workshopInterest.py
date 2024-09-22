@@ -109,11 +109,6 @@ class WorkshopInterest(commands.Cog):
                 with open(WORKSHOP_INTEREST_FILE, "w") as f:
                     json.dump(wsIntFile, f, indent=4)
 
-            # File entry msg.id == 0
-            for _, workshopDetails in wsIntFile.items():
-                if workshopDetails.get("messageId", 0) == 0:
-                    isUpdateChannel = True
-
 
         if isUpdateChannel:
             await self.updateChannel()

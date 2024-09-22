@@ -19,9 +19,6 @@ if DEBUG:
 
 EMBED_INVALID = discord.Embed(title="❌ Invalid input", color=discord.Color.red())
 
-OPERATION_NAME_ADJECTIVES = "constants/opAdjectives.txt"
-OPERATION_NAME_NOUNS = "constants/opNouns.txt"
-
 MAX_SERVER_ATTENDANCE = 50
 
 

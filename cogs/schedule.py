@@ -1357,7 +1357,11 @@ class Schedule(commands.Cog):
                                 Logger.exception("Schedule buttonHandling: channelOperationAnnouncements is not discord.TextChannel")
                                 return
 
-                            embed = discord.Embed(title="Operation scheduled", description=f"Title: **{previewEmbedDict['title']}**\nTime: {discord.utils.format_dt(UTC.localize(datetime.strptime(previewEmbedDict['time'], TIME_FORMAT)), style='F')}\nDuration: {previewEmbedDict['duration']}", color=EVENT_TYPE_COLORS["Operation"])
+                            with open(EVENTS_FILE) as f:
+                                events = json.load(f)
+                            event = [event for event in events if event["authorId"] == interaction.user.id and event["title"] == previewEmbedDict["title"] and event["description"] == previewEmbedDict["description"]][0]
+
+                            embed = discord.Embed(title="Operation scheduled", url=f"https://discord.com/channels/{GUILD_ID}/{SCHEDULE}/{event['messageId']}", description=f"Title: **{previewEmbedDict['title']}**\nTime: {discord.utils.format_dt(UTC.localize(datetime.strptime(previewEmbedDict['time'], TIME_FORMAT)), style='F')}\nDuration: {previewEmbedDict['duration']}", color=EVENT_TYPE_COLORS["Operation"])
                             embed.set_footer(text=f"Created by {interaction.user.display_name}")
                             await channelOperationAnnouncements.send(content=roleOperationPings.mention, embed=embed)
 

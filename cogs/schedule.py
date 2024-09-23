@@ -1340,13 +1340,31 @@ class Schedule(commands.Cog):
                         await self.updateSchedule()
 
 
+                        guild = interaction.guild
+                        if not isinstance(guild, discord.Guild):
+                            Logger.exception("Schedule buttonHandling: guild is not discord.Guild")
+                            return
+
+                        # Workshop interest ping
+                        workshopInterestValue = previewEmbedDict.get("workshopInterest", None)
+                        if workshopInterestValue:
+                            with open(WORKSHOP_INTEREST_FILE) as f:
+                                fileWSINT = json.load(f)
+                            targetWorkshopMembers = [wsDetails.get("members", []) for wsName, wsDetails in fileWSINT.items() if workshopInterestValue == wsName][0]
+                            if targetWorkshopMembers:
+                                channelArmaDiscussion = guild.get_channel(ARMA_DISCUSSION)
+                                if not isinstance(channelArmaDiscussion, discord.TextChannel):
+                                    Logger.exception("Schedule buttonHandling: channelArmaDiscussion is not discord.TextChannel")
+                                    return
+
+                                message = ""
+                                for memberId in targetWorkshopMembers:
+                                    message += (workshopMember.mention if (workshopMember := guild.get_member(memberId)) else "")
+                                await channelArmaDiscussion.send(f"{message}\n**{previewEmbedDict['title']}** is up on <#{SCHEDULE}> - which you are interested in.\nNo longer interested? Unlist yourself in <#{WORKSHOP_INTEREST}>")
+
+
                         # Operation Pings
                         if previewEmbedDict["type"].lower() == "operation":
-                            guild = interaction.guild
-                            if not isinstance(guild, discord.Guild):
-                                Logger.exception("Schedule buttonHandling: guild is not discord.Guild")
-                                return
-
                             roleOperationPings = guild.get_role(OPERATION_PINGS)
                             if not isinstance(roleOperationPings, discord.Role):
                                 Logger.exception("Schedule buttonHandling: roleOperationPings is not discord.Role")

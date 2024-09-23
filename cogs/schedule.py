@@ -1339,6 +1339,28 @@ class Schedule(commands.Cog):
                         # Update schedule
                         await self.updateSchedule()
 
+
+                        # Operation Pings
+                        if previewEmbedDict["type"].lower() == "operation":
+                            guild = interaction.guild
+                            if not isinstance(guild, discord.Guild):
+                                Logger.exception("Schedule buttonHandling: guild is not discord.Guild")
+                                return
+
+                            roleOperationPings = guild.get_role(OPERATION_PINGS)
+                            if not isinstance(roleOperationPings, discord.Role):
+                                Logger.exception("Schedule buttonHandling: roleOperationPings is not discord.Role")
+                                return
+
+                            channelOperationAnnouncements = guild.get_channel(OPERATION_ANNOUNCEMENTS)
+                            if not isinstance(channelOperationAnnouncements, discord.TextChannel):
+                                Logger.exception("Schedule buttonHandling: channelOperationAnnouncements is not discord.TextChannel")
+                                return
+
+                            embed = discord.Embed(title="Operation scheduled", description=f"Title: **{previewEmbedDict['title']}**\nTime: {discord.utils.format_dt(UTC.localize(datetime.strptime(previewEmbedDict['time'], TIME_FORMAT)), style='F')}\nDuration: {previewEmbedDict['duration']}", color=EVENT_TYPE_COLORS["Operation"])
+                            embed.set_footer(text=f"Created by {interaction.user.display_name}")
+                            await channelOperationAnnouncements.send(content=roleOperationPings.mention, embed=embed)
+
                     case "cancel":
                         embed = discord.Embed(title="Are you sure you want to cancel this event scheduling?", color=discord.Color.orange())
                         view = ScheduleView()

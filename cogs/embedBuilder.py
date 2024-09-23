@@ -59,7 +59,7 @@ class EmbedBuilder(commands.Cog):
                 messageid = int(messageid)
                 messageEdit = await channel.fetch_message(messageid)
             except Exception:
-                embed = discord.Embed(title="❌ Invalid data", description=f"Message with id `{messageid}` could not be found in channel `{channel.mention}`!", color=discord.Color.red())
+                embed = discord.Embed(title="❌ Invalid data", description=f"Message with id `{messageid}` could not be found in channel {channel.mention}!", color=discord.Color.red())
                 await interaction.response.send_message(embed=embed, ephemeral=True, delete_after=15.0)
                 return
 

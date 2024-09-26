@@ -385,7 +385,7 @@ class EmbedBuilder(commands.Cog):
                 patternRGB = re.compile(r"(\d{1,3}(?:,| |, ))(\d{1,3}(?:,| |, ))(\d{1,3})")
 
                 # Hex
-                if re.match(r"#?[a-zA-Z0-9]{6}", value):
+                if re.match(r"^#?(?:[0-9a-fA-F]{3}){1,2}$", value):
                     try:
                         embed.color = int(value.lstrip("#"), 16)
                     except ValueError:

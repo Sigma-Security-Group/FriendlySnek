@@ -1935,7 +1935,7 @@ class Schedule(commands.Cog):
                         memberTimeZones = json.load(f)
                     timeZone = pytz.timezone(memberTimeZones[str(interaction.user.id)])
                     try:
-                        startTime = datetimeParse(value)
+                        startTime = datetimeParse(value, tzinfos=None)
                     except Exception:
                         await interaction.response.send_message(interaction.user.mention, embed=EMBED_INVALID, ephemeral=True, delete_after=10.0)
                         return

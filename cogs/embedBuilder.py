@@ -386,12 +386,18 @@ class EmbedBuilder(commands.Cog):
 
                 # Hex
                 if re.match(r"#?[a-zA-Z0-9]{6}", value):
-                    embed.color = int(value.lstrip("#"), 16)
+                    try:
+                        embed.color = int(value.lstrip("#"), 16)
+                    except ValueError:
+                        stderr = "Invalid color value."
 
                 # RGB
                 elif re.match(patternRGB, value):
                     rgb = re.findall(patternRGB, value)[0]
-                    embed.color = discord.Color.from_rgb(int(rgb[0].rstrip(" ").rstrip(",")), int(rgb[1].rstrip(" ").rstrip(",")), int(rgb[2].rstrip(" ").rstrip(",")))
+                    try:
+                        embed.color = discord.Color.from_rgb(int(rgb[0].rstrip(" ").rstrip(",")), int(rgb[1].rstrip(" ").rstrip(",")), int(rgb[2].rstrip(" ").rstrip(",")))
+                    except Exception:
+                        stderr = "Invalid color value."
 
             case "url":
                 if not re.match(r"^https?:\/\/.*", value):

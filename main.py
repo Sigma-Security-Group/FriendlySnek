@@ -131,22 +131,22 @@ async def on_voice_state_update(member: discord.Member, before: discord.VoiceSta
             Logger.exception("on_voice_state_update: guild is None")
             return
 
-        smokePitCategory = discord.utils.get(guild.categories, id=SMOKE_PIT)
-        if smokePitCategory is None:
-            Logger.exception("on_voice_state_update: smokePitCategory is None")
+        customChannelsCategory = discord.utils.get(guild.categories, id=CUSTOM_CHANNELS)
+        if customChannelsCategory is None:
+            Logger.exception("on_voice_state_update: customChannelsCategory is None")
             return
 
         voiceNums = []
         # Iterate all dynamic "Room" channels, extract digit(s)
-        for smokePitVoice in smokePitCategory.voice_channels:
-            if smokePitVoice.name.startswith("Room #"):
-                voiceNums.append(int("".join(c for c in smokePitVoice.name[len("Room #"):] if c.isdigit())))
+        for customVoice in customChannelsCategory.voice_channels:
+            if customVoice.name.startswith("Room #"):
+                voiceNums.append(int("".join(c for c in customVoice.name[len("Room #"):] if c.isdigit())))
 
         newVoiceName = f"Room #{next(filterfalse(set(voiceNums).__contains__, count(1)))}"
-        newVoiceChannel = await guild.create_voice_channel(newVoiceName, reason="User created new dynamic voice channel.", category=smokePitCategory, user_limit=4)
+        newVoiceChannel = await guild.create_voice_channel(newVoiceName, reason="User created new dynamic voice channel.", category=customChannelsCategory, user_limit=4)
         await member.move_to(newVoiceChannel, reason="User created new dynamic voice channel.")
 
-    if before.channel and before.channel.name.startswith("Room #") and len(before.channel.members) == 0:
+    if before.channel and before.channel.id != CREATE_CHANNEL and before.channel.category and before.channel.category.id == CUSTOM_CHANNELS and len(before.channel.members) == 0:
         try:
             await before.channel.delete(reason="No users left in dynamic voice channel.")
         except Exception:

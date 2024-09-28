@@ -172,6 +172,7 @@ FILE_UPLOAD_EXTENSION_BLACKLIST = ["exe", "pif", "application", "gadget", "msi",
 class Schedule(commands.Cog):
     """Schedule Cog."""
     def __init__(self, bot: commands.Bot) -> None:
+        super().__init__()
         self.bot = bot
 
     @commands.Cog.listener()

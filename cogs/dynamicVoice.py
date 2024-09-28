@@ -11,6 +11,7 @@ if DEBUG:
 class DynamicVoice(commands.Cog):
     """Dynamic Voice Cog."""
     def __init__(self, bot: commands.Bot) -> None:
+        super().__init__()
         self.bot = bot
 
     @commands.Cog.listener()

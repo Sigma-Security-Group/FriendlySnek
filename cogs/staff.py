@@ -18,6 +18,7 @@ if DEBUG:
 class Staff(commands.Cog):
     """Staff Cog."""
     def __init__(self, bot: commands.Bot) -> None:
+        super().__init__()
         self.bot = bot
 
     @commands.Cog.listener()

@@ -72,6 +72,7 @@ WORKSHOP_INTEREST_LIST: dict[str, dict[str, str | int | tuple]] = {
 class WorkshopInterest(commands.Cog):
     """Workshop Interest Cog."""
     def __init__(self, bot: commands.Bot) -> None:
+        super().__init__()
         self.bot = bot
 
     @commands.Cog.listener()

@@ -23,6 +23,7 @@ def chunkList(lst: list, n: int):
 
 class BotTasks(commands.Cog):
     def __init__(self, bot: commands.Bot) -> None:
+        super().__init__()
         self.bot = bot
 
     @commands.Cog.listener()
@@ -520,8 +521,8 @@ Join Us:
 class Reminders(commands.GroupCog, name="reminder"):
     """Reminders Cog."""
     def __init__(self, bot: commands.Bot) -> None:
-        self.bot = bot
         super().__init__()
+        self.bot = bot
 
     @staticmethod
     def getFirstDayNextMonth(startDate: datetime = datetime.now(timezone.utc)) -> datetime:

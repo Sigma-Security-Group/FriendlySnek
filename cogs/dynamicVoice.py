@@ -24,7 +24,7 @@ class DynamicVoice(commands.GroupCog, name="voice"):
 
     @discord.app_commands.command(name="limit")
     @discord.app_commands.describe(new_limit="New user limit for the channel; between 0-99.")
-    async def limit(self, interaction: discord.Interaction, new_limit: int) -> None:
+    async def limit(self, interaction: discord.Interaction, new_limit: discord.app_commands.Range[int, 0, 99]) -> None:
         """Changes your active dynamic voice channel's user limit.
 
         Parameters:
@@ -49,7 +49,7 @@ class DynamicVoice(commands.GroupCog, name="voice"):
 
     @discord.app_commands.command(name="name")
     @discord.app_commands.describe(new_name="New channel name; 1-100 characters.")
-    async def name(self, interaction: discord.Interaction, new_name: str) -> None:
+    async def name(self, interaction: discord.Interaction, new_name: discord.app_commands.Range[str, 1, 100]) -> None:
         """Changes your active dynamic voice channel's name.
 
         Parameters:

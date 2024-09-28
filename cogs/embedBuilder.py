@@ -278,7 +278,7 @@ class EmbedBuilder(commands.Cog):
                     file=(await interaction.message.attachments[0].to_file()) if len(interaction.message.attachments) > 0 else None
                 )
                 await interaction.response.edit_message(
-                    content=f"Embed sent to <#{targetChannel.id}>!",
+                    content=f"Embed sent to {targetChannel.mention}!",
                     embed=None,
                     attachments=[],
                     view=None

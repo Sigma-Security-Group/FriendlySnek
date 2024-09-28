@@ -1,5 +1,6 @@
 import discord
 from discord.ext import commands  # type: ignore
+from itertools import count, filterfalse
 
 from logger import Logger
 from secret import DEBUG
@@ -20,6 +21,38 @@ class DynamicVoice(commands.GroupCog, name="voice"):
     async def on_ready(self) -> None:
         Logger.debug(LOG_COG_READY.format("DynamicVoice"), flush=True)
         cogsReady["dynamicVoice"] = True
+
+
+    @staticmethod
+    @commands.Cog.listener()
+    async def on_voice_state_update(member: discord.Member, before: discord.VoiceState, after: discord.VoiceState) -> None:
+        """On member voiceState change."""
+        if not ((before.channel and before.channel.guild.id == GUILD_ID) or (after.channel and after.channel.guild.id == GUILD_ID)):
+            return
+
+        # User joined create channel vc; create new vc
+        if after.channel and after.channel.id == CREATE_CHANNEL:
+            guild = member.guild
+            customChannelsCategory = discord.utils.get(guild.categories, id=CUSTOM_CHANNELS)
+            if customChannelsCategory is None:
+                Logger.exception("on_voice_state_update: customChannelsCategory is None")
+                return
+
+            voiceNums = []
+            # Iterate all dynamic "Room" channels, extract digit(s)
+            for customVoice in customChannelsCategory.voice_channels:
+                if customVoice.name.startswith("Room #"):
+                    voiceNums.append(int("".join(c for c in customVoice.name[len("Room #"):] if c.isdigit())))
+
+            newVoiceName = f"Room #{next(filterfalse(set(voiceNums).__contains__, count(1)))}"
+            newVoiceChannel = await guild.create_voice_channel(newVoiceName, reason="User created new dynamic voice channel.", category=customChannelsCategory, user_limit=4)
+            await member.move_to(newVoiceChannel, reason="User created new dynamic voice channel.")
+
+        if before.channel and before.channel.id != CREATE_CHANNEL and before.channel.category and before.channel.category.id == CUSTOM_CHANNELS and len(before.channel.members) == 0:
+            try:
+                await before.channel.delete(reason="No users left in dynamic voice channel.")
+            except Exception:
+                Logger.warning(f"on_voice_state_update: could not delete dynamic voice channel: '{before.channel.name}' ({member})")
 
 
     @discord.app_commands.command(name="limit")

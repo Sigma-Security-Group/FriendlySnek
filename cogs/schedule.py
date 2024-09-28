@@ -411,14 +411,16 @@ class Schedule(commands.Cog):
             Logger.exception("aar: channelDeployed is None")
             return
 
+        await interaction.response.send_message("AAR has started, Thanks for running a bop!", ephemeral=True)
+
         deployed_members = channelDeployed.members
         for member in deployed_members:
-            Logger.debug(f"Moving {member.display_name} to Command ( {COMMAND} )")
+            Logger.debug(f"AAR moving member {member.display_name} to Command")
             try:
                 await member.move_to(channelCommand)
             except Exception:
-                Logger.warning(f"Snek did a booboo moving {member.display_name}")
-        await interaction.response.send_message("AAR has started, Thanks for running a bop!", ephemeral=True)
+                Logger.warning(f"Schedule aar: could not move {member.display_name}")
+
 
     @aar.error
     async def onaAarError(self, interaction: discord.Interaction, error: discord.app_commands.AppCommandError) -> None:

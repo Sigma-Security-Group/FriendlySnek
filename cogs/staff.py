@@ -26,7 +26,8 @@ class Staff(commands.Cog):
         Logger.debug(LOG_COG_READY.format("Staff"), flush=True)
         cogsReady["staff"] = True
 
-    def _getMember(self, searchTerm: str) -> discord.Member | None:
+    @staticmethod
+    def _getMember(searchTerm: str, guild: discord.Guild) -> discord.Member | None:
         """Searches for a discord.Member - supports a lot of different serach terms.
 
         Parameters:
@@ -35,11 +36,6 @@ class Staff(commands.Cog):
         Returns:
         discord.Member | None: Returns a discord.Member if found, otherwise None.
         """
-        guild = self.bot.get_guild(GUILD_ID)
-        if guild is None:
-            Logger.exception("Staff _getMember: guild is None")
-            return None
-
         member = None
         for member_ in guild.members:
             if searchTerm.replace("<", "").replace("@", "").replace("!", "").replace(">", "").isdigit() and int(searchTerm.replace("<", "").replace("@", "").replace("!", "").replace(">", "")) == member_.id:
@@ -59,7 +55,10 @@ class Staff(commands.Cog):
     @commands.has_any_role(*CMD_STAFF_LIMIT)
     async def getMember(self, ctx: commands.Context, *, member: str) -> None:
         """Get detailed information about a guild member."""
-        targetMember = self._getMember(member)
+        if not isinstance(ctx.guild, discord.Guild):
+            Logger.exception("Staff getmember: ctx guild is not discord.Guild")
+            return
+        targetMember = Staff._getMember(member, ctx.guild)
         if targetMember is None:
             await ctx.send(f"No member found for search term: `{member}`")
             return
@@ -105,7 +104,10 @@ class Staff(commands.Cog):
     @commands.has_any_role(*CMD_STAFF_LIMIT)
     async def purgeMessagesFromMember(self, ctx: commands.Context, *, member: str) -> None:
         """Purges all messages from a specific member."""
-        tagetMember = self._getMember(member)
+        if not isinstance(ctx.guild, discord.Guild):
+            Logger.exception("Staff purge: ctx guild is not discord.Guild")
+            return
+        tagetMember = Staff._getMember(member, ctx.guild)
         if tagetMember is None:
             Logger.info(f"No member found for search term: {member}")
             await ctx.send(embed=discord.Embed(title="❌ No member found", description=f"Searched for: `{member}`", color=discord.Color.red()))
@@ -193,7 +195,10 @@ class Staff(commands.Cog):
     @commands.has_any_role(*CMD_STAFF_LIMIT)
     async def lastActivityForMember(self, ctx: commands.Context, *, member: str) -> None:
         """Get last activity (message) for a specific member."""
-        targetMember = self._getMember(member)
+        if not isinstance(ctx.guild, discord.Guild):
+            Logger.exception("Staff lastactivitymember: ctx guild is not discord.Guild")
+            return
+        targetMember = Staff._getMember(member, ctx.guild)
         if targetMember is None:
             Logger.info(f"No member found for search term: {member}!")
             await ctx.send(embed=discord.Embed(title="❌ No member found", description=f"Searched for: `{member}`", color=discord.Color.red()))
@@ -228,7 +233,10 @@ class Staff(commands.Cog):
     @commands.has_any_role(*CMD_STAFF_LIMIT)
     async def promote(self, ctx: commands.Context, *, member: str) -> None:
         """Promote a member to the next rank."""
-        targetMember = self._getMember(member)
+        if not isinstance(ctx.guild, discord.Guild):
+            Logger.exception("Staff promote: ctx guild is not discord.Guild")
+            return
+        targetMember = Staff._getMember(member, ctx.guild)
         if targetMember is None:
             Logger.info(f"No member found for search term: {member}!")
             await ctx.send(embed=discord.Embed(title="❌ No member found", description=f"Searched for: `{member}`", color=discord.Color.red()))
@@ -275,7 +283,10 @@ class Staff(commands.Cog):
     @commands.has_any_role(*CMD_STAFF_LIMIT)
     async def demote(self, ctx: commands.Context, *, member: str) -> None:
         """Demote a member to the previous rank."""
-        targetMember = self._getMember(member)
+        if not isinstance(ctx.guild, discord.Guild):
+            Logger.exception("Staff demote: ctx guild is not discord.Guild")
+            return
+        targetMember = Staff._getMember(member, ctx.guild)
         if targetMember is None:
             Logger.info(f"No member found for search term: {member}")
             await ctx.send(embed=discord.Embed(title="❌ No member found", description=f"Searched for: `{member}`", color=discord.Color.red()))
@@ -319,7 +330,10 @@ class Staff(commands.Cog):
             Logger.exception("Staff searchmodlogs: channelStaffChat or channelModerationLog not discord.TextChannel")
             return
 
-        targetMember = self._getMember(member)
+        if not isinstance(ctx.guild, discord.Guild):
+            Logger.exception("Staff searchmodlogs: ctx guild is not discord.Guild")
+            return
+        targetMember = Staff._getMember(member, ctx.guild)
         if targetMember is None:
             Logger.info(f"No member found for search term: {member}")
             Logger.debug(f"Searching Moderation Logs for search term: {member}")
@@ -375,7 +389,10 @@ class Staff(commands.Cog):
     @commands.has_any_role(*CMD_STAFF_LIMIT)
     async def disableRoleReservation(self, ctx: commands.Context, *, member: str) -> None:
         """Add member to role reservation blacklist."""
-        targetMember = self._getMember(member)
+        if not isinstance(ctx.guild, discord.Guild):
+            Logger.exception("Staff disablerolereservation: ctx guild is not discord.Guild")
+            return
+        targetMember = Staff._getMember(member, ctx.guild)
         if targetMember is None:
             Logger.info(f"No member found for search term: {member}")
             await ctx.send(embed=discord.Embed(title="❌ No member found", description=f"Searched for: `{member}`", color=discord.Color.red()))
@@ -413,7 +430,10 @@ class Staff(commands.Cog):
     @commands.has_any_role(*CMD_STAFF_LIMIT)
     async def enableRoleReservation(self, ctx: commands.Context, *, member: str) -> None:
         """Remove member from role reservation blacklist."""
-        targetMember = self._getMember(member)
+        if not isinstance(ctx.guild, discord.Guild):
+            Logger.exception("Staff enablerolereservation: ctx guild is not discord.Guild")
+            return
+        targetMember = Staff._getMember(member, ctx.guild)
         if targetMember is None:
             Logger.info(f"No member found for search term: {member}")
             await ctx.send(embed=discord.Embed(title="❌ No member found", description=f"Searched for: `{member}`", color=discord.Color.red()))
@@ -458,7 +478,10 @@ class Staff(commands.Cog):
     @commands.has_any_role(*CMD_VERIFY_LIMIT)
     async def verify(self, ctx: commands.Context, *, member: str) -> None:
         """Verifies a Prospect (passed interview)."""
-        targetMember = self._getMember(member)
+        if not isinstance(ctx.guild, discord.Guild):
+            Logger.exception("Staff verify: ctx guild is not discord.Guild")
+            return
+        targetMember = Staff._getMember(member, ctx.guild)
         if targetMember is None:
             Logger.info(f"No member found for search term: {member}")
             await ctx.send(embed=discord.Embed(title="❌ No member found", description=f"Searched for: `{member}`", color=discord.Color.red()))

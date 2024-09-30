@@ -2,6 +2,7 @@ import os, json, re, discord
 
 from discord.ext import commands  # type: ignore
 
+from cogs.staff import Staff
 from logger import Logger
 from secret import DEBUG
 from constants import *
@@ -286,31 +287,67 @@ class WorkshopInterest(commands.Cog):
 
     @commands.command(name="clean-specific-workshop-interest-list")
     @commands.has_any_role(*CMD_CLEANWSINTEREST_LIMIT)
-    async def cleanSpecificWorkshopInterestList(self, ctx: commands.Context, *, worskhopListName: str) -> None:
+    async def cleanSpecificWorkshopInterestList(self, ctx: commands.Context, worskhopListName: str, member: str = "") -> None:
         """Clear specific workshop interest list, no confirmation."""
+        if not isinstance(ctx.guild, discord.Guild):
+            Logger.exception("WorkshopInterest cleanSpecificWorkshopInterestList: ctx guild is not discord.Guild")
+            return
+
+        channelWSINT = self.bot.get_channel(WORKSHOP_INTEREST)
+        if not isinstance(ctx.guild, discord.Guild):
+            Logger.exception("WorkshopInterest cleanSpecificWorkshopInterestList: ctx guild is not discord.Guild")
+            return
+
+
         with open(WORKSHOP_INTEREST_FILE) as f:
                 workshopInterest = json.load(f)
 
+        # Find workshop
         for workshop in WORKSHOP_INTEREST_LIST.keys():
             if worskhopListName.lower() == workshop.lower():
-                workshopInterest[workshop]["members"] = []
-                with open(WORKSHOP_INTEREST_FILE, "w") as f:
-                    json.dump(workshopInterest, f, indent=4)
 
-                guild = self.bot.get_guild(GUILD_ID)
-                if guild is None:
-                    Logger.exception("clean-specific-workshop-interest-list: guild is None")
+                # If specific member specified
+                if member:
+                    targetMember = Staff._getMember(member, ctx.guild)
+                    if targetMember is None:
+                        await ctx.send(f"No member found for search term: `{member}`")
+                        return
+
+                    for signupMember in workshopInterest[workshop]["members"]:
+                        if signupMember == targetMember.id:
+                            workshopInterest[workshop]["members"].remove(targetMember.id)
+
+                            with open(WORKSHOP_INTEREST_FILE, "w") as f:
+                                json.dump(workshopInterest, f, indent=4)
+
+                            msg = await channelWSINT.fetch_message(workshopInterest[workshop]["messageId"])
+                            try:
+                                await msg.edit(embed=self.getWorkshopEmbed(ctx.guild, workshop))
+                            except Exception as e:
+                                Logger.exception(f"{ctx.author} | {e}")
+
+                            await ctx.send(embed=discord.Embed(title="✅ Removed user", description=f"Removed user {targetMember.mention} (`{targetMember.id}`) from the workshop `{workshop}` interest list.", color=discord.Color.green()))
+                            return
+                    else:
+                        await ctx.send(embed=discord.Embed(title="❌ Invalid member", description=f"Could not find member {targetMember.mention} (`{targetMember.id}`) in the workshop interest list.", color=discord.Color.red()))
+                        return
+
+                # Clean whole workshop
+                else:
+                    workshopInterest[workshop]["members"] = []
+                    with open(WORKSHOP_INTEREST_FILE, "w") as f:
+                        json.dump(workshopInterest, f, indent=4)
+
+                    msg = await channelWSINT.fetch_message(workshopInterest[workshop]["messageId"])
+                    try:
+                        await msg.edit(embed=self.getWorkshopEmbed(ctx.guild, workshop))
+                    except Exception as e:
+                        Logger.exception(f"{ctx.author} | {e}")
+                    await ctx.send(embed=discord.Embed(title="✅ Cleared workshop list!", description=f"Cleared workshop list '{workshop}'.", color=discord.Color.green()))
                     return
-                channel = self.bot.get_channel(WORKSHOP_INTEREST)
-                msg = await channel.fetch_message(workshopInterest[workshop]["messageId"])
-                try:
-                    await msg.edit(embed=self.getWorkshopEmbed(guild, workshop))
-                except Exception as e:
-                    Logger.exception(f"{ctx.author} | {e}")
-                await ctx.send(embed=discord.Embed(title="✅ Cleared workshop list!", description=f"Cleared workshop list '{worskhopListName}'.", color=discord.Color.green()))
-                break
-        else:
-            await ctx.send(embed=discord.Embed(title="❌ Invalid workshop name", description=f"Could not find workshop '{worskhopListName}'.", color=discord.Color.red()))
+
+        # Invalid workshop
+        await ctx.send(embed=discord.Embed(title="❌ Invalid workshop name", description=f"Could not find workshop '{worskhopListName}'.", color=discord.Color.red()))
 
 
 class WorkshopInterestButton(discord.ui.DynamicItem[discord.ui.Button], template=r"workshopinterest_(?P<action>add|remove)"):

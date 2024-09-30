@@ -1362,7 +1362,7 @@ class Schedule(commands.Cog):
 
                                 message = ""
                                 for memberId in targetWorkshopMembers:
-                                    message += (workshopMember.mention if (workshopMember := guild.get_member(memberId)) else "")
+                                    message += workshopMember.mention + " " if (workshopMember := guild.get_member(memberId)) else ""
                                 await channelArmaDiscussion.send(f"{message}\n**{previewEmbedDict['title']}** is up on <#{SCHEDULE}> - which you are interested in.\nNo longer interested? Unlist yourself in <#{WORKSHOP_INTEREST}>")
 
 

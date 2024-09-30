@@ -2104,6 +2104,9 @@ class Schedule(commands.Cog):
                 Logger.exception("editEvent: guild is None")
                 return None
 
+            # Send before time-hogging processes - fix interaction failed
+            await interaction.response.send_message(interaction.user.mention, embed=discord.Embed(title="✅ Event edited", color=discord.Color.green()), ephemeral=True, delete_after=15.0)
+
             previewEmbed = discord.Embed(title=f":clock3: The starting time has changed for: {event['title']}!", description=f"From: {discord.utils.format_dt(UTC.localize(datetime.strptime(startTimeOld, TIME_FORMAT)), style='F')}\n\u2000\u2000To: {discord.utils.format_dt(UTC.localize(datetime.strptime(event['time'], TIME_FORMAT)), style='F')}", color=discord.Color.orange())
             previewEmbed.add_field(name="\u200B", value=eventMsg.jump_url, inline=False)
             previewEmbed.set_footer(text=f"By: {interaction.user}")
@@ -2150,7 +2153,6 @@ class Schedule(commands.Cog):
 
             with open(EVENTS_FILE, "w") as f:
                 json.dump(sortedEvents, f, indent=4)
-            await interaction.response.send_message(interaction.user.mention, embed=discord.Embed(title="✅ Event edited", color=discord.Color.green()), ephemeral=True, delete_after=5.0)
 
             # If events are reordered and user have elevated privileges and may edit other events than self-made - warn them
             if anyEventChange and ((interaction.user.id in DEVELOPERS) or any(role.id == UNIT_STAFF or role.id == SERVER_HAMSTER for role in interaction.user.roles)):

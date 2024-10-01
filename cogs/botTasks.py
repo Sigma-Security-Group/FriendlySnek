@@ -279,7 +279,10 @@ Join Us:
                 pingEmbed.description = f"Last `{wsName}` event you had couldn't be found in my logs.\nPlease host at least every 2 months to give everyone a chance to cert!"
                 await smeCorner.send(self.getPingString(wsDetails["role"]), embed=pingEmbed)
 
+            Logger.debug(f"SME Reminder: failed {wsName}")
+
         if len(workshopsInTimeFrame) > 0:
+            Logger.debug(f"SME Reminder: succeeded {workshopsInTimeFrame}")
             await smeCorner.send(":clap: Good job for keeping up the hosting " + ", ".join([f"`{wsName}`" for wsName in workshopsInTimeFrame]) + "! :clap:")
 
 
@@ -293,6 +296,8 @@ Join Us:
         msgDateLog["smeReminder"] = datetime.timestamp(nextTime)
         with open(REPEATED_MSG_DATE_LOG_FILE, "w") as f:
             json.dump(msgDateLog, f, indent=4)
+
+        Logger.info("SME Reminder: sent & updated time")
 
 
     @staticmethod

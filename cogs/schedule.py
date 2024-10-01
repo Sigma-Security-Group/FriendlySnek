@@ -1420,7 +1420,8 @@ class Schedule(commands.Cog):
                 if buttonLabel.startswith("select_template"):
                     filename = f"data/{previewEmbedDict['type'].lower()}Templates.json"
                     with open(filename) as f:
-                        templates = json.load(f)
+                        templates: list[dict] = json.load(f)
+                    templates.sort(key=lambda template : template["templateName"])
 
                     options = [discord.SelectOption(label=template["templateName"], description=template["description"][:100]) for template in templates]
                     setOptionLabel = ""
@@ -1990,7 +1991,7 @@ class Schedule(commands.Cog):
                     # Write to file
                     filename = f"data/{previewEmbedDict['type'].lower()}Templates.json"
                     with open(filename) as f:
-                        templates = json.load(f)
+                        templates: list[dict] = json.load(f)
                     templateOverwritten = (False, 0)
                     for idx, template in enumerate(templates):
                         if template["templateName"] == previewEmbedDict["templateName"]:
@@ -2003,6 +2004,7 @@ class Schedule(commands.Cog):
                         previewEmbedDict.pop(shit, None)
 
                     templates.append(previewEmbedDict)
+                    templates.sort(key=lambda template : template["templateName"])
                     with open(filename, "w") as f:
                         json.dump(templates, f, indent=4)
 

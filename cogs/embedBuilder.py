@@ -50,6 +50,7 @@ class EmbedBuilder(commands.Cog):
         """
 
         messageEdit = discord.utils.MISSING
+        messageEditEmbed = discord.utils.MISSING
         if messageid:
             guild = self.bot.get_guild(GUILD_ID)
             if guild is None:
@@ -79,7 +80,7 @@ class EmbedBuilder(commands.Cog):
 
             Logger.info(f"{interaction.user.display_name} ({interaction.user}) is editing a message ({messageid}) embed.")
 
-            messageEdit = messageEdit.embeds[0]
+            messageEditEmbed = messageEdit.embeds[0]
 
         else:
             Logger.info(f"{interaction.user.display_name} ({interaction.user}) is building an embed.")
@@ -106,17 +107,21 @@ class EmbedBuilder(commands.Cog):
         for item in items:
             view.add_item(item)
 
-        if messageEdit is not discord.utils.MISSING:
-            EmbedBuilder.adaptViewAfterEmbed(view, EmbedBuilder.getDependencies(messageEdit))
+        if messageEditEmbed is not discord.utils.MISSING:
+            EmbedBuilder.adaptViewAfterEmbed(view, EmbedBuilder.getDependencies(messageEditEmbed))
 
         attachment = await attachment.to_file() if attachment else discord.utils.MISSING
 
         await interaction.response.send_message(
             "Embed builder!",
-            embed=messageEdit,
+            embed=messageEditEmbed,
             view=view,
             file=attachment
         )
+
+        if not attachment and isinstance(messageEdit, discord.Message) and len(messageEdit.attachments):
+            embed = discord.Embed(title="⚠️ Removing attachment", description="The target message (messageid) currently has an attachment.\nYou have not provided an attachment.\n**This means that on submit, the attachment will be removed!**", color=discord.Color.orange())
+            await interaction.followup.send(interaction.user.mention, embed=embed, ephemeral=True)
 
 
     @buildEmbed.error

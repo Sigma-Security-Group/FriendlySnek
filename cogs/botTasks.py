@@ -115,13 +115,18 @@ class BotTasks(commands.Cog):
                 Logger.exception("checkModUpdates: changelog channel is not discord.channel.TextChannel")
                 return
 
-            hampter = guild.get_role(SERVER_HAMSTER)
-            if hampter is None:
+            roleHampter = guild.get_role(SERVER_HAMSTER)
+            if roleHampter is None:
                 Logger.exception("checkModUpdates: Hampter role is None")
                 return
 
+            roleGuinea = guild.get_role(GUINEA_PIG)
+            if roleGuinea is None:
+                Logger.exception("checkModUpdates: Guinea pig role is None")
+                return
+
             # Each mod update will be sent in a separate message
-            msgContent: str | None = hampter.mention + (f" ({len(output)})" if len(output) > 1 else "") + "\n\n"  # Ping for first message
+            msgContent: str | None = roleHampter.mention + " " + roleGuinea.mention + (f" ({len(output)})" if len(output) > 1 else "") + "\n\n"  # Ping for first message
             for mod in output:
                 await changelog.send(msgContent, embed=discord.Embed(title=mod["name"], url=CHANGELOG_URL.format(mod['modID']), timestamp=mod["datetime"], color=discord.Color.dark_blue()))
                 msgContent = None  # Only 1 ping

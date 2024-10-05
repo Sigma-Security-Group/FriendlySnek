@@ -45,7 +45,7 @@ class DynamicVoice(commands.GroupCog, name="voice"):
                     voiceNums.append(int("".join(c for c in customVoice.name[len("Room #"):] if c.isdigit())))
 
             newVoiceName = f"Room #{next(filterfalse(set(voiceNums).__contains__, count(1)))}"
-            newVoiceChannel = await guild.create_voice_channel(newVoiceName, reason="User created new dynamic voice channel.", category=customChannelsCategory, user_limit=4)
+            newVoiceChannel = await guild.create_voice_channel(newVoiceName, reason="User created new dynamic voice channel.", category=customChannelsCategory)
             await member.move_to(newVoiceChannel, reason="User created new dynamic voice channel.")
 
         if before.channel and before.channel.id != CREATE_CHANNEL and before.channel.category and before.channel.category.id == CUSTOM_CHANNELS and len(before.channel.members) == 0:

@@ -34,7 +34,7 @@ class EmbedBuilder(commands.Cog):
     @discord.app_commands.checks.has_any_role(*CMD_STAFF_LIMIT)
     @discord.app_commands.describe(
         channel = "Target channel for later sending embed, or fetching message from.",
-        messageid = "Optional target message id for editing embed.",
+        messageid = "Optional discord message id for editing an embed.",
         attachment = "Optional attachment (file)."
     )
     async def buildEmbed(self, interaction: discord.Interaction, channel: discord.TextChannel, messageid: str = "", attachment: discord.Attachment = None) -> None:

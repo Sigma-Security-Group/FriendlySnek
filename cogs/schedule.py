@@ -1906,7 +1906,7 @@ class Schedule(commands.Cog):
         if not isinstance(interaction.user, discord.Member):
             Logger.exception("Schedule modalHandling: interaction.user is not discord.Member")
             return
-        value = modal.children[0].value.strip()
+        value: str = modal.children[0].value.strip()
 
         # == Creating Event ==
 
@@ -2053,12 +2053,12 @@ class Schedule(commands.Cog):
                 return
 
             # No res roles or all roles are unoccupied
-            elif event["reservableRoles"] is None or all([id is None for id in event["reservableRoles"].values()]):
-                event["reservableRoles"] = {role: None for role in reservableRoles}
+            if event["reservableRoles"] is None or all([id is None for id in event["reservableRoles"].values()]):
+                event["reservableRoles"] = {role.strip(): None for role in reservableRoles}
 
             # Res roles are set and some occupied
             else:
-                event["reservableRoles"] = {role: event["reservableRoles"][role] if role in event["reservableRoles"] else None for role in reservableRoles}
+                event["reservableRoles"] = {role.strip(): event["reservableRoles"][role.strip()] if role in event["reservableRoles"] else None for role in reservableRoles}
 
         elif modal.custom_id == "modal_maxPlayers":
             if value.lower() == "none" or (value.isdigit() and int(value) > MAX_SERVER_ATTENDANCE):

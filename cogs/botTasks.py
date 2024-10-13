@@ -41,6 +41,34 @@ class BotTasks(commands.Cog):
             self.fiveMinTasks.start()
 
 
+    @commands.Cog.listener()
+    async def on_member_join(member: discord.Member) -> None:
+        """On member join client event.
+
+        Parameters:
+        member (discord.Member): The Discord member.
+
+        Returns:
+        None.
+        """
+        guild = member.guild
+        if guild.id != GUILD_ID:
+            return
+
+        Logger.debug(f"Newcomer joined the server: {member}")
+
+        remindTime = datetime.datetime.now() + datetime.timedelta(days=1)
+        with open(REMINDERS_FILE) as f:
+            reminders = json.load(f)
+
+        reminders[datetime.datetime.timestamp(remindTime)] = {
+            "type": "newcomer",
+            "userID": member.id
+        }
+        with open(REMINDERS_FILE, "w", encoding="utf-8") as f:
+            json.dump(reminders, f, indent=4)
+
+
     @staticmethod
     async def fetchWebsiteText(url: str) -> str:
         async with aiohttp.ClientSession() as session:

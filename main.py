@@ -152,11 +152,14 @@ async def analyzeChannel(client, message: discord.Message, channelID: int, attac
     """
     if message.channel.id != channelID:
         return
-    elif any(role.id == UNIT_STAFF for role in (message.author.roles if isinstance(message.author, discord.Member) else [])):
+
+    if any(role.id == UNIT_STAFF for role in (message.author.roles if isinstance(message.author, discord.Member) else [])):
         return
-    elif any(attachment.content_type.startswith(f"{attachmentContentType}/") for attachment in message.attachments if attachment.content_type is not None):
+
+    if any(attachment.content_type.startswith(f"{attachmentContentType}/") for attachment in message.attachments if attachment.content_type is not None):
         return
-    elif attachmentContentType == "video" and re.search(r"https?:\/\/((www)?(clips)?\.)?(youtu(be)?|twitch|streamable|medal)\.(com|be|tv).+", message.content):
+
+    if attachmentContentType == "video" and re.search(r"https?:\/\/((www)?(clips)?\.)?(youtu(be)?|twitch|streamable|medal)\.(com|be|tv).+", message.content):
         return
 
     try:
@@ -171,34 +174,6 @@ async def analyzeChannel(client, message: discord.Message, channelID: int, attac
         await message.author.send(embed=discord.Embed(title="❌ Message removed", description=f"The message you just posted in <#{channelID}> was deleted because no {attachmentContentType} was detected in it.\n\nIf this is an error, then please ask **staff** to post the {attachmentContentType} for you, and inform: {DEVS}", color=discord.Color.red()))
     except Exception as e:
         Logger.exception(f"{message.author} | {e}")
-
-
-@client.event
-async def on_member_join(member: discord.Member) -> None:
-    """On member join client event.
-
-    Parameters:
-    member (discord.Member): The Discord member.
-
-    Returns:
-    None.
-    """
-    guild = member.guild
-    if guild.id != GUILD_ID:
-        return
-
-    Logger.debug(f"Newcomer joined the server: {member}")
-
-    remindTime = datetime.datetime.now() + datetime.timedelta(days=1)
-    with open(REMINDERS_FILE) as f:
-        reminders = json.load(f)
-
-    reminders[datetime.datetime.timestamp(remindTime)] = {
-        "type": "newcomer",
-        "userID": member.id
-    }
-    with open(REMINDERS_FILE, "w", encoding="utf-8") as f:
-        json.dump(reminders, f, indent=4)
 
 
 @client.event

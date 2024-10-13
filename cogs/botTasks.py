@@ -57,11 +57,11 @@ class BotTasks(commands.Cog):
 
         Logger.debug(f"Newcomer joined the server: {member}")
 
-        remindTime = datetime.datetime.now() + datetime.timedelta(days=1)
+        remindTime = datetime.now() + timedelta(days=1)
         with open(REMINDERS_FILE) as f:
             reminders = json.load(f)
 
-        reminders[datetime.datetime.timestamp(remindTime)] = {
+        reminders[datetime.timestamp(remindTime)] = {
             "type": "newcomer",
             "userID": member.id
         }

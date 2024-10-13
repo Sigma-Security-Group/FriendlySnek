@@ -156,7 +156,7 @@ async def analyzeChannel(client, message: discord.Message, channelID: int, attac
         return
     elif any(attachment.content_type.startswith(f"{attachmentContentType}/") for attachment in message.attachments if attachment.content_type is not None):
         return
-    elif attachmentContentType == "video" and re.search(r"https?:\/\/((www)?(clips)?\.)?(youtu(be)?|twitch|streamable)\.(com|be|tv).+", message.content):
+    elif attachmentContentType == "video" and re.search(r"https?:\/\/((www)?(clips)?\.)?(youtu(be)?|twitch|streamable|medal)\.(com|be|tv).+", message.content):
         return
 
     try:

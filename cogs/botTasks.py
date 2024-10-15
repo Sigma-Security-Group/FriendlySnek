@@ -41,6 +41,7 @@ class BotTasks(commands.Cog):
             self.fiveMinTasks.start()
 
 
+    @staticmethod
     @commands.Cog.listener()
     async def on_member_join(member: discord.Member) -> None:
         """On member join client event.

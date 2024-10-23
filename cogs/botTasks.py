@@ -42,6 +42,47 @@ class BotTasks(commands.Cog):
 
 
     @staticmethod
+    @commands.Cog.listener()
+    async def on_member_join(member: discord.Member) -> None:
+        """On member join client event.
+
+        Parameters:
+        member (discord.Member): The Discord member.
+
+        Returns:
+        None.
+        """
+        guild = member.guild
+        if guild.id != GUILD_ID:
+            return
+
+        Logger.debug(f"Newcomer joined the server: {member}")
+
+        try:
+            await member.add_roles(PROSPECT, reason="Joined guild")
+        except discord.HTTPException:
+            Logger.warning(f"on_member_join: failed to add prospect role to member '{member.id}'")
+
+        remindTime = datetime.now() + timedelta(days=1)
+        with open(REMINDERS_FILE) as f:
+            reminders = json.load(f)
+
+        reminders[datetime.timestamp(remindTime)] = {
+            "type": "newcomer",
+            "userID": member.id
+        }
+        with open(REMINDERS_FILE, "w", encoding="utf-8") as f:
+            json.dump(reminders, f, indent=4)
+
+        channelWelcome = member.guild.get_channel(WELCOME)
+        if not isinstance(channelWelcome, discord.TextChannel):
+            Logger.exception("on_member_join: channelWelcome is not discord.TextChannel")
+            return
+        embed = discord.Embed(title=f"Welcome, {member.mention}!", description=f"Your view of the Discord server is limited. Please check <#{RULES_AND_EXPECTATIONS}> and <#{SERVER_INFO}>. After that, ping @​Recruitment Team for a brief voice interview to get the correct roles.", color=discord.Color.green())
+        channelWelcome.send(member.mention, embed=embed)
+
+
+    @staticmethod
     async def fetchWebsiteText(url: str) -> str:
         async with aiohttp.ClientSession() as session:
             async with session.get(url) as response:

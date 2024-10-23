@@ -49,14 +49,14 @@ class DynamicVoice(commands.GroupCog, name="voice"):
             await member.move_to(newVoiceChannel, reason="User created new dynamic voice channel.")
 
             if secret.DISCORD_LOGGING.get("voice_dynamic_create", False):
-                channelBot = member.guild.get_channel(BOT)
-                if not isinstance(channelBot, discord.TextChannel):
-                    Logger.exception("DynamicVoice on_voice_state_update: channelBot not discord.TextChannel")
+                channelAuditLog = member.guild.get_channel(AUDIT_LOG)
+                if not isinstance(channelAuditLog, discord.TextChannel):
+                    Logger.exception("DynamicVoice on_voice_state_update: channelAuditLog not discord.TextChannel")
                     return
 
                 embed = discord.Embed(title="Dynamic Voice Channel Created", description=f"{member.mention} created `{newVoiceName}`", color=discord.Color.blue())
-                embed.set_footer(text=f"Member ID: {member.id}")
-                await channelBot.send(embed=embed)
+                embed.set_footer(text=f"Member ID: {member.id} | Channel ID: {newVoiceChannel.id}")
+                await channelAuditLog.send(embed=embed)
 
         if before.channel and before.channel.id != CREATE_CHANNEL and before.channel.category and before.channel.category.id == CUSTOM_CHANNELS and len(before.channel.members) == 0:
             try:
@@ -93,14 +93,14 @@ class DynamicVoice(commands.GroupCog, name="voice"):
             if not isinstance(interaction.guild, discord.Guild):
                 Logger.exception("DynamicVoice limit: interaction.guild not discord.Guild")
                 return
-            channelBot = interaction.guild.get_channel(BOT)
-            if not isinstance(channelBot, discord.TextChannel):
-                Logger.exception("DynamicVoice limit: channelBot not discord.TextChannel")
+            channelAuditLog = interaction.guild.get_channel(AUDIT_LOG)
+            if not isinstance(channelAuditLog, discord.TextChannel):
+                Logger.exception("DynamicVoice limit: channelAuditLog not discord.TextChannel")
                 return
 
             embed = discord.Embed(title="Dynamic Voice Channel Limit", description=f"{interaction.user.mention} changed {interaction.user.voice.channel.mention} limit to `{new_limit}`", color=discord.Color.blue())
-            embed.set_footer(text=f"Member ID: {interaction.user.id}")
-            await channelBot.send(embed=embed)
+            embed.set_footer(text=f"Member ID: {interaction.user.id} | Channel ID: {interaction.user.voice.channel.id}")
+            await channelAuditLog.send(embed=embed)
 
 
     @discord.app_commands.command(name="name")
@@ -132,14 +132,14 @@ class DynamicVoice(commands.GroupCog, name="voice"):
             if not isinstance(interaction.guild, discord.Guild):
                 Logger.exception("DynamicVoice name: interaction.guild not discord.Guild")
                 return
-            channelBot = interaction.guild.get_channel(BOT)
-            if not isinstance(channelBot, discord.TextChannel):
-                Logger.exception("DynamicVoice name: channelBot not discord.TextChannel")
+            channelAuditLog = interaction.guild.get_channel(AUDIT_LOG)
+            if not isinstance(channelAuditLog, discord.TextChannel):
+                Logger.exception("DynamicVoice name: channelAuditLog not discord.TextChannel")
                 return
 
             embed = discord.Embed(title="Dynamic Voice Channel Name", description=f"{interaction.user.mention} changed {interaction.user.voice.channel.mention} name to `{new_name}`", color=discord.Color.blue())
-            embed.set_footer(text=f"Member ID: {interaction.user.id}")
-            await channelBot.send(embed=embed)
+            embed.set_footer(text=f"Member ID: {interaction.user.id} | Channel ID: {interaction.user.voice.channel.id}")
+            await channelAuditLog.send(embed=embed)
 
 
 async def setup(bot: commands.Bot) -> None:

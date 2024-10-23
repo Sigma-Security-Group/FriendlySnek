@@ -205,6 +205,13 @@ async def on_member_join(member: discord.Member) -> None:
     with open(REMINDERS_FILE, "w", encoding="utf-8") as f:
         json.dump(reminders, f, indent=4)
 
+    channelWelcome = member.guild.get_channel(WELCOME)
+    if not isinstance(channelWelcome, discord.TextChannel):
+        Logger.exception("on_member_join: channelWelcome is not discord.TextChannel")
+        return
+    embed = discord.Embed(title=f"Welcome, {member.mention}!", description=f"Your view of the Discord server is limited. Please check <#{RULES_AND_EXPECTATIONS}> and <#{SERVER_INFO}>. After that, ping @​Recruitment Team for a brief voice interview to get the correct roles.", color=discord.Color.green())
+    channelWelcome.send(member.mention, embed=embed)
+
 
 @client.event
 async def on_error(event, *args, **kwargs) -> None:

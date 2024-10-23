@@ -89,6 +89,19 @@ class DynamicVoice(commands.GroupCog, name="voice"):
         await interaction.user.voice.channel.edit(user_limit=new_limit)
         await interaction.response.send_message(f"Changed {interaction.user.voice.channel.mention} user limit to `{new_limit}`", ephemeral=True, delete_after=15.0)
 
+        if secret.DISCORD_LOGGING.get("voice_dynamic_limit", False):
+            if not isinstance(interaction.guild, discord.Guild):
+                Logger.exception("DynamicVoice limit: interaction.guild not discord.Guild")
+                return
+            channelBot = interaction.guild.get_channel(BOT)
+            if not isinstance(channelBot, discord.TextChannel):
+                Logger.exception("DynamicVoice limit: channelBot not discord.TextChannel")
+                return
+
+            embed = discord.Embed(title="Dynamic Voice Channel Limit", description=f"{interaction.user.mention} changed {interaction.user.voice.channel.mention} limit to `{new_limit}`", color=discord.Color.blue())
+            embed.set_footer(text=f"Member ID: {interaction.user.id}")
+            channelBot.send(embed=embed)
+
 
     @discord.app_commands.command(name="name")
     @discord.app_commands.describe(new_name="New channel name; 1-100 characters.")

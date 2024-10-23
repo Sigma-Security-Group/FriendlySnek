@@ -189,6 +189,11 @@ async def on_member_join(member: discord.Member) -> None:
 
     Logger.debug(f"Newcomer joined the server: {member}")
 
+    try:
+        await member.add_roles(PROSPECT, reason="Joined guild")
+    except discord.HTTPException:
+        Logger.warning(f"on_member_join: failed to add prospect role to member '{member.id}'")
+
     remindTime = datetime.datetime.now() + datetime.timedelta(days=1)
     with open(REMINDERS_FILE) as f:
         reminders = json.load(f)

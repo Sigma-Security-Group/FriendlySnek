@@ -69,7 +69,7 @@ WORKSHOP_INTEREST_LIST: dict[str, dict[str, str | int | tuple]] = {
     },
     "Rifleman": {
         "emoji": "🔫",
-        "role": (UNIT_STAFF, ADVISOR, STRATEGIST, TACTICIAN, OPERATOR, MERCENARY),
+        "role": (UNIT_STAFF, ADVISOR, STRATEGIST, OPERATOR),
         "description": "Become a more educated rifleman - a complementary newcomer workshop."
     },
     "Newcomer": {

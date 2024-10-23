@@ -56,7 +56,7 @@ class DynamicVoice(commands.GroupCog, name="voice"):
 
                 embed = discord.Embed(title="Dynamic Voice Channel Created", description=f"{member.mention} created `{newVoiceName}`", color=discord.Color.blue())
                 embed.set_footer(text=f"Member ID: {member.id}")
-                channelBot.send(embed=embed)
+                await channelBot.send(embed=embed)
 
         if before.channel and before.channel.id != CREATE_CHANNEL and before.channel.category and before.channel.category.id == CUSTOM_CHANNELS and len(before.channel.members) == 0:
             try:
@@ -100,7 +100,7 @@ class DynamicVoice(commands.GroupCog, name="voice"):
 
             embed = discord.Embed(title="Dynamic Voice Channel Limit", description=f"{interaction.user.mention} changed {interaction.user.voice.channel.mention} limit to `{new_limit}`", color=discord.Color.blue())
             embed.set_footer(text=f"Member ID: {interaction.user.id}")
-            channelBot.send(embed=embed)
+            await channelBot.send(embed=embed)
 
 
     @discord.app_commands.command(name="name")
@@ -139,7 +139,7 @@ class DynamicVoice(commands.GroupCog, name="voice"):
 
             embed = discord.Embed(title="Dynamic Voice Channel Name", description=f"{interaction.user.mention} changed {interaction.user.voice.channel.mention} name to `{new_name}`", color=discord.Color.blue())
             embed.set_footer(text=f"Member ID: {interaction.user.id}")
-            channelBot.send(embed=embed)
+            await channelBot.send(embed=embed)
 
 
 async def setup(bot: commands.Bot) -> None:

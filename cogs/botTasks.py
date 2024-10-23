@@ -79,7 +79,7 @@ class BotTasks(commands.Cog):
             Logger.exception("on_member_join: channelWelcome is not discord.TextChannel")
             return
         embed = discord.Embed(title=f"Welcome, {member.mention}!", description=f"Your view of the Discord server is limited. Please check <#{RULES_AND_EXPECTATIONS}> and <#{SERVER_INFO}>. After that, ping @​Recruitment Team for a brief voice interview to get the correct roles.", color=discord.Color.green())
-        channelWelcome.send(member.mention, embed=embed)
+        await channelWelcome.send(member.mention, embed=embed)
 
 
     @staticmethod

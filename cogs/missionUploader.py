@@ -123,7 +123,7 @@ class MissionUploader(commands.Cog):
                 f"Member ID: {interaction.user.id}\n"
             )
 
-        if secret.DISCORD_LOGGING["upload_mission_file"]:
+        if secret.DISCORD_LOGGING.get("upload_mission_file", False):
             embed = discord.Embed(title="Uploaded mission file" + (" (Debug)" if secret.DEBUG else ""), color=discord.Color.blue())
             embed.add_field(name="Filename", value=f"`{missionfile.filename}`")
             embed.add_field(name="Size", value=f"`{convertBytes(missionfile.size)}`")

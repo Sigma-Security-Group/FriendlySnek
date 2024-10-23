@@ -2339,7 +2339,7 @@ class Schedule(commands.Cog):
         await interaction.response.send_message(embed=embed)
 
         # Log
-        if secret.DISCORD_LOGGING["upload_file"]:
+        if secret.DISCORD_LOGGING.get("upload_file", False):
             embed = discord.Embed(title="Uploaded file" + (" (Debug)" if secret.DEBUG else ""), color=discord.Color.blue())
             embed.add_field(name="Filename", value=f"`{file.filename}`")
             embed.add_field(name="Size", value=f"`{Schedule.convertBytes(file.size)}`")

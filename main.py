@@ -36,6 +36,7 @@ REDDIT = {
 }
 
 DISCORD_LOGGING = {
+    "upload_mission_file": True,
     "upload_file": True
 }
 """

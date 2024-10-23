@@ -32,7 +32,7 @@ SERVERS = [
     }
 ]
 
-def convertBytes(size):
+def convertBytes(size: int):
     for unit in ["bytes", "KB", "MB", "GB", "TB"]:
         if size < 1024.0:
             return f'{size:.1f} {unit}'
@@ -123,21 +123,22 @@ class MissionUploader(commands.Cog):
                 f"Member ID: {interaction.user.id}\n"
             )
 
-        embed = discord.Embed(title="Uploaded mission file" + (" (Debug)" if secret.DEBUG else ""), color=discord.Color.blue())
-        embed.add_field(name="Filename", value=f"`{missionfile.filename}`")
-        embed.add_field(name="Size", value=f"`{convertBytes(missionfile.size)}`")
-        embed.add_field(name="Server", value=f"`{serverDict['Name']}`")
-        embed.add_field(name="Time", value=discord.utils.format_dt(datetime.now(timezone.utc), style="F"))
-        embed.add_field(name="Member", value=interaction.user.mention)
-        embed.set_footer(text=f"Member ID: {interaction.user.id}")
+        if secret.DISCORD_LOGGING["upload_mission_file"]:
+            embed = discord.Embed(title="Uploaded mission file" + (" (Debug)" if secret.DEBUG else ""), color=discord.Color.blue())
+            embed.add_field(name="Filename", value=f"`{missionfile.filename}`")
+            embed.add_field(name="Size", value=f"`{convertBytes(missionfile.size)}`")
+            embed.add_field(name="Server", value=f"`{serverDict['Name']}`")
+            embed.add_field(name="Time", value=discord.utils.format_dt(datetime.now(timezone.utc), style="F"))
+            embed.add_field(name="Member", value=interaction.user.mention)
+            embed.set_footer(text=f"Member ID: {interaction.user.id}")
 
-        # Send the log message in the Bot channel
-        botChannel = self.bot.get_channel(BOT)
-        if not isinstance(botChannel, discord.channel.TextChannel):
-            Logger.exception("UploadMission: botChanel is not discord.channel.TextChannel")
-            return
+            # Send the log message in the Bot channel
+            botChannel = self.bot.get_channel(BOT)
+            if not isinstance(botChannel, discord.channel.TextChannel):
+                Logger.exception("UploadMission: botChanel is not discord.channel.TextChannel")
+                return
 
-        await botChannel.send(embed=embed)
+            await botChannel.send(embed=embed)
 
         Logger.info(f"{interaction.user.display_name} ({interaction.user}) uploaded the mission file: {missionfile.filename}!")
         await interaction.edit_original_response(content=f"Mission file successfully uploaded: `{missionfile.filename}`" + (" (DEBUG)"*secret.DEBUG), embed=None)

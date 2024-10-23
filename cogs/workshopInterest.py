@@ -15,7 +15,7 @@ WORKSHOP_INTEREST_LIST: dict[str, dict[str, str | int | tuple]] = {
     "Naval": {
         "emoji": "⚓",
         "role": SME_NAVAL,
-        "description": "\"I am naval SME\" - Police"
+        "description": "\"But tbh the naval sme tag was mostly a joke\" - Police"
     },
     "Artillery": {
         "emoji": "💥",
@@ -62,16 +62,21 @@ WORKSHOP_INTEREST_LIST: dict[str, dict[str, str | int | tuple]] = {
         "role": SME_HEAVY_WEAPONS,
         "description": "Learn how to efficiently operate as a machine gun crew, use grenade launchers, and shoot cretins out of shitboxes (AT & AA)."
     },
+    "Leadership": {
+        "emoji": "🫀",  # Anatomical heart
+        "role": (UNIT_STAFF, ADVISOR, STRATEGIST),
+        "description": "Learn how to lead a team, squad or platoon in Sigma Security Group."
+    },
+    "Rifleman": {
+        "emoji": "🔫",
+        "role": (UNIT_STAFF, ADVISOR, STRATEGIST, TACTICIAN, OPERATOR, MERCENARY),
+        "description": "Become a more educated rifleman - a complementary newcomer workshop."
+    },
     "Newcomer": {
         "emoji": "🐣",
         "role": (UNIT_STAFF, ADVISOR, OPERATOR, STRATEGIST),
         "description": "Learn what you need to know before attending an operation in Sigma Security Group."
     },
-    "Leadership": {
-        "emoji": "🫀",  # Anatomical heart
-        "role": (ADVISOR, STRATEGIST),
-        "description": "Learn how to lead a team, squad or platoon in Sigma Security Group."
-    }
 }
 
 

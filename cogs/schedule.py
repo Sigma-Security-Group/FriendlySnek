@@ -10,10 +10,10 @@ from discord.ext import commands, tasks  # type: ignore
 
 from logger import Logger
 from .workshopInterest import WorkshopInterest  # type: ignore
-from secret import DEBUG
+import secret
 from constants import *
 from __main__ import cogsReady
-if DEBUG:
+if secret.DEBUG:
     from constants.debug import *
 
 
@@ -2268,6 +2268,13 @@ class Schedule(commands.Cog):
 
 # ===== <Fileupload> =====
 
+    @staticmethod
+    def convertBytes(size: int):
+        for unit in ["bytes", "KB", "MB", "GB", "TB"]:
+            if size < 1024.0:
+                return f'{size:.1f} {unit}'
+            size /= 1024.0
+
     @discord.app_commands.command(name="fileupload")
     @discord.app_commands.guilds(GUILD)
     @discord.app_commands.describe(file="File to upload")
@@ -2286,6 +2293,11 @@ class Schedule(commands.Cog):
             await interaction.response.send_message(embed=discord.Embed(title="❌ Invalid filesize", description="Max allowed filesize is 25 MB!", color=discord.Color.red()), ephemeral=True)
             return
 
+        channelBot = self.bot.get_channel(BOT)
+        if not isinstance(channelBot, discord.TextChannel):
+            Logger.exception("fileupload: channelBot not discord.TextChannel")
+            return
+
         # Block files with file extension in blacklist
         fileExtension = os.path.splitext(file.filename)[1][1:] # Get extension without dot
         if not fileExtension or fileExtension.lower() in FILE_UPLOAD_EXTENSION_BLACKLIST:
@@ -2298,10 +2310,6 @@ class Schedule(commands.Cog):
             roleSnekLord = guild.get_role(SNEK_LORD)
             if roleSnekLord is None:
                 Logger.exception("fileupload: roleSnekLord is None")
-                return
-            channelBot = self.bot.get_channel(BOT)
-            if not isinstance(channelBot, discord.TextChannel):
-                Logger.exception("fileupload: channelBot not discord.TextChannel")
                 return
 
             embed = discord.Embed(title="❌ File upload blocked", description=f"User {interaction.user.mention} ({interaction.user.id}) uploaded the file '{file.filename}'.\nThis action has been blocked since the file extension is blacklisted.", color=discord.Color.red())
@@ -2329,6 +2337,17 @@ class Schedule(commands.Cog):
         Logger.info(f"{interaction.user.display_name} ({interaction.user.id}) uploaded the file '{file.filename}' as '{filenameNew}'.")
         embed = discord.Embed(title="✅ File uploaded", description=f"Uploaded file as `{filenameCap}`", color=discord.Color.green())
         await interaction.response.send_message(embed=embed)
+
+        # Log
+        if secret.DISCORD_LOGGING["upload_file"]:
+            embed = discord.Embed(title="Uploaded file" + (" (Debug)" if secret.DEBUG else ""), color=discord.Color.blue())
+            embed.add_field(name="Filename", value=f"`{file.filename}`")
+            embed.add_field(name="Size", value=f"`{Schedule.convertBytes(file.size)}`")
+            embed.add_field(name="Time", value=discord.utils.format_dt(datetime.now(timezone.utc), style="F"))
+            embed.add_field(name="Member", value=interaction.user.mention)
+            embed.set_footer(text=f"Member ID: {interaction.user.id}")
+
+            await channelBot.send(embed=embed)
 
         # NEW CLEANUP METHOD (Date)
         fileUploadFiles = os.listdir("tmp/fileUpload")

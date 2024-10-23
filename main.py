@@ -33,7 +33,12 @@ REDDIT = {
     "client_id": "",
     "client_secret": "",
     "password": ""
-}"""
+}
+
+DISCORD_LOGGING = {
+    "upload_file": True
+}
+"""
         )
     exit()
 

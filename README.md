@@ -37,6 +37,14 @@ REDDIT = {
     "client_secret": "",
     "password": ""
 }
+
+DISCORD_LOGGING = {
+    "upload_mission_file": True,
+    "upload_file": True,
+    "voice_dynamic_create": True,
+    "voice_dynamic_name": True,
+    "voice_dynamic_limit": False,
+}
 ```
 
 You can easily toggle the bot's debug mode by changing the DEBUG variable in `secret.py`. On debug mode, the bot will use the debug server (`debug.py` constants).

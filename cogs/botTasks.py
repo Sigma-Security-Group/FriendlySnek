@@ -463,22 +463,21 @@ Join Us:
                     return
 
 
-                roleUnitStaff = guild.get_role(UNIT_STAFF)
-                roleAdvisor = guild.get_role(ADVISOR)
-                if roleUnitStaff is None or roleAdvisor is None:
-                    Logger.exception("botTasks fiveMinTasks: roleUnitStaff or roleAdvisor is None")
+                roleRecruitmentTeam = guild.get_role(RECRUITMENT_TEAM)
+                if roleRecruitmentTeam is None:
+                    Logger.exception("botTasks fiveMinTasks: roleRecruitmentTeam is None")
                     return
 
                 hasUserPinged = len([
                     message async for message
                     in channelWelcome.history(limit=100)
-                    if message.author.id == member.id and (str(roleUnitStaff.id) in message.content or str(roleAdvisor.id) in message.content)
+                    if message.author.id == member.id and roleRecruitmentTeam in message.role_mentions
                 ]) > 0
 
                 if hasUserPinged:
                     continue
 
-                await channelWelcome.send(f"{member.mention} Don't forget to ping @​{roleUnitStaff.name} and @​{roleAdvisor.name} when you are ready!")
+                await channelWelcome.send(f"{member.mention} Don't forget to ping @​{roleRecruitmentTeam.name} when you are ready!")
                 continue
 
 

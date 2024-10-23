@@ -3,10 +3,10 @@ from discord.ext import commands  # type: ignore
 from itertools import count, filterfalse
 
 from logger import Logger
-from secret import DEBUG
+import secret
 from constants import *
 from __main__ import cogsReady
-if DEBUG:
+if secret.DEBUG:
     from constants.debug import *
 
 
@@ -47,6 +47,16 @@ class DynamicVoice(commands.GroupCog, name="voice"):
             newVoiceName = f"Room #{next(filterfalse(set(voiceNums).__contains__, count(1)))}"
             newVoiceChannel = await guild.create_voice_channel(newVoiceName, reason="User created new dynamic voice channel.", category=customChannelsCategory)
             await member.move_to(newVoiceChannel, reason="User created new dynamic voice channel.")
+
+            if secret.DISCORD_LOGGING.get("voice_dynamic_create", False):
+                channelBot = member.guild.get_channel(BOT)
+                if not isinstance(channelBot, discord.TextChannel):
+                    Logger.exception("DynamicVoice on_voice_state_update: channelBot not discord.TextChannel")
+                    return
+
+                embed = discord.Embed(title="Dynamic Voice Channel Created", description=f"{member.mention} created `{newVoiceName}`", color=discord.Color.blue())
+                embed.set_footer(text=f"Member ID: {member.id}")
+                channelBot.send(embed=embed)
 
         if before.channel and before.channel.id != CREATE_CHANNEL and before.channel.category and before.channel.category.id == CUSTOM_CHANNELS and len(before.channel.members) == 0:
             try:

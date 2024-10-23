@@ -128,6 +128,19 @@ class DynamicVoice(commands.GroupCog, name="voice"):
         await interaction.user.voice.channel.edit(name=new_name)
         await interaction.response.send_message(f"Changed voice channel name from `{oldName}` to `{new_name}`", ephemeral=True, delete_after=15.0)
 
+        if secret.DISCORD_LOGGING.get("voice_dynamic_name", False):
+            if not isinstance(interaction.guild, discord.Guild):
+                Logger.exception("DynamicVoice name: interaction.guild not discord.Guild")
+                return
+            channelBot = interaction.guild.get_channel(BOT)
+            if not isinstance(channelBot, discord.TextChannel):
+                Logger.exception("DynamicVoice name: channelBot not discord.TextChannel")
+                return
+
+            embed = discord.Embed(title="Dynamic Voice Channel Name", description=f"{interaction.user.mention} changed {interaction.user.voice.channel.mention} name to `{new_name}`", color=discord.Color.blue())
+            embed.set_footer(text=f"Member ID: {interaction.user.id}")
+            channelBot.send(embed=embed)
+
 
 async def setup(bot: commands.Bot) -> None:
     await bot.add_cog(DynamicVoice(bot))

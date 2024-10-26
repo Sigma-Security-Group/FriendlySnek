@@ -58,8 +58,13 @@ class BotTasks(commands.Cog):
 
         Logger.debug(f"Newcomer joined the server: {member}")
 
+        roleProspect = guild.get_role(PROSPECT)
+        if not isinstance(roleProspect, discord.Role):
+            Logger.exception("BotTasks on_member_join: roleProspect is not discord.Role")
+            return
+
         try:
-            await member.add_roles(PROSPECT, reason="Joined guild")
+            await member.add_roles(roleProspect, reason="Joined guild")
         except discord.HTTPException:
             Logger.warning(f"on_member_join: failed to add prospect role to member '{member.id}'")
 

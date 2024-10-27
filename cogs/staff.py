@@ -473,43 +473,51 @@ class Staff(commands.Cog):
         await BotTasks.smeBigBrother(guild, True)
 
 
-    # Advisor command
-    @commands.command(name="verify")
-    @commands.has_any_role(*CMD_LIMIT_VERIFY)
-    async def verify(self, ctx: commands.Context, *, member: str) -> None:
+    # Recruitment Team command
+    @discord.app_commands.command(name="verify")
+    @discord.app_commands.guilds(GUILD)
+    @discord.app_commands.checks.has_any_role(*CMD_LIMIT_VERIFY)
+    async def verify(self, interaction: discord.Interaction, member: discord.Member) -> None:
         """Verifies a Prospect (passed interview)."""
-        if not isinstance(ctx.guild, discord.Guild):
-            Logger.exception("Staff verify: ctx guild is not discord.Guild")
-            return
-        targetMember = Staff._getMember(member, ctx.guild)
-        if targetMember is None:
-            Logger.info(f"No member found for search term: {member}")
-            await ctx.send(embed=discord.Embed(title="❌ No member found", description=f"Searched for: `{member}`", color=discord.Color.red()))
+        if not isinstance(interaction.guild, discord.Guild):
+            Logger.exception("Staff verify: interaction.guild is not discord.Guild")
             return
 
-        guild = self.bot.get_guild(GUILD_ID)
-        if guild is None:
-            Logger.exception("Staff verify: guild is None")
-            return
-
-        roleProspect = guild.get_role(PROSPECT)
-        roleVerified = guild.get_role(VERIFIED)
-        roleMember = guild.get_role(MEMBER)
+        roleProspect = interaction.guild.get_role(PROSPECT)
+        roleVerified = interaction.guild.get_role(VERIFIED)
+        roleMember = interaction.guild.get_role(MEMBER)
         if roleProspect is None or roleVerified is None or roleMember is None:
             Logger.exception("Staff verify: roleProspect, roleVerified, roleMember is None")
             return
 
         reason = "User verified"
-        if roleProspect in targetMember.roles:
-            await targetMember.remove_roles(roleProspect, reason=reason)
-            await targetMember.add_roles(roleVerified, reason=reason)
+        if roleProspect in member.roles:
+            await member.remove_roles(roleProspect, reason=reason)
+            await member.add_roles(roleVerified, reason=reason)
 
-        await targetMember.add_roles(roleMember, reason=reason)
-        embed = discord.Embed(title="✅ Member verified", description=f"{targetMember.mention} verified!", color=discord.Color.green())
-        embed.set_footer(text=f"ID: {targetMember.id}")
+        await member.add_roles(roleMember, reason=reason)
+        interviewQuestions = """# Interview Points
+        1. Where to find the mods/server info guide.
+        2. Don't worry about pinging roles or people we are here to help.
+        3. Channel explanations.
+        4. What to do if you are stuck/unsure.
+        5. IRL comes first.
+        6. We work around your schedules, whenever you are available."""
+
+        embed = discord.Embed(title="✅ Member verified", description=f"{member.mention} verified!\n\n{interviewQuestions}", color=discord.Color.green())
+        embed.set_footer(text=f"ID: {member.id}")
         embed.timestamp = datetime.now()
-        await ctx.send(embed=embed)
+        await interaction.response.send_message(embed=embed, ephemeral=True)
 
+        # Logging
+        channelAuditLog = interaction.guild.get_channel(AUDIT_LOG)
+        if not isinstance(channelAuditLog, discord.TextChannel):
+            Logger.exception("Staff verify: channelAuditLog is not discord.TextChannel")
+            return
+        embed = discord.Embed(title="Member verified", description=f"Verified: {member.mention}\nInterviewer: {interaction.user.mention}", color=discord.Color.blue())
+        embed.set_footer(text=f"Verified ID: {member.id} | Interviewer ID: {interaction.user.id}")
+        embed.timestamp = datetime.now()
+        await channelAuditLog.send(embed=embed)
 
 
     # Hampter command

@@ -31,7 +31,7 @@ class EmbedBuilder(commands.Cog):
 
     @discord.app_commands.command(name="build-embed")
     @discord.app_commands.guilds(GUILD)
-    @discord.app_commands.checks.has_any_role(*CMD_STAFF_LIMIT)
+    @discord.app_commands.checks.has_any_role(*CMD_LIMIT_STAFF)
     @discord.app_commands.describe(
         channel = "Target channel for later sending embed, or fetching message from.",
         messageid = "Optional discord message id for editing an embed.",
@@ -141,7 +141,7 @@ class EmbedBuilder(commands.Cog):
                 Logger.exception("onBuildEmbedError: guild is None")
                 return
 
-            embed = discord.Embed(title="❌ Missing permissions", description=f"You do not have the permissions to build embeds!\nThe permitted roles are: {', '.join([guild.get_role(role).name for role in CMD_STAFF_LIMIT])}.", color=discord.Color.red())
+            embed = discord.Embed(title="❌ Missing permissions", description=f"You do not have the permissions to build embeds!\nThe permitted roles are: {', '.join([guild.get_role(role).name for role in CMD_LIMIT_STAFF])}.", color=discord.Color.red())
             await interaction.response.send_message(embed=embed, ephemeral=True, delete_after=15.0)
             return
         Logger.exception(error)

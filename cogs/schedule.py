@@ -348,7 +348,7 @@ class Schedule(commands.Cog):
 
     @discord.app_commands.command(name="refreshschedule")
     @discord.app_commands.guilds(GUILD)
-    @discord.app_commands.checks.has_any_role(*CMD_REFRESHSCHEDULE_LIMIT)
+    @discord.app_commands.checks.has_any_role(*CMD_LIMIT_REFRESHSCHEDULE)
     async def refreshSchedule(self, interaction: discord.Interaction) -> None:
         """Refreshes the schedule - Use if an event was deleted without using the reaction.
 
@@ -379,7 +379,7 @@ class Schedule(commands.Cog):
                 Logger.exception("OnRefreshScheduleError: guild is None")
                 return
 
-            embed = discord.Embed(title="❌ Missing permissions", description=f"You do not have the permissions to refresh the schedule!\nThe permitted roles are: {', '.join([guild.get_role(role).name for role in CMD_REFRESHSCHEDULE_LIMIT])}.", color=discord.Color.red())
+            embed = discord.Embed(title="❌ Missing permissions", description=f"You do not have the permissions to refresh the schedule!\nThe permitted roles are: {', '.join([guild.get_role(role).name for role in CMD_LIMIT_REFRESHSCHEDULE])}.", color=discord.Color.red())
             await interaction.response.send_message(embed=embed, ephemeral=True)
             return
         Logger.exception(error)
@@ -391,7 +391,7 @@ class Schedule(commands.Cog):
 
     @discord.app_commands.command(name="aar")
     @discord.app_commands.guilds(GUILD)
-    @discord.app_commands.checks.has_any_role(*CMD_AAR_LIMIT)
+    @discord.app_commands.checks.has_any_role(*CMD_LIMIT_AAR)
     async def aar(self, interaction: discord.Interaction) -> None:
         """Move all users in Deployed to Command voice channel."""
         Logger.info(f"{interaction.user.display_name} ({interaction.user}) is starting an AAR...")
@@ -439,7 +439,7 @@ class Schedule(commands.Cog):
                 Logger.exception("OnAarError: guild is None")
                 return
 
-            embed = discord.Embed(title="❌ Missing permissions", description=f"You do not have the permissions to move all users to command!\nThe permitted roles are: {', '.join([guild.get_role(role).name for role in CMD_AAR_LIMIT])}.", color=discord.Color.red())
+            embed = discord.Embed(title="❌ Missing permissions", description=f"You do not have the permissions to move all users to command!\nThe permitted roles are: {', '.join([guild.get_role(role).name for role in CMD_LIMIT_AAR])}.", color=discord.Color.red())
             await interaction.response.send_message(embed=embed, ephemeral=True)
             return
         Logger.exception(error)

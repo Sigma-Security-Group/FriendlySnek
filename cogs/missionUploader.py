@@ -56,7 +56,7 @@ class MissionUploader(commands.Cog):
         server="Which server to upload to?"
     )
     @discord.app_commands.choices(server = [discord.app_commands.Choice(name=srv["Name"], value=srv["Host"]) for srv in SERVERS])
-    @discord.app_commands.checks.has_any_role(*CMD_UPLOADMISSION_LIMIT)
+    @discord.app_commands.checks.has_any_role(*CMD_LIMIT_UPLOADMISSION)
     async def uploadMission(self, interaction: discord.Interaction, missionfile: discord.Attachment, server: discord.app_commands.Choice[str]) -> None:
         """Upload a mission PBO file to the server."""
 
@@ -153,7 +153,7 @@ class MissionUploader(commands.Cog):
                 Logger.exception("onUploadMissionError: guild is None")
                 return
 
-            embed = discord.Embed(title="❌ Missing permissions", description=f"You do not have the permissions to upload a mission file!\nThe permitted roles are: {', '.join([role.name for allowedRole in CMD_UPLOADMISSION_LIMIT if (role := guild.get_role(allowedRole)) is not None])}.", color=discord.Color.red())
+            embed = discord.Embed(title="❌ Missing permissions", description=f"You do not have the permissions to upload a mission file!\nThe permitted roles are: {', '.join([role.name for allowedRole in CMD_LIMIT_UPLOADMISSION if (role := guild.get_role(allowedRole)) is not None])}.", color=discord.Color.red())
             await interaction.response.send_message(embed=embed, ephemeral=True, delete_after=30.0)
             return
         Logger.exception(error)

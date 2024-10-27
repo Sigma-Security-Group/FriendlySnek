@@ -26,7 +26,7 @@ class ButtonRoles(commands.GroupCog, group_name="button-role"):
 
 
     @discord.app_commands.command(name="create")
-    @discord.app_commands.checks.has_any_role(*CMD_STAFF_LIMIT)
+    @discord.app_commands.checks.has_any_role(*CMD_LIMIT_STAFF)
     @discord.app_commands.describe(
         target_channel = "Where the message will be sent.",
         role1 = "A role for users to toggle.",
@@ -139,7 +139,7 @@ class ButtonRoles(commands.GroupCog, group_name="button-role"):
 
     @discord.app_commands.command(name="edit")
     @discord.app_commands.guilds(GUILD)
-    @discord.app_commands.checks.has_any_role(*CMD_STAFF_LIMIT)
+    @discord.app_commands.checks.has_any_role(*CMD_LIMIT_STAFF)
     @discord.app_commands.describe(message_channel = "What channel the existing message is in.", message_id = "What message id the existing message has.")
     async def buttonRoleEdit(self, interaction: discord.Interaction, message_channel: discord.TextChannel, message_id: str) -> None:
         """Edit a Button Role message.

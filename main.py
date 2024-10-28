@@ -195,6 +195,19 @@ async def on_guild_channel_create(channel: discord.abc.GuildChannel) -> None:
     embed.timestamp = datetime.datetime.now()
     await channelAuditLog.send(embed=embed)
 
+@client.event
+async def on_guild_channel_delete(channel: discord.abc.GuildChannel) -> None:
+    if not secret.DISCORD_LOGGING.get("channel_delete", False):
+        return
+    channelAuditLog = channel.guild.get_channel(AUDIT_LOG)
+    if not isinstance(channelAuditLog, discord.TextChannel):
+        Logger.exception("on_guild_channel_delete: channelAuditLog not discord.TextChannel")
+        return
+    embed = discord.Embed(title="Channel Deleted", description=f"`{channel.name}`", color=discord.Color.red())
+    embed.set_footer(text=f"Channel ID: {channel.id}")
+    embed.timestamp = datetime.datetime.now()
+    await channelAuditLog.send(embed=embed)
+
 
 @client.event
 async def on_error(event, *args, **kwargs) -> None:

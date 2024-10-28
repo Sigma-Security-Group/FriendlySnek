@@ -878,6 +878,23 @@ class Schedule(commands.Cog):
                         if event["reservableRoles"][btnRoleName] == interaction.user.id:
                             event["reservableRoles"][btnRoleName] = None
 
+            # Ping Recruitment Team if candidate accepts
+            if button.custom_id == "accepted" and eventList[0]["type"].lower() == "operation" and interaction.user.id in eventList[0]["accepted"] and any([True for role in interaction.user.roles if role.id == CANDIDATE]):
+                if not isinstance(interaction.guild, discord.Guild):
+                    Logger.exception("Schedule buttonHandling: interaction.guild is not discord.Guild")
+                    return
+                channelRecruitmentHr = interaction.guild.get_channel(RECRUITMENT_AND_HR)
+                if not isinstance(channelRecruitmentHr, discord.TextChannel):
+                    Logger.exception("Schedule buttonHandling: channelRecruitmentHr is not discord.TextChannel")
+                    return
+                roleRecruitmentTeam = interaction.guild.get_role(RECRUITMENT_TEAM)
+                if not isinstance(roleRecruitmentTeam, discord.Role):
+                    Logger.exception("Schedule buttonHandling: roleRecruitmentTeam is not discord.Role")
+                    return
+                embed = discord.Embed(title="Candidate Accept", description=f"{interaction.user.mention} accepted operation `{eventList[0]['title']}`", color=discord.Color.blue())
+                embed.set_footer(text=f"Candidate ID: {interaction.user.id}")
+                await channelRecruitmentHr.send(roleRecruitmentTeam.mention, embed=embed)
+
             elif button.custom_id == "reserve":
                 with open(ROLE_RESERVATION_BLACKLIST_FILE) as f:
                     blacklist = json.load(f)

@@ -1,4 +1,4 @@
-import os, re, asyncio, discord, json
+import os, re, asyncio, discord, json, datetime
 import pytz # type: ignore
 
 from logger import Logger
@@ -180,6 +180,20 @@ async def analyzeChannel(client, message: discord.Message, channelID: int, attac
         await message.author.send(embed=discord.Embed(title="❌ Message removed", description=f"The message you just posted in <#{channelID}> was deleted because no {attachmentContentType} was detected in it.\n\nIf this is an error, then please ask **staff** to post the {attachmentContentType} for you, and inform: {DEVS}", color=discord.Color.red()))
     except Exception as e:
         Logger.exception(f"{message.author} | {e}")
+
+
+@client.event
+async def on_guild_channel_create(channel: discord.abc.GuildChannel) -> None:
+    if not secret.DISCORD_LOGGING.get("channel_create", False):
+        return
+    channelAuditLog = channel.guild.get_channel(AUDIT_LOG)
+    if not isinstance(channelAuditLog, discord.TextChannel):
+        Logger.exception("on_guild_channel_create: channelAuditLog not discord.TextChannel")
+        return
+    embed = discord.Embed(title="Channel Created", description=f"`{channel.name}`", color=discord.Color.green())
+    embed.set_footer(text=f"Channel ID: {channel.id}")
+    embed.timestamp = datetime.datetime.now()
+    await channelAuditLog.send(embed=embed)
 
 
 @client.event

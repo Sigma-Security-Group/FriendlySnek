@@ -48,15 +48,6 @@ class DynamicVoice(commands.GroupCog, name="voice"):
             newVoiceChannel = await guild.create_voice_channel(newVoiceName, reason="User created new dynamic voice channel.", category=customChannelsCategory)
             await member.move_to(newVoiceChannel, reason="User created new dynamic voice channel.")
 
-            if secret.DISCORD_LOGGING.get("voice_dynamic_create", False):
-                channelAuditLog = member.guild.get_channel(AUDIT_LOG)
-                if not isinstance(channelAuditLog, discord.TextChannel):
-                    Logger.exception("DynamicVoice on_voice_state_update: channelAuditLog not discord.TextChannel")
-                    return
-
-                embed = discord.Embed(title="Dynamic Voice Channel Created", description=f"{member.mention} created `{newVoiceName}`", color=discord.Color.blue())
-                embed.set_footer(text=f"Member ID: {member.id} | Channel ID: {newVoiceChannel.id}")
-                await channelAuditLog.send(embed=embed)
 
         if before.channel and before.channel.id != CREATE_CHANNEL and before.channel.category and before.channel.category.id == CUSTOM_CHANNELS and len(before.channel.members) == 0:
             try:

@@ -1751,6 +1751,23 @@ class Schedule(commands.Cog):
             with open(EVENTS_FILE, "w") as f:
                 json.dump(events, f, indent=4)
 
+            # Ping Recruitment Team if candidate reserves
+            if event["type"].lower() == "operation" and any([True for role in interaction.user.roles if role.id == CANDIDATE]):
+                if not isinstance(interaction.guild, discord.Guild):
+                    Logger.exception("Schedule selectHandling: interaction.guild is not discord.Guild")
+                    return
+                channelRecruitmentHr = interaction.guild.get_channel(RECRUITMENT_AND_HR)
+                if not isinstance(channelRecruitmentHr, discord.TextChannel):
+                    Logger.exception("Schedule selectHandling: channelRecruitmentHr is not discord.TextChannel")
+                    return
+                roleRecruitmentTeam = interaction.guild.get_role(RECRUITMENT_TEAM)
+                if not isinstance(roleRecruitmentTeam, discord.Role):
+                    Logger.exception("Schedule selectHandling: roleRecruitmentTeam is not discord.Role")
+                    return
+                embed = discord.Embed(title="Candidate Accept", description=f"{interaction.user.mention} accepted operation `{event['title']}`\nReserved role `{selectedValue}`", color=discord.Color.blue())
+                embed.set_footer(text=f"Candidate ID: {interaction.user.id}")
+                await channelRecruitmentHr.send(roleRecruitmentTeam.mention, embed=embed)
+
 
         elif select.custom_id == "edit_select":
             with open(EVENTS_FILE) as f:

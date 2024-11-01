@@ -580,7 +580,9 @@ class Reminders(commands.GroupCog, name="reminder"):
         self.bot = bot
 
     @staticmethod
-    def getFirstDayNextMonth(startDate: datetime = datetime.now(timezone.utc)) -> datetime:
+    def getFirstDayNextMonth(startDate: datetime | None = None) -> datetime:
+        if startDate is None:
+            startDate = datetime.now(timezone.utc)
         return (startDate.replace(day=1) + timedelta(days=32)).replace(day=1, hour=12, minute=0, second=0, microsecond=0)
 
     @staticmethod

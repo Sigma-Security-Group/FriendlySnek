@@ -829,6 +829,27 @@ class Schedule(commands.Cog):
             elif endTime < eventStartTime and endTime + timedelta(hours=1) > eventStartTime:
                 return f"There is another event (`{event['title']}`) starting less than an hour after your event ends!\nScheduled event: {discord.utils.format_dt(eventStartTime, style='F')} - {discord.utils.format_dt(eventEndTime, style='F')}"
 
+    @staticmethod
+    async def has_candidate_pinged(candidateId: int, operationTitle: str, channelRecruitmentHr: discord.TextChannel) -> bool:
+        """Checks recent messages for candidate accept embed notifications
+
+        Parameters:
+        candidateId (int): ID of the target candidate member.
+        operationTitle (str): Title of the target operation.
+        channelRecruitmentHr (discord.TextChannel): Instance of the Recruitment & HR channel to search through.
+
+        Returns:
+        bool: Whether the notification embed has been found.
+        """
+        async for message in channelRecruitmentHr.history(limit=200):
+            if message.author.id not in FRIENDLY_SNEKS:
+                continue
+            if not message.embeds:
+                continue
+            if message.embeds[0].description and candidateId in message.embeds[0].description and f"`{operationTitle}`" in message.embeds[0].description:
+                return True
+        return False
+
     async def buttonHandling(self, message: discord.Message | None, button: discord.ui.Button, interaction: discord.Interaction, authorId: int | None) -> None:
         """Handling all schedule button interactions.
 
@@ -887,10 +908,13 @@ class Schedule(commands.Cog):
                 if not isinstance(channelRecruitmentHr, discord.TextChannel):
                     Logger.exception("Schedule buttonHandling: channelRecruitmentHr is not discord.TextChannel")
                     return
+                if await Schedule.has_candidate_pinged(interaction.user.id, eventList[0]["title"], channelRecruitmentHr):
+                    return
                 roleRecruitmentTeam = interaction.guild.get_role(RECRUITMENT_TEAM)
                 if not isinstance(roleRecruitmentTeam, discord.Role):
                     Logger.exception("Schedule buttonHandling: roleRecruitmentTeam is not discord.Role")
                     return
+
                 embed = discord.Embed(title="Candidate Accept", description=f"{interaction.user.mention} accepted operation `{eventList[0]['title']}`", color=discord.Color.blue())
                 embed.set_footer(text=f"Candidate ID: {interaction.user.id}")
                 await channelRecruitmentHr.send(roleRecruitmentTeam.mention, embed=embed)

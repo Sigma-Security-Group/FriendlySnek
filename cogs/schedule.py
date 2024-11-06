@@ -841,12 +841,12 @@ class Schedule(commands.Cog):
         Returns:
         bool: Whether the notification embed has been found.
         """
-        async for message in channelRecruitmentHr.history(limit=200):
+        async for message in channelRecruitmentHr.history(limit=50):
             if message.author.id not in FRIENDLY_SNEKS:
                 continue
             if not message.embeds:
                 continue
-            if message.embeds[0].description and candidateId in message.embeds[0].description and f"`{operationTitle}`" in message.embeds[0].description:
+            if message.embeds[0].description and str(candidateId) in message.embeds[0].description and f"`{operationTitle}`" in message.embeds[0].description:
                 return True
         return False
 
@@ -908,16 +908,15 @@ class Schedule(commands.Cog):
                 if not isinstance(channelRecruitmentHr, discord.TextChannel):
                     Logger.exception("Schedule buttonHandling: channelRecruitmentHr is not discord.TextChannel")
                     return
-                if await Schedule.has_candidate_pinged(interaction.user.id, eventList[0]["title"], channelRecruitmentHr):
-                    return
-                roleRecruitmentTeam = interaction.guild.get_role(RECRUITMENT_TEAM)
-                if not isinstance(roleRecruitmentTeam, discord.Role):
-                    Logger.exception("Schedule buttonHandling: roleRecruitmentTeam is not discord.Role")
-                    return
+                if not await Schedule.has_candidate_pinged(interaction.user.id, eventList[0]["title"], channelRecruitmentHr):
+                    roleRecruitmentTeam = interaction.guild.get_role(RECRUITMENT_TEAM)
+                    if not isinstance(roleRecruitmentTeam, discord.Role):
+                        Logger.exception("Schedule buttonHandling: roleRecruitmentTeam is not discord.Role")
+                        return
 
-                embed = discord.Embed(title="Candidate Accept", description=f"{interaction.user.mention} accepted operation `{eventList[0]['title']}`", color=discord.Color.blue())
-                embed.set_footer(text=f"Candidate ID: {interaction.user.id}")
-                await channelRecruitmentHr.send(roleRecruitmentTeam.mention, embed=embed)
+                    embed = discord.Embed(title="Candidate Accept", description=f"{interaction.user.mention} accepted operation `{eventList[0]['title']}`", color=discord.Color.blue())
+                    embed.set_footer(text=f"Candidate ID: {interaction.user.id}")
+                    await channelRecruitmentHr.send(roleRecruitmentTeam.mention, embed=embed)
 
             elif button.custom_id == "reserve":
                 with open(ROLE_RESERVATION_BLACKLIST_FILE) as f:
@@ -1784,13 +1783,14 @@ class Schedule(commands.Cog):
                 if not isinstance(channelRecruitmentHr, discord.TextChannel):
                     Logger.exception("Schedule selectHandling: channelRecruitmentHr is not discord.TextChannel")
                     return
-                roleRecruitmentTeam = interaction.guild.get_role(RECRUITMENT_TEAM)
-                if not isinstance(roleRecruitmentTeam, discord.Role):
-                    Logger.exception("Schedule selectHandling: roleRecruitmentTeam is not discord.Role")
-                    return
-                embed = discord.Embed(title="Candidate Accept", description=f"{interaction.user.mention} accepted operation `{event['title']}`\nReserved role `{selectedValue}`", color=discord.Color.blue())
-                embed.set_footer(text=f"Candidate ID: {interaction.user.id}")
-                await channelRecruitmentHr.send(roleRecruitmentTeam.mention, embed=embed)
+                if not await Schedule.has_candidate_pinged(interaction.user.id, event["title"], channelRecruitmentHr):
+                    roleRecruitmentTeam = interaction.guild.get_role(RECRUITMENT_TEAM)
+                    if not isinstance(roleRecruitmentTeam, discord.Role):
+                        Logger.exception("Schedule selectHandling: roleRecruitmentTeam is not discord.Role")
+                        return
+                    embed = discord.Embed(title="Candidate Accept", description=f"{interaction.user.mention} accepted operation `{event['title']}`\nReserved role `{selectedValue}`", color=discord.Color.blue())
+                    embed.set_footer(text=f"Candidate ID: {interaction.user.id}")
+                    await channelRecruitmentHr.send(roleRecruitmentTeam.mention, embed=embed)
 
 
         elif select.custom_id == "edit_select":

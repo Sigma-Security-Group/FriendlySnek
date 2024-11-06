@@ -117,6 +117,9 @@ class BotTasks(commands.Cog):
 
             # Find latest update
             update = soup.find("div", class_="detailBox workshopAnnouncement noFooter changeLogCtn")
+            if update is None:
+                Logger.exception("BotTasks checkModUpdates: update is None")
+                return
 
             # Loop paragraphs in latest update
             for paragraph in update.descendants:

@@ -510,14 +510,14 @@ class Staff(commands.Cog):
         await interaction.response.send_message(embed=embed, ephemeral=True)
 
         # Logging
-        channelAuditLog = interaction.guild.get_channel(AUDIT_LOG)
-        if not isinstance(channelAuditLog, discord.TextChannel):
-            Logger.exception("Staff verify: channelAuditLog is not discord.TextChannel")
+        channelAuditLogs = interaction.guild.get_channel(AUDIT_LOGS)
+        if not isinstance(channelAuditLogs, discord.TextChannel):
+            Logger.exception("Staff verify: channelAuditLogs is not discord.TextChannel")
             return
         embed = discord.Embed(title="Member verified", description=f"Verified: {member.mention}\nInterviewer: {interaction.user.mention}", color=discord.Color.blue())
         embed.set_footer(text=f"Verified ID: {member.id} | Interviewer ID: {interaction.user.id}")
         embed.timestamp = datetime.now()
-        await channelAuditLog.send(embed=embed)
+        await channelAuditLogs.send(embed=embed)
 
 
     # Hampter command

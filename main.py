@@ -186,27 +186,27 @@ async def analyzeChannel(client, message: discord.Message, channelID: int, attac
 async def on_guild_channel_create(channel: discord.abc.GuildChannel) -> None:
     if not secret.DISCORD_LOGGING.get("channel_create", False):
         return
-    channelAuditLog = channel.guild.get_channel(AUDIT_LOG)
-    if not isinstance(channelAuditLog, discord.TextChannel):
-        Logger.exception("on_guild_channel_create: channelAuditLog not discord.TextChannel")
+    channelAuditLogs = channel.guild.get_channel(AUDIT_LOGS)
+    if not isinstance(channelAuditLogs, discord.TextChannel):
+        Logger.exception("on_guild_channel_create: channelAuditLogs not discord.TextChannel")
         return
     embed = discord.Embed(title="Channel Created", description=f"`{channel.name}`", color=discord.Color.green())
     embed.set_footer(text=f"Channel ID: {channel.id}")
     embed.timestamp = datetime.datetime.now()
-    await channelAuditLog.send(embed=embed)
+    await channelAuditLogs.send(embed=embed)
 
 @client.event
 async def on_guild_channel_delete(channel: discord.abc.GuildChannel) -> None:
     if not secret.DISCORD_LOGGING.get("channel_delete", False):
         return
-    channelAuditLog = channel.guild.get_channel(AUDIT_LOG)
-    if not isinstance(channelAuditLog, discord.TextChannel):
-        Logger.exception("on_guild_channel_delete: channelAuditLog not discord.TextChannel")
+    channelAuditLogs = channel.guild.get_channel(AUDIT_LOGS)
+    if not isinstance(channelAuditLogs, discord.TextChannel):
+        Logger.exception("on_guild_channel_delete: channelAuditLogs not discord.TextChannel")
         return
     embed = discord.Embed(title="Channel Deleted", description=f"`{channel.name}`", color=discord.Color.red())
     embed.set_footer(text=f"Channel ID: {channel.id}")
     embed.timestamp = datetime.datetime.now()
-    await channelAuditLog.send(embed=embed)
+    await channelAuditLogs.send(embed=embed)
 
 
 @client.event

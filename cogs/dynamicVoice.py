@@ -85,15 +85,15 @@ class DynamicVoice(commands.GroupCog, name="voice"):
             if not isinstance(interaction.guild, discord.Guild):
                 Logger.exception("DynamicVoice limit: interaction.guild not discord.Guild")
                 return
-            channelAuditLog = interaction.guild.get_channel(AUDIT_LOG)
-            if not isinstance(channelAuditLog, discord.TextChannel):
-                Logger.exception("DynamicVoice limit: channelAuditLog not discord.TextChannel")
+            channelAuditLogs = interaction.guild.get_channel(AUDIT_LOGS)
+            if not isinstance(channelAuditLogs, discord.TextChannel):
+                Logger.exception("DynamicVoice limit: channelAuditLogs not discord.TextChannel")
                 return
 
             embed = discord.Embed(title="Dynamic Voice Channel Limit", description=f"Channel: {interaction.user.voice.channel.name}\nOld limit: `{oldLimit}`\nNew limit: `{new_limit}`", color=discord.Color.blue())
             embed.set_author(name=interaction.user.name, icon_url=interaction.user.display_avatar)
             embed.set_footer(text=f"Member ID: {interaction.user.id} | Channel ID: {interaction.user.voice.channel.id}")
-            await channelAuditLog.send(embed=embed)
+            await channelAuditLogs.send(embed=embed)
 
 
     @discord.app_commands.command(name="name")
@@ -125,15 +125,15 @@ class DynamicVoice(commands.GroupCog, name="voice"):
             if not isinstance(interaction.guild, discord.Guild):
                 Logger.exception("DynamicVoice name: interaction.guild not discord.Guild")
                 return
-            channelAuditLog = interaction.guild.get_channel(AUDIT_LOG)
-            if not isinstance(channelAuditLog, discord.TextChannel):
-                Logger.exception("DynamicVoice name: channelAuditLog not discord.TextChannel")
+            channelAuditLogs = interaction.guild.get_channel(AUDIT_LOGS)
+            if not isinstance(channelAuditLogs, discord.TextChannel):
+                Logger.exception("DynamicVoice name: channelAuditLogs not discord.TextChannel")
                 return
 
             embed = discord.Embed(title="Dynamic Voice Channel Name", description=f"Old channel name: `{oldName}`\nNew channel name: `{new_name}`", color=discord.Color.blue())
             embed.set_author(name=interaction.user.name, icon_url=interaction.user.display_avatar)
             embed.set_footer(text=f"Member ID: {interaction.user.id} | Channel ID: {interaction.user.voice.channel.id}")
-            await channelAuditLog.send(embed=embed)
+            await channelAuditLogs.send(embed=embed)
 
 
 async def setup(bot: commands.Bot) -> None:

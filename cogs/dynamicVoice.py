@@ -76,7 +76,8 @@ class DynamicVoice(commands.GroupCog, name="voice"):
             await interaction.response.send_message("New limit must be greater than 0 and less than 99!", ephemeral=True, delete_after=15.0)
             return
 
-        Logger.debug(f"{interaction.user.display_name} ({interaction.user}) changed the dynamic voice limit from '{interaction.user.voice.channel.user_limit}' to '{new_limit}'")
+        oldLimit = interaction.user.voice.channel.user_limit
+        Logger.debug(f"{interaction.user.display_name} ({interaction.user}) changed the dynamic voice limit from '{oldLimit}' to '{new_limit}'")
         await interaction.user.voice.channel.edit(user_limit=new_limit)
         await interaction.response.send_message(f"Changed {interaction.user.voice.channel.mention} user limit to `{new_limit}`", ephemeral=True, delete_after=15.0)
 
@@ -89,7 +90,8 @@ class DynamicVoice(commands.GroupCog, name="voice"):
                 Logger.exception("DynamicVoice limit: channelAuditLog not discord.TextChannel")
                 return
 
-            embed = discord.Embed(title="Dynamic Voice Channel Limit", description=f"{interaction.user.mention} changed {interaction.user.voice.channel.mention} limit to `{new_limit}`", color=discord.Color.blue())
+            embed = discord.Embed(title="Dynamic Voice Channel Limit", description=f"Channel: {interaction.user.voice.channel.name}\nOld limit: `{oldLimit}`\nNew limit: `{new_limit}`", color=discord.Color.blue())
+            embed.set_author(name=interaction.user.name, icon_url=interaction.user.display_avatar)
             embed.set_footer(text=f"Member ID: {interaction.user.id} | Channel ID: {interaction.user.voice.channel.id}")
             await channelAuditLog.send(embed=embed)
 
@@ -128,7 +130,8 @@ class DynamicVoice(commands.GroupCog, name="voice"):
                 Logger.exception("DynamicVoice name: channelAuditLog not discord.TextChannel")
                 return
 
-            embed = discord.Embed(title="Dynamic Voice Channel Name", description=f"{interaction.user.mention} changed {interaction.user.voice.channel.mention} name to `{new_name}`", color=discord.Color.blue())
+            embed = discord.Embed(title="Dynamic Voice Channel Name", description=f"Old channel name: `{oldName}`\nNew channel name: `{new_name}`", color=discord.Color.blue())
+            embed.set_author(name=interaction.user.name, icon_url=interaction.user.display_avatar)
             embed.set_footer(text=f"Member ID: {interaction.user.id} | Channel ID: {interaction.user.voice.channel.id}")
             await channelAuditLog.send(embed=embed)
 

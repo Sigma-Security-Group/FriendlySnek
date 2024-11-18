@@ -46,6 +46,7 @@ DISCORD_LOGGING = {
     "voice_dynamic_limit": False,
     "channel_create": True,
     "channel_delete": True,
+    "user_join": True,
 }
 ```
 

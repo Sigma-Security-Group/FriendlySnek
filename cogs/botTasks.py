@@ -86,6 +86,20 @@ class BotTasks(commands.Cog):
         embed = discord.Embed(title=f"Welcome, {member.mention}!", description=f"Your view of the Discord server is limited. Please check <#{RULES_AND_EXPECTATIONS}> and <#{SERVER_INFO}>. After that, ping @​Recruitment Team for a brief voice interview to get the correct roles.", color=discord.Color.green())
         await channelWelcome.send(member.mention, embed=embed)
 
+        # Log in Audit Logs
+        if not secret.DISCORD_LOGGING.get("user_join", False):
+            return
+        channelAuditLogs = member.guild.get_channel(AUDIT_LOGS)
+        if not isinstance(channelAuditLogs, discord.TextChannel):
+            Logger.exception("on_member_join: channelAuditLogs is not discord.TextChannel")
+            return
+        memberJoined = discord.utils.format_dt(member.joined_at, style="F") if member.joined_at else "Unknown"
+        embed = discord.Embed(description=f"{member.mention} {member.name}\n**Account Registered**\n{memberJoined}", color=discord.Color.green(), timestamp=datetime.now(timezone.utc))
+        embed.set_author(name="Member Joined", icon_url=member.display_avatar)
+        embed.set_footer(text=f"Member ID: {member.id}")
+        embed.set_thumbnail(url=member.display_avatar)
+        await channelAuditLogs.send(embed=embed)
+
 
     @staticmethod
     async def fetchWebsiteText(url: str) -> str:

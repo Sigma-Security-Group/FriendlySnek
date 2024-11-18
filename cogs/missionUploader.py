@@ -132,13 +132,13 @@ class MissionUploader(commands.Cog):
             embed.add_field(name="Member", value=interaction.user.mention)
             embed.set_footer(text=f"Member ID: {interaction.user.id}")
 
-            # Send the log message in the Bot channel
-            botChannel = self.bot.get_channel(BOT)
-            if not isinstance(botChannel, discord.channel.TextChannel):
-                Logger.exception("UploadMission: botChanel is not discord.channel.TextChannel")
+            # Send the log message in the Audit Logs channel
+            channelAuditLogs = self.bot.get_channel(AUDIT_LOGS)
+            if not isinstance(channelAuditLogs, discord.TextChannel):
+                Logger.exception("UploadMission: channelAuditLogs is not discord.TextChannel")
                 return
 
-            await botChannel.send(embed=embed)
+            await channelAuditLogs.send(embed=embed)
 
         Logger.info(f"{interaction.user.display_name} ({interaction.user}) uploaded the mission file: {missionfile.filename}!")
         await interaction.edit_original_response(content=f"Mission file successfully uploaded: `{missionfile.filename}`" + (" (DEBUG)"*secret.DEBUG), embed=None)

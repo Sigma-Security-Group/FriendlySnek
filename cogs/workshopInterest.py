@@ -292,8 +292,8 @@ class WorkshopInterest(commands.Cog):
 
     @commands.command(name="clean-specific-workshop-interest-list")
     @commands.has_any_role(*CMD_LIMIT_CLEANWSINTEREST)
-    async def cleanSpecificWorkshopInterestList(self, ctx: commands.Context, worskhopListName: str, member: str = "") -> None:
-        """Clear specific workshop interest list, no confirmation."""
+    async def cleanSpecificWorkshopInterestList(self, ctx: commands.Context, worskhopListName: str = commands.parameter(description="Name of targeted workshop"), member: str = commands.parameter(default="", description="Optional target member")) -> None:
+        """Clear specific workshop interest list, no confirmation. Can remove specific member if supplied."""
         if not isinstance(ctx.guild, discord.Guild):
             Logger.exception("WorkshopInterest cleanSpecificWorkshopInterestList: ctx guild is not discord.Guild")
             return

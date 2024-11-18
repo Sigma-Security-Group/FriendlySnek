@@ -53,7 +53,7 @@ class Staff(commands.Cog):
 
     @commands.command(name="getmember")
     @commands.has_any_role(*CMD_LIMIT_STAFF)
-    async def getMember(self, ctx: commands.Context, *, member: str) -> None:
+    async def getMember(self, ctx: commands.Context, *, member: str = commands.parameter(description="Target member")) -> None:
         """Get detailed information about a guild member."""
         if not isinstance(ctx.guild, discord.Guild):
             Logger.exception("Staff getmember: ctx guild is not discord.Guild")
@@ -102,7 +102,7 @@ class Staff(commands.Cog):
 
     @commands.command(name="purge")
     @commands.has_any_role(*CMD_LIMIT_STAFF)
-    async def purgeMessagesFromMember(self, ctx: commands.Context, *, member: str) -> None:
+    async def purgeMessagesFromMember(self, ctx: commands.Context, *, member: str = commands.parameter(description="Target member")) -> None:
         """Purges all messages from a specific member."""
         if not isinstance(ctx.guild, discord.Guild):
             Logger.exception("Staff purge: ctx guild is not discord.Guild")
@@ -138,7 +138,7 @@ class Staff(commands.Cog):
 
     @commands.command(name="lastactivity")
     @commands.has_any_role(*CMD_LIMIT_STAFF)
-    async def lastActivity(self, ctx: commands.Context, pingStaff: str = "yes") -> None:
+    async def lastActivity(self, ctx: commands.Context, pingStaff: str = commands.parameter(default="yes", description="If staff is pinged when finished")) -> None:
         """Get last activity (message) for all members."""
         guild = self.bot.get_guild(GUILD_ID)
         if guild is None:
@@ -193,7 +193,7 @@ class Staff(commands.Cog):
 
     @commands.command(name="lastactivitymember")
     @commands.has_any_role(*CMD_LIMIT_STAFF)
-    async def lastActivityForMember(self, ctx: commands.Context, *, member: str) -> None:
+    async def lastActivityForMember(self, ctx: commands.Context, *, member: str = commands.parameter(description="Target member")) -> None:
         """Get last activity (message) for a specific member."""
         if not isinstance(ctx.guild, discord.Guild):
             Logger.exception("Staff lastactivitymember: ctx guild is not discord.Guild")
@@ -231,7 +231,7 @@ class Staff(commands.Cog):
 
     @commands.command(name="promote")
     @commands.has_any_role(*CMD_LIMIT_STAFF)
-    async def promote(self, ctx: commands.Context, *, member: str) -> None:
+    async def promote(self, ctx: commands.Context, *, member: str = commands.parameter(description="Target member")) -> None:
         """Promote a member to the next rank."""
         if not isinstance(ctx.guild, discord.Guild):
             Logger.exception("Staff promote: ctx guild is not discord.Guild")
@@ -281,7 +281,7 @@ class Staff(commands.Cog):
 
     @commands.command(name="demote")
     @commands.has_any_role(*CMD_LIMIT_STAFF)
-    async def demote(self, ctx: commands.Context, *, member: str) -> None:
+    async def demote(self, ctx: commands.Context, *, member: str = commands.parameter(description="Target member")) -> None:
         """Demote a member to the previous rank."""
         if not isinstance(ctx.guild, discord.Guild):
             Logger.exception("Staff demote: ctx guild is not discord.Guild")
@@ -322,8 +322,8 @@ class Staff(commands.Cog):
 
     @commands.command(name="searchmodlogs")
     @commands.has_any_role(*CMD_LIMIT_STAFF)
-    async def searchModLogs(self, ctx: commands.Context, *, member: str) -> None:
-        """ Fetch all occurrences ances in the moderation log related to a member. """
+    async def searchModLogs(self, ctx: commands.Context, *, member: str = commands.parameter(description="Target member")) -> None:
+        """Fetch all occurrencesances in the moderation log related to a member."""
         channelStaffChat = self.bot.get_channel(STAFF_CHAT)
         channelModerationLog = self.bot.get_channel(MODERATION_LOG)
         if not isinstance(channelStaffChat, discord.TextChannel) or not isinstance(channelModerationLog, discord.TextChannel):
@@ -387,8 +387,8 @@ class Staff(commands.Cog):
 
     @commands.command(name="disablerolereservation")
     @commands.has_any_role(*CMD_LIMIT_STAFF)
-    async def disableRoleReservation(self, ctx: commands.Context, *, member: str) -> None:
-        """Add member to role reservation blacklist."""
+    async def disableRoleReservation(self, ctx: commands.Context, *, member: str = commands.parameter(description="Target member")) -> None:
+        """Disable role reservation for specified member."""
         if not isinstance(ctx.guild, discord.Guild):
             Logger.exception("Staff disablerolereservation: ctx guild is not discord.Guild")
             return
@@ -428,8 +428,8 @@ class Staff(commands.Cog):
 
     @commands.command(name="enablerolereservation")
     @commands.has_any_role(*CMD_LIMIT_STAFF)
-    async def enableRoleReservation(self, ctx: commands.Context, *, member: str) -> None:
-        """Remove member from role reservation blacklist."""
+    async def enableRoleReservation(self, ctx: commands.Context, *, member: str = commands.parameter(description="Target member")) -> None:
+        """Enable role reservation for specified member."""
         if not isinstance(ctx.guild, discord.Guild):
             Logger.exception("Staff enablerolereservation: ctx guild is not discord.Guild")
             return

@@ -1738,8 +1738,6 @@ class Schedule(commands.Cog):
                 Logger.exception("selectHandling select.view is None")
                 return
 
-            for child in select.view.children:
-                child.disabled = True
             await interaction.response.edit_message(view=None)
 
             with open(EVENTS_FILE) as f:

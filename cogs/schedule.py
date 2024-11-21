@@ -1740,7 +1740,7 @@ class Schedule(commands.Cog):
 
             for child in select.view.children:
                 child.disabled = True
-            await interaction.response.edit_message(view=select.view)
+            await interaction.response.edit_message(view=None)
 
             with open(EVENTS_FILE) as f:
                 events = json.load(f)

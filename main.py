@@ -244,6 +244,22 @@ async def on_member_ban(guild: discord.Guild, user: discord.User | discord.Membe
 
 
 @client.event
+async def on_member_unban(guild: discord.Guild, user: discord.User) -> None:
+    """On member unban event."""
+    if not secret.DISCORD_LOGGING.get("user_unban", False):
+        return
+    channelAuditLogs = guild.get_channel(AUDIT_LOGS)
+    if not isinstance(channelAuditLogs, discord.TextChannel):
+        Logger.exception("on_member_ban: channelAuditLogs is not discord.TextChannel")
+        return
+    embed = discord.Embed(description=f"{user.mention} {user.name}", color=discord.Color.green(), timestamp=datetime.datetime.now(datetime.timezone.utc))
+    embed.set_author(name="Member Unbanned", icon_url=user.display_avatar)
+    embed.set_footer(text=f"Member ID: {user.id}")
+    embed.set_thumbnail(url=user.display_avatar)
+    await channelAuditLogs.send(embed=embed)
+
+
+@client.event
 async def on_error(event, *args, **kwargs) -> None:
     """On error event."""
     Logger.exception(f"An error occured! {event}")

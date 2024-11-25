@@ -49,6 +49,7 @@ DISCORD_LOGGING = {
     "user_join": True,
     "user_leave": True,
     "user_ban": True,
+    "user_unban": True,
 }
 ```
 

@@ -184,6 +184,7 @@ async def analyzeChannel(client, message: discord.Message, channelID: int, attac
 
 @client.event
 async def on_guild_channel_create(channel: discord.abc.GuildChannel) -> None:
+    """On guild channel create event."""
     if not secret.DISCORD_LOGGING.get("channel_create", False):
         return
     channelAuditLogs = channel.guild.get_channel(AUDIT_LOGS)
@@ -197,6 +198,7 @@ async def on_guild_channel_create(channel: discord.abc.GuildChannel) -> None:
 
 @client.event
 async def on_guild_channel_delete(channel: discord.abc.GuildChannel) -> None:
+    """On guild channel delete event."""
     if not secret.DISCORD_LOGGING.get("channel_delete", False):
         return
     channelAuditLogs = channel.guild.get_channel(AUDIT_LOGS)
@@ -227,13 +229,13 @@ async def on_member_remove(member: discord.Member) -> None:
 
 @client.event
 async def on_error(event, *args, **kwargs) -> None:
-    """  """
+    """On error event."""
     Logger.exception(f"An error occured! {event}")
 
 
 @client.event
 async def on_command_error(ctx: commands.Context, error: commands.CommandError) -> None:
-    """  """
+    """On command error event."""
     errorType = type(error)
     if errorType is commands.errors.MissingRequiredArgument:
         await ctx.send_help(ctx.command)

@@ -47,6 +47,7 @@ DISCORD_LOGGING = {
     "channel_create": True,
     "channel_delete": True,
     "user_join": True,
+    "user_leave": True,
 }
 ```
 

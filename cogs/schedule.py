@@ -949,7 +949,7 @@ class Schedule(commands.Cog):
                 with open(ROLE_RESERVATION_BLACKLIST_FILE) as f:
                     blacklist = json.load(f)
                 if any(interaction.user.id == member["id"] for member in blacklist):
-                    await interaction.response.send_message(embed=discord.Embed(title="❌ Sorry, seems like are not allowed to reserve any roles!", description="If you have any questions about this situation, please contact Unit Staff.", color=discord.Color.red()), ephemeral=True, delete_after=60.0)
+                    await interaction.response.send_message(embed=discord.Embed(title="❌ Sorry, seems like you are not allowed to reserve any roles!", description="If you have any questions about this situation, please contact Unit Staff.", color=discord.Color.red()), ephemeral=True, delete_after=60.0)
                     return
 
                 event = eventList[0]

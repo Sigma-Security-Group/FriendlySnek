@@ -830,7 +830,7 @@ class Schedule(commands.Cog):
                 return f"There is another event (`{event['title']}`) starting less than an hour after your event ends!\nScheduled event: {discord.utils.format_dt(eventStartTime, style='F')} - {discord.utils.format_dt(eventEndTime, style='F')}"
 
     @staticmethod
-    async def has_candidate_pinged(candidateId: int, operationTitle: str, channelRecruitmentHr: discord.TextChannel) -> bool:
+    async def hasCandidatePinged(candidateId: int, operationTitle: str, channelRecruitmentHr: discord.TextChannel) -> bool:
         """Checks recent messages for candidate accept embed notifications
 
         Parameters:
@@ -935,7 +935,7 @@ class Schedule(commands.Cog):
                 if not isinstance(channelRecruitmentHr, discord.TextChannel):
                     Logger.exception("Schedule buttonHandling: channelRecruitmentHr is not discord.TextChannel")
                     return
-                if not await Schedule.has_candidate_pinged(interaction.user.id, eventList[0]["title"], channelRecruitmentHr):
+                if not await Schedule.hasCandidatePinged(interaction.user.id, eventList[0]["title"], channelRecruitmentHr):
                     roleRecruitmentTeam = interaction.guild.get_role(RECRUITMENT_TEAM)
                     if not isinstance(roleRecruitmentTeam, discord.Role):
                         Logger.exception("Schedule buttonHandling: roleRecruitmentTeam is not discord.Role")
@@ -1811,7 +1811,7 @@ class Schedule(commands.Cog):
                 if not isinstance(channelRecruitmentHr, discord.TextChannel):
                     Logger.exception("Schedule selectHandling: channelRecruitmentHr is not discord.TextChannel")
                     return
-                if not await Schedule.has_candidate_pinged(interaction.user.id, event["title"], channelRecruitmentHr):
+                if not await Schedule.hasCandidatePinged(interaction.user.id, event["title"], channelRecruitmentHr):
                     roleRecruitmentTeam = interaction.guild.get_role(RECRUITMENT_TEAM)
                     if not isinstance(roleRecruitmentTeam, discord.Role):
                         Logger.exception("Schedule selectHandling: roleRecruitmentTeam is not discord.Role")

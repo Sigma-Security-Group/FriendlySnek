@@ -850,6 +850,30 @@ class Schedule(commands.Cog):
                 return True
         return False
 
+    @staticmethod
+    async def blockVerifiedRoleRSVP(interaction: discord.Interaction, event: dict) -> bool:
+        """Checks if user has Verified role, and feedbacks blocking
+
+        Parameters:
+        interaction (discord.Interaction): The Discord interaction.
+        event (dict): Target event.
+
+        Returns:
+        bool: True on block/quit. False on continue.
+        """
+        isUserRoleVerified = [True for userRole in interaction.user.roles if userRole.id == VERIFIED]
+        if isUserRoleVerified and event["type"].lower() == "operation":
+            if not isinstance(interaction.guild, discord.Guild):
+                Logger.exception("Schedule buttonHandling: interaction.guild is not discord.Guild")
+                return True
+            roleRecruitmentTeam = interaction.guild.get_role(RECRUITMENT_TEAM)
+            if not isinstance(roleRecruitmentTeam, discord.Role):
+                Logger.exception("Schedule buttonHandling: roleRecruitmentTeam is not discord.Role")
+                return True
+            await interaction.response.send_message(f"{interaction.user.mention} Complete the newcomer workshop first in order to RSVP!\nPing {roleRecruitmentTeam.mention} for more information.", ephemeral=True)
+            return True
+        return False
+
     async def buttonHandling(self, message: discord.Message | None, button: discord.ui.Button, interaction: discord.Interaction, authorId: int | None) -> None:
         """Handling all schedule button interactions.
 
@@ -881,6 +905,9 @@ class Schedule(commands.Cog):
             rsvpOptions = ("accepted", "declined", "tentative")
             if button.custom_id in rsvpOptions:
                 event = eventList[0]
+
+                if await Schedule.blockVerifiedRoleRSVP(interaction, event):
+                    return
 
                 # User click on button twice - remove
                 if interaction.user.id in event[button.custom_id]:
@@ -927,6 +954,9 @@ class Schedule(commands.Cog):
 
                 event = eventList[0]
                 scheduleNeedsUpdate = False
+
+                if await Schedule.blockVerifiedRoleRSVP(interaction, event):
+                    return
 
                 if isinstance(event["maxPlayers"], int) and len(event["accepted"]) >= event["maxPlayers"] and (interaction.user.id not in event["accepted"] or event["accepted"].index(interaction.user.id) >= event["maxPlayers"]):
                     await interaction.response.send_message(embed=discord.Embed(title="❌ Sorry, seems like there's no space left in the :b:op!", color=discord.Color.red()), ephemeral=True, delete_after=60.0)

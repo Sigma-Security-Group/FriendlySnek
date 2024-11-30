@@ -105,10 +105,11 @@ class BotTasks(commands.Cog):
     async def fetchWebsiteText(url: str) -> str:
         async with aiohttp.ClientSession() as session:
             async with session.get(url) as response:
+                if response.status != 200:
+                    Logger.error(f"fetchWebsiteText: response.status is not 200 '{url}'")
                 return await response.text()
 
-
-    @tasks.loop(minutes=30.0)
+    @tasks.loop(hours=1)
     async def checkModUpdates(self) -> None:
         """Checks mod updates, pings hampters if detected."""
 
@@ -165,6 +166,8 @@ class BotTasks(commands.Cog):
                     "name": name,
                     "datetime": utcTime
                 })
+            else:
+                Logger.debug(f"Arma mod update IGNORE: {name}")
 
 
         if len(output) > 0:

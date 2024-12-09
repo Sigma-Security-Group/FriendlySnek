@@ -316,11 +316,10 @@ Join Us:
             Logger.exception("Bottasks smeReminder: smeCorner is not discord.TextChannel")
             return
 
-        pingEmbed = discord.Embed(
-            title="Workshop Reminder",
-            color=discord.Color.orange()
-        )
+        pingEmbed = discord.Embed(color=discord.Color.orange())
 
+        with open(WORKSHOP_INTEREST_FILE) as f:
+            wsIntFile: dict = json.load(f)
         workshopsInTimeFrame = []
         for wsName, wsDetails in WORKSHOP_INTEREST_LIST.items():
             wsScheduled = False
@@ -334,6 +333,9 @@ Join Us:
             if wsScheduled:
                 continue
 
+            pingEmbed.title = f"Workshop Reminder [{wsName}]"
+            pingEmbed.description = f"\n\nInterested people signed up on workshop-interest: {len(wsIntFile.get(wsName, {'members': []}).get('members', []))}"
+
             # Check for past events
             for event in eventsHistory[::-1]:  # Newest to oldest
                 if "workshopInterest" in event and event["workshopInterest"] == wsName:
@@ -341,15 +343,16 @@ Join Us:
                     # Send reminder if latest workshop was scheduled more than 60 days ago
                     if datetime.strptime(event["time"], TIME_FORMAT) < (datetime.now() - timedelta(days=60)):
                         eventScheduled = pytz.utc.localize(datetime.strptime(event['time'], TIME_FORMAT))
-                        pingEmbed.description = f"Last `{wsName}` event you had (`{event['title']}`) was at {discord.utils.format_dt(eventScheduled, style='F')} ({discord.utils.format_dt(eventScheduled, style='R')}).\nPlease host at least every 2 months to give everyone a chance to cert!"
+                        pingEmbed.description = f"Last `{wsName}` event you had (`{event['title']}`) was at {discord.utils.format_dt(eventScheduled, style='F')} ({discord.utils.format_dt(eventScheduled, style='R')}).\nPlease host at least every 2 months to give everyone a chance to cert!" + pingEmbed.description
                         await smeCorner.send(self.getPingString(wsDetails["role"]), embed=pingEmbed)
                     else:
                         workshopsInTimeFrame.append(wsName)
                     break
 
             else:  # No workshop found
-                pingEmbed.description = f"Last `{wsName}` event you had couldn't be found in my logs.\nPlease host at least every 2 months to give everyone a chance to cert!"
+                pingEmbed.description = f"Last `{wsName}` event you had couldn't be found in my logs.\nPlease host at least every 2 months to give everyone a chance to cert!" + pingEmbed.description
                 await smeCorner.send(self.getPingString(wsDetails["role"]), embed=pingEmbed)
+
 
             Logger.debug(f"SME Reminder: failed {wsName}")
 

@@ -965,6 +965,33 @@ class Schedule(commands.Cog):
                     return
 
                 if isinstance(event["maxPlayers"], int) and len(event["accepted"]) >= event["maxPlayers"] and (interaction.user.id not in event["accepted"] or event["accepted"].index(interaction.user.id) >= event["maxPlayers"]):
+                    isAcceptAndReserve = event["reservableRoles"] and len(event["reservableRoles"]) == event["maxPlayers"]
+                    if isAcceptAndReserve:
+                        if interaction.user.id in event["accepted"]:
+                            event["accepted"].remove(interaction.user.id)
+                            embed = self.getEventEmbed(event)
+                            await interaction.response.edit_message(embed=embed)
+
+                        elif interaction.user.id not in event["accepted"]:
+                            for option in rsvpOptions:
+                                if interaction.user.id in event[option]:
+                                    event[option].remove(interaction.user.id)
+                            event["accepted"].append(interaction.user.id)
+
+                            await interaction.response.send_message(embed=discord.Embed(title="✅ On standby list", description="The event player limit is reached!\nYou have been placed on the standby list. If an accepted member leaves, you will advance to the next queue position. Make sure to reserve a role once accepted!", color=discord.Color.green()), ephemeral=True, delete_after=60.0)
+
+                            if interaction.channel is None or isinstance(interaction.channel, discord.channel.ForumChannel) or isinstance(interaction.channel, discord.channel.CategoryChannel):
+                                Logger.exception("ButtonHandling buttonHandling: interaction.channel is invalid type")
+                                return
+                            embed = self.getEventEmbed(event)
+                            originalMsgId = interaction.message.id
+                            msg = await interaction.channel.fetch_message(originalMsgId)
+                            await msg.edit(embed=embed)
+
+                        with open(EVENTS_FILE, "w") as f:
+                            json.dump(events, f, indent=4)
+                        return
+
                     await interaction.response.send_message(embed=discord.Embed(title="❌ Sorry, seems like there's no space left in the :b:op!", color=discord.Color.red()), ephemeral=True, delete_after=60.0)
                     return
 

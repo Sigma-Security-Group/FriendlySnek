@@ -546,12 +546,18 @@ class Schedule(commands.Cog):
 
         # Add attendance buttons if maxPlayers is not hidden
         if event["maxPlayers"] != "hidden":
+            isAcceptAndReserve = event["reservableRoles"] and len(event["reservableRoles"]) == event["maxPlayers"]
+
+            if isAcceptAndReserve:
+                items.append(ScheduleButton(self, None, row=0, label="Accept & Reserve", style=discord.ButtonStyle.success, custom_id="reserve"))
+            else:
+                items.append(ScheduleButton(self, None, row=0, label="Accept", style=discord.ButtonStyle.success, custom_id="accepted"))
+
             items.extend([
-                ScheduleButton(self, None, row=0, label="Accept", style=discord.ButtonStyle.success, custom_id="accepted"),
                 ScheduleButton(self, None, row=0, label="Decline", style=discord.ButtonStyle.danger, custom_id="declined"),
                 ScheduleButton(self, None, row=0, label="Tentative", style=discord.ButtonStyle.secondary, custom_id="tentative")
             ])
-            if event["reservableRoles"] is not None:
+            if event["reservableRoles"] is not None and not isAcceptAndReserve:
                 items.append(ScheduleButton(self, None, row=0, label="Reserve", style=discord.ButtonStyle.secondary, custom_id="reserve"))
 
         items.append(ScheduleButton(self, None, row=0, emoji="⚙️", style=discord.ButtonStyle.secondary, custom_id="config"))
@@ -1011,6 +1017,13 @@ class Schedule(commands.Cog):
                     if event["reservableRoles"][roleName] == interaction.user.id:
                         event["reservableRoles"][roleName] = None
                         await interaction.followup.send(embed=discord.Embed(title=f"✅ Role unreserved: `{roleName}`", color=discord.Color.green()), ephemeral=True)
+
+                        # Event view has button "Accept & Reserve"
+                        if event["reservableRoles"] and len(event["reservableRoles"]) == event["maxPlayers"]:
+                            try:
+                                event["accepted"].remove(interaction.user.id)
+                            except ValueError:
+                                pass
                         await message.edit(embed=self.getEventEmbed(event))
                         break
 

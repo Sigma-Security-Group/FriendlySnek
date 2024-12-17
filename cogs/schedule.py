@@ -2079,8 +2079,12 @@ class Schedule(commands.Cog):
                         await interaction.response.send_message(interaction.user.mention, embed=EMBED_INVALID, ephemeral=True, delete_after=10.0)
                         return
 
-                    # Set time
                     startTime = timeZone.localize(startTime).astimezone(pytz.utc)
+                    if startTime < (datetime.now(timezone.utc) - timedelta(weeks=52/2)):
+                        await interaction.response.send_message(interaction.user.mention, embed=discord.Embed(title="❌ Operation set too far in the past!", description="You've entered a time that is too far in the past!", color=discord.Color.red()), ephemeral=True, delete_after=10.0)
+                        return
+
+                    # Set time
                     previewEmbedDict["time"] = startTime.strftime(TIME_FORMAT)
                     previewEmbedDict["endTime"] = None
                     # Set endTime if duration available

@@ -456,9 +456,18 @@ class Schedule(commands.Cog):
             Logger.exception("updateSchedule: channel invalid type")
             return
 
-        await channel.purge(limit=None, check=lambda m: m.author.id in FRIENDLY_SNEKS)
+        scheduleIntroMessage = f"__Welcome to the schedule channel!__\n🟩 Schedule operations: `/operation` (`/bop`)\n🟦 Workshops: `/workshop` (`/ws`)\n🟨 Generic events: `/event`\n\nThe datetime you see in here are based on __your local time zone__.\nChange timezone when scheduling events with `/changetimezone`.\n\nSuggestions/bugs contact: {', '.join([f'**{developerName.display_name}**' for name in DEVELOPERS if (developerName := channel.guild.get_member(name)) is not None])} -- <https://github.com/Sigma-Security-Group/FriendlySnek>"
 
-        await channel.send(f"__Welcome to the schedule channel!__\n🟩 Schedule operations: `/operation` (`/bop`)\n🟦 Workshops: `/workshop` (`/ws`)\n🟨 Generic events: `/event`\n\nThe datetime you see in here are based on __your local time zone__.\nChange timezone when scheduling events with `/changetimezone`.\n\nSuggestions/bugs contact: {', '.join([f'**{developerName.display_name}**' for name in DEVELOPERS if (developerName := channel.guild.get_member(name)) is not None])} -- <https://github.com/Sigma-Security-Group/FriendlySnek>")  #  `{commitHash}`")
+        # Do not purge intro message if unchanged
+        sendIntroMessage = True
+        await channel.purge(limit=None,
+                            check=lambda m: (
+                                m.author.id in FRIENDLY_SNEKS and m.content != scheduleIntroMessage
+                            ) or (m.content == scheduleIntroMessage and (isFoundIntroMessage := False))
+        )
+
+        if not sendIntroMessage:
+            await channel.send(scheduleIntroMessage)
 
         try:
             with open(EVENTS_FILE) as f:

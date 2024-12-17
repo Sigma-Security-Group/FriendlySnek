@@ -478,12 +478,12 @@ class Schedule(commands.Cog):
                 return
 
             newEvents: list[dict] = []
-            with open(EVENTS_FILE, "w") as f:
-                json.dump(newEvents, f, indent=4)
             for event in sorted(events, key=lambda e: datetime.strptime(e["time"], TIME_FORMAT), reverse=True):
                 msg = await channel.send(embed=self.getEventEmbed(event), view=self.getEventView(event), files=self.getEventFiles(event))
                 event["messageId"] = msg.id
                 newEvents.append(event)
+
+            if newEvents != events:
                 with open(EVENTS_FILE, "w") as f:
                     json.dump(newEvents, f, indent=4)
         except Exception as e:

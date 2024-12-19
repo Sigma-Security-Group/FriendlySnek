@@ -1201,10 +1201,10 @@ class Schedule(commands.Cog):
                         if [True for role in interaction.user.roles if role.id in CMD_LIMIT_ZEUS]:
                             typeOptions.append(discord.SelectOption(emoji="🟩", label="Operation"))
 
-                        typeOptions = [
-                            discord.SelectOption(emoji="🟦", label="Workshop"),
-                            discord.SelectOption(emoji="🟨", label="Event")
-                        ]
+                        typeOptions.extend(
+                            [discord.SelectOption(emoji="🟦", label="Workshop"),
+                            discord.SelectOption(emoji="🟨", label="Event")]
+                        )
                         await interaction.response.send_message(interaction.user.mention, view=self.generateSelectView(
                             typeOptions,
                             False,

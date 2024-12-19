@@ -483,9 +483,8 @@ class Schedule(commands.Cog):
                 event["messageId"] = msg.id
                 newEvents.append(event)
 
-            if newEvents != events:
-                with open(EVENTS_FILE, "w") as f:
-                    json.dump(newEvents, f, indent=4)
+            with open(EVENTS_FILE, "w") as f:
+                json.dump(newEvents, f, indent=4)
         except Exception as e:
             Logger.exception(e)
 

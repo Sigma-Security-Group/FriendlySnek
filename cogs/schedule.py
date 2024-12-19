@@ -767,7 +767,7 @@ class Schedule(commands.Cog):
 
     def fromDictToPreviewView(self, previewDict: dict, selectedTemplate: str) -> discord.ui.View:
         """Generates preview view from event dict."""
-        view = ScheduleView()
+        view = ScheduleView(authorId=previewDict["authorId"])
         for label, data in SCHEDULE_EVENT_VIEW.items():
             permittedEventTypesForTemplates = ("Workshop", "Event")
 
@@ -784,7 +784,6 @@ class Schedule(commands.Cog):
             button = ScheduleButton(
                 self,
                 None,
-                previewDict["authorId"],
                 style=style,
                 label=label,
                 custom_id=f"event_schedule_{label.lower().replace(' ', '_')}",
@@ -888,7 +887,7 @@ class Schedule(commands.Cog):
             return True
         return False
 
-    async def buttonHandling(self, message: discord.Message | None, button: discord.ui.Button, interaction: discord.Interaction, authorId: int | None) -> None:
+    async def buttonHandling(self, message: discord.Message | None, button: discord.ui.Button, interaction: discord.Interaction) -> None:
         """Handling all schedule button interactions.
 
         Parameters:
@@ -1176,7 +1175,7 @@ class Schedule(commands.Cog):
                     Logger.exception("Schedule buttonHandling: button.view is None")
                     return
 
-                if interaction.user.id != authorId:
+                if interaction.user.id != button.view.authorId:
                     await interaction.response.send_message(f"{interaction.user.mention} Only the one who executed the command may interact with the buttons!", ephemeral=True, delete_after=10.0)
                     return
 
@@ -1332,10 +1331,10 @@ class Schedule(commands.Cog):
 
                     # FILES
                     case "files":
-                        view = ScheduleView(previousMessageView=button.view)
+                        view = ScheduleView(authorId=interaction.user.id, previousMessageView=button.view)
                         items = [
-                            ScheduleButton(self, interaction.message, interaction.user.id, row=0, label="Add", style=discord.ButtonStyle.success, custom_id="event_schedule_files_add", disabled=(len(previewEmbedDict["files"]) == 10)),
-                            ScheduleButton(self, interaction.message, interaction.user.id, row=0, label="Remove", style=discord.ButtonStyle.danger, custom_id="event_schedule_files_remove", disabled=(len(previewEmbedDict["files"]) == 0)),
+                            ScheduleButton(self, interaction.message, row=0, label="Add", style=discord.ButtonStyle.success, custom_id="event_schedule_files_add", disabled=(len(previewEmbedDict["files"]) == 10)),
+                            ScheduleButton(self, interaction.message, row=0, label="Remove", style=discord.ButtonStyle.danger, custom_id="event_schedule_files_remove", disabled=(len(previewEmbedDict["files"]) == 0)),
                         ]
                         for item in items:
                             view.add_item(item)
@@ -1511,10 +1510,10 @@ class Schedule(commands.Cog):
 
                     case "cancel":
                         embed = discord.Embed(title="Are you sure you want to cancel this event scheduling?", color=discord.Color.orange())
-                        view = ScheduleView()
+                        view = ScheduleView(authorId=interaction.user.id)
                         items = [
-                            ScheduleButton(self, interaction.message, interaction.user.id, row=0, label="Cancel", style=discord.ButtonStyle.success, custom_id="event_schedule_cancel_confirm"),
-                            ScheduleButton(self, interaction.message, interaction.user.id, row=0, label="No, I changed my mind", style=discord.ButtonStyle.danger, custom_id="event_schedule_cancel_decline"),
+                            ScheduleButton(self, interaction.message, row=0, label="Cancel", style=discord.ButtonStyle.success, custom_id="event_schedule_cancel_confirm"),
+                            ScheduleButton(self, interaction.message, row=0, label="No, I changed my mind", style=discord.ButtonStyle.danger, custom_id="event_schedule_cancel_decline"),
                         ]
                         for item in items:
                             view.add_item(item)
@@ -1795,10 +1794,10 @@ class Schedule(commands.Cog):
 
 
             if infoLabel.startswith("files"):
-                view = ScheduleView(previousMessageView=eventMsgView)
+                view = ScheduleView(authorId=interaction.user.id, previousMessageView=eventMsgView)
                 items = [
-                    ScheduleButton(self, eventMsgNew, interaction.user.id, row=0, label="Add", style=discord.ButtonStyle.success, custom_id="event_schedule_files_add", disabled=(len(previewEmbedDict["files"]) == 10)),
-                    ScheduleButton(self, eventMsgNew, interaction.user.id, row=0, label="Remove", style=discord.ButtonStyle.danger, custom_id="event_schedule_files_remove", disabled=(len(previewEmbedDict["files"]) == 0))
+                    ScheduleButton(self, eventMsgNew, row=0, label="Add", style=discord.ButtonStyle.success, custom_id="event_schedule_files_add", disabled=(len(previewEmbedDict["files"]) == 10)),
+                    ScheduleButton(self, eventMsgNew, row=0, label="Remove", style=discord.ButtonStyle.danger, custom_id="event_schedule_files_remove", disabled=(len(previewEmbedDict["files"]) == 0))
                 ]
                 for item in items:
                     view.add_item(item)
@@ -1974,10 +1973,10 @@ class Schedule(commands.Cog):
 
                 # Editing Files
                 case "Files":
-                    view = ScheduleView()
+                    view = ScheduleView(authorId=interaction.user.id)
                     items = [
-                        ScheduleButton(self, eventMsg, interaction.user.id, row=0, label="Add", style=discord.ButtonStyle.success, custom_id="event_edit_files_add", disabled=(len(eventMsg.attachments) == 10)),
-                        ScheduleButton(self, eventMsg, interaction.user.id, row=0, label="Remove", style=discord.ButtonStyle.danger, custom_id="event_edit_files_remove", disabled=(not eventMsg.attachments)),
+                        ScheduleButton(self, eventMsg, row=0, label="Add", style=discord.ButtonStyle.success, custom_id="event_edit_files_add", disabled=(len(eventMsg.attachments) == 10)),
+                        ScheduleButton(self, eventMsg, row=0, label="Remove", style=discord.ButtonStyle.danger, custom_id="event_edit_files_remove", disabled=(not eventMsg.attachments)),
                     ]
                     for item in items:
                         view.add_item(item)
@@ -2707,21 +2706,21 @@ class Schedule(commands.Cog):
 
 class ScheduleView(discord.ui.View):
     """Handling all schedule views."""
-    def __init__(self, previousMessageView = None, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, *, authorId: int = None, previousMessageView = None, **kwargs):
+        super().__init__(**kwargs)
         self.timeout = None
+        self.authorId = authorId
         self.previousMessageView = previousMessageView
 
 class ScheduleButton(discord.ui.Button):
     """Handling all schedule buttons."""
-    def __init__(self, instance, message: discord.Message | None, authorId: int | None = None, *args, **kwargs):
+    def __init__(self, instance, message: discord.Message | None, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.instance = instance
         self.message = message
-        self.authorId = authorId
 
     async def callback(self, interaction: discord.Interaction):
-        await self.instance.buttonHandling(self.message, self, interaction, self.authorId)
+        await self.instance.buttonHandling(self.message, self, interaction)
 
 class ScheduleSelect(discord.ui.Select):
     """Handling all schedule dropdowns."""

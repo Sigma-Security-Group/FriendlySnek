@@ -1435,6 +1435,7 @@ class Schedule(commands.Cog):
 
                     # EVENT FINISHING
                     case "submit":
+                        Logger.debug(f"{interaction.user} submitted with event type: {previewEmbedDict['type']}")
                         # Check if all mandatory fields are filled
                         if isAllRequiredInfoFilled() is False:
                             await interaction.response.send_message(f"{interaction.user.mention} Before creating the event, you need to fill out the mandatory (red buttons) information!", ephemeral=True, delete_after=10.0)
@@ -1462,6 +1463,7 @@ class Schedule(commands.Cog):
 
                         # Update schedule
                         await self.updateSchedule()
+                        Logger.debug(f"{interaction.user} submitted with event type, after updateschedule: {previewEmbedDict['type']}")
 
 
                         guild = interaction.guild
@@ -1709,6 +1711,7 @@ class Schedule(commands.Cog):
             # Do preview embed edits
             match infoLabel:
                 case "type":
+                    Logger.debug(f"{interaction.user} selected event type: {selectedValue}")
                     previewEmbedDict["type"] = selectedValue
 
                     templateName = "None"

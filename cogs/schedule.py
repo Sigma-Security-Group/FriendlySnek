@@ -391,7 +391,7 @@ class Schedule(commands.Cog):
 
     @discord.app_commands.command(name="aar")
     @discord.app_commands.guilds(GUILD)
-    @discord.app_commands.checks.has_any_role(*CMD_LIMIT_AAR)
+    @discord.app_commands.checks.has_any_role(*CMD_LIMIT_ZEUS)
     async def aar(self, interaction: discord.Interaction) -> None:
         """Move all users in Deployed to Command voice channel."""
         Logger.info(f"{interaction.user.display_name} ({interaction.user}) is starting an AAR...")
@@ -439,7 +439,7 @@ class Schedule(commands.Cog):
                 Logger.exception("OnAarError: guild is None")
                 return
 
-            embed = discord.Embed(title="❌ Missing permissions", description=f"You do not have the permissions to move all users to command!\nThe permitted roles are: {', '.join([guild.get_role(role).name for role in CMD_LIMIT_AAR])}.", color=discord.Color.red())
+            embed = discord.Embed(title="❌ Missing permissions", description=f"You do not have the permissions to move all users to command!\nThe permitted roles are: {', '.join([guild.get_role(role).name for role in CMD_LIMIT_ZEUS])}.", color=discord.Color.red())
             await interaction.response.send_message(embed=embed, ephemeral=True)
             return
         Logger.exception(error)
@@ -1197,8 +1197,11 @@ class Schedule(commands.Cog):
                 match buttonLabel:
                     # INFO FIELDS
                     case "type":
+                        typeOptions = []
+                        if [True for role in interaction.user.roles if role.id in CMD_LIMIT_ZEUS]:
+                            typeOptions.append(discord.SelectOption(emoji="🟩", label="Operation"))
+
                         typeOptions = [
-                            discord.SelectOption(emoji="🟩", label="Operation"),
                             discord.SelectOption(emoji="🟦", label="Workshop"),
                             discord.SelectOption(emoji="🟨", label="Event")
                         ]
@@ -2367,10 +2370,37 @@ class Schedule(commands.Cog):
 # ===== <Event> =====
 
     @discord.app_commands.command(name="bop")
+    @discord.app_commands.checks.has_any_role(*CMD_LIMIT_ZEUS)
     @discord.app_commands.guilds(GUILD)
     async def scheduleOperation(self, interaction: discord.Interaction) -> None:
         """Create an operation to add to the schedule."""
         await self.scheduleEventInteraction(interaction, "Operation")
+
+    @scheduleOperation.error
+    async def onBopError(self, interaction: discord.Interaction, error: discord.app_commands.AppCommandError) -> None:
+        """Bop errors - dedicated for the discord.app_commands.errors.MissingAnyRole error.
+
+        Parameters:
+        interaction (discord.Interaction): The Discord interaction.
+        error (discord.app_commands.AppCommandError): The end user error.
+
+        Returns:
+        None.
+        """
+        if isinstance(error, discord.app_commands.errors.MissingAnyRole):
+            if interaction.guild is None:
+                Logger.exception("onBopError: interaction.guild is None")
+                return
+
+            channelZeusGuidelines = interaction.guild.get_channel(ZEUS_GUIDELINES)
+            if not isinstance(channelZeusGuidelines, discord.TextChannel):
+                Logger.exception("onBopError: channelZeusGuidelines not discord.TextChannel")
+                return
+
+            embed = discord.Embed(title="❌ Missing permissions", description=f"You do not have the permissions to schedule an operation!\nPlease reference the {channelZeusGuidelines.mention} for more information!", color=discord.Color.red())
+            await interaction.response.send_message(embed=embed, ephemeral=True)
+            return
+        Logger.exception(error)
 
     @discord.app_commands.command(name="ws")
     @discord.app_commands.guilds(GUILD)

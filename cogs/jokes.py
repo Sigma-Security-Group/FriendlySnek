@@ -6,7 +6,6 @@ from discord.ext import commands  # type: ignore
 from logger import Logger
 from secret import DEBUG
 from constants import *
-from __main__ import cogsReady
 if DEBUG:
     from constants.debug import *
 
@@ -22,7 +21,7 @@ class Jokes(commands.Cog):
     @commands.Cog.listener()
     async def on_ready(self) -> None:
         Logger.debug(LOG_COG_READY.format("Jokes"), flush=True)
-        cogsReady["jokes"] = True
+        self.bot.cogsReady["jokes"] = True
 
     @discord.app_commands.command(name="dadjoke")
     @discord.app_commands.guilds(GUILD)

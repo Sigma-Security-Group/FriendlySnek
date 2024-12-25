@@ -9,7 +9,6 @@ from discord.ext import commands  # type: ignore
 
 from logger import Logger
 from constants import *
-from __main__ import cogsReady
 if secret.DEBUG:
     from constants.debug import *
 
@@ -47,7 +46,7 @@ class MissionUploader(commands.Cog):
     @commands.Cog.listener()
     async def on_ready(self) -> None:
         Logger.debug(LOG_COG_READY.format("MissionUploader"), flush=True)
-        cogsReady["missionUploader"] = True
+        self.bot.cogsReady["missionUploader"] = True
 
     @discord.app_commands.command(name="uploadmission")
     @discord.app_commands.guilds(GUILD)

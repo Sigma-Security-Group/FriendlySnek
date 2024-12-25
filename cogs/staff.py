@@ -11,7 +11,6 @@ from textwrap import wrap
 from logger import Logger
 from secret import DEBUG
 from constants import *
-from __main__ import cogsReady
 if DEBUG:
     from constants.debug import *
 
@@ -24,7 +23,7 @@ class Staff(commands.Cog):
     @commands.Cog.listener()
     async def on_ready(self) -> None:
         Logger.debug(LOG_COG_READY.format("Staff"), flush=True)
-        cogsReady["staff"] = True
+        self.bot.cogsReady["staff"] = True
 
     @staticmethod
     def _getMember(searchTerm: str, guild: discord.Guild) -> discord.Member | None:

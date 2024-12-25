@@ -6,7 +6,6 @@ from discord.ext import commands  # type: ignore
 from logger import Logger
 from secret import DEBUG
 from constants import *
-from __main__ import cogsReady
 if DEBUG:
     from constants.debug import *
 
@@ -21,7 +20,7 @@ class Poll(commands.Cog):
     @commands.Cog.listener()
     async def on_ready(self) -> None:
         Logger.debug(LOG_COG_READY.format("Poll"), flush=True)
-        cogsReady["poll"] = True
+        self.bot.cogsReady["poll"] = True
 
     @discord.app_commands.command(name="poll")
     @discord.app_commands.guilds(GUILD)

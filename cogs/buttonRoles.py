@@ -5,7 +5,6 @@ from discord.ext import commands  # type: ignore
 from logger import Logger
 from secret import DEBUG
 from constants import *
-from __main__ import cogsReady
 if DEBUG:
     from constants.debug import *
 
@@ -22,7 +21,7 @@ class ButtonRoles(commands.GroupCog, group_name="button-role"):
     @commands.Cog.listener()
     async def on_ready(self) -> None:
         Logger.debug(LOG_COG_READY.format("ButtonRoles"), flush=True)
-        cogsReady["buttonRoles"] = True
+        self.bot.cogsReady["buttonRoles"] = True
 
 
     @discord.app_commands.command(name="create")

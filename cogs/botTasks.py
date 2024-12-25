@@ -10,7 +10,6 @@ from discord.ext import commands, tasks  # type: ignore
 
 from logger import Logger
 from constants import *
-from __main__ import cogsReady
 if secret.DEBUG:
     from constants.debug import *
 
@@ -29,7 +28,7 @@ class BotTasks(commands.Cog):
     @commands.Cog.listener()
     async def on_ready(self) -> None:
         Logger.debug(LOG_COG_READY.format("BotTasks"), flush=True)
-        cogsReady["botTasks"] = True
+        self.bot.cogsReady["botTasks"] = True
 
         if secret.MOD_UPDATE_ACTIVE and not self.checkModUpdates.is_running():
             self.checkModUpdates.start()

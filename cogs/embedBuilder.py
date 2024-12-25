@@ -9,7 +9,6 @@ from discord.ext import commands # type: ignore
 from logger import Logger
 from secret import DEBUG
 from constants import *
-from __main__ import cogsReady
 if DEBUG:
     from constants.debug import *
 
@@ -24,7 +23,7 @@ class EmbedBuilder(commands.Cog):
     @commands.Cog.listener()
     async def on_ready(self) -> None:
         Logger.debug(LOG_COG_READY.format("EmbedBuilder"), flush=True)
-        cogsReady["embedBuilder"] = True
+        self.bot.cogsReady["embedBuilder"] = True
 
 
 # ===== <Build Embed> =====

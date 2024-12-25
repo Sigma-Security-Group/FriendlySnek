@@ -6,7 +6,6 @@ from cogs.staff import Staff
 from logger import Logger
 from secret import DEBUG
 from constants import *
-from __main__ import cogsReady
 if DEBUG:
     from constants.debug import *
 
@@ -89,7 +88,7 @@ class WorkshopInterest(commands.Cog):
     @commands.Cog.listener()
     async def on_ready(self) -> None:
         Logger.debug(LOG_COG_READY.format("WorkshopInterest"), flush=True)
-        cogsReady["workshopInterest"] = True
+        self.bot.cogsReady["workshopInterest"] = True
 
         isUpdateChannel = False
 

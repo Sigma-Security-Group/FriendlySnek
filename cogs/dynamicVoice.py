@@ -5,7 +5,6 @@ from itertools import count, filterfalse
 from logger import Logger
 import secret
 from constants import *
-from __main__ import cogsReady
 if secret.DEBUG:
     from constants.debug import *
 
@@ -20,7 +19,7 @@ class DynamicVoice(commands.GroupCog, name="voice"):
     @commands.Cog.listener()
     async def on_ready(self) -> None:
         Logger.debug(LOG_COG_READY.format("DynamicVoice"), flush=True)
-        cogsReady["dynamicVoice"] = True
+        self.bot.cogsReady["dynamicVoice"] = True
 
 
     @staticmethod

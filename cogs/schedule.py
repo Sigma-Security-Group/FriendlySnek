@@ -12,7 +12,6 @@ from logger import Logger
 from .workshopInterest import WorkshopInterest  # type: ignore
 import secret
 from constants import *
-from __main__ import cogsReady
 if secret.DEBUG:
     from constants.debug import *
 
@@ -178,7 +177,7 @@ class Schedule(commands.Cog):
     @commands.Cog.listener()
     async def on_ready(self) -> None:
         Logger.debug(LOG_COG_READY.format("Schedule"), flush=True)
-        cogsReady["schedule"] = True
+        self.bot.cogsReady["schedule"] = True
 
         await self.updateSchedule()
         if not self.tenMinTask.is_running():
@@ -266,7 +265,7 @@ class Schedule(commands.Cog):
         Returns:
         None.
         """
-        while not self.bot.ready:
+        while not all(self.bot.cogsReady.values()):
             await asyncio.sleep(1)
 
         # === Check for old events and deletes them. ===

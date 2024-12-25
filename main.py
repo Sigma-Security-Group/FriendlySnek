@@ -86,9 +86,6 @@ for filePath, dump in DATA_FILES.items():
 
 
 COGS = [cog[:-3] for cog in os.listdir("cogs/") if cog.endswith(".py")]
-# COGS = ["schedule"]  # DEBUG: Faster startup
-cogsReady = {cog: False for cog in COGS}
-
 INTENTS = discord.Intents.all()
 UTC = pytz.utc
 
@@ -104,6 +101,7 @@ class FriendlySnek(commands.Bot):
             ),
             status="online"
         )
+        self.cogsReady = {cog: False for cog in COGS}
 
     async def setup_hook(self) -> None:
         for cog in COGS:
@@ -112,13 +110,11 @@ class FriendlySnek(commands.Bot):
         await self.tree.sync(guild=GUILD)
 
 client = FriendlySnek(intents=INTENTS)
-client.ready = False
 
 @client.event
 async def on_ready() -> None:
-    while not all(cogsReady.values()):
+    while not all(client.cogsReady.values()):
         await asyncio.sleep(1)
-    client.ready = True
 
     Logger.info(f"Bot Ready! Logged in as {client.user}.")
 

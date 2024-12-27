@@ -8,7 +8,7 @@ from constants import *
 if DEBUG:
     from constants.debug import *
 
-emojiNumbers: tuple = ("1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣", "🔟")
+EMOJI_NUMBERS: tuple = ("1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣", "🔟")
 
 log = logging.getLogger(__name__)
 
@@ -79,7 +79,7 @@ class Poll(commands.Cog):
         optionCount = 0
         for optionInp in options:
             if optionInp != "":
-                embed.description += f"{emojiNumbers[optionCount]}{' **(0%)**' * isOneOption} {optionInp}\n"
+                embed.description += f"{EMOJI_NUMBERS[optionCount]}{' **(0%)**' * isOneOption} {optionInp}\n"
                 group[f"poll_vote_{optionCount}"] = []
                 optionCount += 1
 
@@ -88,7 +88,7 @@ class Poll(commands.Cog):
             row.timeout = None
             buttons = []
             for num in range(optionCount):
-                buttons.append(PollButton(self, group, emoji=emojiNumbers[num], label="(0)", style=discord.ButtonStyle.secondary, custom_id=f"poll_vote_{num}"))
+                buttons.append(PollButton(self, group, emoji=EMOJI_NUMBERS[num], label="(0)", style=discord.ButtonStyle.secondary, custom_id=f"poll_vote_{num}"))
                 row.add_item(item=buttons[num])
             buttons.append(PollButton(self, group, emoji="👀", style=discord.ButtonStyle.primary, custom_id="results"))
             row.add_item(item=buttons[-1])
@@ -112,7 +112,7 @@ class Poll(commands.Cog):
             embed = discord.Embed(title="Poll results", color=discord.Color.green())
             for key, value in group.items():
                 if key.startswith("poll_vote_"):
-                    embed.add_field(name=emojiNumbers[int(key.split("_")[-1])], value="\n".join([member.mention for voterId in value if interaction.guild is not None and (member := interaction.guild.get_member(voterId)) is not None]) if len(value) > 0 else "No votes", inline=True)
+                    embed.add_field(name=EMOJI_NUMBERS[int(key.split("_")[-1])], value="\n".join([member.mention for voterId in value if interaction.guild is not None and (member := interaction.guild.get_member(voterId)) is not None]) if len(value) > 0 else "No votes", inline=True)
             embed.set_footer(text=f"Poll by {group['Creator']}")
             await interaction.response.send_message(embed=embed, ephemeral=True)
             return
@@ -132,7 +132,7 @@ class Poll(commands.Cog):
                 log.exception("Poll buttonHandling: embed.description is None")
                 return
 
-            optionRows = (emojiNumbers[0] + embed.description.split(emojiNumbers[0])[1]).split("\n")
+            optionRows = (EMOJI_NUMBERS[0] + embed.description.split(EMOJI_NUMBERS[0])[1]).split("\n")
 
             if button.view is None:
                 log.exception("Poll buttonHandling: button.view is None")
@@ -170,10 +170,10 @@ class Poll(commands.Cog):
                 splitter = re.search(POLL_PERCENT_REGEX, newPercentText[rowNum]).span(0)[1]  # Find the character pos where the percentText ends
                 optionRows[rowNum] = newPercentText[rowNum][:splitter] + padding + newPercentText[rowNum][splitter:]  # Add padding after percentText
 
-            embed.description = embed.description.split(emojiNumbers[0])[0] + "\n".join(optionRows)  # Concat "description" with options
+            embed.description = embed.description.split(EMOJI_NUMBERS[0])[0] + "\n".join(optionRows)  # Concat "description" with options
             await msg.edit(embed=embed)
 
-            userVotes = ', '.join([emojiNumbers[int(buttonId.split('_')[-1])] for buttonId, ppl in group.items() if buttonId.startswith("poll_vote_") and interaction.user.id in ppl])  # E.g. 8️⃣, 9️⃣, 🔟
+            userVotes = ', '.join([EMOJI_NUMBERS[int(buttonId.split('_')[-1])] for buttonId, ppl in group.items() if buttonId.startswith("poll_vote_") and interaction.user.id in ppl])  # E.g. 8️⃣, 9️⃣, 🔟
             await interaction.followup.send(("(Multi-vote poll)" if group["Multivote"] else "(Single vote poll)") + f"\nYou've voted for:\n{userVotes if len(userVotes) > 0 else 'Nothing.'}", ephemeral=True)
 
         except Exception as e:

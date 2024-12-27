@@ -1,7 +1,5 @@
-import os, re, asyncio, discord, json, datetime
+import os, re, asyncio, discord, json, datetime, logging
 import pytz # type: ignore
-
-from logger import Logger
 
 import platform  # Set appropriate event loop policy to avoid runtime errors on windows
 if platform.system() == "Windows":
@@ -9,8 +7,11 @@ if platform.system() == "Windows":
 
 from discord.ext import commands  # type: ignore
 
+import logger
+log = logging.getLogger()
+
 if not os.path.exists("./secret.py"):
-    Logger.info("Creating a secret.py file!")
+    log.info("Creating a secret.py file!")
     with open("secret.py", "w") as f:
         f.write(  # Write secret.py template
             """TOKEN = ""
@@ -52,7 +53,7 @@ if secret.DEBUG:
 # Set up directories
 def setupDirectory(dirName: str) -> None:
     if not os.path.exists(dirName):
-        # Logger.info(f"Creating directory '{dirName}'")
+        # log.info(f"Creating directory '{dirName}'")
         os.mkdir(dirName)
 
 usedDirectories = ("data", "tmp", "tmp/missionUpload", "tmp/fileUpload")
@@ -63,7 +64,7 @@ for directory in usedDirectories:
 # Set up data JSON files
 def setupJSONDataFile(filename: str, dump: list | dict) -> None:
     if not os.path.exists(filename):
-        # Logger.info(f"Creating data file '{filename}'")
+        # log.info(f"Creating data file '{filename}'")
         with open(filename, "w") as f:
             json.dump(dump, f, indent=4)
 
@@ -116,7 +117,7 @@ async def on_ready() -> None:
     while not all(client.cogsReady.values()):
         await asyncio.sleep(1)
 
-    Logger.info(f"Bot Ready! Logged in as {client.user}")
+    log.info(f"Bot Ready! Logged in as {client.user}")
 
 
 @client.event
@@ -132,7 +133,7 @@ async def on_message(message: discord.Message) -> None:
 
     # Execute commands
     if message.content.startswith(COMMAND_PREFIX):
-        Logger.debug(f"{message.author.id} [{message.author.display_name}] {message.content}")
+        log.debug(f"{message.author.id} [{message.author.display_name}] {message.content}")
         message.content = message.content.lower()
         await client.process_commands(message)
 
@@ -167,15 +168,15 @@ async def analyzeChannel(client, message: discord.Message, channelID: int, attac
     try:
         await message.delete()
     except Exception as e:
-        Logger.exception(f"{message.author.id} [{message.author}]")
+        log.exception(f"{message.author.id} [{message.author}]")
 
     try:
-        Logger.info(f"{message.author.id} [{message.author.display_name}] Removed message in #{client.get_channel(channelID)}. Message content: {message.content}")
+        log.info(f"{message.author.id} [{message.author.display_name}] Removed message in #{client.get_channel(channelID)}. Message content: {message.content}")
         DEVS = ", ".join([f"**{message.guild.get_member(name)}**" for name in DEVELOPERS if message.guild is not None and message.guild.get_member(name) is not None])
 
         await message.author.send(embed=discord.Embed(title="❌ Message removed", description=f"The message you just posted in <#{channelID}> was deleted because no {attachmentContentType} was detected in it.\n\nIf this is an error, then please ask **staff** to post the {attachmentContentType} for you, and inform: {DEVS}", color=discord.Color.red()))
     except Exception as e:
-        Logger.exception(f"{message.author.id} [{message.author.display_name}]")
+        log.exception(f"{message.author.id} [{message.author.display_name}]")
 
 
 @client.event
@@ -185,7 +186,7 @@ async def on_guild_channel_create(channel: discord.abc.GuildChannel) -> None:
         return
     channelAuditLogs = channel.guild.get_channel(AUDIT_LOGS)
     if not isinstance(channelAuditLogs, discord.TextChannel):
-        Logger.exception("on_guild_channel_create: channelAuditLogs not discord.TextChannel")
+        log.exception("on_guild_channel_create: channelAuditLogs not discord.TextChannel")
         return
     embed = discord.Embed(title="Channel Created", description=f"`{channel.name}`", color=discord.Color.green())
     embed.set_footer(text=f"Channel ID: {channel.id}")
@@ -199,7 +200,7 @@ async def on_guild_channel_delete(channel: discord.abc.GuildChannel) -> None:
         return
     channelAuditLogs = channel.guild.get_channel(AUDIT_LOGS)
     if not isinstance(channelAuditLogs, discord.TextChannel):
-        Logger.exception("on_guild_channel_delete: channelAuditLogs not discord.TextChannel")
+        log.exception("on_guild_channel_delete: channelAuditLogs not discord.TextChannel")
         return
     embed = discord.Embed(title="Channel Deleted", description=f"`{channel.name}`", color=discord.Color.red())
     embed.set_footer(text=f"Channel ID: {channel.id}")
@@ -214,7 +215,7 @@ async def on_member_remove(member: discord.Member) -> None:
         return
     channelAuditLogs = member.guild.get_channel(AUDIT_LOGS)
     if not isinstance(channelAuditLogs, discord.TextChannel):
-        Logger.exception("on_member_remove: channelAuditLogs is not discord.TextChannel")
+        log.exception("on_member_remove: channelAuditLogs is not discord.TextChannel")
         return
     embed = discord.Embed(description=f"{member.mention} {member.name}", color=discord.Color.red(), timestamp=datetime.datetime.now(datetime.timezone.utc))
     embed.set_author(name="Member Left", icon_url=member.display_avatar)
@@ -230,7 +231,7 @@ async def on_member_ban(guild: discord.Guild, user: discord.User | discord.Membe
         return
     channelAuditLogs = guild.get_channel(AUDIT_LOGS)
     if not isinstance(channelAuditLogs, discord.TextChannel):
-        Logger.exception("on_member_ban: channelAuditLogs is not discord.TextChannel")
+        log.exception("on_member_ban: channelAuditLogs is not discord.TextChannel")
         return
     embed = discord.Embed(description=f"{user.mention} {user.name}", color=discord.Color.red(), timestamp=datetime.datetime.now(datetime.timezone.utc))
     embed.set_author(name="Member Banned", icon_url=user.display_avatar)
@@ -246,7 +247,7 @@ async def on_member_unban(guild: discord.Guild, user: discord.User) -> None:
         return
     channelAuditLogs = guild.get_channel(AUDIT_LOGS)
     if not isinstance(channelAuditLogs, discord.TextChannel):
-        Logger.exception("on_member_unban: channelAuditLogs is not discord.TextChannel")
+        log.exception("on_member_unban: channelAuditLogs is not discord.TextChannel")
         return
     embed = discord.Embed(description=f"{user.mention} {user.name}", color=discord.Color.green(), timestamp=datetime.datetime.now(datetime.timezone.utc))
     embed.set_author(name="Member Unbanned", icon_url=user.display_avatar)
@@ -258,7 +259,7 @@ async def on_member_unban(guild: discord.Guild, user: discord.User) -> None:
 @client.event
 async def on_error(event: str, *args, **kwargs) -> None:
     """On error event."""
-    Logger.exception(f"An error occured! {event} | {args} | {kwargs}")
+    log.exception(f"An error occured! {event} | {args} | {kwargs}")
 
 
 @client.event
@@ -268,14 +269,14 @@ async def on_command_error(ctx: commands.Context, error: commands.CommandError) 
     if errorType is commands.errors.MissingRequiredArgument:
         await ctx.send_help(ctx.command)
     elif not isinstance(errorType, commands.CommandNotFound):
-        Logger.exception(f"{ctx.author.id} [{ctx.author.display_name}] | {error}")
+        log.exception(f"{ctx.author.id} [{ctx.author.display_name}] | {error}")
 
 
 @client.command()
 @commands.has_any_role(SNEK_LORD)
 async def reload(ctx: commands.Context) -> None:
     """Reload bot cogs."""
-    Logger.info(f"{ctx.author.id} [{ctx.author.display_name}] Reloading bot cogs")
+    log.info(f"{ctx.author.id} [{ctx.author.display_name}] Reloading bot cogs")
     for cog in COGS:
         await client.reload_extension(f"cogs.{cog}")
     await client.tree.sync(guild=GUILD)
@@ -290,8 +291,16 @@ async def stop(ctx: commands.Context) -> None:
 
 
 if __name__ == "__main__":
+    # Redirect log handler to void
+    class VoidHandler(logging.Handler):
+        def emit(self, record):
+            pass
+
+    voidHandler = VoidHandler()
+
     try:
-        client.run(secret.TOKEN_DEV if secret.DEBUG else secret.TOKEN)
-        Logger.info("Bot stopped")
+        client.run(secret.TOKEN_DEV if secret.DEBUG else secret.TOKEN, log_handler=voidHandler)
     except Exception as e:
-        Logger.exception(e)
+        log.exception(e)
+    finally:
+        log.info("Bot stopped")

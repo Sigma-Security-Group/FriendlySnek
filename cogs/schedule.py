@@ -1,4 +1,4 @@
-import os, re, json, asyncio, discord
+import os, re, json, asyncio, discord, logging
 import pytz  # type: ignore
 
 from math import ceil
@@ -8,7 +8,6 @@ from dateutil.parser import parse as datetimeParse  # type: ignore
 
 from discord.ext import commands, tasks  # type: ignore
 
-from logger import Logger
 from .workshopInterest import WorkshopInterest  # type: ignore
 import secret
 from constants import *
@@ -165,8 +164,9 @@ FILE_UPLOAD_EXTENSION_BLACKLIST = ["exe", "pif", "application", "gadget", "msi",
 #     with open("./.git/logs/refs/heads/main") as f:
 #         commitHash = f.readlines()[-1].split()[1][:7]  # The commit hash that the bot is running on (last line, second column, first 7 characters)
 # except Exception as e:
-#     Logger.exception(e)
+#     log.exception(e)
 
+log = logging.getLogger(__name__)
 
 class Schedule(commands.Cog):
     """Schedule Cog."""
@@ -176,7 +176,7 @@ class Schedule(commands.Cog):
 
     @commands.Cog.listener()
     async def on_ready(self) -> None:
-        Logger.debug(LOG_COG_READY.format("Schedule"), flush=True)
+        log.debug(LOG_COG_READY.format("Schedule"))
         self.bot.cogsReady["schedule"] = True
 
         await self.updateSchedule()
@@ -213,7 +213,7 @@ class Schedule(commands.Cog):
         """
         guild = self.bot.get_guild(GUILD_ID)
         if guild is None:
-            Logger.exception("Schedule saveEventToHistory: guild is None")
+            log.exception("Schedule saveEventToHistory: guild is None")
             return
 
         if event.get("type", "Operation") == "Workshop" and (workshopInterestName := event.get("workshopInterest")) is not None:
@@ -233,7 +233,7 @@ class Schedule(commands.Cog):
                         json.dump(workshopInterestFile, f, indent=4)
                     channelWorkshopInterest = self.bot.get_channel(WORKSHOP_INTEREST)
                     if not isinstance(channelWorkshopInterest, discord.TextChannel):
-                        Logger.exception("Schedule saveEventToHistory: channelWorkshopInterest not discord.TextChannel")
+                        log.exception("Schedule saveEventToHistory: channelWorkshopInterest not discord.TextChannel")
                         return
                     embed = WorkshopInterest.getWorkshopEmbed(guild, workshopInterestName)
                     workshopMessage = await channelWorkshopInterest.fetch_message(workshop["messageId"])
@@ -279,7 +279,7 @@ class Schedule(commands.Cog):
                 if utcNow > endTime + timedelta(minutes=69):
                     if event["maxPlayers"] != "hidden":  # Save events that does not have hidden attendance
                         await self.saveEventToHistory(event, autoDeleted=True)
-                    Logger.debug(f"Schedule tenMinTask: Auto deleting event '{event['title']}'")
+                    log.debug(f"Schedule tenMinTask: Auto deleting event '{event['title']}'")
                     deletedEvents.append(event)
                     eventMessage = await self.bot.get_channel(SCHEDULE).fetch_message(event["messageId"])
                     await eventMessage.delete()
@@ -291,13 +291,13 @@ class Schedule(commands.Cog):
             with open(EVENTS_FILE, "w") as f:
                 json.dump(events, f, indent=4)
         except Exception as e:
-            Logger.exception(e)
+            log.exception(e)
 
 
         # === Checks if players have accepted the event and joined the voice channel. ===
         guild = self.bot.get_guild(GUILD_ID)
         if guild is None:
-            Logger.exception("Schedule tenMinTask: guild is None")
+            log.exception("Schedule tenMinTask: guild is None")
             return
 
         try:
@@ -307,7 +307,7 @@ class Schedule(commands.Cog):
 
             channelArmaDiscussion = self.bot.get_channel(ARMA_DISCUSSION)
             if not isinstance(channelArmaDiscussion, discord.TextChannel):
-                Logger.exception("Schedule tenMinTask: channelArmaDiscussion not discord.TextChannel")
+                log.exception("Schedule tenMinTask: channelArmaDiscussion not discord.TextChannel")
                 return
 
             for event in events:
@@ -332,13 +332,13 @@ class Schedule(commands.Cog):
                     with open(EVENTS_FILE, "w") as f:
                         json.dump(events, f, indent=4)
                     if len(acceptedMembersNotOnline) > 0:
-                        Logger.debug(f"Schedule tenMinTask: Pinging members in accepted not in VC: {', '.join([member.display_name for member in acceptedMembersNotOnline])}")
+                        log.debug(f"Schedule tenMinTask: Pinging members in accepted not in VC: {', '.join([member.display_name for member in acceptedMembersNotOnline])}")
                         await channelArmaDiscussion.send(" ".join(member.mention for member in acceptedMembersNotOnline) + f" If you are in-game, please get in <#{COMMAND}> or <#{DEPLOYED}>. If you are not making it to this {event['type'].lower()}, please hit decline ❌ on the <#{SCHEDULE}>.")
                     if len(onlineMembersNotAccepted) > 0:
-                        Logger.debug(f"Schedule tenMinTask: Pinging members in VC not in accepted: {', '.join([member.display_name for member in onlineMembersNotAccepted])}")
+                        log.debug(f"Schedule tenMinTask: Pinging members in VC not in accepted: {', '.join([member.display_name for member in onlineMembersNotAccepted])}")
                         await channelArmaDiscussion.send(" ".join(member.mention for member in onlineMembersNotAccepted) + f" If you are in-game, please hit accept ✅ on the <#{SCHEDULE}>.")
         except Exception as e:
-            Logger.exception(e)
+            log.exception(e)
 
 # ===== </Tasks> =====
 
@@ -358,7 +358,7 @@ class Schedule(commands.Cog):
         None.
         """
         await interaction.response.send_message(f"Refreshing <#{SCHEDULE}>...")
-        Logger.info(f"{interaction.user.id} [{interaction.user.display_name}] Is refreshing the schedule")
+        log.info(f"{interaction.user.id} [{interaction.user.display_name}] Is refreshing the schedule")
         await self.updateSchedule()
 
     @refreshSchedule.error
@@ -375,13 +375,13 @@ class Schedule(commands.Cog):
         if type(error) == discord.app_commands.errors.MissingAnyRole:
             guild = self.bot.get_guild(GUILD_ID)
             if guild is None:
-                Logger.exception("Schedule onRefreshScheduleError: guild is None")
+                log.exception("Schedule onRefreshScheduleError: guild is None")
                 return
 
             embed = discord.Embed(title="❌ Missing permissions", description=f"You do not have the permissions to refresh the schedule!\nThe permitted roles are: {', '.join([guild.get_role(role).name for role in CMD_LIMIT_REFRESHSCHEDULE])}.", color=discord.Color.red())
             await interaction.response.send_message(embed=embed, ephemeral=True)
             return
-        Logger.exception(error)
+        log.exception(error)
 
 # ===== </Refresh Schedule> =====
 
@@ -393,21 +393,21 @@ class Schedule(commands.Cog):
     @discord.app_commands.checks.has_any_role(*CMD_LIMIT_ZEUS)
     async def aar(self, interaction: discord.Interaction) -> None:
         """Move all users in Deployed to Command voice channel."""
-        Logger.info(f"{interaction.user.id} [{interaction.user.display_name}] is starting AAR")
+        log.info(f"{interaction.user.id} [{interaction.user.display_name}] is starting AAR")
 
         guild = self.bot.get_guild(GUILD_ID)
         if guild is None:
-            Logger.exception("Schedule aar: guild is None")
+            log.exception("Schedule aar: guild is None")
             return
 
         channelDeployed = guild.get_channel(DEPLOYED)
         if not isinstance(channelDeployed, discord.VoiceChannel):
-            Logger.exception("Schedule aar: channelDeployed is None")
+            log.exception("Schedule aar: channelDeployed is None")
             return
 
         channelCommand = guild.get_channel(COMMAND)
         if not isinstance(channelCommand, discord.VoiceChannel):
-            Logger.exception("Schedule aar: channelDeployed is None")
+            log.exception("Schedule aar: channelDeployed is None")
             return
 
         await interaction.response.send_message("AAR has started, Thanks for running a bop!", ephemeral=True)
@@ -417,7 +417,7 @@ class Schedule(commands.Cog):
             try:
                 await member.move_to(channelCommand)
             except Exception:
-                Logger.warning(f"Schedule aar: failed to move {member.id} [{member.display_name}]")
+                log.warning(f"Schedule aar: failed to move {member.id} [{member.display_name}]")
 
 
     @aar.error
@@ -434,13 +434,13 @@ class Schedule(commands.Cog):
         if type(error) == discord.app_commands.errors.MissingAnyRole:
             guild = self.bot.get_guild(GUILD_ID)
             if guild is None:
-                Logger.exception("Schedule onAarError: guild is None")
+                log.exception("Schedule onAarError: guild is None")
                 return
 
             embed = discord.Embed(title="❌ Missing permissions", description=f"You do not have the permissions to move all users to command!\nThe permitted roles are: {', '.join([guild.get_role(role).name for role in CMD_LIMIT_ZEUS])}.", color=discord.Color.red())
             await interaction.response.send_message(embed=embed, ephemeral=True)
             return
-        Logger.exception(error)
+        log.exception(error)
 
 # ===== </AAR> ====
 
@@ -451,7 +451,7 @@ class Schedule(commands.Cog):
         """Updates the schedule channel with all messages."""
         channelSchedule = self.bot.get_channel(SCHEDULE)
         if not isinstance(channelSchedule, discord.TextChannel):
-            Logger.exception("Schedule updateSchedule: channelSchedule not discord.TextChannel")
+            log.exception("Schedule updateSchedule: channelSchedule not discord.TextChannel")
             return
 
         scheduleIntroMessage = f"__Welcome to the schedule channel!__\n🟩 Schedule operations: `/operation` (`/bop`)\n🟦 Workshops: `/workshop` (`/ws`)\n🟨 Generic events: `/event`\n\nThe datetime you see in here are based on __your local time zone__.\nChange timezone when scheduling events with `/changetimezone`.\n\nSuggestions/bugs contact: {', '.join([f'**{developerName.display_name}**' for name in DEVELOPERS if (developerName := channelSchedule.guild.get_member(name)) is not None])} -- <https://github.com/Sigma-Security-Group/FriendlySnek>"
@@ -484,7 +484,7 @@ class Schedule(commands.Cog):
             with open(EVENTS_FILE, "w") as f:
                 json.dump(newEvents, f, indent=4)
         except Exception as e:
-            Logger.exception(e)
+            log.exception(e)
 
     def getEventEmbed(self, event: dict) -> discord.Embed:
         """Generates an embed from the given event.
@@ -497,7 +497,7 @@ class Schedule(commands.Cog):
         """
         guild = self.bot.get_guild(GUILD_ID)
         if guild is None:
-            Logger.exception("Schedule getEventEmbed: guild is None")
+            log.exception("Schedule getEventEmbed: guild is None")
             return discord.Embed()
 
         embed = discord.Embed(title=event["title"], description=event["description"], color=EVENT_TYPE_COLORS[event.get("type", "Operation")])
@@ -740,7 +740,7 @@ class Schedule(commands.Cog):
         # Author, Footer, Timestamp
         guild = self.bot.get_guild(GUILD_ID)
         if guild is None:
-            Logger.exception("Schedule fromDictToPreviewEmbed: guild is None")
+            log.exception("Schedule fromDictToPreviewEmbed: guild is None")
             return discord.Embed(title="Error")
         if previewDict["type"] == "Workshop" and "workshopInterest" in previewDict:
             embed.set_author(name=f"Linking: {previewDict['workshopInterest']}")
@@ -875,11 +875,11 @@ class Schedule(commands.Cog):
         isUserRoleVerified = [True for userRole in interaction.user.roles if userRole.id == VERIFIED]
         if isUserRoleVerified and event["type"].lower() == "operation":
             if not isinstance(interaction.guild, discord.Guild):
-                Logger.exception("Schedule blockVerifiedRoleRSVP: interaction.guild not discord.Guild")
+                log.exception("Schedule blockVerifiedRoleRSVP: interaction.guild not discord.Guild")
                 return True
             roleRecruitmentTeam = interaction.guild.get_role(RECRUITMENT_TEAM)
             if not isinstance(roleRecruitmentTeam, discord.Role):
-                Logger.exception("Schedule blockVerifiedRoleRSVP: roleRecruitmentTeam not discord.Role")
+                log.exception("Schedule blockVerifiedRoleRSVP: roleRecruitmentTeam not discord.Role")
                 return True
             await interaction.response.send_message(f"{interaction.user.mention} Complete the newcomer workshop first in order to RSVP!\nPing {roleRecruitmentTeam.mention} for more information.", ephemeral=True)
             return True
@@ -898,11 +898,11 @@ class Schedule(commands.Cog):
         None.
         """
         if not isinstance(interaction.user, discord.Member):
-            Logger.exception("Schedule buttonHandling: interaction.user not discord.Member")
+            log.exception("Schedule buttonHandling: interaction.user not discord.Member")
             return
 
         if interaction.message is None:
-            Logger.exception("Schedule buttonHandling: interaction.message is None")
+            log.exception("Schedule buttonHandling: interaction.message is None")
             return
 
         try:
@@ -940,16 +940,16 @@ class Schedule(commands.Cog):
             # Ping Recruitment Team if candidate accepts
             if button.custom_id == "accepted" and eventList[0]["type"].lower() == "operation" and interaction.user.id in eventList[0]["accepted"] and any([True for role in interaction.user.roles if role.id == CANDIDATE]):
                 if not isinstance(interaction.guild, discord.Guild):
-                    Logger.exception("Schedule buttonHandling: interaction.guild not discord.Guild")
+                    log.exception("Schedule buttonHandling: interaction.guild not discord.Guild")
                     return
                 channelRecruitmentHr = interaction.guild.get_channel(RECRUITMENT_AND_HR)
                 if not isinstance(channelRecruitmentHr, discord.TextChannel):
-                    Logger.exception("Schedule buttonHandling: channelRecruitmentHr not discord.TextChannel")
+                    log.exception("Schedule buttonHandling: channelRecruitmentHr not discord.TextChannel")
                     return
                 if not await Schedule.hasCandidatePinged(interaction.user.id, eventList[0]["title"], channelRecruitmentHr):
                     roleRecruitmentTeam = interaction.guild.get_role(RECRUITMENT_TEAM)
                     if not isinstance(roleRecruitmentTeam, discord.Role):
-                        Logger.exception("Schedule buttonHandling: roleRecruitmentTeam is not discord.Role")
+                        log.exception("Schedule buttonHandling: roleRecruitmentTeam is not discord.Role")
                         return
 
                     embed = discord.Embed(title="Candidate Accept", description=f"{interaction.user.mention} accepted operation `{eventList[0]['title']}`", color=discord.Color.blue())
@@ -986,7 +986,7 @@ class Schedule(commands.Cog):
                             await interaction.response.send_message(embed=discord.Embed(title="✅ On standby list", description="The event player limit is reached!\nYou have been placed on the standby list. If an accepted member leaves, you will advance to the next queue position. Make sure to reserve a role once accepted!", color=discord.Color.green()), ephemeral=True, delete_after=60.0)
 
                             if interaction.channel is None or isinstance(interaction.channel, discord.ForumChannel) or isinstance(interaction.channel, discord.CategoryChannel):
-                                Logger.exception("Schedule buttonHandling: interaction.channel is invalid type")
+                                log.exception("Schedule buttonHandling: interaction.channel is invalid type")
                                 return
                             embed = self.getEventEmbed(event)
                             originalMsgId = interaction.message.id
@@ -1001,7 +1001,7 @@ class Schedule(commands.Cog):
                     return
 
                 if not isinstance(interaction.user, discord.Member):
-                    Logger.exception("Schedule buttonHandling: interaction.user not discord.Member")
+                    log.exception("Schedule buttonHandling: interaction.user not discord.Member")
                     return
 
                 vacantRoles = [btnRoleName for btnRoleName, memberId in event["reservableRoles"].items() if memberId is None or interaction.user.guild.get_member(memberId) is None]
@@ -1031,13 +1031,13 @@ class Schedule(commands.Cog):
             elif button.custom_id == "reserve_role_unreserve":
                 scheduleNeedsUpdate = False
                 if message is None:
-                    Logger.exception("Schedule buttonHandling reserve_role_unreserve: message is None")
+                    log.exception("Schedule buttonHandling reserve_role_unreserve: message is None")
                     return
                 event = [event for event in events if event["messageId"] == message.id][0]
 
                 # Disable all discord.ui.Item
                 if button.view is None:
-                    Logger.exception("Schedule buttonHandling reserve_role_unreserve: button.view is None")
+                    log.exception("Schedule buttonHandling reserve_role_unreserve: button.view is None")
                     return
 
                 for child in button.view.children:
@@ -1079,7 +1079,7 @@ class Schedule(commands.Cog):
             elif button.custom_id == "edit":
                 scheduleNeedsUpdate = False
                 if message is None:
-                    Logger.exception("Schedule buttonHandling edit: message is None")
+                    log.exception("Schedule buttonHandling edit: message is None")
                     return
 
                 event = [event for event in events if event["messageId"] == message.id][0]
@@ -1090,7 +1090,7 @@ class Schedule(commands.Cog):
 
             elif button.custom_id == "delete":
                 if message is None:
-                    Logger.exception("Schedule buttonHandling delete: message is None")
+                    log.exception("Schedule buttonHandling delete: message is None")
                     return
 
                 event = [event for event in events if event["messageId"] == message.id][0]
@@ -1110,11 +1110,11 @@ class Schedule(commands.Cog):
                 scheduleNeedsUpdate = False
 
                 if button.view is None:
-                    Logger.exception("Schedule buttonHandling delete_event_confirm: button.view is None")
+                    log.exception("Schedule buttonHandling delete_event_confirm: button.view is None")
                     return
 
                 if message is None:
-                    Logger.exception("Schedule buttonHandling delete_event_confirm: message is None")
+                    log.exception("Schedule buttonHandling delete_event_confirm: message is None")
                     return
 
                 # Disable buttons
@@ -1126,7 +1126,7 @@ class Schedule(commands.Cog):
                 event = [event for event in events if event["messageId"] == message.id][0]
                 await message.delete()
                 try:
-                    Logger.info(f"{interaction.user.id} [{interaction.user.display_name}] deleted the event '{event['title']}'")
+                    log.info(f"{interaction.user.id} [{interaction.user.display_name}] deleted the event '{event['title']}'")
                     await interaction.followup.send(embed=discord.Embed(title=f"✅ {event['type']} deleted!", color=discord.Color.green()), ephemeral=True)
 
                     # Notify attendees
@@ -1137,7 +1137,7 @@ class Schedule(commands.Cog):
                     else:
                         guild = self.bot.get_guild(GUILD_ID)
                         if guild is None:
-                            Logger.exception("Schedule buttonHandling delete_event_confirm: guild is None")
+                            log.exception("Schedule buttonHandling delete_event_confirm: guild is None")
                             return
 
                         for memberId in event["accepted"] + event["declined"] + event["tentative"]:
@@ -1148,14 +1148,14 @@ class Schedule(commands.Cog):
                                 try:
                                     await member.send(embed=embed)
                                 except Exception as e:
-                                    Logger.warning(f"{member.id} [{member.display_name}]")
+                                    log.warning(f"{member.id} [{member.display_name}]")
                 except Exception as e:
-                    Logger.exception(f"{interaction.user.id} [{interaction.user.display_name}]")
+                    log.exception(f"{interaction.user.id} [{interaction.user.display_name}]")
                 events.remove(event)
 
             elif button.custom_id == "delete_event_cancel":
                 if button.view is None:
-                    Logger.exception("Schedule buttonHandling delete_event_cancel: button.view is None")
+                    log.exception("Schedule buttonHandling delete_event_cancel: button.view is None")
                     return
 
                 for item in button.view.children:
@@ -1166,7 +1166,7 @@ class Schedule(commands.Cog):
 
             elif button.custom_id is not None and button.custom_id.startswith("event_schedule_"):
                 if button.view is None:
-                    Logger.exception("Schedule buttonHandling event_schedule_: button.view is None")
+                    log.exception("Schedule buttonHandling event_schedule_: button.view is None")
                     return
 
                 if interaction.user.id != button.view.authorId:
@@ -1272,7 +1272,7 @@ class Schedule(commands.Cog):
                         with open(GENERIC_DATA_FILE) as f:
                             genericData = json.load(f)
                             if "modpackMaps" not in genericData:
-                                Logger.warning("Schedule buttonHandling map: modpackMaps not in genericData")
+                                log.warning("Schedule buttonHandling map: modpackMaps not in genericData")
                                 return
 
                         options = [discord.SelectOption(label=mapName) for mapName in genericData["modpackMaps"]]
@@ -1339,7 +1339,7 @@ class Schedule(commands.Cog):
                     case "files_add":
                         messageNew = await interaction.channel.fetch_message(message.id)
                         if not isinstance(messageNew, discord.Message):
-                            Logger.exception("Schedule ButtonHandling files_add: messageNew not discord.Message")
+                            log.exception("Schedule ButtonHandling files_add: messageNew not discord.Message")
                             return
                         previewEmbedDict = self.fromPreviewEmbedToDict(messageNew.embeds[0])
                         options = [discord.SelectOption(label=fileUpload) for fileUpload in Schedule.getUserFileUploads(str(interaction.user.id)) if fileUpload not in previewEmbedDict["files"]]
@@ -1356,7 +1356,7 @@ class Schedule(commands.Cog):
                     case "files_remove":
                         messageNew = await interaction.channel.fetch_message(message.id)
                         if not isinstance(messageNew, discord.Message):
-                            Logger.exception("Schedule ButtonHandling files_remove: messageNew not discord.Message")
+                            log.exception("Schedule ButtonHandling files_remove: messageNew not discord.Message")
                             return
                         previewEmbedDict = self.fromPreviewEmbedToDict(messageNew.embeds[0])
                         options = [discord.SelectOption(label=previewFile) for previewFile in previewEmbedDict["files"]]
@@ -1398,9 +1398,9 @@ class Schedule(commands.Cog):
                                 templateName = "".join(child.label.split(":")[1:]).strip()
                                 break
                         if templateName == "":
-                            Logger.exception("Schedule buttonHandling: templateName is empty")
+                            log.exception("Schedule buttonHandling: templateName is empty")
                             return
-                        Logger.info(f"{interaction.user.id} [{interaction.user.dispay_name}] Updated template '{templateName}'")
+                        log.info(f"{interaction.user.id} [{interaction.user.dispay_name}] Updated template '{templateName}'")
                         # Write to file
                         filename = f"data/{previewEmbedDict['type'].lower()}Templates.json"
                         with open(filename) as f:
@@ -1412,7 +1412,7 @@ class Schedule(commands.Cog):
                                 templateIndex = idx
                                 break
                         else:
-                            Logger.exception("Schedule buttonHandling: templateIndex not found")
+                            log.exception("Schedule buttonHandling: templateIndex not found")
                             return
 
                         previewEmbedDict["templateName"] = templateName
@@ -1428,7 +1428,7 @@ class Schedule(commands.Cog):
 
                     # EVENT FINISHING
                     case "submit":
-                        Logger.debug(f"{interaction.user.id} [{interaction.user.display_name}] Submitted with event type '{previewEmbedDict['type']}'")
+                        log.debug(f"{interaction.user.id} [{interaction.user.display_name}] Submitted with event type '{previewEmbedDict['type']}'")
                         # Check if all mandatory fields are filled
                         if isAllRequiredInfoFilled() is False:
                             await interaction.response.send_message(f"{interaction.user.mention} Before creating the event, you need to fill out the mandatory (red buttons) information!", ephemeral=True, delete_after=10.0)
@@ -1456,12 +1456,12 @@ class Schedule(commands.Cog):
 
                         # Update schedule
                         await self.updateSchedule()
-                        Logger.debug(f"{interaction.user.id} [{interaction.user.display_name}] Submitted with event type, after updateschedule '{previewEmbedDict['type']}'")
+                        log.debug(f"{interaction.user.id} [{interaction.user.display_name}] Submitted with event type, after updateschedule '{previewEmbedDict['type']}'")
 
 
                         guild = interaction.guild
                         if not isinstance(guild, discord.Guild):
-                            Logger.exception("Schedule buttonHandling: guild not discord.Guild")
+                            log.exception("Schedule buttonHandling: guild not discord.Guild")
                             return
 
                         # Workshop interest ping
@@ -1473,7 +1473,7 @@ class Schedule(commands.Cog):
                             if targetWorkshopMembers:
                                 channelArmaDiscussion = guild.get_channel(ARMA_DISCUSSION)
                                 if not isinstance(channelArmaDiscussion, discord.TextChannel):
-                                    Logger.exception("Schedule buttonHandling: channelArmaDiscussion not discord.TextChannel")
+                                    log.exception("Schedule buttonHandling: channelArmaDiscussion not discord.TextChannel")
                                     return
 
                                 message = ""
@@ -1486,12 +1486,12 @@ class Schedule(commands.Cog):
                         if previewEmbedDict["type"].lower() == "operation":
                             roleOperationPings = guild.get_role(OPERATION_PINGS)
                             if not isinstance(roleOperationPings, discord.Role):
-                                Logger.exception("Schedule buttonHandling: roleOperationPings not discord.Role")
+                                log.exception("Schedule buttonHandling: roleOperationPings not discord.Role")
                                 return
 
                             channelOperationAnnouncements = guild.get_channel(OPERATION_ANNOUNCEMENTS)
                             if not isinstance(channelOperationAnnouncements, discord.TextChannel):
-                                Logger.exception("Schedule buttonHandling: channelOperationAnnouncements not discord.TextChannel")
+                                log.exception("Schedule buttonHandling: channelOperationAnnouncements not discord.TextChannel")
                                 return
 
                             with open(EVENTS_FILE) as f:
@@ -1515,7 +1515,7 @@ class Schedule(commands.Cog):
 
                     case "cancel_confirm":
                         if message is None:
-                            Logger.exception("Schedule buttonHandling cancel_confirm: message is None")
+                            log.exception("Schedule buttonHandling cancel_confirm: message is None")
                             return
                         for child in button.view.children:
                             if isinstance(child, discord.ui.Button):
@@ -1525,7 +1525,7 @@ class Schedule(commands.Cog):
 
                     case "cancel_decline":
                         if message is None:
-                            Logger.exception("Schedule buttonHandling cancel_decline: message is None")
+                            log.exception("Schedule buttonHandling cancel_decline: message is None")
                             return
                         for child in button.view.children:
                             if isinstance(child, discord.ui.Button):
@@ -1564,7 +1564,7 @@ class Schedule(commands.Cog):
             elif button.custom_id == "event_edit_files_add":
                 messageNew = await interaction.channel.fetch_message(message.id)
                 if not isinstance(messageNew, discord.Message):
-                    Logger.exception("Schedule buttonHandling event_edit_files_add: messageNew not discord.Message")
+                    log.exception("Schedule buttonHandling event_edit_files_add: messageNew not discord.Message")
                     return
 
                 attachmentFilenames = [attachment.filename for attachment in messageNew.attachments]
@@ -1585,7 +1585,7 @@ class Schedule(commands.Cog):
             elif button.custom_id == "event_edit_files_remove":
                 messageNew = await interaction.channel.fetch_message(message.id)
                 if not isinstance(messageNew, discord.Message):
-                    Logger.exception("Schedule buttonHandling event_edit_files_remove: messageNew not discord.Message")
+                    log.exception("Schedule buttonHandling event_edit_files_remove: messageNew not discord.Message")
                     return
 
                 attachmentFilenames = [attachment.filename for attachment in messageNew.attachments]
@@ -1607,7 +1607,7 @@ class Schedule(commands.Cog):
                     embed = self.getEventEmbed(event)
                     if fetchMsg:  # Could be better - could be worse...
                         if interaction.channel is None or isinstance(interaction.channel, discord.ForumChannel) or isinstance(interaction.channel, discord.CategoryChannel):
-                            Logger.exception("Schedule buttonHandling: interaction.channel is invalid type")
+                            log.exception("Schedule buttonHandling: interaction.channel is invalid type")
                             return
 
                         originalMsgId = interaction.message.id
@@ -1616,12 +1616,12 @@ class Schedule(commands.Cog):
                     else:
                         await interaction.response.edit_message(embed=embed)
                 except Exception as e:
-                    Logger.exception(f"{interaction.user.id} | [{interaction.user.display_name}]")
+                    log.exception(f"{interaction.user.id} | [{interaction.user.display_name}]")
 
             with open(EVENTS_FILE, "w") as f:
                 json.dump(events, f, indent=4)
         except Exception as e:
-            Logger.exception(f"{interaction.user.id} | [{interaction.user.display_name}]")
+            log.exception(f"{interaction.user.id} | [{interaction.user.display_name}]")
 
     def generateSelectView(self, options: list[discord.SelectOption], noneOption: bool, setOptionLabel: str | None, eventMsg: discord.Message, placeholder: str, customId: str, eventMsgView: discord.ui.View | None = None):
         """Generates good select menu view - ceil(len(options)/25) dropdowns.
@@ -1670,14 +1670,14 @@ class Schedule(commands.Cog):
         None.
         """
         if not isinstance(interaction.user, discord.Member):
-            Logger.exception("Schedule selectHandling: interaction.user not discord.Member")
+            log.exception("Schedule selectHandling: interaction.user not discord.Member")
             return
 
         selectedValue = select.values[0]
 
         if select.custom_id.startswith("select_create_"):
             if eventMsgView is None:
-                Logger.exception("Schedule selectHandling: eventMsgView is None")
+                log.exception("Schedule selectHandling: eventMsgView is None")
                 return
 
             infoLabel = select.custom_id[len("select_create_"):].split("_REMOVE")[0]  # e.g. "type"
@@ -1686,7 +1686,7 @@ class Schedule(commands.Cog):
             CASES_WHEN_SELECT_MENU_EDITS_AWAY = ("files_add", "files_remove")
             if infoLabel not in CASES_WHEN_SELECT_MENU_EDITS_AWAY:
                 if select.view is None:
-                    Logger.exception("Schedule selectHandling: select.view is None")
+                    log.exception("Schedule selectHandling: select.view is None")
                     return
                 for child in select.view.children:
                     child.disabled = True
@@ -1694,7 +1694,7 @@ class Schedule(commands.Cog):
 
             eventMsgNew = await interaction.channel.fetch_message(eventMsg.id)
             if not isinstance(eventMsgNew, discord.Message):
-                Logger.exception("Schedule selectHandling: eventMsgNew not discord.Message")
+                log.exception("Schedule selectHandling: eventMsgNew not discord.Message")
                 return
 
             previewEmbedDict = self.fromPreviewEmbedToDict(eventMsgNew.embeds[0])
@@ -1704,7 +1704,7 @@ class Schedule(commands.Cog):
             # Do preview embed edits
             match infoLabel:
                 case "type":
-                    Logger.debug(f"{interaction.user.id} [{interaction.user.display_name}] selected event type '{selectedValue}'")
+                    log.debug(f"{interaction.user.id} [{interaction.user.display_name}] selected event type '{selectedValue}'")
                     previewEmbedDict["type"] = selectedValue
 
                     templateName = "None"
@@ -1812,7 +1812,7 @@ class Schedule(commands.Cog):
         elif select.custom_id == "reserve_role_select":
             # Disable all discord.ui.Item
             if select.view is None:
-                Logger.exception("Schedule selectHandling reserve_role_select: select.view is None")
+                log.exception("Schedule selectHandling reserve_role_select: select.view is None")
                 return
 
             await interaction.response.edit_message(view=None)
@@ -1852,16 +1852,16 @@ class Schedule(commands.Cog):
             # Ping Recruitment Team if candidate reserves
             if event["type"].lower() == "operation" and any([True for role in interaction.user.roles if role.id == CANDIDATE]):
                 if not isinstance(interaction.guild, discord.Guild):
-                    Logger.exception("Schedule selectHandling: interaction.guild not discord.Guild")
+                    log.exception("Schedule selectHandling: interaction.guild not discord.Guild")
                     return
                 channelRecruitmentHr = interaction.guild.get_channel(RECRUITMENT_AND_HR)
                 if not isinstance(channelRecruitmentHr, discord.TextChannel):
-                    Logger.exception("Schedule selectHandling: channelRecruitmentHr not discord.TextChannel")
+                    log.exception("Schedule selectHandling: channelRecruitmentHr not discord.TextChannel")
                     return
                 if not await Schedule.hasCandidatePinged(interaction.user.id, event["title"], channelRecruitmentHr):
                     roleRecruitmentTeam = interaction.guild.get_role(RECRUITMENT_TEAM)
                     if not isinstance(roleRecruitmentTeam, discord.Role):
-                        Logger.exception("Schedule selectHandling: roleRecruitmentTeam not discord.Role")
+                        log.exception("Schedule selectHandling: roleRecruitmentTeam not discord.Role")
                         return
                     embed = discord.Embed(title="Candidate Accept", description=f"{interaction.user.mention} accepted operation `{event['title']}`\nReserved role `{selectedValue}`", color=discord.Color.blue())
                     embed.set_footer(text=f"Candidate ID: {interaction.user.id}")
@@ -1929,7 +1929,7 @@ class Schedule(commands.Cog):
                     with open(GENERIC_DATA_FILE) as f:
                         genericData = json.load(f)
                         if "modpackMaps" not in genericData:
-                            Logger.exception("Schedule buttonHandling: modpackMaps not in genericData")
+                            log.exception("Schedule buttonHandling: modpackMaps not in genericData")
                             return
                     options = [discord.SelectOption(label=mapName) for mapName in genericData["modpackMaps"]]
                     view = self.generateSelectView(options, True, event["map"], eventMsg, "Select a map.", "edit_select_map")
@@ -1978,7 +1978,7 @@ class Schedule(commands.Cog):
                     embed = discord.Embed(title="Attaching files", description="You may attach up to 10 files to your event.\nUpload them first using the command `/fileupload`.", color=discord.Color.gold())
                     await interaction.response.send_message(interaction.user.mention, embed=embed, view=view, ephemeral=True, delete_after=300.0)
 
-            Logger.info(f"{interaction.user.id} [{interaction.user.display_name}] Edited the event '{event['title'] if 'title' in event else event['templateName']}'")
+            log.info(f"{interaction.user.id} [{interaction.user.display_name}] Edited the event '{event['title'] if 'title' in event else event['templateName']}'")
 
         # All select menu options in edit_select
         elif select.custom_id.startswith("edit_select_"):
@@ -1993,7 +1993,7 @@ class Schedule(commands.Cog):
                     allUserFiles = Schedule.getUserFileUploads(str(interaction.user.id), fullFilename=True)
                     specifiedFileList = [file for file in allUserFiles if file.split("_", 2)[2] == selectedValue]
                     if not specifiedFileList:
-                        Logger.exception(f"Schedule selectHandling files_add: Could not find '{selectedValue}' in specifiedFileList")
+                        log.exception(f"Schedule selectHandling files_add: Could not find '{selectedValue}' in specifiedFileList")
                         await interaction.response.send_message(embed=discord.Embed(title="❌ Interaction failed", description="Could not find file in fileuploads!", color=discord.Color.red()), ephemeral=True, delete_after=5.0)
                         return
 
@@ -2012,14 +2012,14 @@ class Schedule(commands.Cog):
                     eventMsgNew = await interaction.channel.fetch_message(eventMsg.id)
                     eventAttachmentDict = {eventAttachment.filename: eventAttachment for eventAttachment in eventMsgNew.attachments}
                     if selectedValue not in eventAttachmentDict:
-                        Logger.exception(f"Schedule selectHandling files_remove: Could not find '{selectedValue}' in eventMsg.attachments")
+                        log.exception(f"Schedule selectHandling files_remove: Could not find '{selectedValue}' in eventMsg.attachments")
                         await interaction.response.send_message(embed=discord.Embed(title="❌ Interaction failed", description="Could not find attachment in message!", color=discord.Color.red()), ephemeral=True, delete_after=5.0)
                         return
 
                     allUserFiles = Schedule.getUserFileUploads(str(interaction.user.id), fullFilename=True)
                     filenameFull = [file for file in allUserFiles if file.split("_", 2)[2] == selectedValue][0]
                     if filenameFull not in event["files"]:
-                        Logger.exception(f"Schedule selectHandling files_remove: filenameFull '{filenameFull}' not in event['files']")
+                        log.exception(f"Schedule selectHandling files_remove: filenameFull '{filenameFull}' not in event['files']")
                         await interaction.response.send_message(embed=discord.Embed(title="❌ File already removed", color=discord.Color.red()), ephemeral=True, delete_after=5.0)
                         return
 
@@ -2037,7 +2037,7 @@ class Schedule(commands.Cog):
 
     async def modalHandling(self, modal: discord.ui.Modal, interaction: discord.Interaction, eventMsg: discord.Message, view: discord.ui.View | None) -> None:
         if not isinstance(interaction.user, discord.Member):
-            Logger.exception("Schedule modalHandling: interaction.user not discord.Member")
+            log.exception("Schedule modalHandling: interaction.user not discord.Member")
             return
         value: str = modal.children[0].value.strip()
 
@@ -2134,7 +2134,7 @@ class Schedule(commands.Cog):
                         if template["templateName"] == previewEmbedDict["templateName"]:
                             templateOverwritten = (True, idx)
                             break
-                    Logger.info(f"{interaction.user.id} [{interaction.user.display_name}] Saved {('[Overwritten] ') * templateOverwritten[0]}a template as '{previewEmbedDict['templateName']}'")
+                    log.info(f"{interaction.user.id} [{interaction.user.display_name}] Saved {('[Overwritten] ') * templateOverwritten[0]}a template as '{previewEmbedDict['templateName']}'")
                     if templateOverwritten[0]:
                         templates.pop(templateOverwritten[1])
                     for shit in SCHEDULE_TEMPLATE_REMOVE_FROM_EVENT:
@@ -2240,7 +2240,7 @@ class Schedule(commands.Cog):
             # Notify attendees of time change
             guild = self.bot.get_guild(GUILD_ID)
             if guild is None:
-                Logger.exception("Schedule modalHandling: guild is None")
+                log.exception("Schedule modalHandling: guild is None")
                 return None
 
             # Send before time-hogging processes - fix interaction failed
@@ -2255,7 +2255,7 @@ class Schedule(commands.Cog):
                     try:
                         await member.send(embed=previewEmbed)
                     except Exception as e:
-                        Logger.exception(f"{member.id} [{member.display_name}]")
+                        log.exception(f"{member.id} [{member.display_name}]")
 
             with open(EVENTS_FILE, "w") as f:
                 json.dump(events, f, indent=4)
@@ -2271,7 +2271,7 @@ class Schedule(commands.Cog):
 
             channelSchedule = await guild.fetch_channel(SCHEDULE)
             if not isinstance(channelSchedule, discord.TextChannel):
-                Logger.exception("Schedule modalHandling: channelSchedule not discord.TextChannel")
+                log.exception("Schedule modalHandling: channelSchedule not discord.TextChannel")
                 return
 
             anyEventChange = False
@@ -2349,7 +2349,7 @@ class Schedule(commands.Cog):
             "Time",
             "Files"
         )
-        Logger.info(f"{interaction.user.id} [{interaction.user.display_name}] Is editing the event '{event['title']}'")
+        log.info(f"{interaction.user.id} [{interaction.user.display_name}] Is editing the event '{event['title']}'")
         options = []
         for editOption in editOptions:
             options.append(discord.SelectOption(label=editOption))
@@ -2385,18 +2385,18 @@ class Schedule(commands.Cog):
         """
         if isinstance(error, discord.app_commands.errors.MissingAnyRole):
             if interaction.guild is None:
-                Logger.exception("Schedule onBopError: interaction.guild is None")
+                log.exception("Schedule onBopError: interaction.guild is None")
                 return
 
             channelZeusGuidelines = interaction.guild.get_channel(ZEUS_GUIDELINES)
             if not isinstance(channelZeusGuidelines, discord.TextChannel):
-                Logger.exception("Schedule onBopError: channelZeusGuidelines not discord.TextChannel")
+                log.exception("Schedule onBopError: channelZeusGuidelines not discord.TextChannel")
                 return
 
             embed = discord.Embed(title="❌ Missing permissions", description=f"You do not have the permissions to schedule an operation!\nPlease reference the {channelZeusGuidelines.mention} for more information!", color=discord.Color.red())
             await interaction.response.send_message(embed=embed, ephemeral=True)
             return
-        Logger.exception(error)
+        log.exception(error)
 
     @discord.app_commands.command(name="ws")
     @discord.app_commands.guilds(GUILD)
@@ -2413,7 +2413,7 @@ class Schedule(commands.Cog):
 
     async def scheduleEventInteraction(self, interaction: discord.Interaction, preselectedType: str) -> None:
         """Create an event to add to the schedule."""
-        Logger.info(f"{interaction.user.id} [{interaction.user.display_name}] Is creating an {preselectedType.lower()}")
+        log.info(f"{interaction.user.id} [{interaction.user.display_name}] Is creating an {preselectedType.lower()}")
 
         previewDict = {
             "authorId": interaction.user.id,
@@ -2459,21 +2459,21 @@ class Schedule(commands.Cog):
 
         channelAuditLogs = self.bot.get_channel(AUDIT_LOGS)
         if not isinstance(channelAuditLogs, discord.TextChannel):
-            Logger.exception("Schedule fileupload: channelAuditLogs not discord.TextChannel")
+            log.exception("Schedule fileupload: channelAuditLogs not discord.TextChannel")
             return
 
         # Block files with file extension in blacklist
         fileExtension = os.path.splitext(file.filename)[1][1:] # Get extension without dot
         if not fileExtension or fileExtension.lower() in FILE_UPLOAD_EXTENSION_BLACKLIST:
-            Logger.exception(f"{interaction.user.id} [{interaction.user.display_name}] Uploaded a blacklisted file extension '{file.filename}'")
+            log.exception(f"{interaction.user.id} [{interaction.user.display_name}] Uploaded a blacklisted file extension '{file.filename}'")
 
             guild = self.bot.get_guild(GUILD_ID)
             if guild is None:
-                Logger.exception("Schedule fileupload: guild is None")
+                log.exception("Schedule fileupload: guild is None")
                 return
             roleSnekLord = guild.get_role(SNEK_LORD)
             if roleSnekLord is None:
-                Logger.exception("Schedule fileupload: roleSnekLord is None")
+                log.exception("Schedule fileupload: roleSnekLord is None")
                 return
 
             embed = discord.Embed(title="❌ File upload blocked", description=f"User {interaction.user.mention} ({interaction.user.id}) uploaded the file '{file.filename}'.\nThis action has been blocked since the file extension is blacklisted.", color=discord.Color.red())
@@ -2498,7 +2498,7 @@ class Schedule(commands.Cog):
         with open(f"tmp/fileUpload/{filenameNew}", "wb") as f:
             await file.save(f)
 
-        Logger.info(f"{interaction.user.id} [{interaction.user.display_name}] Uploaded the file '{file.filename}' as '{filenameNew}'")
+        log.info(f"{interaction.user.id} [{interaction.user.display_name}] Uploaded the file '{file.filename}' as '{filenameNew}'")
         embed = discord.Embed(title="✅ File uploaded", description=f"Uploaded file as `{filenameCap}`", color=discord.Color.green())
         await interaction.response.send_message(embed=embed)
 
@@ -2522,7 +2522,7 @@ class Schedule(commands.Cog):
                 try:
                     os.remove(f"tmp/fileUpload/{fileUploadFile}")
                 except Exception as e:
-                    Logger.warning(f"Schedule fileupload: Failed to remove file '{fileUploadFile}' | {e}")
+                    log.warning(f"Schedule fileupload: Failed to remove file '{fileUploadFile}' | {e}")
 
 
         # OLD CLEANUP METHOD (Count)
@@ -2533,7 +2533,7 @@ class Schedule(commands.Cog):
         #    try:
         #        os.remove(fileUploadFiles[0])
         #    except Exception as e:
-        #        Logger.warning(f"Schedule fileupload: Failed to remove global file '{fileUploadFiles[0]}' | {e}")
+        #        log.warning(f"Schedule fileupload: Failed to remove global file '{fileUploadFiles[0]}' | {e}")
         #    finally:
         #        fileUploadFiles.pop(0)
 
@@ -2543,7 +2543,7 @@ class Schedule(commands.Cog):
         #    try:
         #        os.remove(fileUploadFilesInd[0])
         #    except Exception as e:
-        #        Logger.warning(f"Schedule fileupload: Failed to remove ind file '{fileUploadFilesInd[0]}' | {e}")
+        #        log.warning(f"Schedule fileupload: Failed to remove ind file '{fileUploadFilesInd[0]}' | {e}")
         #    finally:
         #        fileUploadFilesInd.pop(0)
 
@@ -2637,7 +2637,7 @@ class Schedule(commands.Cog):
         Returns:
         bool: If function executed successfully.
         """
-        Logger.info(f"{author.id} [{author.display_name}] Is updating their time zone preferences")
+        log.info(f"{author.id} [{author.display_name}] Is updating their time zone preferences")
 
         with open(MEMBER_TIME_ZONES_FILE) as f:
             memberTimeZones = json.load(f)
@@ -2656,7 +2656,7 @@ class Schedule(commands.Cog):
             try:
                 msg = await author.send(embed=embed)
             except Exception as e:
-                Logger.exception(f"{author.id} [{author.display_name}]")
+                log.exception(f"{author.id} [{author.display_name}]")
                 return False
             dmChannel = msg.channel
             try:
@@ -2739,11 +2739,11 @@ class ScheduleModal(discord.ui.Modal):
         # try:
         await self.instance.modalHandling(self, interaction, self.eventMsg, self.view)
         # except Exception as e:
-        #     Logger.exception(f"ScheduleModal on_submit")
+        #     log.exception(f"ScheduleModal on_submit")
 
     async def on_error(self, interaction: discord.Interaction, error: Exception) -> None:
         # await interaction.response.send_message("Something went wrong. cope.", ephemeral=True)
-        Logger.exception(error)
+        log.exception(error)
 
 # ===== </Views and Buttons> =====
 

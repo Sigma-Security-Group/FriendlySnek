@@ -1,17 +1,17 @@
+import discord, logging
 import requests  # type: ignore
 
-import discord
 from discord.ext import commands  # type: ignore
 
-from logger import Logger
 from secret import DEBUG
 from constants import *
 if DEBUG:
     from constants.debug import *
 
-
 URL = "https://icanhazdadjoke.com/"
 HEADERS = {"Accept": "application/json"}
+
+log = logging.getLogger(__name__)
 
 class Jokes(commands.Cog):
     def __init__(self, bot: commands.Bot) -> None:
@@ -20,7 +20,7 @@ class Jokes(commands.Cog):
 
     @commands.Cog.listener()
     async def on_ready(self) -> None:
-        Logger.debug(LOG_COG_READY.format("Jokes"), flush=True)
+        log.debug(LOG_COG_READY.format("Jokes"))
         self.bot.cogsReady["jokes"] = True
 
     @discord.app_commands.command(name="dadjoke")

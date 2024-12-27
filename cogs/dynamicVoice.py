@@ -1,13 +1,13 @@
-import discord
+import discord, logging
 from discord.ext import commands  # type: ignore
 from itertools import count, filterfalse
 
-from logger import Logger
 import secret
 from constants import *
 if secret.DEBUG:
     from constants.debug import *
 
+log = logging.getLogger(__name__)
 
 @discord.app_commands.guilds(GUILD)
 class DynamicVoice(commands.GroupCog, name="voice"):
@@ -18,7 +18,7 @@ class DynamicVoice(commands.GroupCog, name="voice"):
 
     @commands.Cog.listener()
     async def on_ready(self) -> None:
-        Logger.debug(LOG_COG_READY.format("DynamicVoice"), flush=True)
+        log.debug(LOG_COG_READY.format("DynamicVoice"))
         self.bot.cogsReady["dynamicVoice"] = True
 
 
@@ -34,7 +34,7 @@ class DynamicVoice(commands.GroupCog, name="voice"):
             guild = member.guild
             customChannelsCategory = discord.utils.get(guild.categories, id=CUSTOM_CHANNELS)
             if customChannelsCategory is None:
-                Logger.exception("DynamicVoice on_voice_state_update: customChannelsCategory is None")
+                log.exception("DynamicVoice on_voice_state_update: customChannelsCategory is None")
                 return
 
             voiceNums = []
@@ -52,7 +52,7 @@ class DynamicVoice(commands.GroupCog, name="voice"):
             try:
                 await before.channel.delete(reason="No users left in dynamic voice channel.")
             except Exception:
-                Logger.warning(f"DynamicVoice on_voice_state_update: failed to delete dynamic voice channel: '{before.channel.name}' ({member.id})")
+                log.warning(f"DynamicVoice on_voice_state_update: failed to delete dynamic voice channel: '{before.channel.name}' ({member.id})")
 
 
     @discord.app_commands.command(name="limit")
@@ -76,17 +76,17 @@ class DynamicVoice(commands.GroupCog, name="voice"):
             return
 
         oldLimit = interaction.user.voice.channel.user_limit
-        Logger.debug(f"{interaction.user.id} [{interaction.user.display_name}] Changed the dynamic voice limit from '{oldLimit}' to '{new_limit}'")
+        log.debug(f"{interaction.user.id} [{interaction.user.display_name}] Changed the dynamic voice limit from '{oldLimit}' to '{new_limit}'")
         await interaction.user.voice.channel.edit(user_limit=new_limit)
         await interaction.response.send_message(f"Changed {interaction.user.voice.channel.mention} user limit to `{new_limit}`", ephemeral=True, delete_after=15.0)
 
         if secret.DISCORD_LOGGING.get("voice_dynamic_limit", False):
             if not isinstance(interaction.guild, discord.Guild):
-                Logger.exception("DynamicVoice limit: interaction.guild not discord.Guild")
+                log.exception("DynamicVoice limit: interaction.guild not discord.Guild")
                 return
             channelAuditLogs = interaction.guild.get_channel(AUDIT_LOGS)
             if not isinstance(channelAuditLogs, discord.TextChannel):
-                Logger.exception("DynamicVoice limit: channelAuditLogs not discord.TextChannel")
+                log.exception("DynamicVoice limit: channelAuditLogs not discord.TextChannel")
                 return
 
             embed = discord.Embed(title="Dynamic Voice Channel Limit", description=f"Channel: {interaction.user.voice.channel.name}\nOld limit: `{oldLimit}`\nNew limit: `{new_limit}`", color=discord.Color.blue())
@@ -116,17 +116,17 @@ class DynamicVoice(commands.GroupCog, name="voice"):
             return
 
         oldName = interaction.user.voice.channel.name
-        Logger.debug(f"{interaction.user.id} [{interaction.user.display_name}] Changed the dynamic voice name from '{oldName}' to '{new_name}'")
+        log.debug(f"{interaction.user.id} [{interaction.user.display_name}] Changed the dynamic voice name from '{oldName}' to '{new_name}'")
         await interaction.user.voice.channel.edit(name=new_name)
         await interaction.response.send_message(f"Changed voice channel name from `{oldName}` to `{new_name}`", ephemeral=True, delete_after=15.0)
 
         if secret.DISCORD_LOGGING.get("voice_dynamic_name", False):
             if not isinstance(interaction.guild, discord.Guild):
-                Logger.exception("DynamicVoice name: interaction.guild not discord.Guild")
+                log.exception("DynamicVoice name: interaction.guild not discord.Guild")
                 return
             channelAuditLogs = interaction.guild.get_channel(AUDIT_LOGS)
             if not isinstance(channelAuditLogs, discord.TextChannel):
-                Logger.exception("DynamicVoice name: channelAuditLogs not discord.TextChannel")
+                log.exception("DynamicVoice name: channelAuditLogs not discord.TextChannel")
                 return
 
             embed = discord.Embed(title="Dynamic Voice Channel Name", description=f"Old channel name: `{oldName}`\nNew channel name: `{new_name}`", color=discord.Color.blue())

@@ -160,12 +160,6 @@ SCHEDULE_EVENT_PREVIEW_EMBED = {
 FILE_UPLOAD_EXTENSION_BLACKLIST = ["exe", "pif", "application", "gadget", "msi", "msp", "com", "scr", "hta", "cpl", "msc", "jar", "bat", "cmd", "vb", "vbs", "vbe", "js", "jse", "ws", "wsf", "wsc", "wsh", "ps1", "ps1xml", "ps2", "ps2xml", "psc1", "psc2", "msh", "msh1", "msh2", "mshxml", "msh1xml", "msh2xml", "scf", "lnk", "inf", "reg", "doc", "xls", "ppt", "docm", "dotm", "xlsm", "xltm", "xlam", "pptm", "potm", "ppam", "ppsm", "sldm", "sh", "bash", "zsh"]
 
 
-# try:
-#     with open("./.git/logs/refs/heads/main") as f:
-#         commitHash = f.readlines()[-1].split()[1][:7]  # The commit hash that the bot is running on (last line, second column, first 7 characters)
-# except Exception as e:
-#     log.exception(e)
-
 log = logging.getLogger(__name__)
 
 class Schedule(commands.Cog):
@@ -2513,9 +2507,9 @@ class Schedule(commands.Cog):
 
             await channelAuditLogs.send(embed=embed)
 
-        # NEW CLEANUP METHOD (Date)
+        # Cleanup files older than 20 weeks
+        # Other cleanup methods are to have 1) a global file cap 2) an individual file cap
         fileUploadFiles = os.listdir("tmp/fileUpload")
-        #fileUploadFiles.sort()
         for fileUploadFile in fileUploadFiles:
             fileUploadFileTime = UTC.localize(datetime.strptime(fileUploadFile.split("_")[0], "%Y%m%d%H%M%S"))
             if fileUploadFileTime < (datetime.now(timezone.utc) - timedelta(weeks=20)):
@@ -2523,29 +2517,6 @@ class Schedule(commands.Cog):
                     os.remove(f"tmp/fileUpload/{fileUploadFile}")
                 except Exception as e:
                     log.warning(f"Schedule fileupload: Failed to remove file '{fileUploadFile}' | {e}")
-
-
-        # OLD CLEANUP METHOD (Count)
-        ## Clean up - global (MAX 400)
-        #fileUploadFiles = os.listdir("tmp/fileUpload")
-        #fileUploadFiles.sort()
-        #for _ in range(len(fileUploadFiles) - 400):
-        #    try:
-        #        os.remove(fileUploadFiles[0])
-        #    except Exception as e:
-        #        log.warning(f"Schedule fileupload: Failed to remove global file '{fileUploadFiles[0]}' | {e}")
-        #    finally:
-        #        fileUploadFiles.pop(0)
-
-        ## Clean up - individual (MAX 50)
-        #fileUploadFilesInd = [file for file in fileUploadFiles if str(interaction.user.id) in file]
-        #while len(fileUploadFilesInd) > 50:
-        #    try:
-        #        os.remove(fileUploadFilesInd[0])
-        #    except Exception as e:
-        #        log.warning(f"Schedule fileupload: Failed to remove ind file '{fileUploadFilesInd[0]}' | {e}")
-        #    finally:
-        #        fileUploadFilesInd.pop(0)
 
 
 # ===== </Fileupload> =====
@@ -2736,10 +2707,7 @@ class ScheduleModal(discord.ui.Modal):
         self.view = view
 
     async def on_submit(self, interaction: discord.Interaction):
-        # try:
         await self.instance.modalHandling(self, interaction, self.eventMsg, self.view)
-        # except Exception as e:
-        #     log.exception(f"ScheduleModal on_submit")
 
     async def on_error(self, interaction: discord.Interaction, error: Exception) -> None:
         # await interaction.response.send_message("Something went wrong. cope.", ephemeral=True)

@@ -185,9 +185,6 @@ class PollView(discord.ui.View):
         super().__init__(*args, **kwargs)
         self.instance = instance
 
-    #async def on_timeout(self):
-    #    pass
-
 
 class PollButton(discord.ui.Button):
     def __init__(self, instance, group: dict, *args, **kwargs):

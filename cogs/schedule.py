@@ -197,7 +197,7 @@ class Schedule(commands.Cog):
         await channel.send(embed=discord.Embed(title=f"❌ {abortText} canceled!", color=discord.Color.red()))
 
     @staticmethod
-    async def checkDMChannel(user: discord.User | discord.Member) -> discord.channel.DMChannel:
+    async def checkDMChannel(user: discord.User | discord.Member) -> discord.DMChannel:
         """  """
         return await user.create_dm() if user.dm_channel is None else user.dm_channel
 
@@ -985,7 +985,7 @@ class Schedule(commands.Cog):
 
                             await interaction.response.send_message(embed=discord.Embed(title="✅ On standby list", description="The event player limit is reached!\nYou have been placed on the standby list. If an accepted member leaves, you will advance to the next queue position. Make sure to reserve a role once accepted!", color=discord.Color.green()), ephemeral=True, delete_after=60.0)
 
-                            if interaction.channel is None or isinstance(interaction.channel, discord.channel.ForumChannel) or isinstance(interaction.channel, discord.channel.CategoryChannel):
+                            if interaction.channel is None or isinstance(interaction.channel, discord.ForumChannel) or isinstance(interaction.channel, discord.CategoryChannel):
                                 Logger.exception("Schedule buttonHandling: interaction.channel is invalid type")
                                 return
                             embed = self.getEventEmbed(event)
@@ -1606,7 +1606,7 @@ class Schedule(commands.Cog):
                 try:
                     embed = self.getEventEmbed(event)
                     if fetchMsg:  # Could be better - could be worse...
-                        if interaction.channel is None or isinstance(interaction.channel, discord.channel.ForumChannel) or isinstance(interaction.channel, discord.channel.CategoryChannel):
+                        if interaction.channel is None or isinstance(interaction.channel, discord.ForumChannel) or isinstance(interaction.channel, discord.CategoryChannel):
                             Logger.exception("Schedule buttonHandling: interaction.channel is invalid type")
                             return
 

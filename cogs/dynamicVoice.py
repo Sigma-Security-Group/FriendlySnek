@@ -34,7 +34,7 @@ class DynamicVoice(commands.GroupCog, name="voice"):
             guild = member.guild
             customChannelsCategory = discord.utils.get(guild.categories, id=CUSTOM_CHANNELS)
             if customChannelsCategory is None:
-                Logger.exception("on_voice_state_update: customChannelsCategory is None")
+                Logger.exception("DynamicVoice on_voice_state_update: customChannelsCategory is None")
                 return
 
             voiceNums = []
@@ -52,7 +52,7 @@ class DynamicVoice(commands.GroupCog, name="voice"):
             try:
                 await before.channel.delete(reason="No users left in dynamic voice channel.")
             except Exception:
-                Logger.warning(f"on_voice_state_update: could not delete dynamic voice channel: '{before.channel.name}' ({member})")
+                Logger.warning(f"DynamicVoice on_voice_state_update: failed to delete dynamic voice channel: '{before.channel.name}' ({member.id})")
 
 
     @discord.app_commands.command(name="limit")
@@ -76,7 +76,7 @@ class DynamicVoice(commands.GroupCog, name="voice"):
             return
 
         oldLimit = interaction.user.voice.channel.user_limit
-        Logger.debug(f"{interaction.user.display_name} ({interaction.user}) changed the dynamic voice limit from '{oldLimit}' to '{new_limit}'")
+        Logger.debug(f"{interaction.user.id} [{interaction.user.display_name}] Changed the dynamic voice limit from '{oldLimit}' to '{new_limit}'")
         await interaction.user.voice.channel.edit(user_limit=new_limit)
         await interaction.response.send_message(f"Changed {interaction.user.voice.channel.mention} user limit to `{new_limit}`", ephemeral=True, delete_after=15.0)
 
@@ -116,7 +116,7 @@ class DynamicVoice(commands.GroupCog, name="voice"):
             return
 
         oldName = interaction.user.voice.channel.name
-        Logger.debug(f"{interaction.user.display_name} ({interaction.user}) changed the dynamic voice name from '{oldName}' to '{new_name}'")
+        Logger.debug(f"{interaction.user.id} [{interaction.user.display_name}] Changed the dynamic voice name from '{oldName}' to '{new_name}'")
         await interaction.user.voice.channel.edit(name=new_name)
         await interaction.response.send_message(f"Changed voice channel name from `{oldName}` to `{new_name}`", ephemeral=True, delete_after=15.0)
 

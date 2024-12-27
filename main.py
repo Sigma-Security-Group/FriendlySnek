@@ -116,7 +116,7 @@ async def on_ready() -> None:
     while not all(client.cogsReady.values()):
         await asyncio.sleep(1)
 
-    Logger.info(f"Bot Ready! Logged in as {client.user}.")
+    Logger.info(f"Bot Ready! Logged in as {client.user}")
 
 
 @client.event
@@ -132,7 +132,7 @@ async def on_message(message: discord.Message) -> None:
 
     # Execute commands
     if message.content.startswith(COMMAND_PREFIX):
-        Logger.debug(f"{message.author.display_name} ({message.author}) > {message.content}")
+        Logger.debug(f"{message.author.id} [{message.author.display_name}] {message.content}")
         message.content = message.content.lower()
         await client.process_commands(message)
 
@@ -167,15 +167,15 @@ async def analyzeChannel(client, message: discord.Message, channelID: int, attac
     try:
         await message.delete()
     except Exception as e:
-        Logger.exception(f"{message.author} | {e}")
+        Logger.exception(f"{message.author.id} [{message.author}]")
 
     try:
-        Logger.info(f"Removed message in #{client.get_channel(channelID)} from {message.author.display_name} ({message.author}). Message content: {message.content}")
+        Logger.info(f"{message.author.id} [{message.author.display_name}] Removed message in #{client.get_channel(channelID)}. Message content: {message.content}")
         DEVS = ", ".join([f"**{message.guild.get_member(name)}**" for name in DEVELOPERS if message.guild is not None and message.guild.get_member(name) is not None])
 
         await message.author.send(embed=discord.Embed(title="❌ Message removed", description=f"The message you just posted in <#{channelID}> was deleted because no {attachmentContentType} was detected in it.\n\nIf this is an error, then please ask **staff** to post the {attachmentContentType} for you, and inform: {DEVS}", color=discord.Color.red()))
     except Exception as e:
-        Logger.exception(f"{message.author} | {e}")
+        Logger.exception(f"{message.author.id} [{message.author.display_name}]")
 
 
 @client.event
@@ -246,7 +246,7 @@ async def on_member_unban(guild: discord.Guild, user: discord.User) -> None:
         return
     channelAuditLogs = guild.get_channel(AUDIT_LOGS)
     if not isinstance(channelAuditLogs, discord.TextChannel):
-        Logger.exception("on_member_ban: channelAuditLogs is not discord.TextChannel")
+        Logger.exception("on_member_unban: channelAuditLogs is not discord.TextChannel")
         return
     embed = discord.Embed(description=f"{user.mention} {user.name}", color=discord.Color.green(), timestamp=datetime.datetime.now(datetime.timezone.utc))
     embed.set_author(name="Member Unbanned", icon_url=user.display_avatar)
@@ -256,9 +256,9 @@ async def on_member_unban(guild: discord.Guild, user: discord.User) -> None:
 
 
 @client.event
-async def on_error(event, *args, **kwargs) -> None:
+async def on_error(event: str, *args, **kwargs) -> None:
     """On error event."""
-    Logger.exception(f"An error occured! {event}")
+    Logger.exception(f"An error occured! {event} | {args} | {kwargs}")
 
 
 @client.event
@@ -267,15 +267,15 @@ async def on_command_error(ctx: commands.Context, error: commands.CommandError) 
     errorType = type(error)
     if errorType is commands.errors.MissingRequiredArgument:
         await ctx.send_help(ctx.command)
-    elif not errorType is commands.CommandNotFound:
-        Logger.exception(f"{ctx.author} | {error}")
+    elif not isinstance(errorType, commands.CommandNotFound):
+        Logger.exception(f"{ctx.author.id} [{ctx.author.display_name}] | {error}")
 
 
 @client.command()
 @commands.has_any_role(SNEK_LORD)
 async def reload(ctx: commands.Context) -> None:
     """Reload bot cogs."""
-    Logger.info(f"{ctx.author.display_name} ({ctx.author}) Reloading bot cogs...")
+    Logger.info(f"{ctx.author.id} [{ctx.author.display_name}] Reloading bot cogs")
     for cog in COGS:
         await client.reload_extension(f"cogs.{cog}")
     await client.tree.sync(guild=GUILD)
@@ -292,6 +292,6 @@ async def stop(ctx: commands.Context) -> None:
 if __name__ == "__main__":
     try:
         client.run(secret.TOKEN_DEV if secret.DEBUG else secret.TOKEN)
-        Logger.info("Bot stopped!")
+        Logger.info("Bot stopped")
     except Exception as e:
         Logger.exception(e)

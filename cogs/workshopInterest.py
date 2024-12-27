@@ -134,8 +134,8 @@ class WorkshopInterest(commands.Cog):
         None.
         """
         wsIntChannel = self.bot.get_channel(WORKSHOP_INTEREST)
-        if not isinstance(wsIntChannel, discord.channel.TextChannel):
-            Logger.exception("WSINT updateChannel: wsInt is not discord.channel.TextChannel")
+        if not isinstance(wsIntChannel, discord.TextChannel):
+            Logger.exception("WSINT updateChannel: wsIntChannel not discord.TextChannel")
             return
 
         await wsIntChannel.purge(limit=None, check=lambda message: message.author.id in FRIENDLY_SNEKS)
@@ -245,12 +245,12 @@ class WorkshopInterest(commands.Cog):
                 workshopInterest = json.load(f)
 
             if interaction.message is None:
-                Logger.exception("WSINT UpdateInterestList: interaction.message is None")
+                Logger.exception("WSINT updateInterestList: interaction.message is None")
                 return
 
             wsTitle = interaction.message.embeds[0].title
             if wsTitle is None:
-                Logger.exception("WSINT UpdateInterestList: wsTitle is None")
+                Logger.exception("WSINT updateInterestList: wsTitle is None")
                 return
 
             # Brute force emoji removal, produces title
@@ -283,10 +283,10 @@ class WorkshopInterest(commands.Cog):
             try:
                 await interaction.response.edit_message(embed=WorkshopInterest.getWorkshopEmbed(interaction.guild, wsTitle))
             except Exception as e:
-                Logger.exception(f"{interaction.user} | {e}")
+                Logger.exception(f"{interaction.user.id} [{interaction.user.display_name}]")
 
         except Exception as e:
-            Logger.exception(f"{interaction.user} | {e}")
+            Logger.exception(f"{interaction.user.id} [{interaction.user.display_name}]")
 
 
     @commands.command(name="clean-specific-workshop-interest-list")
@@ -294,12 +294,12 @@ class WorkshopInterest(commands.Cog):
     async def cleanSpecificWorkshopInterestList(self, ctx: commands.Context, worskhopListName: str = commands.parameter(description="Name of targeted workshop"), member: str = commands.parameter(default="", description="Optional target member")) -> None:
         """Clear specific workshop interest list, no confirmation. Can remove specific member if supplied."""
         if not isinstance(ctx.guild, discord.Guild):
-            Logger.exception("WorkshopInterest cleanSpecificWorkshopInterestList: ctx guild is not discord.Guild")
+            Logger.exception("WSINT cleanSpecificWorkshopInterestList: ctx.guild not discord.Guild")
             return
 
         channelWSINT = self.bot.get_channel(WORKSHOP_INTEREST)
         if not isinstance(ctx.guild, discord.Guild):
-            Logger.exception("WorkshopInterest cleanSpecificWorkshopInterestList: ctx guild is not discord.Guild")
+            Logger.exception("WSINT cleanSpecificWorkshopInterestList: ctx.guild not discord.Guild")
             return
 
 
@@ -328,7 +328,7 @@ class WorkshopInterest(commands.Cog):
                             try:
                                 await msg.edit(embed=self.getWorkshopEmbed(ctx.guild, workshop))
                             except Exception as e:
-                                Logger.exception(f"{ctx.author} | {e}")
+                                Logger.exception(f"{ctx.author.id} [{ctx.author.display_name}]")
 
                             await ctx.send(embed=discord.Embed(title="✅ Removed user", description=f"Removed user {targetMember.mention} (`{targetMember.id}`) from the workshop `{workshop}` interest list.", color=discord.Color.green()))
                             return
@@ -346,7 +346,7 @@ class WorkshopInterest(commands.Cog):
                     try:
                         await msg.edit(embed=self.getWorkshopEmbed(ctx.guild, workshop))
                     except Exception as e:
-                        Logger.exception(f"{ctx.author} | {e}")
+                        Logger.exception(f"{ctx.author.id} [{ctx.author.display_name}]")
                     await ctx.send(embed=discord.Embed(title="✅ Cleared workshop list!", description=f"Cleared workshop list '{workshop}'.", color=discord.Color.green()))
                     return
 

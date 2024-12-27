@@ -53,7 +53,7 @@ class EmbedBuilder(commands.Cog):
         if messageid:
             guild = self.bot.get_guild(GUILD_ID)
             if guild is None:
-                Logger.exception("buildEmbed: guild is None")
+                Logger.exception("EmbedBuilder buildEmbed: guild is None")
                 return
 
             try:
@@ -77,12 +77,12 @@ class EmbedBuilder(commands.Cog):
                 await interaction.response.send_message(embed=embed, ephemeral=True, delete_after=15.0)
                 return
 
-            Logger.info(f"{interaction.user.display_name} ({interaction.user}) is editing a message ({messageid}) embed.")
+            Logger.info(f"{interaction.user.id} [{interaction.user.display_name}] Is editing a message ({messageid}) embed")
 
             messageEditEmbed = messageEdit.embeds[0]
 
         else:
-            Logger.info(f"{interaction.user.display_name} ({interaction.user}) is building an embed.")
+            Logger.info(f"{interaction.user.id} [{interaction.user.display_name}] Is building an embed")
 
 
         # Send preview embed (empty)
@@ -137,7 +137,7 @@ class EmbedBuilder(commands.Cog):
         if type(error) == discord.app_commands.errors.MissingAnyRole:
             guild = self.bot.get_guild(GUILD_ID)
             if guild is None:
-                Logger.exception("onBuildEmbedError: guild is None")
+                Logger.exception("EmbedBuilder onBuildEmbedError: guild is None")
                 return
 
             embed = discord.Embed(title="❌ Missing permissions", description=f"You do not have the permissions to build embeds!\nThe permitted roles are: {', '.join([guild.get_role(role).name for role in CMD_LIMIT_STAFF])}.", color=discord.Color.red())
@@ -165,11 +165,11 @@ class EmbedBuilder(commands.Cog):
             return
 
         if not isinstance(interaction.user, discord.Member):
-            Logger.exception("ButtonHandling: user not discord.Member")
+            Logger.exception("EmbedBuilder buttonHandling: user not discord.Member")
             return
 
         if interaction.message is None:
-            Logger.exception("ButtonHandling: interaction.message is None")
+            Logger.exception("EmbedBuilder buttonHandling: interaction.message is None")
             return
 
 
@@ -242,17 +242,17 @@ class EmbedBuilder(commands.Cog):
                 return
             case "submit":
                 if not hasattr(button.view, "targetChannel"):
-                    Logger.exception("ButtonHandling: targetChannel not set in button.view")
+                    Logger.exception("EmbedBuilder buttonHandling: targetChannel not set in button.view")
                     return
 
                 guild = self.bot.get_guild(GUILD_ID)
                 if not guild:
-                    Logger.exception("ButtonHandling: guild is None")
+                    Logger.exception("EmbedBuilder buttonHandling: guild is None")
                     return
 
                 targetChannel = guild.get_channel(button.view.targetChannel)
                 if not targetChannel:
-                    Logger.exception("ButtonHandling: targetChannel is None")
+                    Logger.exception("EmbedBuilder buttonHandling: targetChannel is None")
                     return
 
                 if hasattr(button.view, "messageId") and button.view.messageId:
@@ -263,7 +263,7 @@ class EmbedBuilder(commands.Cog):
                         await interaction.response.send_message(embed=embed, ephemeral=True, delete_after=15.0)
                         return
 
-                    Logger.info(f"{interaction.user.display_name} ({interaction.user}) edited the embed on message '{button.view.messageId}' in '{targetChannel.name}' ({targetChannel.id}).")
+                    Logger.info(f"{interaction.user.id} [{interaction.user.display_name}] Edited the embed on message '{button.view.messageId}' in '{targetChannel.name}' ({targetChannel.id})")
                     await targetMessage.edit(
                         embed=interaction.message.embeds[0] if len(interaction.message.embeds) > 0 else None,
                         attachments=([await interaction.message.attachments[0].to_file()]) if len(interaction.message.attachments) > 0 else []
@@ -276,7 +276,7 @@ class EmbedBuilder(commands.Cog):
                     )
                     return
 
-                Logger.info(f"{interaction.user.display_name} ({interaction.user}) built an embed and sent it to '{targetChannel.name}' ({targetChannel.id}).")
+                Logger.info(f"{interaction.user.id} [{interaction.user.display_name}] Built an embed and sent it to '{targetChannel.id}' [{targetChannel.name}]")
                 await targetChannel.send(
                     embed=interaction.message.embeds[0] if len(interaction.message.embeds) > 0 else None,
                     file=(await interaction.message.attachments[0].to_file()) if len(interaction.message.attachments) > 0 else None
@@ -360,7 +360,7 @@ class EmbedBuilder(commands.Cog):
 
     async def modalHandling(self, modal: discord.ui.Modal, interaction: discord.Interaction, message: discord.Message, view: discord.ui.View | None) -> None:
         if not isinstance(interaction.user, discord.Member):
-            Logger.exception("EmbedBuilder modalHandling: interaction.user is not discord.Member")
+            Logger.exception("EmbedBuilder modalHandling: interaction.user not discord.Member")
             return
 
         value: str = modal.children[0].value.strip()

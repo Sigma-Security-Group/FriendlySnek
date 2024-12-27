@@ -63,7 +63,7 @@ class MissionUploader(commands.Cog):
         # Logger.debug(f"{interaction.user.display_name} ({interaction.user}) attempted to upload a mission file while upload was disabled.")
         # return
 
-        Logger.debug(f"{interaction.user.display_name} ({interaction.user}) is uploading a mission file...")
+        Logger.debug(f"{interaction.user.id} [{interaction.user.display_name}] Is uploading a mission file")
 
         # Only allow .pbo files
         if not missionfile.filename.endswith(".pbo"):
@@ -98,9 +98,9 @@ class MissionUploader(commands.Cog):
                         with open(f"tmp/missionUpload/{missionfile.filename}", "rb") as f:
                             sftp.put(f"tmp/missionUpload/{missionfile.filename}")
                     except Exception as e:
-                        Logger.exception(f"{interaction.user} | {e}")
+                        Logger.exception(f"{interaction.user.id} [{interaction.user.display_name}]")
         except Exception as e:
-            Logger.exception(f"{interaction.user} | {e}")
+            Logger.exception(f"{interaction.user.id} [{interaction.user.display_name}]")
             await interaction.response.send_message(embed=discord.Embed(title="❌ Connection error", description="There was an error connecting to the server. Please try again later!", color=discord.Color.red()), ephemeral=True, delete_after=30.0)
             return
 
@@ -112,7 +112,7 @@ class MissionUploader(commands.Cog):
         try:
             os.remove(f"tmp/missionUpload/{missionfile.filename}")
         except Exception as e:
-            Logger.exception("missionUploader uploadMission: Could not delete mission file after upload.")
+            Logger.exception("MissionUploader uploadMission: Failed to delete mission file after upload")
 
         with open(MISSIONS_UPLOADED_FILE, "a") as f:
             f.write(f"\nFilename: {missionfile.filename}\n"
@@ -134,12 +134,12 @@ class MissionUploader(commands.Cog):
             # Send the log message in the Audit Logs channel
             channelAuditLogs = self.bot.get_channel(AUDIT_LOGS)
             if not isinstance(channelAuditLogs, discord.TextChannel):
-                Logger.exception("UploadMission: channelAuditLogs is not discord.TextChannel")
+                Logger.exception("MissionUploader uploadMission: channelAuditLogs not discord.TextChannel")
                 return
 
             await channelAuditLogs.send(embed=embed)
 
-        Logger.info(f"{interaction.user.display_name} ({interaction.user}) uploaded the mission file: {missionfile.filename}!")
+        Logger.info(f"{interaction.user.id} [{interaction.user.display_name}] Uploaded the mission file '{missionfile.filename}'")
         await interaction.edit_original_response(content=f"Mission file successfully uploaded: `{missionfile.filename}`" + (" (DEBUG)"*secret.DEBUG), embed=None)
 
 
@@ -149,7 +149,7 @@ class MissionUploader(commands.Cog):
         if type(error) == discord.app_commands.errors.MissingAnyRole:
             guild = self.bot.get_guild(GUILD_ID)
             if guild is None:
-                Logger.exception("onUploadMissionError: guild is None")
+                Logger.exception("MissionUploader onUploadMissionError: guild is None")
                 return
 
             embed = discord.Embed(title="❌ Missing permissions", description=f"You do not have the permissions to upload a mission file!\nThe permitted roles are: {', '.join([role.name for allowedRole in CMD_LIMIT_UPLOADMISSION if (role := guild.get_role(allowedRole)) is not None])}.", color=discord.Color.red())

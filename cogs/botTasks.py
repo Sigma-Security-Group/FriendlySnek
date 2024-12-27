@@ -55,8 +55,6 @@ class BotTasks(commands.Cog):
         if guild.id != GUILD_ID:
             return
 
-        Logger.debug(f"Newcomer joined the server: {member}")
-
         roleProspect = guild.get_role(PROSPECT)
         if not isinstance(roleProspect, discord.Role):
             Logger.exception("BotTasks on_member_join: roleProspect is not discord.Role")
@@ -65,7 +63,7 @@ class BotTasks(commands.Cog):
         try:
             await member.add_roles(roleProspect, reason="Joined guild")
         except discord.HTTPException:
-            Logger.warning(f"on_member_join: failed to add prospect role to member '{member.id}'")
+            Logger.warning(f"BotTasks on_member_join: failed to add prospect role to member '{member.id}'")
 
         remindTime = datetime.now() + timedelta(days=1)
         with open(REMINDERS_FILE) as f:
@@ -80,7 +78,7 @@ class BotTasks(commands.Cog):
 
         channelWelcome = member.guild.get_channel(WELCOME)
         if not isinstance(channelWelcome, discord.TextChannel):
-            Logger.exception("on_member_join: channelWelcome is not discord.TextChannel")
+            Logger.exception("BotTasks on_member_join: channelWelcome not discord.TextChannel")
             return
         embed = discord.Embed(title=f"Welcome, {member.mention}!", description=f"Your view of the Discord server is limited. Please check <#{RULES_AND_EXPECTATIONS}> and <#{SERVER_INFO}>. After that, ping @​Recruitment Team for a brief voice interview to get the correct roles.", color=discord.Color.green())
         await channelWelcome.send(member.mention, embed=embed)
@@ -90,7 +88,7 @@ class BotTasks(commands.Cog):
             return
         channelAuditLogs = member.guild.get_channel(AUDIT_LOGS)
         if not isinstance(channelAuditLogs, discord.TextChannel):
-            Logger.exception("on_member_join: channelAuditLogs is not discord.TextChannel")
+            Logger.exception("BotTasks on_member_join: channelAuditLogs not discord.TextChannel")
             return
         memberJoined = discord.utils.format_dt(member.joined_at, style="F") if member.joined_at else "Unknown"
         embed = discord.Embed(description=f"{member.mention} {member.name}\n**Account Registered**\n{memberJoined}", color=discord.Color.green(), timestamp=datetime.now(timezone.utc))
@@ -105,7 +103,7 @@ class BotTasks(commands.Cog):
         async with aiohttp.ClientSession() as session:
             async with session.get(url) as response:
                 if response.status != 200:
-                    Logger.error(f"fetchWebsiteText: response.status is not 200 '{url}'")
+                    Logger.warning(f"BotTasks fetchWebsiteText: response.status is not 200 '{url}'")
                 return await response.text()
 
     @tasks.loop(hours=1)
@@ -117,7 +115,7 @@ class BotTasks(commands.Cog):
         with open(GENERIC_DATA_FILE) as f:
             genericData = json.load(f)
             if "modpackIds" not in genericData:
-                Logger.warning("checkModUpdates: modpackIds not in genericData.")
+                Logger.exception("BotTasks checkModUpdates: modpackIds not in genericData")
                 return
 
         for modID in genericData["modpackIds"]:
@@ -159,42 +157,42 @@ class BotTasks(commands.Cog):
 
             # Check if update is new
             if utcTime > (now - timedelta(minutes=29.0, seconds=59.0)):  # Relative time checking
-                Logger.debug(f"Arma mod update: {name}")
+                Logger.debug(f"BotTasks checkModUpdates: Arma mod update '{name}'")
                 output.append({
                     "modID": modID,
                     "name": name,
                     "datetime": utcTime
                 })
             else:
-                Logger.debug(f"Arma mod update IGNORE: {name}")
+                Logger.debug(f"BotTasks checkModUpdates: Arma mod update IGNORE '{name}'")
 
 
         if len(output) > 0:
             # Create message
             guild = self.bot.get_guild(GUILD_ID)
             if guild is None:
-                Logger.exception("checkModUpdates: guild is None")
+                Logger.exception("BotTasks checkModUpdates: guild is None")
                 return
 
-            changelog = await guild.fetch_channel(CHANGELOG)
-            if not isinstance(changelog, discord.channel.TextChannel):
-                Logger.exception("checkModUpdates: changelog channel is not discord.channel.TextChannel")
+            channelChangelog = await guild.fetch_channel(CHANGELOG)
+            if not isinstance(channelChangelog, discord.TextChannel):
+                Logger.exception("BotTasks checkModUpdates: channelChangelog not discord.TextChannel")
                 return
 
             roleHampter = guild.get_role(SERVER_HAMSTER)
             if roleHampter is None:
-                Logger.exception("checkModUpdates: Hampter role is None")
+                Logger.exception("BotTasks checkModUpdates: roleHampter is None")
                 return
 
             roleGuinea = guild.get_role(GUINEA_PIG)
             if roleGuinea is None:
-                Logger.exception("checkModUpdates: Guinea pig role is None")
+                Logger.exception("BotTasks checkModUpdates: roleGuinea is None")
                 return
 
             # Each mod update will be sent in a separate message
             msgContent: str | None = roleHampter.mention + " " + roleGuinea.mention + (f" ({len(output)})" if len(output) > 1 else "") + "\n\n"  # Ping for first message
             for mod in output:
-                await changelog.send(msgContent, embed=discord.Embed(title=mod["name"], url=CHANGELOG_URL.format(mod['modID']), timestamp=mod["datetime"], color=discord.Color.dark_blue()))
+                await channelChangelog.send(msgContent, embed=discord.Embed(title=mod["name"], url=CHANGELOG_URL.format(mod['modID']), timestamp=mod["datetime"], color=discord.Color.dark_blue()))
                 msgContent = None  # Only 1 ping
 
 
@@ -229,7 +227,7 @@ class BotTasks(commands.Cog):
                 flairID = flair["flair_template_id"]
                 break
         else:
-            Logger.warning("No Recruiting flair found!")
+            Logger.warning("BotTasks redditRecruitmentPosts: No recruiting flair found")
 
         # Submission details
         propagandaPath = r"constants/SSG_Propaganda"
@@ -266,14 +264,14 @@ Join Us:
         submission = await sub.submit_image(title=post["Title"], image_path=f"{propagandaPath}/{random.choice(os.listdir(propagandaPath))}", flair_id=post["FlairID"])
         await submission.reply(post["Description"])
 
-        Logger.info("Reddit recruitment posted!")
+        Logger.info("BotTasks redditRecruitmentPosts: Reddit recruitment posted")
 
-        armaDisc = self.bot.get_channel(ARMA_DISCUSSION)
-        if not isinstance(armaDisc, discord.channel.TextChannel):
-            Logger.exception("checkModUpdates: Arma Discussion channel is not discord.channel.TextChannel")
+        channelArmaDiscussion = self.bot.get_channel(ARMA_DISCUSSION)
+        if not isinstance(channelArmaDiscussion, discord.TextChannel):
+            Logger.exception("BotTasks redditRecruitmentPosts: channelArmaDiscussion not discord.TextChannel")
             return
 
-        await armaDisc.send(f"Reddit recruitment post published, go upvote it!\nhttps://www.reddit.com{submission.permalink}")
+        await channelArmaDiscussion.send(f"Reddit recruitment post published, go upvote it!\nhttps://www.reddit.com{submission.permalink}")
 
     def getPingString(self, rawRole: int | tuple) -> str | None:
         """Generate a ping string from role id(s).
@@ -286,19 +284,19 @@ Join Us:
         """
         guild = self.bot.get_guild(GUILD_ID)
         if guild is None:
-            Logger.exception("Bottasks getSmePing: guild is None")
+            Logger.exception("Bottasks getPingString: guild is None")
             return None
 
         if isinstance(rawRole, int):
             role = guild.get_role(rawRole)
             if role is None:
-                Logger.exception("Bottasks smeReminder: role is None")
+                Logger.exception("Bottasks getPingString: role is None")
                 return None
             return role.mention
 
         roles = [guild.get_role(roleId) for roleId in rawRole]
         if None in roles:
-            Logger.exception(f"Bottasks getSmePing: roleId {roles[roles.index(None)]} returns None")
+            Logger.exception(f"Bottasks getPingString: roleId {roles[roles.index(None)]} returns None")
             return None
         return " ".join([role.mention for role in roles])  # type: ignore
 
@@ -312,7 +310,7 @@ Join Us:
 
         smeCorner = self.bot.get_channel(SME_CORNER)
         if not isinstance(smeCorner, discord.TextChannel):
-            Logger.exception("Bottasks smeReminder: smeCorner is not discord.TextChannel")
+            Logger.exception("Bottasks smeReminder: smeCorner not discord.TextChannel")
             return
 
         pingEmbed = discord.Embed(color=discord.Color.orange())
@@ -353,10 +351,10 @@ Join Us:
                 await smeCorner.send(self.getPingString(wsDetails["role"]), embed=pingEmbed)
 
 
-            Logger.debug(f"SME Reminder: failed {wsName}")
+            Logger.debug(f"Bottasks smeReminder: SME reminder failed '{wsName}'")
 
         if len(workshopsInTimeFrame) > 0:
-            Logger.debug(f"SME Reminder: succeeded {workshopsInTimeFrame}")
+            Logger.debug(f"Bottasks smeReminder: SME reminder succeeded '{workshopsInTimeFrame}'")
             await smeCorner.send(":clap: Good job for keeping up the hosting " + ", ".join([f"`{wsName}`" for wsName in workshopsInTimeFrame]) + "! :clap:")
 
 
@@ -371,15 +369,15 @@ Join Us:
         with open(REPEATED_MSG_DATE_LOG_FILE, "w") as f:
             json.dump(msgDateLog, f, indent=4)
 
-        Logger.info("SME Reminder: sent & updated time")
+        Logger.info("Bottasks smeReminder: SME reminder sent & updated time")
 
 
     @staticmethod
     async def smeBigBrother(guild: discord.Guild, manuallyExecuted: bool) -> None:
         """Summarize each SMEs activity last 6 months for Unit Staff."""
-        staffChat = guild.get_channel(STAFF_CHAT)
-        if staffChat is None:
-            Logger.exception("botTasks smeBigBrother: staffChat is None.")
+        channelStaffChat = guild.get_channel(STAFF_CHAT)
+        if channelStaffChat is None:
+            Logger.exception("Bottasks smeBigBrother: channelStaffChat is None")
             return
 
         with open(EVENTS_HISTORY_FILE) as f:
@@ -395,33 +393,33 @@ Join Us:
             if wsDetails["role"] not in SME_ROLES:
                 continue
 
-            smeRole = guild.get_role(wsDetails["role"])
-            if smeRole is None:
-                Logger.exception(f"botTasks smeBigBrother: sme_role is None, id='{wsDetails['role']}'.")
+            roleSme = guild.get_role(wsDetails["role"])
+            if roleSme is None:
+                Logger.exception(f"Bottasks smeBigBrother: roleSme is None, id='{wsDetails['role']}'.")
                 continue
 
             # Iterate SME holders
-            for sme_person in smeRole.members:
+            for memberSme in roleSme.members:
                 # Search in old
                 isWsFound = False
                 for event in eventsHistorySorted:  # Newest to oldest
                     eventScheduled = pytz.utc.localize(datetime.strptime(event["time"], TIME_FORMAT))
-                    if "workshopInterest" in event and event["workshopInterest"] == wsName and event["authorId"] == sme_person.id and eventScheduled > searchTime:
+                    if "workshopInterest" in event and event["workshopInterest"] == wsName and event["authorId"] == memberSme.id and eventScheduled > searchTime:
                         isWsFound = True
                         eventScheduledFormat = discord.utils.format_dt(eventScheduled, style="R")
-                        if sme_person.display_name not in bigBrotherWatchList:
-                            bigBrotherWatchList[sme_person.display_name] = {smeRole.mention: {"count": 1, "time": eventScheduledFormat}}
-                        elif smeRole.mention not in bigBrotherWatchList[sme_person.display_name]:
-                            bigBrotherWatchList[sme_person.display_name][smeRole.mention] = {"count": 1, "time": eventScheduledFormat}
+                        if memberSme.display_name not in bigBrotherWatchList:
+                            bigBrotherWatchList[memberSme.display_name] = {roleSme.mention: {"count": 1, "time": eventScheduledFormat}}
+                        elif roleSme.mention not in bigBrotherWatchList[memberSme.display_name]:
+                            bigBrotherWatchList[memberSme.display_name][roleSme.mention] = {"count": 1, "time": eventScheduledFormat}
                         else:
-                            bigBrotherWatchList[sme_person.display_name][smeRole.mention]["count"] += 1
+                            bigBrotherWatchList[memberSme.display_name][roleSme.mention]["count"] += 1
 
 
                 if not isWsFound:  # No workshop found
-                    if sme_person.display_name not in bigBrotherWatchList:
-                        bigBrotherWatchList[sme_person.display_name] = {smeRole.mention: {"count": 0, "time": None}}
+                    if memberSme.display_name not in bigBrotherWatchList:
+                        bigBrotherWatchList[memberSme.display_name] = {roleSme.mention: {"count": 0, "time": None}}
                     else:
-                        bigBrotherWatchList[sme_person.display_name][smeRole.mention] = {"count": 0, "time": None}
+                        bigBrotherWatchList[memberSme.display_name][roleSme.mention] = {"count": 0, "time": None}
 
 
         embedsToSend = []
@@ -436,14 +434,14 @@ Join Us:
         embedDescription += ".\nThis displays one embed for each SME; each row for each SME tag - last hosted workshop and total count."
 
         if len(embedsToSend) == 0:
-            Logger.warning("botTasks smeBigBrother: no embeds sent.")
-            await staffChat.send(discord.Embed(title=embedTitle, color=discord.Color.red(), description="Nothing to send. Contact Snek Lords."))
+            Logger.warning("Bottasks smeBigBrother: no embeds sent")
+            await channelStaffChat.send(discord.Embed(title=embedTitle, color=discord.Color.red(), description="Nothing to send. Contact Snek Lords."))
             return
 
         embedsToSend.insert(0, discord.Embed(title=embedTitle, color=discord.Color.green(), description=embedDescription))
         for embedChunk in chunkList(embedsToSend, 10):
-            Logger.info("botTasks smeBigBrother: sending chunk.")
-            await staffChat.send(embeds=embedChunk)
+            Logger.info("Bottasks smeBigBrother: sending chunk")
+            await channelStaffChat.send(embeds=embedChunk)
 
 
         # Update next execution time
@@ -467,7 +465,7 @@ Join Us:
             try:
                 await self.redditRecruitmentPosts()
             except Exception as e:
-                Logger.exception(f"oneHourTasks Reddit recruitment posts: {e}")
+                Logger.exception(f"Bottasks oneHourTasks: Reddit recruitment posts")
 
         # smeReminder
         with open(REPEATED_MSG_DATE_LOG_FILE) as f:
@@ -477,19 +475,19 @@ Join Us:
             try:
                 await self.smeReminder()
             except Exception as e:
-                Logger.exception(f"oneHourTasks SME reminder: {e}")
+                Logger.exception(f"Bottasks oneHourTasks: SME reminder")
 
         # smeBigBrother
         if secret.SME_BIG_BROTHER and ("smeBigBrother" not in msgDateLog or (datetime.fromtimestamp(msgDateLog["smeBigBrother"], tz=pytz.utc) < datetime.now(timezone.utc))):
             guild = self.bot.get_guild(GUILD_ID)
             if guild is None:
-                Logger.exception("botTasks oneHourTasks: guild is None")
+                Logger.exception("Bottasks oneHourTasks: guild is None")
                 return
 
             try:
                 await BotTasks.smeBigBrother(guild, False)
             except Exception as e:
-                Logger.exception(f"oneHourTasks SME big brother: {e}")
+                Logger.exception(f"Bottasks oneHourTasks: SME big brother")
 
 
     @tasks.loop(minutes=5)
@@ -509,7 +507,7 @@ Join Us:
             # Guild
             guild = self.bot.get_guild(GUILD_ID)
             if guild is None:
-                Logger.exception("botTasks fiveMinTasks: guild is None")
+                Logger.exception("Bottasks fiveMinTasks: guild is None")
                 return
 
             # User
@@ -519,22 +517,22 @@ Join Us:
                 removalList.append(time)
 
                 if member is None:
-                    Logger.debug("Newcomer is no longer in the server")
+                    Logger.debug("Bottasks fiveMinTasks: Newcomer is no longer in the server")
                     continue
 
                 if len(member.roles) > 2:
-                    Logger.debug(f"Newcomer already verified: {member}")
+                    Logger.debug(f"Bottasks fiveMinTasks: Newcomer already verified '{member}'")
                     continue
 
                 channelWelcome = guild.get_channel(WELCOME)
                 if not isinstance(channelWelcome, discord.TextChannel):
-                    Logger.exception("botTasks fiveMinTasks: welcomeChannel is not TextChannel")
+                    Logger.exception("Bottasks fiveMinTasks: channelWelcome not TextChannel")
                     return
 
 
                 roleRecruitmentTeam = guild.get_role(RECRUITMENT_TEAM)
                 if roleRecruitmentTeam is None:
-                    Logger.exception("botTasks fiveMinTasks: roleRecruitmentTeam is None")
+                    Logger.exception("Bottasks fiveMinTasks: roleRecruitmentTeam is None")
                     return
 
                 hasUserPinged = len([
@@ -553,14 +551,14 @@ Join Us:
             ## REMINDERS
 
             if member is None:
-                Logger.warning("botTasks fiveMinTasks: user is None")
+                Logger.warning("Bottasks fiveMinTasks: member is None")
                 removalList.append(time)
                 continue
 
             # Channel
             channel = self.bot.get_channel(details["channelID"])
             if channel is None or not isinstance(channel, discord.TextChannel):
-                Logger.warning("botTasks fiveMinTasks: channel not TextChannel")
+                Logger.warning("Bottasks fiveMinTasks: channel not TextChannel")
                 removalList.append(time)
                 continue
 
@@ -708,7 +706,7 @@ class Reminders(commands.GroupCog, name="reminder"):
             return
 
         if interaction.channel is None:
-            Logger.warning("botTasks reminderSet: interaction.channel is None")
+            Logger.exception("BotTasks reminderSet: interaction.channel is None")
             await interaction.response.send_message(embed=discord.Embed(title="❌ Invalid channel.", color=discord.Color.red()), ephemeral=True, delete_after=10.0)
             return
 

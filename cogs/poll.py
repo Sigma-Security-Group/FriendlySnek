@@ -62,7 +62,7 @@ class Poll(commands.Cog):
         Returns:
         None.
         """
-        Logger.info(f"{interaction.user.display_name} ({interaction.user}) Created a poll!")
+        Logger.info(f"{interaction.user.id} [{interaction.user.display_name}] Created a poll!")
         group = {
             "Creator": interaction.user.display_name,
             "Multivote": True if multivote.value == "Yes" else False
@@ -71,7 +71,7 @@ class Poll(commands.Cog):
         embed.set_footer(text=f"Poll by {interaction.user.display_name}")
         embed.timestamp = datetime.now(timezone.utc)
         if embed.description is None:
-            Logger.exception("Poll: embed.description is None")
+            Logger.exception("Poll poll: embed.description is None")
             return
 
         options = [option1, option2, option3, option4, option5, option6, option7, option8, option9, option10]
@@ -94,7 +94,7 @@ class Poll(commands.Cog):
             row.add_item(item=buttons[-1])
             await interaction.response.send_message(embed=embed, view=row)
         except Exception as e:
-            Logger.exception(f"{interaction.user} | {e}")
+            Logger.exception(f"{interaction.user.id} [{interaction.user.display_name}]")
 
     @staticmethod
     async def buttonHandling(button: discord.ui.Button, interaction: discord.Interaction, group: dict) -> None:
@@ -118,24 +118,24 @@ class Poll(commands.Cog):
             return
 
         try:
-            if interaction.channel is None or isinstance(interaction.channel, discord.channel.ForumChannel) or isinstance(interaction.channel, discord.channel.CategoryChannel):
-                Logger.exception("Poll ButtonHandling: interaction.channel is invalid type")
+            if not isinstance(interaction.channel, discord.TextChannel):
+                Logger.exception("Poll buttonHandling: interaction.channel not discord.TextChannel")
                 return
             if interaction.message is None:
-                Logger.exception("Poll ButtonHandling: interaction.message is None")
+                Logger.exception("Poll buttonHandling: interaction.message is None")
                 return
 
             msg = await interaction.channel.fetch_message(interaction.message.id)
 
             embed = msg.embeds[0]
             if embed.description is None:
-                Logger.exception("Poll ButtonHandling: embed.description is None")
+                Logger.exception("Poll buttonHandling: embed.description is None")
                 return
 
             optionRows = (emojiNumbers[0] + embed.description.split(emojiNumbers[0])[1]).split("\n")
 
             if button.view is None:
-                Logger.exception("Poll ButtonHandling: button.view is None")
+                Logger.exception("Poll buttonHandling: button.view is None")
                 return
             row = button.view
 
@@ -177,7 +177,7 @@ class Poll(commands.Cog):
             await interaction.followup.send(("(Multi-vote poll)" if group["Multivote"] else "(Single vote poll)") + f"\nYou've voted for:\n{userVotes if len(userVotes) > 0 else 'Nothing.'}", ephemeral=True)
 
         except Exception as e:
-            Logger.exception(f"{interaction.user} | {e}")
+            Logger.exception(f"{interaction.user.id} [{interaction.user.display_name}]")
 
 
 class PollView(discord.ui.View):

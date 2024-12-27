@@ -96,7 +96,7 @@ class ButtonRoles(commands.GroupCog, group_name="button-role"):
             return
 
         # Send feedback
-        Logger.info(f"{interaction.user.display_name} ({interaction.user}) created a button-role message.")
+        Logger.info(f"{interaction.user.id} [{interaction.user.display_name}] Created a button-role message")
         msg = await target_channel.send(message_content, view=view)
         await interaction.response.send_message(f"Button Role message created! {msg.jump_url}", ephemeral=True, delete_after=30.0)
 
@@ -114,12 +114,12 @@ class ButtonRoles(commands.GroupCog, group_name="button-role"):
         """
         guild = interaction.guild
         if not isinstance(guild, discord.Guild):
-            Logger.exception("ButtonRoles toggleRole: guild is not discord.Guild")
+            Logger.exception("ButtonRoles toggleRole: guild not discord.Guild")
             return
 
         role = guild.get_role(roleId)
         if not isinstance(role, discord.Role):
-            Logger.warning("ButtonRoles toggleRole: role is not discord.Role")
+            Logger.exception("ButtonRoles toggleRole: role not discord.Role")
             embed = discord.Embed(title="❌ Invalid role", description="Role does not exist. Please contact Unit Staff!", color=discord.Color.red())
             await interaction.response.send_message(content=interaction.user.mention, embed=embed, ephemeral=True, delete_after=15.0)
             return
@@ -161,7 +161,7 @@ class ButtonRoles(commands.GroupCog, group_name="button-role"):
 
         guild = interaction.guild
         if not isinstance(guild, discord.Guild):
-            Logger.exception("ButtonRoles buttonRoleEdit: guild is not discord.Guild")
+            Logger.exception("ButtonRoles buttonRoleEdit: guild not discord.Guild")
             return
 
         # Automatically update message buttons
@@ -198,7 +198,7 @@ class ButtonRoles(commands.GroupCog, group_name="button-role"):
         for button in buttons:
             view.add_item(button)
 
-        Logger.info(f"{interaction.user.display_name} ({interaction.user}) edits a button-role message '{message_id}'.")
+        Logger.info(f"{interaction.user.id} [{interaction.user.display_name}] Edits a button-role message '{message_id}'")
         await interaction.response.send_message(embed=embed, view=view, ephemeral=True, delete_after=300.0)
 
 
@@ -251,7 +251,7 @@ class ButtonRoles(commands.GroupCog, group_name="button-role"):
         """
         guild = interaction.guild
         if not isinstance(guild, discord.Guild):
-            Logger.exception("ButtonRoles buttonHandling: guild is not discord.Guild")
+            Logger.exception("ButtonRoles buttonHandling: guild not discord.Guild")
             return
 
         buttonRoleMsg = await msgChannel.fetch_message(buttonRoleMsgId)
@@ -320,12 +320,12 @@ class ButtonRoles(commands.GroupCog, group_name="button-role"):
             case "buttonrole_select_add":
                 guild = interaction.guild
                 if not isinstance(guild, discord.Guild):
-                    Logger.exception("ButtonRoles selectHandling: guild is not discord.Guild")
+                    Logger.exception("ButtonRoles selectHandling: guild not discord.Guild")
                     return
 
                 roleSelected = guild.get_role(roleIdSelected)
                 if not isinstance(roleSelected, discord.Role):
-                    Logger.exception("ButtonRoles selectHandling: roleSelected is not discord.Role")
+                    Logger.exception("ButtonRoles selectHandling: roleSelected not discord.Role")
                     return
 
                 view = discord.ui.View.from_message(buttonRoleMsg, timeout=None)
@@ -409,12 +409,12 @@ class ButtonRolesPersistentButton(discord.ui.DynamicItem[discord.ui.Button], tem
         if self.whitelistId:
             guild = interaction.guild
             if not isinstance(guild, discord.Guild):
-                Logger.exception("ButtonRolesButton interaction_check: guild is not discord.Guild")
+                Logger.exception("ButtonRolesPersistentButton callback: guild not discord.Guild")
                 return
 
             whitelistRole = guild.get_role(self.whitelistId)
             if not isinstance(whitelistRole, discord.Role):
-                Logger.exception("ButtonRolesButton interaction_check: whitelistRole is not discord.Role")
+                Logger.exception("ButtonRolesPersistentButton callback: whitelistRole not discord.Role")
                 return
 
             if whitelistRole not in interaction.user.roles:

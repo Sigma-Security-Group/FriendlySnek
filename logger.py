@@ -60,7 +60,7 @@ def streamSupportsColor(stream) -> bool:
 
 
 # Configure the logger
-logger = logging.getLogger() # root
+log = logging.getLogger("FriendlySnek")
 level = logging.DEBUG
 handler = logging.StreamHandler()
 dtFormat = "%Y-%m-%d %H:%M:%S"
@@ -72,10 +72,10 @@ if isinstance(handler, logging.StreamHandler) and streamSupportsColor(handler.st
 else:
     handler.setFormatter(formatter)
 
-logger.setLevel(level)
-logger.addHandler(handler)
+log.setLevel(level)
+log.addHandler(handler)
 
 # Add file handler to write logs to a file and clear logs on new sessions
 fileHandler = logging.FileHandler(LOG_FILE, mode="w")
 fileHandler.setFormatter(formatter)
-logger.addHandler(fileHandler)
+log.addHandler(fileHandler)

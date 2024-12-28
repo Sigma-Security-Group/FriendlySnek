@@ -8,7 +8,7 @@ if platform.system() == "Windows":
 from discord.ext import commands  # type: ignore
 
 import logger
-log = logging.getLogger()
+log = logging.getLogger("FriendlySnek")
 
 if not os.path.exists("./secret.py"):
     log.info("Creating a secret.py file!")
@@ -291,15 +291,9 @@ async def stop(ctx: commands.Context) -> None:
 
 
 if __name__ == "__main__":
-    # Redirect log handler to void
-    class VoidHandler(logging.Handler):
-        def emit(self, record):
-            pass
-
-    voidHandler = VoidHandler()
-
+    log.info("Bot starting")
     try:
-        client.run(secret.TOKEN_DEV if secret.DEBUG else secret.TOKEN, log_handler=voidHandler)
+        client.run(secret.TOKEN_DEV if secret.DEBUG else secret.TOKEN, log_formatter=log.handlers[0].formatter, log_level=logging.INFO)
     except Exception as e:
         log.exception(e)
     finally:

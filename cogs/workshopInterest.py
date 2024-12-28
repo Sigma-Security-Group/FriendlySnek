@@ -77,7 +77,7 @@ WORKSHOP_INTEREST_LIST: dict[str, dict[str, str | int | tuple]] = {
     },
 }
 
-log = logging.getLogger(__name__)
+log = logging.getLogger("FriendlySnek")
 
 class WorkshopInterest(commands.Cog):
     """Workshop Interest Cog."""

@@ -10,7 +10,7 @@ if DEBUG:
 
 EMOJI_NUMBERS: tuple = ("1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣", "🔟")
 
-log = logging.getLogger(__name__)
+log = logging.getLogger("FriendlySnek")
 
 class Poll(commands.Cog):
     def __init__(self, bot: commands.Bot) -> None:

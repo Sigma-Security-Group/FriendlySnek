@@ -11,7 +11,7 @@ if DEBUG:
 URL = "https://icanhazdadjoke.com/"
 HEADERS = {"Accept": "application/json"}
 
-log = logging.getLogger(__name__)
+log = logging.getLogger("FriendlySnek")
 
 class Jokes(commands.Cog):
     def __init__(self, bot: commands.Bot) -> None:

@@ -10,7 +10,7 @@ if DEBUG:
 CUSTOMID_PERSISTENT_BUTTON_REGEX = r"buttonrole_persistent_(?P<whitelistid>\d+)_(?P<roleid>\d+)"
 CUSTOMID_PERSISTENT_BUTTON_FORMAT = "buttonrole_persistent_{}_{}"
 
-log = logging.getLogger(__name__)
+log = logging.getLogger("FriendlySnek")
 
 @discord.app_commands.guilds(GUILD)
 class ButtonRoles(commands.GroupCog, group_name="button-role"):

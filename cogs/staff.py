@@ -10,7 +10,7 @@ from constants import *
 if DEBUG:
     from constants.debug import *
 
-log = logging.getLogger(__name__)
+log = logging.getLogger("FriendlySnek")
 
 class Staff(commands.Cog):
     """Staff Cog."""

@@ -12,7 +12,7 @@ from constants import *
 if secret.DEBUG:
     from constants.debug import *
 
-log = logging.getLogger(__name__)
+log = logging.getLogger("FriendlySnek")
 
 
 def chunkList(lst: list, n: int):

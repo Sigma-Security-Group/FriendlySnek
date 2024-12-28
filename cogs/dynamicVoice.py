@@ -7,7 +7,7 @@ from constants import *
 if secret.DEBUG:
     from constants.debug import *
 
-log = logging.getLogger(__name__)
+log = logging.getLogger("FriendlySnek")
 
 @discord.app_commands.guilds(GUILD)
 class DynamicVoice(commands.GroupCog, name="voice"):

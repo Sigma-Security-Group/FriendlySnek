@@ -26,7 +26,7 @@ SERVERS = [
     }
 ]
 
-log = logging.getLogger(__name__)
+log = logging.getLogger("FriendlySnek")
 
 def convertBytes(size: int):
     for unit in ["bytes", "KB", "MB", "GB", "TB"]:

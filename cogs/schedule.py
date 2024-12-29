@@ -214,11 +214,8 @@ class Schedule(commands.Cog):
             with open(WORKSHOP_INTEREST_FILE) as f:
                 workshopInterestFile = json.load(f)
             if (workshop := workshopInterestFile.get(workshopInterestName)) is not None:
-                accepted = event["accepted"]
-                if isinstance(event["maxPlayers"], int):  # If int: maxPlayer limit
-                    accepted = accepted[:event["maxPlayers"]]
                 updateWorkshopInterest = False
-                for memberId in accepted:
+                for memberId in event["accepted"]:
                     if memberId in workshop["members"]:
                         updateWorkshopInterest = True
                         workshop["members"].remove(memberId)
@@ -241,6 +238,7 @@ class Schedule(commands.Cog):
         eventCopy["acceptedNames"] = [member.display_name if (member := guild.get_member(memberId)) is not None else "UNKNOWN" for memberId in eventCopy["accepted"]]
         eventCopy["declinedNames"] = [member.display_name if (member := guild.get_member(memberId)) is not None else "UNKNOWN" for memberId in eventCopy["declined"]]
         eventCopy["tentativeNames"] = [member.display_name if (member := guild.get_member(memberId)) is not None else "UNKNOWN" for memberId in eventCopy["tentative"]]
+        eventCopy["standbyNames"] = [member.display_name if (member := guild.get_member(memberId)) is not None else "UNKNOWN" for memberId in eventCopy["standby"]]
         eventCopy["reservableRolesNames"] = {role: ((member.display_name if (member := guild.get_member(memberId)) is not None else "UNKNOWN") if memberId is not None else "VACANT") for role, memberId in eventCopy["reservableRoles"].items()} if eventCopy["reservableRoles"] is not None else {}
         eventsHistory.append(eventCopy)
         with open(EVENTS_HISTORY_FILE, "w") as f:
@@ -311,7 +309,7 @@ class Schedule(commands.Cog):
                     continue
                 startTime = UTC.localize(datetime.strptime(event["time"], TIME_FORMAT))
                 if utcNow > startTime + timedelta(minutes=30):
-                    acceptedMembers = [member for memberId in event["accepted"] if (member := guild.get_member(memberId)) is not None]
+                    acceptedMembers = [member for memberId in event["accepted"] + event["standby"] if (member := guild.get_member(memberId)) is not None]
                     onlineMembers = self.bot.get_channel(COMMAND).members + self.bot.get_channel(DEPLOYED).members
                     acceptedMembersNotOnline = []
                     onlineMembersNotAccepted = []
@@ -514,11 +512,9 @@ class Schedule(commands.Cog):
         embed.add_field(name="\u200B", value="\u200B", inline=False)
 
         accepted = [member.display_name for memberId in event["accepted"] if (member := guild.get_member(memberId)) is not None]
-        standby = []
-        if isinstance(event["maxPlayers"], int) and len(accepted) > event["maxPlayers"]:
-            accepted, standby = accepted[:event["maxPlayers"]], accepted[event["maxPlayers"]:]
         declined = [member.display_name for memberId in event["declined"] if (member := guild.get_member(memberId)) is not None]
         tentative = [member.display_name for memberId in event["tentative"] if (member := guild.get_member(memberId)) is not None]
+        standby = [member.display_name for memberId in event["standby"] if (member := guild.get_member(memberId)) is not None]
 
         # No limit || limit
         if event["maxPlayers"] is None or isinstance(event["maxPlayers"], int):
@@ -530,7 +526,7 @@ class Schedule(commands.Cog):
 
         # Anonymous
         elif event["maxPlayers"] == "anonymous":
-            embed.add_field(name=f"Accepted ({len(accepted + standby)}) ✅", value="\u200B", inline=True)
+            embed.add_field(name=f"Accepted ({len(accepted) + len(standby)}) ✅", value="\u200B", inline=True)
             embed.add_field(name=f"Declined ({len(declined)}) ❌", value="\u200B", inline=True)
             embed.add_field(name=f"Tentative ({len(tentative)}) ❓", value="\u200B", inline=True)
 
@@ -636,6 +632,7 @@ class Schedule(commands.Cog):
             "accepted": [],
             "declined": [],
             "tentative": [],
+            "standby": [],
             "type": [eventType for eventType in EVENT_TYPE_COLORS if EVENT_TYPE_COLORS[eventType] == embed.color][0] if embed.color in EVENT_TYPE_COLORS.values() else None,
             "files": []
         }
@@ -951,6 +948,7 @@ class Schedule(commands.Cog):
                     await channelRecruitmentHr.send(roleRecruitmentTeam.mention, embed=embed)
 
             elif button.custom_id == "reserve":
+                # Check if blacklisted
                 with open(ROLE_RESERVATION_BLACKLIST_FILE) as f:
                     blacklist = json.load(f)
                 if any(interaction.user.id == member["id"] for member in blacklist):
@@ -963,37 +961,48 @@ class Schedule(commands.Cog):
                 if await Schedule.blockVerifiedRoleRSVP(interaction, event):
                     return
 
-                if isinstance(event["maxPlayers"], int) and len(event["accepted"]) >= event["maxPlayers"] and (interaction.user.id not in event["accepted"] or event["accepted"].index(interaction.user.id) >= event["maxPlayers"]):
-                    isAcceptAndReserve = event["reservableRoles"] and len(event["reservableRoles"]) == event["maxPlayers"]
-                    if isAcceptAndReserve:
-                        if interaction.user.id in event["accepted"]:
-                            event["accepted"].remove(interaction.user.id)
-                            embed = self.getEventEmbed(event)
-                            await interaction.response.edit_message(embed=embed)
+                isAcceptAndReserve = event["reservableRoles"] and len(event["reservableRoles"]) == event["maxPlayers"]
+                playerCapReached = isinstance(event["maxPlayers"], int) and len(event["accepted"]) >= event["maxPlayers"]
 
-                        elif interaction.user.id not in event["accepted"]:
-                            for option in rsvpOptions:
-                                if interaction.user.id in event[option]:
-                                    event[option].remove(interaction.user.id)
-                            event["accepted"].append(interaction.user.id)
-
-                            await interaction.response.send_message(embed=discord.Embed(title="✅ On standby list", description="The event player limit is reached!\nYou have been placed on the standby list. If an accepted member leaves, you will advance to the next queue position. Make sure to reserve a role once accepted!", color=discord.Color.green()), ephemeral=True, delete_after=60.0)
-
-                            if interaction.channel is None or isinstance(interaction.channel, discord.ForumChannel) or isinstance(interaction.channel, discord.CategoryChannel):
-                                log.exception("Schedule buttonHandling: interaction.channel is invalid type")
-                                return
-                            embed = self.getEventEmbed(event)
-                            originalMsgId = interaction.message.id
-                            msg = await interaction.channel.fetch_message(originalMsgId)
-                            await msg.edit(embed=embed)
-
-                        with open(EVENTS_FILE, "w") as f:
-                            json.dump(events, f, indent=4)
-                        return
-
+                # Normal reservation, but no space left
+                if not isAcceptAndReserve and playerCapReached:
                     await interaction.response.send_message(embed=discord.Embed(title="❌ Sorry, seems like there's no space left in the :b:op!", color=discord.Color.red()), ephemeral=True, delete_after=60.0)
                     return
 
+                # Remove from standby
+                if isAcceptAndReserve and interaction.user.id in event["standby"]:
+                    event["standby"].remove(interaction.user.id)
+                    embed = self.getEventEmbed(event)
+                    await interaction.response.edit_message(embed=embed)
+
+                    with open(EVENTS_FILE, "w") as f:
+                        json.dump(events, f, indent=4)
+                    return
+
+                # Add to standby
+                if isAcceptAndReserve and interaction.user.id not in event["accepted"] and interaction.user.id not in event["standby"]:
+                    for option in rsvpOptions:
+                        if interaction.user.id in event[option]:
+                            event[option].remove(interaction.user.id)
+                    event["standby"].append(interaction.user.id)
+
+                    await interaction.response.send_message(embed=discord.Embed(title="✅ On standby list", description="The event player limit is reached!\nYou have been placed on the standby list. If an accepted member leaves, you will be notified about the vacant roles!", color=discord.Color.green()), ephemeral=True, delete_after=60.0)
+
+                    if interaction.channel is None or isinstance(interaction.channel, discord.ForumChannel) or isinstance(interaction.channel, discord.CategoryChannel):
+                        log.exception("Schedule buttonHandling: interaction.channel is invalid type")
+                        return
+                    embed = self.getEventEmbed(event)
+                    originalMsgId = interaction.message.id
+                    msg = await interaction.channel.fetch_message(originalMsgId)
+                    await msg.edit(embed=embed)
+
+                    with open(EVENTS_FILE, "w") as f:
+                        json.dump(events, f, indent=4)
+                    return
+
+
+
+                # Select role to (un)reserve
                 if not isinstance(interaction.user, discord.Member):
                     log.exception("Schedule buttonHandling: interaction.user not discord.Member")
                     return
@@ -1045,12 +1054,9 @@ class Schedule(commands.Cog):
                         await interaction.followup.send(embed=discord.Embed(title=f"✅ Role unreserved: `{roleName}`", color=discord.Color.green()), ephemeral=True)
 
                         # Event view has button "Accept & Reserve"
-                        if event["reservableRoles"] and len(event["reservableRoles"]) == event["maxPlayers"]:
-                            try:
-                                event["accepted"].remove(interaction.user.id)
-                            except ValueError:
-                                pass
-                        await message.edit(embed=self.getEventEmbed(event))
+                        if event["reservableRoles"] and len(event["reservableRoles"]) == event["maxPlayers"] and interaction.user.id in event["accepted"]:
+                            event["accepted"].remove(interaction.user.id)
+                            await message.edit(embed=self.getEventEmbed(event))
                         break
 
             elif button.custom_id == "config":
@@ -1134,7 +1140,7 @@ class Schedule(commands.Cog):
                             log.exception("Schedule buttonHandling delete_event_confirm: guild is None")
                             return
 
-                        for memberId in event["accepted"] + event["declined"] + event["tentative"]:
+                        for memberId in event["accepted"] + event["declined"] + event["tentative"] + event["standby"]:
                             member = guild.get_member(memberId)
                             if member is not None:
                                 embed = discord.Embed(title=f"🗑 {event.get('type', 'Operation')} deleted: {event['title']}!", description=f"The {event.get('type', 'Operation').lower()} was scheduled to run:\n{discord.utils.format_dt(UTC.localize(datetime.strptime(event['time'], TIME_FORMAT)), style='F')}", color=discord.Color.red())
@@ -1835,6 +1841,8 @@ class Schedule(commands.Cog):
                 event["declined"].remove(interaction.user.id)
             if interaction.user.id in event["tentative"]:
                 event["tentative"].remove(interaction.user.id)
+            if interaction.user.id in event["standby"]:
+                event["standby"].remove(interaction.user.id)
             if interaction.user.id not in event["accepted"]:
                 event["accepted"].append(interaction.user.id)
 
@@ -2243,7 +2251,7 @@ class Schedule(commands.Cog):
             previewEmbed = discord.Embed(title=f":clock3: The starting time has changed for: {event['title']}!", description=f"From: {discord.utils.format_dt(UTC.localize(datetime.strptime(startTimeOld, TIME_FORMAT)), style='F')}\n\u2000\u2000To: {discord.utils.format_dt(UTC.localize(datetime.strptime(event['time'], TIME_FORMAT)), style='F')}", color=discord.Color.orange())
             previewEmbed.add_field(name="\u200B", value=eventMsg.jump_url, inline=False)
             previewEmbed.set_footer(text=f"By: {interaction.user}")
-            for memberId in event["accepted"] + event["declined"] + event["tentative"]:
+            for memberId in event["accepted"] + event["declined"] + event["tentative"] + event["standby"]:
                 member = guild.get_member(memberId)
                 if member is not None:
                     try:

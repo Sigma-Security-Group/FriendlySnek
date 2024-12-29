@@ -511,6 +511,15 @@ class Schedule(commands.Cog):
             embed.add_field(name="External URL", value=event["externalURL"], inline=False)
         embed.add_field(name="\u200B", value="\u200B", inline=False)
 
+        isAcceptAndReserve = event["reservableRoles"] and len(event["reservableRoles"]) == event["maxPlayers"]
+        if not isAcceptAndReserve and len(event["standby"]) > 0 and (event["maxPlayers"] is None or (isinstance(event["maxPlayers"], int) and len(event["accepted"]) < event["maxPlayers"])):
+            if event["maxPlayers"] is None:
+                membersPromoted = len(event["standby"])
+            else:
+                membersPromoted = event["maxPlayers"] - len(event["accepted"])
+            event["accepted"].extend(event["standby"][:membersPromoted])
+            event["standby"] = event["standby"][membersPromoted:]
+
         accepted = [member.display_name for memberId in event["accepted"] if (member := guild.get_member(memberId)) is not None]
         declined = [member.display_name for memberId in event["declined"] if (member := guild.get_member(memberId)) is not None]
         tentative = [member.display_name for memberId in event["tentative"] if (member := guild.get_member(memberId)) is not None]

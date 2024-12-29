@@ -911,6 +911,33 @@ class Schedule(commands.Cog):
                 if await Schedule.blockVerifiedRoleRSVP(interaction, event):
                     return
 
+                # User removes self from reserved role - Notify people on standby
+                isAcceptAndReserve = event["reservableRoles"] and len(event["reservableRoles"]) == event["maxPlayers"]
+
+                if isAcceptAndReserve and button.custom_id == "accepted" and interaction.user.id in event["accepted"] and len(event["standby"]) > 0 and event["reservableRoles"] and interaction.user.id in event["reservableRoles"].values():
+                    if not isinstance(interaction.guild, discord.Guild):
+                        log.exception("Schedule buttonHandling: interaction.guild not discord.Guild")
+                        return
+
+                    vacantRoles = "\n".join([f"`{role}`" for role, reservedUser in event["reservableRoles"].items() if not reservedUser])
+                    embed = discord.Embed(
+                        title="Role(s) vacant",
+                        description=f"The following role(s) are now vacant for event `{event['title']}`:\n`{vacantRoles}`",
+                        color=discord.Color.green()
+                    )
+
+                    for standbyMemberId in event["standby"]:
+                        standbyMember = interaction.guild.get_member(standbyMemberId)
+                        if standbyMember is None:
+                            log.warning(f"Schedule buttonhandling: Failed to get member with id '{standbyMemberId}'")
+                            continue
+
+                        try:
+                            await standbyMember.send(embed=embed)
+                        except Exception:
+                            log.warning(f"Schedule buttonhandling: Failed to DM {standbyMember.id} [{standbyMember.display_name}] about vacant roles")
+
+
                 # User click on button twice - remove
                 if interaction.user.id in event[button.custom_id]:
                     event[button.custom_id].remove(interaction.user.id)
@@ -1056,14 +1083,40 @@ class Schedule(commands.Cog):
 
                 # Unreserve role
                 for roleName in event["reservableRoles"]:
-                    if event["reservableRoles"][roleName] == interaction.user.id:
-                        event["reservableRoles"][roleName] = None
-                        await interaction.followup.send(embed=discord.Embed(title=f"✅ Role unreserved: `{roleName}`", color=discord.Color.green()), ephemeral=True)
+                    if event["reservableRoles"][roleName] != interaction.user.id:
+                        continue
 
-                        # Event view has button "Accept & Reserve"
-                        if event["reservableRoles"] and len(event["reservableRoles"]) == event["maxPlayers"] and interaction.user.id in event["accepted"]:
-                            event["accepted"].remove(interaction.user.id)
-                            await message.edit(embed=self.getEventEmbed(event))
+                    event["reservableRoles"][roleName] = None
+                    await interaction.followup.send(embed=discord.Embed(title=f"✅ Role unreserved: `{roleName}`", color=discord.Color.green()), ephemeral=True)
+
+                    # Event view has button "Accept & Reserve"
+                    if event["reservableRoles"] and len(event["reservableRoles"]) == event["maxPlayers"] and interaction.user.id in event["accepted"]:
+                        event["accepted"].remove(interaction.user.id)
+                        await message.edit(embed=self.getEventEmbed(event))
+
+                    # Notify people on standby that reservable role(s) are vacant
+                    if len(event["standby"]) > 0 and isinstance(event["maxPlayers"], int) and len(event["accepted"]) < event["maxPlayers"] and event["reservableRoles"] and not all(event["reservableRoles"].values()):
+                        if not isinstance(interaction.guild, discord.Guild):
+                            log.exception("Schedule buttonHandling: interaction.guild not discord.Guild")
+                            return
+
+                        vacantRoles = "\n".join([f"`{role}`" for role, reservedUser in event["reservableRoles"].items() if not reservedUser])
+                        embed = discord.Embed(
+                            title="Role(s) vacant",
+                            description=f"The following role(s) are now vacant for event `{event['title']}`:\n`{vacantRoles}`",
+                            color=discord.Color.green()
+                        )
+
+                        for standbyMemberId in event["standby"]:
+                            standbyMember = interaction.guild.get_member(standbyMemberId)
+                            if standbyMember is None:
+                                log.warning(f"Schedule buttonhandling: Failed to get member with id '{standbyMemberId}'")
+                                continue
+
+                            try:
+                                await standbyMember.send(embed=embed)
+                            except Exception:
+                                log.warning(f"Schedule buttonhandling: Failed to DM {standbyMember.id} [{standbyMember.display_name}] about vacant roles")
                         break
 
             elif button.custom_id == "config":

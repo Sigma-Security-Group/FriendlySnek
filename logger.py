@@ -2,21 +2,31 @@ import logging, os, sys
 
 LOG_FILE = "./bot.log"
 
+ANSI = {
+    "prefix": "\x1B[",
+    "suffix": "m",
+    "reset": "\x1B[0m"
+}
+
 class _ColorFormatter(logging.Formatter):
+
     LEVEL_COLORS = [
-        (logging.DEBUG, "\x1b[34;1m"),
-        (logging.INFO, "\x1b[32;1m"),
-        (logging.WARNING, "\x1b[33;1m"),
-        (logging.ERROR, "\x1b[31m"),
-        (logging.CRITICAL, "\x1b[41m"),
+        (logging.DEBUG, "34", ";1"),
+        (logging.INFO, "32", ";1"),
+        (logging.WARNING, "33", ";1"),
+        (logging.ERROR, "31", ""),
+        (logging.CRITICAL, "41", ""),
     ]
 
     FORMATS = {
         level: logging.Formatter(
-            f"\x1b[30;1m%(asctime)s\x1b[0m {color}%(levelname)-8s\x1b[0m \x1b[35m%(module)s:%(lineno)s\x1b[0m %(message)s",
+            f"\x1b[30;1m%(asctime)s{ANSI['reset']} " +
+            f"{ANSI['prefix']}{fg}{extra}{ANSI['suffix']}%(levelname)-8s{ANSI['reset']} " +
+            f"\x1b[35m%(module)s:%(lineno)s{ANSI['reset']}  " +
+            f"{ANSI['prefix']}{fg}{ANSI['suffix']}%(message)s{ANSI['reset']}",
             "%Y-%m-%d %H:%M:%S",
         )
-        for level, color in LEVEL_COLORS
+        for level, fg, extra in LEVEL_COLORS
     }
 
     def format(self, record):

@@ -904,7 +904,7 @@ class Schedule(commands.Cog):
             fetchMsg = False
             eventList: list[dict] = [event for event in events if event["messageId"] == interaction.message.id]
 
-            rsvpOptions = ("accepted", "declined", "tentative")
+            rsvpOptions = ("accepted", "declined", "tentative", "standby")
             if button.custom_id in rsvpOptions:
                 event = eventList[0]
 
@@ -914,13 +914,20 @@ class Schedule(commands.Cog):
                 # User click on button twice - remove
                 if interaction.user.id in event[button.custom_id]:
                     event[button.custom_id].remove(interaction.user.id)
+                elif button.custom_id == "accepted" and interaction.user.id in event["standby"]:
+                    event["standby"].remove(interaction.user.id)
 
                 # "New" button
                 else:
                     for option in rsvpOptions:
                         if interaction.user.id in event[option]:
                             event[option].remove(interaction.user.id)
-                    event[button.custom_id].append(interaction.user.id)
+
+                    # Place in standby if player cap is reached
+                    if button.custom_id == "accepted" and isinstance(event["maxPlayers"], int) and len(event["accepted"]) >= event["maxPlayers"]:
+                        event["standby"].append(interaction.user.id)
+                    else:
+                        event[button.custom_id].append(interaction.user.id)
 
                 # Remove player from reservable role
                 if event["reservableRoles"] is not None:

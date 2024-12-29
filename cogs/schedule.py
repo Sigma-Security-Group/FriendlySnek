@@ -911,10 +911,35 @@ class Schedule(commands.Cog):
                 if await Schedule.blockVerifiedRoleRSVP(interaction, event):
                     return
 
+                # User click on button twice - remove
+                if interaction.user.id in event[button.custom_id]:
+                    event[button.custom_id].remove(interaction.user.id)
+                elif button.custom_id == "accepted" and interaction.user.id in event["standby"]:
+                    event["standby"].remove(interaction.user.id)
+
+                # "New" button
+                else:
+                    for option in rsvpOptions:
+                        if interaction.user.id in event[option]:
+                            event[option].remove(interaction.user.id)
+
+                    # Place in standby if player cap is reached
+                    if button.custom_id == "accepted" and isinstance(event["maxPlayers"], int) and len(event["accepted"]) >= event["maxPlayers"]:
+                        event["standby"].append(interaction.user.id)
+                    else:
+                        event[button.custom_id].append(interaction.user.id)
+
+                # Remove player from reservable role
+                hadReservedARole = False
+                if event["reservableRoles"] is not None:
+                    for btnRoleName in event["reservableRoles"]:
+                        if event["reservableRoles"][btnRoleName] == interaction.user.id:
+                            event["reservableRoles"][btnRoleName] = None
+                            hadReservedARole = True
+
                 # User removes self from reserved role - Notify people on standby
                 isAcceptAndReserve = event["reservableRoles"] and len(event["reservableRoles"]) == event["maxPlayers"]
-
-                if isAcceptAndReserve and button.custom_id == "accepted" and interaction.user.id in event["accepted"] and len(event["standby"]) > 0 and event["reservableRoles"] and interaction.user.id in event["reservableRoles"].values():
+                if isAcceptAndReserve and hadReservedARole and len(event["standby"]) > 0:
                     if not isinstance(interaction.guild, discord.Guild):
                         log.exception("Schedule buttonHandling: interaction.guild not discord.Guild")
                         return
@@ -937,30 +962,6 @@ class Schedule(commands.Cog):
                         except Exception:
                             log.warning(f"Schedule buttonhandling: Failed to DM {standbyMember.id} [{standbyMember.display_name}] about vacant roles")
 
-
-                # User click on button twice - remove
-                if interaction.user.id in event[button.custom_id]:
-                    event[button.custom_id].remove(interaction.user.id)
-                elif button.custom_id == "accepted" and interaction.user.id in event["standby"]:
-                    event["standby"].remove(interaction.user.id)
-
-                # "New" button
-                else:
-                    for option in rsvpOptions:
-                        if interaction.user.id in event[option]:
-                            event[option].remove(interaction.user.id)
-
-                    # Place in standby if player cap is reached
-                    if button.custom_id == "accepted" and isinstance(event["maxPlayers"], int) and len(event["accepted"]) >= event["maxPlayers"]:
-                        event["standby"].append(interaction.user.id)
-                    else:
-                        event[button.custom_id].append(interaction.user.id)
-
-                # Remove player from reservable role
-                if event["reservableRoles"] is not None:
-                    for btnRoleName in event["reservableRoles"]:
-                        if event["reservableRoles"][btnRoleName] == interaction.user.id:
-                            event["reservableRoles"][btnRoleName] = None
 
             # Ping Recruitment Team if candidate accepts
             if button.custom_id == "accepted" and eventList[0]["type"].lower() == "operation" and interaction.user.id in eventList[0]["accepted"] and any([True for role in interaction.user.roles if role.id == CANDIDATE]):

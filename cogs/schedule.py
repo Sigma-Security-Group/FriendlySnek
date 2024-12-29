@@ -471,6 +471,7 @@ class Schedule(commands.Cog):
 
             newEvents: list[dict] = []
             for event in sorted(events, key=lambda e: datetime.strptime(e["time"], TIME_FORMAT), reverse=True):
+                Schedule.applyMissingEventKeys(event)
                 msg = await channelSchedule.send(embed=self.getEventEmbed(event), view=self.getEventView(event), files=self.getEventFiles(event))
                 event["messageId"] = msg.id
                 newEvents.append(event)
@@ -479,6 +480,34 @@ class Schedule(commands.Cog):
                 json.dump(newEvents, f, indent=4)
         except Exception as e:
             log.exception(e)
+
+    @staticmethod
+    def applyMissingEventKeys(event: dict) -> None:
+        """Applies missing keys to the event.
+
+        Parameters:
+        event (dict): The event.
+
+        Returns:
+        None.
+        """
+        event.setdefault("authorId", None)
+        event.setdefault("type", None)
+        event.setdefault("title", None)
+        event.setdefault("description", None)
+        event.setdefault("externalURL", None)
+        event.setdefault("reservableRoles", None)
+        event.setdefault("maxPlayers", None)
+        event.setdefault("map", None)
+        event.setdefault("time", None)
+        event.setdefault("endTime", None)
+        event.setdefault("duration", None)
+        event.setdefault("messageId", None)
+        event.setdefault("accepted", [])
+        event.setdefault("declined", [])
+        event.setdefault("tentative", [])
+        event.setdefault("standby", [])
+        event.setdefault("files", [])
 
     def getEventEmbed(self, event: dict) -> discord.Embed:
         """Generates an embed from the given event.

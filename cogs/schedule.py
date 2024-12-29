@@ -911,6 +911,13 @@ class Schedule(commands.Cog):
                 if await Schedule.blockVerifiedRoleRSVP(interaction, event):
                     return
 
+                isAcceptAndReserve = event["reservableRoles"] and len(event["reservableRoles"]) == event["maxPlayers"]
+
+                # Promote standby to accepted if not AcceptAndReserve
+                if interaction.user.id in event["accepted"] and not isAcceptAndReserve and len(event["standby"]) > 0:
+                    standbyMember = event["standby"].pop(0)
+                    event["accepted"].append(standbyMember)
+
                 # User click on button twice - remove
                 if interaction.user.id in event[button.custom_id]:
                     event[button.custom_id].remove(interaction.user.id)
@@ -938,7 +945,6 @@ class Schedule(commands.Cog):
                             hadReservedARole = True
 
                 # User removes self from reserved role - Notify people on standby
-                isAcceptAndReserve = event["reservableRoles"] and len(event["reservableRoles"]) == event["maxPlayers"]
                 if isAcceptAndReserve and hadReservedARole and len(event["standby"]) > 0:
                     if not isinstance(interaction.guild, discord.Guild):
                         log.exception("Schedule buttonHandling: interaction.guild not discord.Guild")
@@ -947,7 +953,7 @@ class Schedule(commands.Cog):
                     vacantRoles = "\n".join([f"`{role}`" for role, reservedUser in event["reservableRoles"].items() if not reservedUser])
                     embed = discord.Embed(
                         title="Role(s) vacant",
-                        description=f"The following role(s) are now vacant for event `{event['title']}`:\n`{vacantRoles}`",
+                        description=f"The following role(s) are now vacant for event `{event['title']}`:\n{vacantRoles}",
                         color=discord.Color.green()
                     )
 
@@ -1004,8 +1010,8 @@ class Schedule(commands.Cog):
                     await interaction.response.send_message(embed=discord.Embed(title="❌ Sorry, seems like there's no space left in the :b:op!", color=discord.Color.red()), ephemeral=True, delete_after=60.0)
                     return
 
-                # Remove from standby
-                if isAcceptAndReserve and interaction.user.id in event["standby"]:
+                # Remove from standby if no vacant roles
+                if isAcceptAndReserve and interaction.user.id in event["standby"] and all(event["reservableRoles"].values()):
                     event["standby"].remove(interaction.user.id)
                     embed = self.getEventEmbed(event)
                     await interaction.response.edit_message(embed=embed)
@@ -1104,7 +1110,7 @@ class Schedule(commands.Cog):
                         vacantRoles = "\n".join([f"`{role}`" for role, reservedUser in event["reservableRoles"].items() if not reservedUser])
                         embed = discord.Embed(
                             title="Role(s) vacant",
-                            description=f"The following role(s) are now vacant for event `{event['title']}`:\n`{vacantRoles}`",
+                            description=f"The following role(s) are now vacant for event `{event['title']}`:\n{vacantRoles}",
                             color=discord.Color.green()
                         )
 

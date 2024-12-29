@@ -987,7 +987,7 @@ class Schedule(commands.Cog):
                     return
 
                 # Add to standby
-                if isAcceptAndReserve and interaction.user.id not in event["accepted"] and interaction.user.id not in event["standby"]:
+                if isAcceptAndReserve and playerCapReached and interaction.user.id not in event["accepted"] and interaction.user.id not in event["standby"]:
                     for option in rsvpOptions:
                         if interaction.user.id in event[option]:
                             event[option].remove(interaction.user.id)

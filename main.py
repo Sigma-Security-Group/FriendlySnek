@@ -131,6 +131,12 @@ async def on_message(message: discord.Message) -> None:
     if message.guild is None or message.guild.id != GUILD_ID:  # Ignore messages that were not sent on the correct server
         return
 
+    if [True for mention in message.mentions if mention.id in FRIENDLY_SNEKS]:
+        try:
+            await message.reply("Sssssssnek")
+        except Exception:
+            pass
+
     # Execute commands
     if message.content.startswith(COMMAND_PREFIX):
         log.debug(f"{message.author.id} [{message.author.display_name}] {message.content}")

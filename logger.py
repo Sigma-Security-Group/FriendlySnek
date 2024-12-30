@@ -11,7 +11,7 @@ ANSI = {
 class _ColorFormatter(logging.Formatter):
 
     LEVEL_COLORS = [
-        (logging.DEBUG, "34", ";1"),
+        (logging.DEBUG, "94", ";1"),
         (logging.INFO, "32", ";1"),
         (logging.WARNING, "33", ";1"),
         (logging.ERROR, "31", ""),

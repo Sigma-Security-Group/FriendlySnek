@@ -11,22 +11,22 @@ ANSI = {
 class _ColorFormatter(logging.Formatter):
 
     LEVEL_COLORS = [
-        (logging.DEBUG, "94", ";1"),
-        (logging.INFO, "32", ";1"),
-        (logging.WARNING, "33", ";1"),
-        (logging.ERROR, "31", ""),
+        (logging.DEBUG, "96", ";1"),
+        (logging.INFO, "92", ";1"),
+        (logging.WARNING, "93", ";1"),
+        (logging.ERROR, "91", ""),
         (logging.CRITICAL, "41", ""),
     ]
 
     FORMATS = {
         level: logging.Formatter(
             f"\x1b[30;1m%(asctime)s{ANSI['reset']} " +
-            f"{ANSI['prefix']}{fg}{extra}{ANSI['suffix']}%(levelname)-8s{ANSI['reset']} " +
-            f"\x1b[35m%(module)s:%(lineno)s{ANSI['reset']}  " +
-            f"{ANSI['prefix']}{fg}{ANSI['suffix']}%(message)s{ANSI['reset']}",
+            f"{ANSI['prefix']}{mainColor}{extra}{ANSI['suffix']}%(levelname)-8s{ANSI['reset']} " +
+            f"\x1b[95m%(module)s:%(lineno)s{ANSI['reset']}  " +
+            f"{ANSI['prefix']}{mainColor}{ANSI['suffix']}%(message)s{ANSI['reset']}",
             "%Y-%m-%d %H:%M:%S",
         )
-        for level, fg, extra in LEVEL_COLORS
+        for level, mainColor, extra in LEVEL_COLORS
     }
 
     def format(self, record):
@@ -38,7 +38,7 @@ class _ColorFormatter(logging.Formatter):
         # Override the traceback to always print in red
         if record.exc_info:
             text = formatter.formatException(record.exc_info)
-            record.exc_text = f"\x1b[31m{text}\x1b[0m"
+            record.exc_text = f"\x1b[91m{text}\x1b[0m"
 
         output = formatter.format(record)
 

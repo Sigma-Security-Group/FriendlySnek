@@ -133,6 +133,7 @@ class WorkshopInterest(commands.Cog):
         Returns:
         None.
         """
+        log.info("WSINT updateChannel: updating workshop interest channel")
         wsIntChannel = self.bot.get_channel(WORKSHOP_INTEREST)
         if not isinstance(wsIntChannel, discord.TextChannel):
             log.exception("WSINT updateChannel: wsIntChannel not discord.TextChannel")

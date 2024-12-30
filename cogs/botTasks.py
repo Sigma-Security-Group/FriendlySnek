@@ -4,7 +4,7 @@ import asyncpraw, pytz  # type: ignore
 from datetime import datetime, timezone, timedelta
 from dateutil.parser import parse as datetimeParse  # type: ignore
 from bs4 import BeautifulSoup as BS  # type: ignore
-from .workshopInterest import WORKSHOP_INTEREST_LIST  # type: ignore
+from .workshopInterest import WORKSHOP_INTEREST_LIST, WorkshopInterest  # type: ignore
 
 from discord.ext import commands, tasks  # type: ignore
 
@@ -458,6 +458,64 @@ Join Us:
             json.dump(msgDateLog, f, indent=4)
 
 
+    @staticmethod
+    async def workshopInterestWipe(guild: discord.Guild) -> None:
+        """Wipe workshop interest lists every year."""
+        log.info("BotTasks workshopInterestWipe: wiping workshop interest lists")
+
+        # Update next execution time
+        with open(REPEATED_MSG_DATE_LOG_FILE) as f:
+            msgDateLog = json.load(f)
+
+        # Get datetime for next time in 1 year
+        nextTime = Reminders.getFirstDayNextMonth()
+        for _ in range(11):
+            nextTime = Reminders.getFirstDayNextMonth(nextTime)
+
+        msgDateLog["workshopInterestWipe"] = datetime.timestamp(nextTime)
+        with open(REPEATED_MSG_DATE_LOG_FILE, "w") as f:
+            json.dump(msgDateLog, f, indent=4)
+
+        # Wipe workshop interest lists
+        channelWorkshopInterest = guild.get_channel(WORKSHOP_INTEREST)
+        if not isinstance(channelWorkshopInterest, discord.TextChannel):
+            log.exception("BotTasks workshopInterestWipe: channelWorkshopInterest not discord.TextChannel")
+            return
+
+        with open(WORKSHOP_INTEREST_FILE) as f:
+            wsIntFile = json.load(f)
+
+        for wsName in WORKSHOP_INTEREST_LIST.keys():
+            wsIntFile[wsName]["members"] = []
+        with open(WORKSHOP_INTEREST_FILE, "w") as f:
+            json.dump(wsIntFile, f, indent=4)
+
+        # Update embeds
+        for wsName in WORKSHOP_INTEREST_LIST.keys():
+            try:
+                wsIntEmbed = await channelWorkshopInterest.fetch_message(wsIntFile[wsName].get("messageId", 0))
+            except Exception:
+                log.warning(f"BotTasks workshopInterestWipe: failed to fetch wsIntEmbed '{wsName}' with id '{wsIntFile[wsName].get('messageId', 0)}'")
+                continue
+
+            if not isinstance(wsIntEmbed, discord.Message):
+                log.warning("BotTasks workshopInterestWipe: wsIntEmbed not discord.Message")
+                continue
+
+            try:
+                await wsIntEmbed.edit(embed=WorkshopInterest.getWorkshopEmbed(guild, wsName))
+            except Exception:
+                log.warning(f"BotTasks workshopInterestWipe: failed to edit wsIntEmbed '{wsName}'")
+
+        # Announce wipe in announcements
+        channelAnnouncements = guild.get_channel(ANNOUNCEMENTS)
+        if not isinstance(channelAnnouncements, discord.abc.GuildChannel):
+            log.exception("BotTasks workshopInterestWipe: channelAnnouncements not discord.GuildChannel")
+            return
+
+        await channelAnnouncements.send("@everyone", embed=discord.Embed(title="🧻 Workshop Interest Wipe 🧻", description="Happy new years!\nAll workshop interest lists have been wiped. Please re-sign up for any workshops you are interested in.\n\nThis ensures that inactive members are purged off the lists.", color=discord.Color.orange()), allowed_mentions=discord.AllowedMentions.all())
+
+
     @tasks.loop(hours=1.0)
     async def oneHourTasks(self) -> None:
         # redditRecruitmentPosts
@@ -477,17 +535,27 @@ Join Us:
             except Exception as e:
                 log.exception(f"Bottasks oneHourTasks: SME reminder")
 
+        guild = self.bot.get_guild(GUILD_ID)
+        if guild is None:
+            log.exception("Bottasks oneHourTasks: guild is None")
+            return
+
         # smeBigBrother
         if secret.SME_BIG_BROTHER and ("smeBigBrother" not in msgDateLog or (datetime.fromtimestamp(msgDateLog["smeBigBrother"], tz=pytz.utc) < datetime.now(timezone.utc))):
-            guild = self.bot.get_guild(GUILD_ID)
-            if guild is None:
-                log.exception("Bottasks oneHourTasks: guild is None")
-                return
-
             try:
                 await BotTasks.smeBigBrother(guild, False)
             except Exception as e:
                 log.exception(f"Bottasks oneHourTasks: SME big brother")
+
+        # workshopInterestWipe
+        if secret.WORKSHOP_INTEREST_WIPE and "workshopInterestWipe" not in msgDateLog:
+            log.warning("Bottasks oneHourTasks: workshopInterestWipe not in msgDateLog")
+        elif secret.WORKSHOP_INTEREST_WIPE and (datetime.fromtimestamp(msgDateLog["workshopInterestWipe"], tz=pytz.utc) < datetime.now(timezone.utc)):
+            try:
+                await BotTasks.workshopInterestWipe(guild)
+            except Exception as e:
+                log.exception(f"Bottasks oneHourTasks: workshopInterestWipe")
+
 
 
     @tasks.loop(minutes=5)

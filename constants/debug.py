@@ -4,17 +4,11 @@ GUILD = discord.Object(id=GUILD_ID)
 
 
 ####################
-# PEOPLE
-####################
-
-EVERYONE = 864441968776052747
-
-
-####################
 # BTR CHANNELS
 ####################
 
 # Official
+ANNOUNCEMENTS = 976951898097733642
 CHANGELOG = 976951910571589692
 
 # Doormat

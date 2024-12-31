@@ -788,7 +788,7 @@ class Reminders(commands.GroupCog, name="reminder"):
             "type": "reminder",
             "userID": interaction.user.id,
             "channelID": interaction.channel.id,
-            "message": text or "reminder",
+            "message": text or "",
             "setTime": datetime.timestamp(datetime.now()),
             "timedeltaSeconds": (reminderTime - datetime.now()).total_seconds(),
             "repeat": repeat or False
@@ -796,7 +796,7 @@ class Reminders(commands.GroupCog, name="reminder"):
         with open(REMINDERS_FILE, "w", encoding="utf-8") as f:
             json.dump(reminders, f, indent=4)
 
-        embed=discord.Embed(description=f"I will remind you {discord.utils.format_dt(reminderTime, style='R')}", color=discord.Color.green())
+        embed=discord.Embed(description=f"I will remind you {discord.utils.format_dt(reminderTime, style='R')}" + (f"\n{text}" if text else ""), color=discord.Color.green())
         embed.set_author(name=interaction.user, icon_url=interaction.user.display_avatar)
         await interaction.response.send_message(embed=embed)
 

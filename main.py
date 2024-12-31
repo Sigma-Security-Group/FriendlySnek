@@ -11,37 +11,9 @@ import logger
 log = logging.getLogger("FriendlySnek")
 
 if not os.path.exists("./secret.py"):
-    log.info("Creating a secret.py file!")
     with open("secret.py", "w") as f:
-        f.write(  # Write secret.py template
-            """TOKEN = ""
-TOKEN_DEV = ""
-DEBUG = True
-
-MOD_UPDATE_ACTIVE = False
-SME_REMINDER_ACTIVE = False
-SME_BIG_BROTHER = False
-
-SFTP = {
-    "0.0.0.0": {
-        "username": "",
-        "password": ""
-    },
-}
-
-REDDIT_ACTIVE = False
-REDDIT = {
-    "client_id": "",
-    "client_secret": "",
-    "password": ""
-}
-
-DISCORD_LOGGING = {
-    "upload_mission_file": True,
-    "upload_file": True
-}
-"""
-        )
+        f.write("")
+    log.critical("No secret.py file found!\nFile is created and must be filled in; read README\nExiting program")
     exit()
 
 import secret

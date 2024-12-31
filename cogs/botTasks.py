@@ -549,7 +549,10 @@ Join Us:
 
         # workshopInterestWipe
         if secret.WORKSHOP_INTEREST_WIPE and "workshopInterestWipe" not in msgDateLog:
-            log.warning("Bottasks oneHourTasks: workshopInterestWipe not in msgDateLog")
+            log.info("Bottasks oneHourTasks: workshopInterestWipe not in msgDateLog - set timestamp to 1 Jan next year")
+            msgDateLog["workshopInterestWipe"] = datetime(datetime.now(timezone.utc).year+1, 1, 1, 12, 0, 0, 0, tzinfo=pytz.utc).timestamp()
+            with open(REPEATED_MSG_DATE_LOG_FILE, "w") as f:
+                json.dump(msgDateLog, f, indent=4)
         elif secret.WORKSHOP_INTEREST_WIPE and (datetime.fromtimestamp(msgDateLog["workshopInterestWipe"], tz=pytz.utc) < datetime.now(timezone.utc)):
             try:
                 await BotTasks.workshopInterestWipe(guild)

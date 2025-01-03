@@ -243,10 +243,9 @@ async def on_error(event: str, *args, **kwargs) -> None:
 @client.event
 async def on_command_error(ctx: commands.Context, error: commands.CommandError) -> None:
     """On command error event."""
-    errorType = type(error)
-    if errorType is commands.errors.MissingRequiredArgument:
+    if isinstance(error, commands.errors.MissingRequiredArgument):
         await ctx.send_help(ctx.command)
-    elif not isinstance(errorType, commands.CommandNotFound):
+    elif not isinstance(error, commands.errors.CommandNotFound):
         log.exception(f"{ctx.author.id} [{ctx.author.display_name}] | {error}")
 
 

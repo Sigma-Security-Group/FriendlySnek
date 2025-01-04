@@ -309,26 +309,17 @@ class Schedule(commands.Cog):
                     continue
                 startTime = UTC.localize(datetime.strptime(event["time"], TIME_FORMAT))
                 if utcNow > startTime + timedelta(minutes=30):
-                    acceptedMembers = [member for memberId in event["accepted"] + event["standby"] if (member := guild.get_member(memberId)) is not None]
-                    onlineMembers = self.bot.get_channel(COMMAND).members + self.bot.get_channel(DEPLOYED).members
-                    acceptedMembersNotOnline = []
-                    onlineMembersNotAccepted = []
-                    for member in acceptedMembers:
-                        if member not in onlineMembers and member not in acceptedMembersNotOnline:
-                            acceptedMembersNotOnline.append(member)
-                    for member in onlineMembers:
-                        if member.id != event["authorId"] and member not in acceptedMembers and member not in onlineMembersNotAccepted:
-                            onlineMembersNotAccepted.append(member)
+                    membersAccepted = [member for memberId in event["accepted"] + event["standby"] if (member := guild.get_member(memberId)) is not None]
+                    membersInVC = self.bot.get_channel(COMMAND).members + self.bot.get_channel(DEPLOYED).members
+
+                    membersUnscheduled = [member for member in membersAccepted if member not in membersInVC] + [member for member in membersInVC if member not in membersAccepted and member.id != event["authorId"]]
 
                     event["checkedAcceptedReminders"] = True
                     with open(EVENTS_FILE, "w") as f:
                         json.dump(events, f, indent=4)
-                    if len(acceptedMembersNotOnline) > 0:
-                        log.debug(f"Schedule tenMinTask: Pinging members in accepted not in VC: {', '.join([member.display_name for member in acceptedMembersNotOnline])}")
-                        await channelArmaDiscussion.send(" ".join(member.mention for member in acceptedMembersNotOnline) + f" If you are in-game, please get in <#{COMMAND}> or <#{DEPLOYED}>. If you are not making it to this {event['type'].lower()}, please hit decline ❌ on the <#{SCHEDULE}>.")
-                    if len(onlineMembersNotAccepted) > 0:
-                        log.debug(f"Schedule tenMinTask: Pinging members in VC not in accepted: {', '.join([member.display_name for member in onlineMembersNotAccepted])}")
-                        await channelArmaDiscussion.send(" ".join(member.mention for member in onlineMembersNotAccepted) + f" If you are in-game, please hit accept ✅ on the <#{SCHEDULE}>.")
+                    if len(membersUnscheduled) > 0:
+                        log.debug(f"Schedule tenMinTask: Pinging unscheduled members: {', '.join([member.display_name for member in membersUnscheduled])}")
+                        await channelArmaDiscussion.send(" ".join(member.mention for member in membersUnscheduled) + f"\nIf you are in-game, please:\n* Get in <#{COMMAND}> or <#{DEPLOYED}>\n* Hit accept ✅ on the <#{SCHEDULE}>\nIf you are not making it to this {event['type'].lower()}, please hit decline ❌ on the <#{SCHEDULE}>")
         except Exception as e:
             log.exception(e)
 

@@ -861,7 +861,7 @@ class Schedule(commands.Cog):
                 return f"There is another event (`{event['title']}`) starting less than an hour after your event ends!\nScheduled event: {discord.utils.format_dt(eventStartTime, style='F')} - {discord.utils.format_dt(eventEndTime, style='F')}"
 
     @staticmethod
-    async def hasCandidatePinged(candidateId: int, operationTitle: str, channelRecruitmentHr: discord.TextChannel) -> bool:
+    async def hasCandidatePinged(candidateId: int, operationTitle: str, channelRecruitmentHr: discord.TextChannel) -> discord.Message | None:
         """Checks recent messages for candidate accept embed notifications
 
         Parameters:
@@ -878,8 +878,8 @@ class Schedule(commands.Cog):
             if not message.embeds:
                 continue
             if message.embeds[0].description and str(candidateId) in message.embeds[0].description and f"`{operationTitle}`" in message.embeds[0].description:
-                return True
-        return False
+                return message
+        return None
 
     @staticmethod
     async def blockVerifiedRoleRSVP(interaction: discord.Interaction, event: dict) -> bool:
@@ -1007,7 +1007,7 @@ class Schedule(commands.Cog):
                 if not isinstance(channelRecruitmentHr, discord.TextChannel):
                     log.exception("Schedule buttonHandling: channelRecruitmentHr not discord.TextChannel")
                     return
-                if not await Schedule.hasCandidatePinged(interaction.user.id, eventList[0]["title"], channelRecruitmentHr):
+                if await Schedule.hasCandidatePinged(interaction.user.id, eventList[0]["title"], channelRecruitmentHr) is not None:
                     roleRecruitmentTeam = interaction.guild.get_role(RECRUITMENT_TEAM)
                     if not isinstance(roleRecruitmentTeam, discord.Role):
                         log.exception("Schedule buttonHandling: roleRecruitmentTeam is not discord.Role")
@@ -1956,14 +1956,19 @@ class Schedule(commands.Cog):
                 if not isinstance(channelRecruitmentHr, discord.TextChannel):
                     log.exception("Schedule selectHandling: channelRecruitmentHr not discord.TextChannel")
                     return
-                if not await Schedule.hasCandidatePinged(interaction.user.id, event["title"], channelRecruitmentHr):
+                if (message := await Schedule.hasCandidatePinged(interaction.user.id, event["title"], channelRecruitmentHr)) is not None:
                     roleRecruitmentTeam = interaction.guild.get_role(RECRUITMENT_TEAM)
                     if not isinstance(roleRecruitmentTeam, discord.Role):
                         log.exception("Schedule selectHandling: roleRecruitmentTeam not discord.Role")
                         return
-                    embed = discord.Embed(title="Candidate Accept", description=f"{interaction.user.mention} accepted operation `{event['title']}`\nReserved role `{selectedValue}`", color=discord.Color.blue())
-                    embed.set_footer(text=f"Candidate ID: {interaction.user.id}")
-                    await channelRecruitmentHr.send(roleRecruitmentTeam.mention, embed=embed)
+                    if message.embeds:
+                        embed = message.embeds[0]
+                        embed.description = f"{interaction.user.mention} accepted operation `{event['title']}`\nReserved role `{selectedValue}`"
+                        return await message.edit(embed=embed)
+                    else:
+                        embed = discord.Embed(title="Candidate Accept", description=f"{interaction.user.mention} accepted operation `{event['title']}`\nReserved role `{selectedValue}`", color=discord.Color.blue())
+                        embed.set_footer(text=f"Candidate ID: {interaction.user.id}")
+                        await channelRecruitmentHr.send(roleRecruitmentTeam.mention, embed=embed)
 
 
         elif select.custom_id == "edit_select":

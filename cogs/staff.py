@@ -463,50 +463,34 @@ class Staff(commands.Cog):
 
 
     # Recruitment Team command
-    @discord.app_commands.command(name="verify")
+    @discord.app_commands.command(name="interview")
+    @discord.app_commands.describe(member = "Target prospect member.")
     @discord.app_commands.guilds(GUILD)
-    @discord.app_commands.checks.has_any_role(*CMD_LIMIT_VERIFY)
-    async def verify(self, interaction: discord.Interaction, member: discord.Member) -> None:
-        """Verifies a Prospect (passed interview)."""
-        if not isinstance(interaction.guild, discord.Guild):
-            log.exception("Staff verify: interaction.guild is not discord.Guild")
-            return
+    @discord.app_commands.checks.has_any_role(*CMD_LIMIT_INTERVIEW)
+    async def interview(self, interaction: discord.Interaction, member: discord.Member) -> None:
+        """Helps HR interview a prospect member and decide to verify or deny."""
 
-        roleProspect = interaction.guild.get_role(PROSPECT)
-        roleVerified = interaction.guild.get_role(VERIFIED)
-        roleMember = interaction.guild.get_role(MEMBER)
-        if roleProspect is None or roleVerified is None or roleMember is None:
-            log.exception("Staff verify: roleProspect, roleVerified, roleMember is None")
-            return
+        view = StaffView()
+        view.add_item(StaffButton(style=discord.ButtonStyle.green, label="Verify", custom_id=f"staff_button_interview_verify_{member.id}"))
+        #view.add_item(StaffButton(style=discord.ButtonStyle.red, label="Deny", custom_id=f"staff_button_interview_deny_{member.id}", disabled=True))
 
-        reason = "User verified"
-        if roleProspect in member.roles:
-            await member.remove_roles(roleProspect, reason=reason)
-            await member.add_roles(roleVerified, reason=reason)
+        interviewQuestions = f"""- Be enthusiastic about sigma and the interview, your energy will set the stage for how our unit operates, if it sounds like you dont care or are disinterested it will affect the quality of the unit in the eyes of the interviewee.
+- Be informative to the point and honest, don't sugar-coat things, be straight forward.
 
-        await member.add_roles(roleMember, reason=reason)
-        interviewQuestions = """# Interview Points
-        1. Where to find the mods/server info guide.
-        2. Don't worry about pinging roles or people we are here to help.
-        3. Channel explanations.
-        4. What to do if you are stuck/unsure.
-        5. IRL comes first.
-        6. We work around your schedules, whenever you are available."""
+1. What year were you born in? (min. ~{datetime.now(timezone.utc).year - 17})
+2. Do you have any previous experience with Arma 3 or any milsim game?
+ a. Have you been in any other units? What kind of units were they?
+3. Have you used Arma 3 mods before?
+ b. Please ensure they know how to use the HTML download, and have mods downloaded before newcomer
+4. Have you used Teamspeak before?
+ c. Help install teamspeak client, and have connected/bookmarked SSG teamspeak server
+5. How did you find out about us?
+6. Is there a specific role or playstyle you are looking to do with us?
+7. Any questions?"""
 
-        embed = discord.Embed(title="✅ Member verified", description=f"{member.mention} verified!\n\n{interviewQuestions}", color=discord.Color.green())
-        embed.set_footer(text=f"ID: {member.id}")
-        embed.timestamp = datetime.now()
-        await interaction.response.send_message(embed=embed, ephemeral=True)
-
-        # Logging
-        channelAuditLogs = interaction.guild.get_channel(AUDIT_LOGS)
-        if not isinstance(channelAuditLogs, discord.TextChannel):
-            log.exception("Staff verify: channelAuditLogs not discord.TextChannel")
-            return
-        embed = discord.Embed(title="Member verified", description=f"Verified: {member.mention}\nInterviewer: {interaction.user.mention}", color=discord.Color.blue())
-        embed.set_footer(text=f"Verified ID: {member.id} | Interviewer ID: {interaction.user.id}")
-        embed.timestamp = datetime.now()
-        await channelAuditLogs.send(embed=embed)
+        embed = discord.Embed(title="Interview Structure", description=interviewQuestions, color=discord.Color.gold())
+        embed.set_footer(text=f"Prospect member id: {member.id}")
+        await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
 
 
     # Hampter command
@@ -606,8 +590,56 @@ class Staff(commands.Cog):
             log.debug(f"ROLE: {role.name} - {hex(role.color.value)}")
 
 
+    @staticmethod
+    async def buttonHandling(interaction: discord.Interaction) -> None:
+        """ Handling all staff buttons. """
+
+        # Verify prospect from interview
+        if interaction.data["custom_id"].startswith("staff_button_interview_verify_"):
+            memberId = int(interaction.data["custom_id"].split("_")[-1])
+
+            if not isinstance(interaction.guild, discord.Guild):
+                log.exception("Staff buttonHandling: interaction.guild is not discord.Guild")
+                return
+
+            member = interaction.guild.get_member(memberId)
+            if not isinstance(member, discord.Member):
+                log.exception(f"Staff buttonHandling: member not discord.Member, id '{memberId}'")
+                return
+
+            roleProspect = interaction.guild.get_role(PROSPECT)
+            roleVerified = interaction.guild.get_role(VERIFIED)
+            roleMember = interaction.guild.get_role(MEMBER)
+            if roleProspect is None or roleVerified is None or roleMember is None:
+                log.exception("Staff buttonHandling: roleProspect, roleVerified, roleMember is None")
+                return
+
+            reason = "User verified"
+            if roleProspect in member.roles:
+                await member.remove_roles(roleProspect, reason=reason)
+                await member.add_roles(roleVerified, reason=reason)
+
+            await member.add_roles(roleMember, reason=reason)
+
+
+            embed = discord.Embed(title="✅ Member verified", description=f"{member.mention} verified!", color=discord.Color.green())
+            embed.set_footer(text=f"Verified member id: {member.id}")
+            embed.timestamp = datetime.now()
+            await interaction.response.send_message(embed=embed, ephemeral=True)
+
+            # Logging
+            channelAuditLogs = interaction.guild.get_channel(AUDIT_LOGS)
+            if not isinstance(channelAuditLogs, discord.TextChannel):
+                log.exception("Staff buttonHandling: channelAuditLogs not discord.TextChannel")
+                return
+            embed = discord.Embed(title="Member verified", description=f"Verified: {member.mention}\nInterviewer: {interaction.user.mention}", color=discord.Color.blue())
+            embed.set_footer(text=f"Verified ID: {member.id} | Interviewer ID: {interaction.user.id}")
+            embed.timestamp = datetime.now()
+            await channelAuditLogs.send(embed=embed)
+
 
     async def modalHandling(self, modal: discord.ui.Modal, interaction: discord.Interaction) -> None:
+        """ Handling all staff modals. """
         if not isinstance(interaction.user, discord.Member):
             log.exception("Staff modalHandling: interaction.user not discord.Member")
             return
@@ -626,6 +658,21 @@ class Staff(commands.Cog):
             json.dump(genericData, f, indent=4)
 
         await interaction.response.send_message(f"Maps updated!", ephemeral=True, delete_after=30.0)
+
+
+class StaffView(discord.ui.View):
+    """Handling all schedule views."""
+    def __init__(self, *args, **kwargs):
+        super().__init__(timeout=None, *args, **kwargs)
+
+
+class StaffButton(discord.ui.Button):
+    """Handling all staff buttons."""
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    async def callback(self, interaction: discord.Interaction):
+        await Staff.buttonHandling(interaction)
 
 
 class StaffModal(discord.ui.Modal):

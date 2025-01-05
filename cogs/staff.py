@@ -481,9 +481,13 @@ class Staff(commands.Cog):
             if message.embeds and message.embeds[0].title == "❌ Prospect denied" and message.embeds[0].footer.text and message.embeds[0].footer.text.startswith(f"Prospect ID: {member.id}"):
                 isAuthorStaff = [True for role in member.roles if role.id == UNIT_STAFF]
                 if isAuthorStaff:
-                    await interaction.followup.send(embed=discord.Embed(title="⚠️ Prospect denied", description="Prospect has been denied before. Since you're Unit Staff, you may still continue and override the decision!", color=discord.Color.yellow()), ephemeral=True)
+                    embed = discord.Embed(title="⚠️ Prospect denied", description=f"Prospect ({member.mention}) has been denied before. Since you're Unit Staff, you may still continue and override the decision!", color=discord.Color.yellow())
+                    embed.set_footer(text=f"Prospect ID: {member.id}")
+                    await interaction.followup.send(embed=embed, ephemeral=True)
                 else:
-                    await interaction.followup.send(embed=discord.Embed(title="❌ Prospect denied", description="Prospect has already been denied. Only Unit Staff may interview denied prospects!", color=discord.Color.red()), ephemeral=True)
+                    embed = discord.Embed(title="❌ Prospect denied", description=f"Prospect ({member.mention}) has already been denied. Only Unit Staff may interview denied prospects!", color=discord.Color.red())
+                    embed.set_footer(text=f"Prospect ID: {member.id}")
+                    await interaction.followup.send(embed=embed, ephemeral=True)
                     return
 
 

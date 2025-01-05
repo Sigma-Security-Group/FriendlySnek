@@ -1496,7 +1496,7 @@ class Schedule(commands.Cog):
                         if templateName == "":
                             log.exception("Schedule buttonHandling: templateName is empty")
                             return
-                        log.info(f"{interaction.user.id} [{interaction.user.dispay_name}] Updated template '{templateName}'")
+                        log.info(f"{interaction.user.id} [{interaction.user.display_name}] Updated template '{templateName}'")
                         # Write to file
                         filename = f"data/{previewEmbedDict['type'].lower()}Templates.json"
                         with open(filename) as f:

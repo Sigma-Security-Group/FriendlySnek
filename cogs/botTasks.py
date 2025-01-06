@@ -106,7 +106,7 @@ class BotTasks(commands.Cog):
                     log.warning(f"BotTasks fetchWebsiteText: response.status is not 200 '{url}'")
                 return await response.text()
 
-    @tasks.loop(hours=1)
+    @tasks.loop(hours=8)
     async def checkModUpdates(self) -> None:
         """Checks mod updates, pings hampters if detected."""
 
@@ -118,6 +118,7 @@ class BotTasks(commands.Cog):
                 log.exception("BotTasks checkModUpdates: modpackIds not in genericData")
                 return
 
+        date = ""
         for modID in genericData["modpackIds"]:
             # Fetch mod & parse HTML
             soup = BS(await BotTasks.fetchWebsiteText(CHANGELOG_URL.format(modID)), "html.parser")
@@ -156,15 +157,15 @@ class BotTasks(commands.Cog):
             now = datetime.now(timezone.utc)
 
             # Check if update is new
-            if utcTime > (now - timedelta(minutes=29.0, seconds=59.0)):  # Relative time checking
-                log.debug(f"BotTasks checkModUpdates: Arma mod update '{name}'")
+            if utcTime > (now - timedelta(hours=7, minutes=59.0)):  # Relative time checking
+                log.debug(f"BotTasks checkModUpdates: Arma mod update '{name}' - '{utcTime}'")
                 output.append({
                     "modID": modID,
                     "name": name,
                     "datetime": utcTime
                 })
             else:
-                log.debug(f"BotTasks checkModUpdates: Arma mod update IGNORE '{name}'")
+                log.debug(f"BotTasks checkModUpdates: Arma mod update IGNORE '{name}' - '{utcTime}'")
 
 
         if len(output) > 0:

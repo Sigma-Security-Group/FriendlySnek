@@ -1128,7 +1128,7 @@ class Schedule(commands.Cog):
                     # Event view has button "Accept & Reserve"
                     if event["reservableRoles"] and len(event["reservableRoles"]) == event["maxPlayers"] and interaction.user.id in event["accepted"]:
                         event["accepted"].remove(interaction.user.id)
-                        await message.edit(embed=self.getEventEmbed(event))
+                    await message.edit(embed=self.getEventEmbed(event))
 
                     # Notify people on standby that reservable role(s) are vacant
                     if len(event["standby"]) > 0 and isinstance(event["maxPlayers"], int) and len(event["accepted"]) < event["maxPlayers"] and event["reservableRoles"] and not all(event["reservableRoles"].values()):

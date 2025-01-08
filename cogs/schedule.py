@@ -2140,7 +2140,17 @@ class Schedule(commands.Cog):
             await interaction.response.send_message(embed=discord.Embed(title="✅ Event edited", color=discord.Color.green()), ephemeral=True, delete_after=5.0)
 
     async def modalHandling(self, modal: discord.ui.Modal, interaction: discord.Interaction, eventMsg: discord.Message, view: discord.ui.View | None) -> None:
+        """Handling all modal menu interactions.
 
+        Parameters:
+        modal (discord.ui.Modal): The Discord modal menu
+        interaction (discord.Interaction): The Discord interaction.
+        eventMsg (discord.Message): The event message.
+        view (discord.ui.View | None): The event message view.
+
+        Returns:
+        None.
+        """
         customId = "_".join(modal.custom_id.split("_")[:-1])  # Remove authorId
 
         if not isinstance(interaction.user, discord.Member):

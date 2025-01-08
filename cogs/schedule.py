@@ -1035,7 +1035,7 @@ class Schedule(commands.Cog):
                 playerCapReached = isinstance(event["maxPlayers"], int) and len(event["accepted"]) >= event["maxPlayers"]
 
                 # Normal reservation, but no space left
-                if not isAcceptAndReserve and playerCapReached:
+                if not isAcceptAndReserve and playerCapReached and interaction.user.id not in event["accepted"]:
                     await interaction.response.send_message(embed=discord.Embed(title="❌ Sorry, seems like there's no space left in the :b:op!", color=discord.Color.red()), ephemeral=True, delete_after=60.0)
                     return
 

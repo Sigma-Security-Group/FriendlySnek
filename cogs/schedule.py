@@ -2152,7 +2152,6 @@ class Schedule(commands.Cog):
 
         if customId.startswith("modal_create_") and view is not None:
             infoLabel = customId[len("modal_create_"):]
-            infoLabel = "_".join(infoLabel.split("_")[:-1])  # Remove authorId
             followupMsg = {}
 
             # Update embed

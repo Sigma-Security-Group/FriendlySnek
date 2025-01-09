@@ -2328,12 +2328,13 @@ class Schedule(commands.Cog):
                 event["reservableRoles"] = {role.strip(): event["reservableRoles"][role.strip()] if role in event["reservableRoles"] else None for role in reservableRoles}
 
         elif customId == "modal_maxPlayers":
-            if value.lower() == "none" or (value.isdigit() and int(value) > MAX_SERVER_ATTENDANCE):
+            valueLower = value.lower()
+            if valueLower == "none":
                 event["maxPlayers"] = None
-            elif value.lower() in ("anonymous", "hidden"):
-                event["maxPlayers"] = value.lower()
-            elif value.isdigit() and 1 < int(value) < MAX_SERVER_ATTENDANCE:
-                event["maxPlayers"] = int(value)
+            elif valueLower in ("anonymous", "hidden"):
+                event["maxPlayers"] = valueLower
+            elif value.isdigit() and 0 < int(value):
+                event["maxPlayers"] = min(int(value), MAX_SERVER_ATTENDANCE)
             else:
                 await interaction.response.send_message(interaction.user.mention, embed=EMBED_INVALID, ephemeral=True, delete_after=10.0)
                 return

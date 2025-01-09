@@ -2237,7 +2237,7 @@ class Schedule(commands.Cog):
                     if valueLower == "none":
                         previewEmbedDict["maxPlayers"] = None
                     elif value.isdigit():
-                        previewEmbedDict["maxPlayers"] = 50 if int(value) > MAX_SERVER_ATTENDANCE else int(value)
+                        previewEmbedDict["maxPlayers"] = 50 if int(value) > MAX_SERVER_ATTENDANCE else max(int(value), 1)
                     else:
                         previewEmbedDict["maxPlayers"] = valueLower
 

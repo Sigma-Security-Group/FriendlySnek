@@ -268,7 +268,7 @@ class ButtonRoles(commands.GroupCog, group_name="button-role"):
         currentRoles = [guild.get_role(msgRoleId) for msgRoleId in activeRoleIds]
 
         # Button specific actions
-        match button.custom_id:
+        match interaction.data["custom_id"]:
             case "buttonrole_edit_add":
                 addableRoles = ButtonRoles.permittedAssignableRoles(guild.roles, blacklist=currentRoles)
                 if not addableRoles:
@@ -312,7 +312,7 @@ class ButtonRoles(commands.GroupCog, group_name="button-role"):
         Returns:
         None.
         """
-        infoLabel = select.custom_id.split("_REMOVE")[0]
+        infoLabel = interaction.data["custom_id"].split("_REMOVE")[0]
         roleIdSelected = int(select.values[0])
 
         buttonRoleMsg = await msgChannel.fetch_message(buttonRoleMsgId)

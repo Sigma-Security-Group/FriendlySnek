@@ -700,8 +700,8 @@ class Staff(commands.Cog):
             log.exception("Staff modalHandling: interaction.user not discord.Member")
             return
 
-        if modal.custom_id != "staff_modal_maps":
-            log.exception("Staff modalHandling: modal.custom_id != staff_modal_maps")
+        if interaction.data["custom_id"] != "staff_modal_maps":
+            log.exception("Staff modalHandling: modal custom_id != staff_modal_maps")
             return
 
         log.info(f"{interaction.user.id} [{interaction.user.display_name}] Updating modpack maps listing")

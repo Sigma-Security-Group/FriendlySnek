@@ -108,7 +108,7 @@ class Poll(commands.Cog):
         Returns:
         None.
         """
-        if button.custom_id == "results":
+        if interaction.data["custom_id"] == "results":
             embed = discord.Embed(title="Poll results", color=discord.Color.green())
             for key, value in group.items():
                 if key.startswith("poll_vote_"):
@@ -140,14 +140,14 @@ class Poll(commands.Cog):
             row = button.view
 
             for num in range(len(optionRows)):  # Loop through the amount of buttons
-                if button.view.children[num].custom_id == button.custom_id and interaction.user.id not in group[button.custom_id]:  # If pressed button (register vote) is same as iteration
+                if button.view.children[num].custom_id == interaction.data["custom_id"] and interaction.user.id not in group[interaction.data["custom_id"]]:  # If pressed button (register vote) is same as iteration
                     if not group["Multivote"]:  # One vote per person
                         for i in range(len(optionRows)):  # Remove previous user votes
                             if interaction.user.id in group[f"poll_vote_{i}"]:
                                 group[f"poll_vote_{i}"].remove(interaction.user.id)
-                    group[button.custom_id].append(interaction.user.id)
-                elif button.view.children[num].custom_id == button.custom_id and interaction.user.id in group[button.custom_id]:  # If pressed button (remove registered vote) is same as iteration
-                    group[button.custom_id].remove(interaction.user.id)
+                    group[interaction.data["custom_id"]].append(interaction.user.id)
+                elif button.view.children[num].custom_id == interaction.data["custom_id"] and interaction.user.id in group[interaction.data["custom_id"]]:  # If pressed button (remove registered vote) is same as iteration
+                    group[interaction.data["custom_id"]].remove(interaction.user.id)
 
             for btnNum in range(len(row.children)):
                 if row.children[btnNum].custom_id.startswith("poll_vote_"):
@@ -157,7 +157,7 @@ class Poll(commands.Cog):
             if len(button.view.children) == 2:
                 return  # Do not continue editing the message if there's only 1 option (+ Eyes emoji)
 
-            voteCount: list = [int(button.label[1:][:-1]) for button in row.children if button.custom_id.startswith("poll_vote_")]  # Get all votes from poll
+            voteCount: list = [int(button.label[1:][:-1]) for button in row.children if interaction.data["custom_id"].startswith("poll_vote_")]  # Get all votes from poll
             voteSum = sum(voteCount) or 1  # Sums all votes - but if 0, change to 1 (not divide by 0)
 
             newPercentText: list = []

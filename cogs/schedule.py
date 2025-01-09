@@ -925,6 +925,8 @@ class Schedule(commands.Cog):
             log.exception("Schedule buttonHandling: interaction.message is None")
             return
 
+        customId = interaction.data["custom_id"]
+
         try:
             with open(EVENTS_FILE) as f:
                 events = json.load(f)
@@ -934,7 +936,7 @@ class Schedule(commands.Cog):
             eventList: list[dict] = [event for event in events if event["messageId"] == interaction.message.id]
 
             rsvpOptions = ("accepted", "declined", "tentative", "standby")
-            if button.custom_id in rsvpOptions:
+            if customId in rsvpOptions:
                 event = eventList[0]
 
                 if await Schedule.blockVerifiedRoleRSVP(interaction, event):
@@ -948,9 +950,9 @@ class Schedule(commands.Cog):
                     event["accepted"].append(standbyMember)
 
                 # User click on button twice - remove
-                if interaction.user.id in event[button.custom_id]:
-                    event[button.custom_id].remove(interaction.user.id)
-                elif button.custom_id == "accepted" and interaction.user.id in event["standby"]:
+                if interaction.user.id in event[customId]:
+                    event[customId].remove(interaction.user.id)
+                elif customId == "accepted" and interaction.user.id in event["standby"]:
                     event["standby"].remove(interaction.user.id)
 
                 # "New" button
@@ -960,10 +962,10 @@ class Schedule(commands.Cog):
                             event[option].remove(interaction.user.id)
 
                     # Place in standby if player cap is reached
-                    if button.custom_id == "accepted" and isinstance(event["maxPlayers"], int) and len(event["accepted"]) >= event["maxPlayers"]:
+                    if customId == "accepted" and isinstance(event["maxPlayers"], int) and len(event["accepted"]) >= event["maxPlayers"]:
                         event["standby"].append(interaction.user.id)
                     else:
-                        event[button.custom_id].append(interaction.user.id)
+                        event[customId].append(interaction.user.id)
 
                 # Remove player from reservable role
                 hadReservedARole = False
@@ -999,7 +1001,7 @@ class Schedule(commands.Cog):
 
 
             # Ping Recruitment Team if candidate accepts
-            if button.custom_id == "accepted" and eventList[0]["type"].lower() == "operation" and interaction.user.id in eventList[0]["accepted"] and any([True for role in interaction.user.roles if role.id == CANDIDATE]):
+            if customId == "accepted" and eventList[0]["type"].lower() == "operation" and interaction.user.id in eventList[0]["accepted"] and any([True for role in interaction.user.roles if role.id == CANDIDATE]):
                 if not isinstance(interaction.guild, discord.Guild):
                     log.exception("Schedule buttonHandling: interaction.guild not discord.Guild")
                     return
@@ -1017,7 +1019,7 @@ class Schedule(commands.Cog):
                     embed.set_footer(text=f"Candidate ID: {interaction.user.id}")
                     await channelRecruitmentHr.send(roleRecruitmentTeam.mention, embed=embed)
 
-            elif button.custom_id == "reserve":
+            elif customId == "reserve":
                 # Check if blacklisted
                 with open(ROLE_RESERVATION_BLACKLIST_FILE) as f:
                     blacklist = json.load(f)
@@ -1101,7 +1103,7 @@ class Schedule(commands.Cog):
                 await interaction.response.send_message(content=interaction.user.mention, view=view, ephemeral=True, delete_after=60.0)
                 return
 
-            elif button.custom_id == "reserve_role_unreserve":
+            elif customId == "reserve_role_unreserve":
                 scheduleNeedsUpdate = False
                 if message is None:
                     log.exception("Schedule buttonHandling reserve_role_unreserve: message is None")
@@ -1155,7 +1157,7 @@ class Schedule(commands.Cog):
                                 log.warning(f"Schedule buttonhandling: Failed to DM {standbyMember.id} [{standbyMember.display_name}] about vacant roles")
                         break
 
-            elif button.custom_id == "config":
+            elif customId == "config":
                 event = eventList[0]
                 scheduleNeedsUpdate = False
 
@@ -1172,7 +1174,7 @@ class Schedule(commands.Cog):
                     view.add_item(item)
                 await interaction.response.send_message(content=f"{interaction.user.mention} What would you like to configure?", view=view, ephemeral=True, delete_after=30.0)
 
-            elif button.custom_id == "edit":
+            elif customId == "edit":
                 scheduleNeedsUpdate = False
                 if message is None:
                     log.exception("Schedule buttonHandling edit: message is None")
@@ -1184,7 +1186,7 @@ class Schedule(commands.Cog):
                     return
                 await self.editEvent(interaction, event, message)
 
-            elif button.custom_id == "delete":
+            elif customId == "delete":
                 if message is None:
                     log.exception("Schedule buttonHandling delete: message is None")
                     return
@@ -1202,7 +1204,7 @@ class Schedule(commands.Cog):
                     view.add_item(item)
                 await interaction.response.send_message(embed=embed, view=view, ephemeral=True, delete_after=60.0)
 
-            elif button.custom_id == "delete_event_confirm":
+            elif customId == "delete_event_confirm":
                 scheduleNeedsUpdate = False
 
                 if button.view is None:
@@ -1249,7 +1251,7 @@ class Schedule(commands.Cog):
                     log.exception(f"{interaction.user.id} [{interaction.user.display_name}]")
                 events.remove(event)
 
-            elif button.custom_id == "delete_event_cancel":
+            elif customId == "delete_event_cancel":
                 if button.view is None:
                     log.exception("Schedule buttonHandling delete_event_cancel: button.view is None")
                     return
@@ -1260,7 +1262,7 @@ class Schedule(commands.Cog):
                 await interaction.followup.send(embed=discord.Embed(title=f"❌ Event deletion canceled!", color=discord.Color.red()), ephemeral=True)
                 return
 
-            elif button.custom_id is not None and button.custom_id.startswith("event_schedule_"):
+            elif customId is not None and customId.startswith("event_schedule_"):
                 if button.view is None:
                     log.exception("Schedule buttonHandling event_schedule_: button.view is None")
                     return
@@ -1269,7 +1271,7 @@ class Schedule(commands.Cog):
                     await interaction.response.send_message(f"{interaction.user.mention} Only the one who executed the command may interact with the buttons!", ephemeral=True, delete_after=10.0)
                     return
 
-                buttonLabel = button.custom_id[len("event_schedule_"):]
+                buttonLabel = customId[len("event_schedule_"):]
 
                 generateModal = lambda style, placeholder, default, required, minLength, maxLength: ScheduleModal(
                         self, title="Create event", customId=f"modal_create_{buttonLabel}", userId=interaction.user.id, eventMsg=interaction.message, view=button.view
@@ -1661,7 +1663,7 @@ class Schedule(commands.Cog):
 
                 return
 
-            elif button.custom_id == "event_edit_files_add":
+            elif customId == "event_edit_files_add":
                 messageNew = await interaction.channel.fetch_message(message.id)
                 if not isinstance(messageNew, discord.Message):
                     log.exception("Schedule buttonHandling event_edit_files_add: messageNew not discord.Message")
@@ -1682,7 +1684,7 @@ class Schedule(commands.Cog):
                 await interaction.response.edit_message(embed=embed, view=view)
                 return
 
-            elif button.custom_id == "event_edit_files_remove":
+            elif customId == "event_edit_files_remove":
                 messageNew = await interaction.channel.fetch_message(message.id)
                 if not isinstance(messageNew, discord.Message):
                     log.exception("Schedule buttonHandling event_edit_files_remove: messageNew not discord.Message")
@@ -1769,7 +1771,7 @@ class Schedule(commands.Cog):
         Returns:
         None.
         """
-        customId = "_".join(select.custom_id.split("_")[:-1])  # Remove authorId
+        customId = "_".join(interaction.data["custom_id"].split("_")[:-1])  # Remove authorId
 
         if not isinstance(interaction.user, discord.Member):
             log.exception("Schedule selectHandling: interaction.user not discord.Member")
@@ -2151,7 +2153,7 @@ class Schedule(commands.Cog):
         Returns:
         None.
         """
-        customId = "_".join(modal.custom_id.split("_")[:-1])  # Remove authorId
+        customId = "_".join(interaction.data["custom_id"].split("_")[:-1])  # Remove authorId
 
         if not isinstance(interaction.user, discord.Member):
             log.exception("Schedule modalHandling: interaction.user not discord.Member")

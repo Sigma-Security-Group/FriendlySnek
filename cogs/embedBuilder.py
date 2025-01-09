@@ -171,7 +171,7 @@ class EmbedBuilder(commands.Cog):
             return
 
 
-        name = button.custom_id[len("builder_button_"):]
+        name = interaction.data["custom_id"][len("builder_button_"):]
         modal = BuilderModal(self, f"Set embed {name.lower()}", f"builder_modal_{name.lower()}", interaction.message, button.view)
         modalConfig = {
             "style": discord.TextStyle.short,
@@ -371,7 +371,7 @@ class EmbedBuilder(commands.Cog):
         # Values depend on (any) key to be filled
         dependencies = EmbedBuilder.getDependencies(embed)
 
-        name = modal.custom_id[len("builder_modal_"):]
+        name = interaction.data["custom_id"][len("builder_modal_"):]
         match name:
             case "title":
                 embed.title = value

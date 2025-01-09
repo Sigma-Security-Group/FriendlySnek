@@ -261,14 +261,14 @@ class WorkshopInterest(commands.Cog):
                     break
             wsMembers = workshopInterest[wsTitle]["members"]
 
-            if button.custom_id == "workshopinterest_add":
+            if interaction.data["custom_id"] == "workshopinterest_add":
                 if interaction.user.id not in wsMembers:
                     wsMembers.append(interaction.user.id)  # Add member to WS
                 else:
                     await interaction.response.send_message("You are already interested!", ephemeral=True)
                     return
 
-            elif button.custom_id == "workshopinterest_remove":
+            elif interaction.data["custom_id"] == "workshopinterest_remove":
                 if interaction.user.id in wsMembers:
                     wsMembers.remove(interaction.user.id)  # Remove member from WS
                 else:

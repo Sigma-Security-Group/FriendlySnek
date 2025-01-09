@@ -958,7 +958,7 @@ class Schedule(commands.Cog):
                     if standbyMember is None:
                         log.warning(f"Schedule buttonHandling: Failed to fetch promoted accepted member '{standbyMemberId}'")
                     else:
-                        embed = discord.Embed(title="✅ Accepted to Operation", description=f"You have been promoted from standby to accepted in `{event['title']}`", color=discord.Color.green())
+                        embed = discord.Embed(title=f"✅ Accepted to `{event['type'].lower()}`", description=f"You have been promoted from standby to accepted in `{event['title']}`", color=discord.Color.green())
                         try:
                             await standbyMember.send(embed=embed)
                         except Exception:

@@ -925,6 +925,10 @@ class Schedule(commands.Cog):
             log.exception("Schedule buttonHandling: interaction.message is None")
             return
 
+        if not isinstance(interaction.guild, discord.Guild):
+            log.exception("Schedule buttonHandling: interaction.guild not discord.Guild")
+            return
+
         customId = interaction.data["custom_id"]
 
         try:
@@ -946,8 +950,19 @@ class Schedule(commands.Cog):
 
                 # Promote standby to accepted if not AcceptAndReserve
                 if interaction.user.id in event["accepted"] and not isAcceptAndReserve and len(event["standby"]) > 0:
-                    standbyMember = event["standby"].pop(0)
-                    event["accepted"].append(standbyMember)
+                    standbyMemberId = event["standby"].pop(0)
+                    event["accepted"].append(standbyMemberId)
+
+                    # Notify (DM) promoted member
+                    standbyMember = interaction.guild.get_member(standbyMemberId)
+                    if standbyMember is None:
+                        log.warning(f"Schedule buttonHandling: Failed to fetch promoted accepted member '{standbyMemberId}'")
+                    else:
+                        embed = discord.Embed(title="✅ Accepted to Operation", description=f"You have been promoted from standby to accepted in `{event['title']}`", color=discord.Color.green())
+                        try:
+                            await standbyMember.send(embed=embed)
+                        except Exception:
+                            log.warning(f"Schedule buttonHandling: Failed to DM {standbyMemberId} [{standbyMember.display_name}] about acceptance")
 
                 # User click on button twice - remove
                 if interaction.user.id in event[customId]:
@@ -977,10 +992,6 @@ class Schedule(commands.Cog):
 
                 # User removes self from reserved role - Notify people on standby
                 if isAcceptAndReserve and hadReservedARole and len(event["standby"]) > 0:
-                    if not isinstance(interaction.guild, discord.Guild):
-                        log.exception("Schedule buttonHandling: interaction.guild not discord.Guild")
-                        return
-
                     vacantRoles = "\n".join([f"`{role}`" for role, reservedUser in event["reservableRoles"].items() if not reservedUser])
                     embed = discord.Embed(
                         title="Role(s) vacant",

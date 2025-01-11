@@ -34,7 +34,7 @@ class EmbedBuilder(commands.Cog):
         messageid = "Optional discord message id for editing an embed.",
         attachment = "Optional attachment (file)."
     )
-    async def buildEmbed(self, interaction: discord.Interaction, channel: discord.TextChannel, messageid: str = "", attachment: discord.Attachment = None) -> None:
+    async def buildEmbed(self, interaction: discord.Interaction, channel: discord.TextChannel, messageid: str = "", attachment: discord.Attachment | None = None) -> None:
         """Builds embeds.
 
         Parameters:
@@ -248,7 +248,7 @@ class EmbedBuilder(commands.Cog):
                     log.exception("EmbedBuilder buttonHandling: guild is None")
                     return
 
-                targetChannel = guild.get_channel(button.view.targetChannel)
+                targetChannel = guild.get_channel_or_thread(button.view.targetChannel)
                 if not targetChannel:
                     log.exception("EmbedBuilder buttonHandling: targetChannel is None")
                     return

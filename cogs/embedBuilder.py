@@ -34,7 +34,7 @@ class EmbedBuilder(commands.Cog):
         messageid = "Optional discord message id for editing an embed.",
         attachment = "Optional attachment (file)."
     )
-    async def buildEmbed(self, interaction: discord.Interaction, channel: discord.TextChannel, messageid: str = "", attachment: discord.Attachment | None = None) -> None:
+    async def buildEmbed(self, interaction: discord.Interaction, channel: discord.TextChannel | discord.Thread, messageid: str = "", attachment: discord.Attachment | None = None) -> None:
         """Builds embeds.
 
         Parameters:

@@ -1540,7 +1540,7 @@ class Schedule(commands.Cog):
 
                     # EVENT FINISHING
                     case "submit":
-                        log.debug(f"{interaction.user.id} [{interaction.user.display_name}] Submitted with event type '{previewEmbedDict['type']}'")
+                        log.info(f"{interaction.user.id} [{interaction.user.display_name}] Created a '{previewEmbedDict['type']}' titled '{previewEmbedDict['title']}'")
                         # Check if all mandatory fields are filled
                         if isAllRequiredInfoFilled() is False:
                             await interaction.response.send_message(f"{interaction.user.mention} Before creating the event, you need to fill out the mandatory (red buttons) information!", ephemeral=True, delete_after=10.0)
@@ -1568,7 +1568,6 @@ class Schedule(commands.Cog):
 
                         # Update schedule
                         await self.updateSchedule()
-                        log.debug(f"{interaction.user.id} [{interaction.user.display_name}] Submitted with event type, after updateschedule '{previewEmbedDict['type']}'")
 
 
                         guild = interaction.guild

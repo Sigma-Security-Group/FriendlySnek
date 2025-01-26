@@ -80,7 +80,7 @@ class BotTasks(commands.Cog):
         if not isinstance(channelWelcome, discord.TextChannel):
             log.exception("BotTasks on_member_join: channelWelcome not discord.TextChannel")
             return
-        embed = discord.Embed(title=f"Welcome, {member.mention}!", description=f"Your view of the Discord server is limited. Please check <#{RULES_AND_EXPECTATIONS}> and <#{SERVER_INFO}>. After that, ping @​Recruitment Team for a brief voice interview to get the correct roles.", color=discord.Color.green())
+        embed = discord.Embed(title=f"Welcome, {member.display_name}!", description=f"Your view of the Discord server is limited. Please check <#{RULES_AND_EXPECTATIONS}> and <#{SERVER_INFO}>. After that, ping @​Recruitment Team for a brief voice interview to get the correct roles.", color=discord.Color.green())
         await channelWelcome.send(member.mention, embed=embed)
 
         # Log in Audit Logs

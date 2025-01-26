@@ -49,7 +49,6 @@ class Staff(commands.Cog):
         return member
 
     @commands.command(name="getmember")
-    @commands.has_any_role(*CMD_LIMIT_STAFF)
     async def getMember(self, ctx: commands.Context, *, member: str = commands.parameter(description="Target member")) -> None:
         """Get detailed information about a guild member."""
         if not isinstance(ctx.guild, discord.Guild):

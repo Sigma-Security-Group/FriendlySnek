@@ -2808,8 +2808,7 @@ class Schedule(commands.Cog):
 class ScheduleView(discord.ui.View):
     """Handling all schedule views."""
     def __init__(self, *, authorId: int = None, previousMessageView = None, **kwargs):
-        super().__init__(**kwargs)
-        self.timeout = None
+        super().__init__(timeout=None, **kwargs)
         self.authorId = authorId
         self.previousMessageView = previousMessageView
 

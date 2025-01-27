@@ -465,8 +465,7 @@ class EmbedBuilder(commands.Cog):
 class BuilderView(discord.ui.View):
     """Handling all builder views."""
     def __init__(self, targetChannel: int, messageId: int | None, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.timeout = None
+        super().__init__(timeout=None, *args, **kwargs)
         self.targetChannel = targetChannel
         self.messageId = messageId
 

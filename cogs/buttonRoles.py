@@ -388,8 +388,7 @@ class ButtonRoles(commands.GroupCog, group_name="button-role"):
 class ButtonRolesPersistentView(discord.ui.View):
     """Handling all schedule persistent views."""
     def __init__(self, whitelistRole = None, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.timeout = None
+        super().__init__(timeout=None, *args, **kwargs)
         self.whitelistRole = whitelistRole
 
 
@@ -429,8 +428,7 @@ class ButtonRolesPersistentButton(discord.ui.DynamicItem[discord.ui.Button], tem
 class ButtonRolesView(discord.ui.View):
     """Handling schedule views."""
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.timeout = None
+        super().__init__(timeout=None, *args, **kwargs)
 
 
 class ButtonRolesButton(discord.ui.Button):

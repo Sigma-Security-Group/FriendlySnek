@@ -85,7 +85,6 @@ class Poll(commands.Cog):
 
         try:
             row = PollView(self)
-            row.timeout = None
             buttons = []
             for num in range(optionCount):
                 buttons.append(PollButton(self, group, emoji=EMOJI_NUMBERS[num], label="(0)", style=discord.ButtonStyle.secondary, custom_id=f"poll_vote_{num}"))
@@ -182,7 +181,7 @@ class Poll(commands.Cog):
 
 class PollView(discord.ui.View):
     def __init__(self, instance, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+        super().__init__(timeout=None, *args, **kwargs)
         self.instance = instance
 
 

@@ -490,7 +490,7 @@ class Staff(commands.Cog):
                     return
 
 
-        view = StaffView()
+        view = discord.ui.View(timeout=None)
         view.add_item(StaffButton(style=discord.ButtonStyle.green, label="Verify", custom_id=f"staff_button_interview_verify_{member.id}"))
         view.add_item(StaffButton(style=discord.ButtonStyle.red, label="Deny", custom_id=f"staff_button_interview_deny_{member.id}"))
 
@@ -714,11 +714,6 @@ class Staff(commands.Cog):
 
         await interaction.response.send_message(f"Maps updated!", ephemeral=True, delete_after=30.0)
 
-
-class StaffView(discord.ui.View):
-    """Handling all schedule views."""
-    def __init__(self, *args, **kwargs):
-        super().__init__(timeout=None, *args, **kwargs)
 
 
 class StaffButton(discord.ui.Button):

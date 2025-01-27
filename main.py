@@ -207,7 +207,7 @@ async def on_member_ban(guild: discord.Guild, user: discord.User | discord.Membe
     """On member ban event."""
     if not secret.DISCORD_LOGGING.get("user_ban", False):
         return
-    channelAuditLogs = guild.get_channel(AUDIT_LOGS)
+    channelAuditLogs = client.get_channel(AUDIT_LOGS)
     if not isinstance(channelAuditLogs, discord.TextChannel):
         log.exception("on_member_ban: channelAuditLogs is not discord.TextChannel")
         return
@@ -223,7 +223,7 @@ async def on_member_unban(guild: discord.Guild, user: discord.User) -> None:
     """On member unban event."""
     if not secret.DISCORD_LOGGING.get("user_unban", False):
         return
-    channelAuditLogs = guild.get_channel(AUDIT_LOGS)
+    channelAuditLogs = client.get_channel(AUDIT_LOGS)
     if not isinstance(channelAuditLogs, discord.TextChannel):
         log.exception("on_member_unban: channelAuditLogs is not discord.TextChannel")
         return

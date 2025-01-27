@@ -1028,7 +1028,7 @@ class Schedule(commands.Cog):
 
                     embed = discord.Embed(title="Candidate Accept", description=f"{interaction.user.mention} accepted operation `{eventList[0]['title']}`", color=discord.Color.blue())
                     embed.set_footer(text=f"Candidate ID: {interaction.user.id}")
-                    await channelRecruitmentHr.send(roleRecruitmentTeam.mention, embed=embed)
+                    await channelRecruitmentHr.send(embed=embed)
 
             elif customId == "reserve":
                 # Check if blacklisted

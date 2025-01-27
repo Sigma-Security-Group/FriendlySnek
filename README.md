@@ -49,6 +49,7 @@ DISCORD_LOGGING = {
     "channel_delete": True,
     "user_join": True,
     "user_leave": True,
+    "user_kick": True,
     "user_ban": True,
     "user_unban": True,
 }

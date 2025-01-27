@@ -188,34 +188,59 @@ async def on_guild_channel_delete(channel: discord.abc.GuildChannel) -> None:
 
 @client.event
 async def on_member_remove(member: discord.Member) -> None:
-    """On member remove event."""
-    if not secret.DISCORD_LOGGING.get("user_leave", False):
-        return
+    """On member remove (leave/kick/ban) event."""
+
     channelAuditLogs = member.guild.get_channel(AUDIT_LOGS)
     if not isinstance(channelAuditLogs, discord.TextChannel):
         log.exception("on_member_remove: channelAuditLogs is not discord.TextChannel")
         return
+
     embed = discord.Embed(description=f"{member.mention} {member.name}", color=discord.Color.red(), timestamp=datetime.datetime.now(datetime.timezone.utc))
     embed.set_author(name="Member Left", icon_url=member.display_avatar)
     embed.set_footer(text=f"Member ID: {member.id}")
     embed.set_thumbnail(url=member.display_avatar)
-    await channelAuditLogs.send(embed=embed)
 
+    auditEntries = [
+        entry
+        async for entry in member.guild.audit_logs(limit=5)
+        if entry.action in (discord.AuditLogAction.kick, discord.AuditLogAction.ban, discord.AuditLogAction.unban)
+        and entry.target.id == member.id
+    ]
 
-@client.event
-async def on_member_ban(guild: discord.Guild, user: discord.User | discord.Member) -> None:
-    """On member ban event."""
-    if not secret.DISCORD_LOGGING.get("user_ban", False):
+    # User left
+    if not auditEntries or auditEntries[0].action == discord.AuditLogAction.unban:  # To not log ban when leaving after ban
+        if not secret.DISCORD_LOGGING.get("user_leave", False):
+            return
+        await channelAuditLogs.send(embed=embed)
         return
-    channelAuditLogs = client.get_channel(AUDIT_LOGS)
-    if not isinstance(channelAuditLogs, discord.TextChannel):
-        log.exception("on_member_ban: channelAuditLogs is not discord.TextChannel")
+
+    # User kicked
+    if auditEntries[0].action == discord.AuditLogAction.kick:
+        if not secret.DISCORD_LOGGING.get("user_kick", False):
+            return
+        embed.set_author(name="Member Kicked", icon_url=member.display_avatar)
+        embed.description = None
+        embed.add_field(name="User", value=f"{member.mention}\n{member.name}", inline=True)
+        embed.add_field(name="Moderator", value=f"{auditEntries[0].user.mention}\n{auditEntries[0].user.name}", inline=True)
+        embed.add_field(name="Reason", value=auditEntries[0].reason, inline=False)
+        embed.set_footer(text=f"Member ID: {member.id} | Moderator ID: {auditEntries[0].user_id}")
+        embed.timestamp = auditEntries[0].created_at
+        await channelAuditLogs.send(embed=embed)
         return
-    embed = discord.Embed(description=f"{user.mention} {user.name}", color=discord.Color.red(), timestamp=datetime.datetime.now(datetime.timezone.utc))
-    embed.set_author(name="Member Banned", icon_url=user.display_avatar)
-    embed.set_footer(text=f"Member ID: {user.id}")
-    embed.set_thumbnail(url=user.display_avatar)
-    await channelAuditLogs.send(embed=embed)
+
+    # User banned
+    if auditEntries[0].action == discord.AuditLogAction.ban:
+        if not secret.DISCORD_LOGGING.get("user_ban", False):
+            return
+        embed.set_author(name="Member Banned", icon_url=member.display_avatar)
+        embed.description = None
+        embed.add_field(name="User", value=f"{member.mention}\n{member.name}", inline=True)
+        embed.add_field(name="Moderator", value=f"{auditEntries[0].user.mention}\n{auditEntries[0].user.name}", inline=True)
+        embed.add_field(name="Reason", value=auditEntries[0].reason, inline=False)
+        embed.set_footer(text=f"Member ID: {member.id} | Moderator ID: {auditEntries[0].user_id}")
+        embed.timestamp = auditEntries[0].created_at
+        await channelAuditLogs.send(embed=embed)
+        return
 
 
 @client.event

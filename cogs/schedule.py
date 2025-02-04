@@ -1021,11 +1021,6 @@ class Schedule(commands.Cog):
                     log.exception("Schedule buttonHandling: channelRecruitmentHr not discord.TextChannel")
                     return
                 if not await Schedule.hasCandidatePinged(interaction.user.id, eventList[0]["title"], channelRecruitmentHr):
-                    roleRecruitmentTeam = interaction.guild.get_role(RECRUITMENT_TEAM)
-                    if not isinstance(roleRecruitmentTeam, discord.Role):
-                        log.exception("Schedule buttonHandling: roleRecruitmentTeam is not discord.Role")
-                        return
-
                     embed = discord.Embed(title="Candidate Accept", description=f"{interaction.user.mention} accepted operation `{eventList[0]['title']}`", color=discord.Color.blue())
                     embed.set_footer(text=f"Candidate ID: {interaction.user.id}")
                     await channelRecruitmentHr.send(embed=embed)

@@ -462,7 +462,7 @@ class Staff(commands.Cog):
 
 
     # Recruitment Team command
-    @discord.app_commands.command(name="interview")
+    @discord.app_commands.command(name="recruitment-interview")
     @discord.app_commands.describe(member = "Target prospect member.")
     @discord.app_commands.guilds(GUILD)
     @discord.app_commands.checks.has_any_role(*CMD_LIMIT_INTERVIEW)

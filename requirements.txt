@@ -8,3 +8,4 @@ pysftp
 beautifulsoup4
 asyncpraw
 unidecode
+gspread

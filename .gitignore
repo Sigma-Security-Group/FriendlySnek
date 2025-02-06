@@ -2,6 +2,7 @@
 __pycache__
 secret.py
 bot.log
+spreadsheet_account_creds.json
 logs/
 data/
 tmp/

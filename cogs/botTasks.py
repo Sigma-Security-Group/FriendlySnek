@@ -5,6 +5,7 @@ from datetime import datetime, timezone, timedelta
 from dateutil.parser import parse as datetimeParse  # type: ignore
 from bs4 import BeautifulSoup as BS  # type: ignore
 from .workshopInterest import WORKSHOP_INTEREST_LIST, WorkshopInterest  # type: ignore
+from .spreadsheet import Spreadsheet
 
 from discord.ext import commands, tasks  # type: ignore
 
@@ -97,6 +98,7 @@ class BotTasks(commands.Cog):
         embed.set_thumbnail(url=member.display_avatar)
         await channelAuditLogs.send(embed=embed)
 
+        Spreadsheet.memberJoin(member)
 
     @staticmethod
     async def fetchWebsiteText(url: str) -> str:

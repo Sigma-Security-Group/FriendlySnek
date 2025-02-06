@@ -627,6 +627,11 @@ class Staff(commands.Cog):
                 log.exception(f"Staff buttonHandling: member not discord.Member, id '{memberId}'")
                 return
 
+            embed = discord.Embed(title="✅ Member verified", description=f"{member.mention} verified!", color=discord.Color.green())
+            embed.set_footer(text=f"Verified member id: {member.id}")
+            embed.timestamp = datetime.now()
+            await interaction.response.send_message(embed=embed, ephemeral=True)
+
             roleProspect = interaction.guild.get_role(PROSPECT)
             roleVerified = interaction.guild.get_role(VERIFIED)
             roleMember = interaction.guild.get_role(MEMBER)
@@ -641,11 +646,6 @@ class Staff(commands.Cog):
 
             await member.add_roles(roleMember, reason=reason)
 
-
-            embed = discord.Embed(title="✅ Member verified", description=f"{member.mention} verified!", color=discord.Color.green())
-            embed.set_footer(text=f"Verified member id: {member.id}")
-            embed.timestamp = datetime.now()
-            await interaction.response.send_message(embed=embed, ephemeral=True)
 
             # Logging
             channelAuditLogs = interaction.guild.get_channel(AUDIT_LOGS)

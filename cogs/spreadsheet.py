@@ -153,7 +153,7 @@ class Spreadsheet(commands.Cog):
                 worksheet.update([[displayName, dateJoined, dateLastReply, userId, lastPromotion, status, position, seen, teamId, teamName, teamDate]], f"B{rowNum}")
                 log.debug(f"Spreadsheet createOrUpdateUserRow: Updated row for user id '{userId}' at row number '{rowNum}'")
 
-    @tasks.loop(minutes=5)
+    @tasks.loop(hours=6)
     async def kickTaggedMembers(self) -> None:
         columnUserIds = ws.col_values(Spreadsheet.WORKSHEET_COLUMNS["userId"])[Spreadsheet.ROW_STARTING_INDEX - 1:]
         columnPositions = ws.col_values(Spreadsheet.WORKSHEET_COLUMNS["position"])[Spreadsheet.ROW_STARTING_INDEX - 1:]

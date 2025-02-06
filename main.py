@@ -190,7 +190,7 @@ async def on_guild_channel_delete(channel: discord.abc.GuildChannel) -> None:
 async def on_member_remove(member: discord.Member) -> None:
     """On member remove (leave/kick/ban) event."""
 
-    channelAuditLogs = member.guild.get_channel(AUDIT_LOGS)
+    channelAuditLogs = client.get_channel(AUDIT_LOGS)
     if not isinstance(channelAuditLogs, discord.TextChannel):
         log.exception("on_member_remove: channelAuditLogs is not discord.TextChannel")
         return

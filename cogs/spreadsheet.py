@@ -2,14 +2,13 @@ import logging, gspread
 
 from datetime import datetime
 
-from discord.ext import commands  # type: ignore
+from discord.ext import commands, tasks  # type: ignore
 from google.oauth2.service_account import Credentials
 from typing import *
-from dataclasses import dataclass
 
-from secret import DEBUG
+import secret
 from constants import *
-if DEBUG:
+if secret.DEBUG:
     from constants.debug import *
 
 
@@ -63,7 +62,25 @@ dropdownStatus = Dropdown(
 
 
 
+
 class Spreadsheet(commands.Cog):
+    ROW_STARTING_INDEX = 7
+    COLUMN_STARTING_INDEX = 2
+
+    WORKSHEET_COLUMNS = {
+        "displayName": COLUMN_STARTING_INDEX,
+        "dateJoined": COLUMN_STARTING_INDEX + 1,
+        "dateLastReply": COLUMN_STARTING_INDEX + 2,
+        "userId": COLUMN_STARTING_INDEX + 3,
+        "lastPromotion": COLUMN_STARTING_INDEX + 4,
+        "status": COLUMN_STARTING_INDEX + 5,
+        "position": COLUMN_STARTING_INDEX + 6,
+        "seen": COLUMN_STARTING_INDEX + 7,
+        "teamId": COLUMN_STARTING_INDEX + 8,
+        "teamName": COLUMN_STARTING_INDEX + 9,
+        "teamDate": COLUMN_STARTING_INDEX + 10
+    }
+
     def __init__(self, bot: commands.Bot) -> None:
         super().__init__()
         self.bot = bot
@@ -72,6 +89,9 @@ class Spreadsheet(commands.Cog):
     async def on_ready(self) -> None:
         log.debug(LOG_COG_READY.format("Spreadsheet"))
         self.bot.cogsReady["spreadsheet"] = True
+
+        if secret.SPREADSHEET_ACTIVE and not self.kickTaggedMembers.is_running():
+            self.kickTaggedMembers.start()
 
     @staticmethod
     def memberJoin(member: discord.Member) -> None:
@@ -85,12 +105,12 @@ class Spreadsheet(commands.Cog):
 
     @staticmethod
     def getNewEntryRowId(worksheet: gspread.worksheet) -> int:
-        col_values = worksheet.col_values(2) # Column B
+        col_values = worksheet.col_values(Spreadsheet.WORKSHEET_COLUMNS["displayName"])
         return len(col_values) + 1
 
     @staticmethod
     def getUserRowId(worksheet: gspread.worksheet, userId: int) -> int | None:
-        col_values = worksheet.col_values(5)  # Column E is the 5th column
+        col_values = worksheet.col_values(Spreadsheet.WORKSHEET_COLUMNS["userId"])
         for idx, value in enumerate(col_values):
             if value == str(userId):
                 return idx + 1  # Row numbers are 1-indexed
@@ -111,6 +131,9 @@ class Spreadsheet(commands.Cog):
         # - Name
         # - Date
 
+        if not secret.SPREADSHEET_ACTIVE:
+            return
+
         if not rowNum and not userId:
             log.exception("Spreadsheet createOrUpdateUserRow: one of row number or userid must be provided")
             return
@@ -129,6 +152,36 @@ class Spreadsheet(commands.Cog):
             else:
                 worksheet.update([[displayName, dateJoined, dateLastReply, userId, lastPromotion, status, position, seen, teamId, teamName, teamDate]], f"B{rowNum}")
                 log.debug(f"Spreadsheet createOrUpdateUserRow: Updated row for user id '{userId}' at row number '{rowNum}'")
+
+    @tasks.loop(minutes=5)
+    async def kickTaggedMembers(self) -> None:
+        columnUserIds = ws.col_values(Spreadsheet.WORKSHEET_COLUMNS["userId"])[Spreadsheet.ROW_STARTING_INDEX - 1:]
+        columnPositions = ws.col_values(Spreadsheet.WORKSHEET_COLUMNS["position"])[Spreadsheet.ROW_STARTING_INDEX - 1:]
+
+        guild = self.bot.get_guild(GUILD_ID)
+        if guild is None:
+            log.exception("Spreadsheet kickTaggedMembers: guild is none")
+            return
+
+        for userId, userPosition in zip(columnUserIds, columnPositions):
+            if not userId or userPosition != "Remove":
+                continue
+
+            member = guild.get_member(int(userId))
+
+            # Member not in guild
+            if member is None:
+                log.debug(f"Spreadsheet kickTaggedMembers: User id '{userId}' not found in server. Removed row from spreadsheet")
+            else:
+                log.debug(f"Spreadsheet kickTaggedMembers: Kicked user id '{userId}' from server. Removed row from spreadsheet")
+                try:
+                    #await guild.kick(member, reason="Tagged for removal in spreadsheet")
+                    ...
+                except discord.HTTPException:
+                    log.exception(f"Spreadsheet kickTaggedMembers: Failed to kick user id '{userId}'. Not removed from spreadsheet")
+                    continue
+
+            ws.delete_rows(Spreadsheet.ROW_STARTING_INDEX + columnUserIds.index(userId))
 
 
 async def setup(bot: commands.Bot) -> None:

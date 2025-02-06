@@ -123,7 +123,7 @@ class Spreadsheet(commands.Cog):
             if not rowNum:
                 newEntryRowId = Spreadsheet.getNewEntryRowId(ws)
                 worksheet.update([[displayName, dateJoined, dateLastReply, userId, lastPromotion, status, position, seen, teamId, teamName, teamDate]], f"B{newEntryRowId}")
-                log.debug(f"Spreadsheet createOrUpdateUserRow: Created row for user id '{userId}' at row number '{rowNum}'")
+                log.debug(f"Spreadsheet createOrUpdateUserRow: Created row for user id '{userId}' at row number '{newEntryRowId}'")
 
             # User found
             else:

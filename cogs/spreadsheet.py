@@ -164,10 +164,9 @@ class Spreadsheet(commands.Cog):
             return
 
         for userId, userPosition in zip(columnUserIds, columnPositions):
-            log.debug(f"Spreadsheet kickTaggedMembers: User id '{userId}' has position '{userPosition}'")
             if not userId or userPosition != "Remove":
                 continue
-            log.debug(f"Spreadsheet kickTaggedMembers: Continuing logic")
+            log.debug(f"Spreadsheet kickTaggedMembers: User id '{userId}' has position '{userPosition}' - row number '{Spreadsheet.ROW_STARTING_INDEX + columnUserIds.index(userId)}'")
 
             member = guild.get_member(int(userId))
 

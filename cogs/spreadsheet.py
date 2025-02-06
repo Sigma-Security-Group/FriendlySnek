@@ -175,8 +175,7 @@ class Spreadsheet(commands.Cog):
             else:
                 log.debug(f"Spreadsheet kickTaggedMembers: Kicked user id '{userId}' from server. Removed row from spreadsheet")
                 try:
-                    #await guild.kick(member, reason="Tagged for removal in spreadsheet")
-                    ...
+                    await guild.kick(member, reason="Tagged for removal in spreadsheet")
                 except discord.HTTPException:
                     log.exception(f"Spreadsheet kickTaggedMembers: Failed to kick user id '{userId}'. Not removed from spreadsheet")
                     continue

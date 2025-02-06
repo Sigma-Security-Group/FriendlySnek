@@ -166,7 +166,6 @@ class Spreadsheet(commands.Cog):
         for userId, userPosition in zip(columnUserIds, columnPositions):
             if not userId or userPosition != "Remove":
                 continue
-            log.debug(f"Spreadsheet kickTaggedMembers: User id '{userId}' has position '{userPosition}' - row number '{Spreadsheet.ROW_STARTING_INDEX + columnUserIds.index(userId)}'")
 
             member = guild.get_member(int(userId))
 
@@ -176,13 +175,12 @@ class Spreadsheet(commands.Cog):
             else:
                 log.debug(f"Spreadsheet kickTaggedMembers: Kicked user '{member.display_name}' ('{userId}') from server. Removed row from spreadsheet")
                 try:
-                    #await guild.kick(member, reason="Tagged for removal in spreadsheet")
-                    ...
+                    await guild.kick(member, reason="Tagged for removal in spreadsheet")
                 except discord.HTTPException:
                     log.exception(f"Spreadsheet kickTaggedMembers: Failed to kick user '{member.display_name}' ('{userId}'). Not removed from spreadsheet")
                     continue
 
-            #ws.delete_rows(Spreadsheet.ROW_STARTING_INDEX + columnUserIds.index(userId))
+            ws.delete_rows(Spreadsheet.ROW_STARTING_INDEX + columnUserIds.index(userId))
 
 
 async def setup(bot: commands.Bot) -> None:

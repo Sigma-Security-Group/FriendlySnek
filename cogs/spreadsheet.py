@@ -155,32 +155,36 @@ class Spreadsheet(commands.Cog):
 
     @tasks.loop(hours=6)
     async def kickTaggedMembers(self) -> None:
-        columnUserIds = ws.col_values(Spreadsheet.WORKSHEET_COLUMNS["userId"])[Spreadsheet.ROW_STARTING_INDEX - 1:]
-        columnPositions = ws.col_values(Spreadsheet.WORKSHEET_COLUMNS["position"])[Spreadsheet.ROW_STARTING_INDEX - 1:]
-
         guild = self.bot.get_guild(GUILD_ID)
         if guild is None:
             log.exception("Spreadsheet kickTaggedMembers: guild is none")
             return
 
-        for userId, userPosition in zip(columnUserIds, columnPositions):
-            if not userId or userPosition != "Remove":
-                continue
+        while True:
+            columnUserIds = ws.col_values(Spreadsheet.WORKSHEET_COLUMNS["userId"])[Spreadsheet.ROW_STARTING_INDEX - 1:]
+            columnPositions = ws.col_values(Spreadsheet.WORKSHEET_COLUMNS["position"])[Spreadsheet.ROW_STARTING_INDEX - 1:]
 
-            member = guild.get_member(int(userId))
-
-            # Member not in guild
-            if member is None:
-                log.debug(f"Spreadsheet kickTaggedMembers: User id '{userId}' not found in server. Removed row from spreadsheet")
-            else:
-                log.debug(f"Spreadsheet kickTaggedMembers: Kicked user '{member.display_name}' ('{userId}') from server. Removed row from spreadsheet")
-                try:
-                    await guild.kick(member, reason="Tagged for removal in spreadsheet")
-                except discord.HTTPException:
-                    log.exception(f"Spreadsheet kickTaggedMembers: Failed to kick user '{member.display_name}' ('{userId}'). Not removed from spreadsheet")
+            for userId, userPosition in zip(columnUserIds, columnPositions):
+                if not userId or userPosition != "Remove":
                     continue
 
-            ws.delete_rows(Spreadsheet.ROW_STARTING_INDEX + columnUserIds.index(userId))
+                member = guild.get_member(int(userId))
+
+                # Member not in guild
+                if member is None:
+                    log.debug(f"Spreadsheet kickTaggedMembers: User id '{userId}' not found in server. Removed row from spreadsheet")
+
+                # Member in guild
+                else:
+                    log.debug(f"Spreadsheet kickTaggedMembers: Kicked user '{member.display_name}' ('{userId}') from server. Removed row from spreadsheet")
+                    try:
+                        await guild.kick(member, reason="Tagged for removal in spreadsheet")
+                    except discord.HTTPException:
+                        log.exception(f"Spreadsheet kickTaggedMembers: Failed to kick user '{member.display_name}' ('{userId}'). Not removed from spreadsheet")
+                        continue
+
+                ws.delete_rows(Spreadsheet.ROW_STARTING_INDEX + columnUserIds.index(userId))
+                break  # Refresh the column values after deleting a row
 
 
 async def setup(bot: commands.Bot) -> None:

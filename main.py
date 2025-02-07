@@ -1,4 +1,4 @@
-import os, re, asyncio, discord, json, datetime, logging
+import os, re, asyncio, discord, json, datetime, logging, random
 import pytz # type: ignore
 
 import platform  # Set appropriate event loop policy to avoid runtime errors on windows
@@ -103,9 +103,17 @@ async def on_message(message: discord.Message) -> None:
     if message.guild is None or message.guild.id != GUILD_ID:  # Ignore messages that were not sent on the correct server
         return
 
+    # Snek replies
     if [True for mention in message.mentions if mention.id in FRIENDLY_SNEKS]:
+        replies = ["snek", "snake", "ssssnek", "ssssnake", "snek!", "snake!", "ssssnek!", "ssssnake!",
+                    "snek?", "snake?", "ssssnek?", "ssssnake?", "snek.", "snake.",
+                    "ssssnek.", "ssssnake", "snek...", "snake...", "ssssnek...", "ssssnake...",
+                    "sup", "yes", "no", "maybe", "I shall consider it",
+                    "For the Emperor!", "Man 100m Front!", "Snek 100m Front!",
+                    "Society if naval workshop:\nhttps://tenor.com/view/utopia-gif-21647156"
+        ]
         try:
-            await message.reply("Sssssssnek")
+            await message.reply(random.choice(replies))
         except Exception:
             pass
 

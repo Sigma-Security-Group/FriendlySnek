@@ -154,7 +154,7 @@ SCHEDULE_EVENT_VIEW: dict[str, dict[str, discord.ButtonStyle | bool | int | None
 
 SCHEDULE_EVENT_PREVIEW_EMBED = {
     "title": "Create an event!",
-    "description": "[Red buttons = Mandatory]\n[Gray = Optional]\n[Green = Done]\n\nNOTE: When saving/updating template, Time is optional\n\n[Markdown Syntax (Formatting)](https://support.discord.com/hc/en-us/articles/210298617-Markdown-Text-101-Chat-Formatting-Bold-Italic-Underline)"
+    "description": "[Red buttons = Mandatory]\n[Gray = Optional]\n[Green = Done]\n\n[Markdown Syntax (Formatting)](https://support.discord.com/hc/en-us/articles/210298617-Markdown-Text-101-Chat-Formatting-Bold-Italic-Underline)"
 }
 
 FILE_UPLOAD_EXTENSION_BLACKLIST = ["exe", "pif", "application", "gadget", "msi", "msp", "com", "scr", "hta", "cpl", "msc", "jar", "bat", "cmd", "vb", "vbs", "vbe", "js", "jse", "ws", "wsf", "wsc", "wsh", "ps1", "ps1xml", "ps2", "ps2xml", "psc1", "psc2", "msh", "msh1", "msh2", "mshxml", "msh1xml", "msh2xml", "scf", "lnk", "inf", "reg", "doc", "xls", "ppt", "docm", "dotm", "xlsm", "xltm", "xlam", "pptm", "potm", "ppam", "ppsm", "sldm", "sh", "bash", "zsh"]
@@ -1289,7 +1289,10 @@ class Schedule(commands.Cog):
 
                 previewEmbedDict = self.fromPreviewEmbedToDict(interaction.message.embeds[0])
 
-                isAllRequiredInfoFilled = [(lambda : len([child.label for child in button.view.children if isinstance(child, discord.ui.Button) and child.label != "Submit" and child.style == discord.ButtonStyle.danger and child.disabled == False]) == 0)(), len([child.label for child in button.view.children if isinstance(child, discord.ui.Button) and child.label != "Submit" and child.style == discord.ButtonStyle.danger and child.disabled == False])]
+                requiredInfoRemaining = [
+                    child.label for child in button.view.children
+                    if isinstance(child, discord.ui.Button) and child.style == discord.ButtonStyle.danger and child.disabled == False
+                ]
 
                 match buttonLabel:
                     # INFO FIELDS
@@ -1480,7 +1483,7 @@ class Schedule(commands.Cog):
 
                     # TEMPLATES
                     case "save_as_template":
-                        if (isAllRequiredInfoFilled[1] >= 2) or (isAllRequiredInfoFilled[1] <=1 and (previewEmbedDict["time"] is not None)):
+                        if (len(requiredInfoRemaining) >= 2) or (len(requiredInfoRemaining) == 1 and ("Time" not in requiredInfoRemaining)):
                             await interaction.response.send_message(f"{interaction.user.mention} Before saving the event as a template, you need to fill out the mandatory (red buttons) information!", ephemeral=True, delete_after=10.0)
                             return
 
@@ -1494,7 +1497,7 @@ class Schedule(commands.Cog):
                         ))
 
                     case "update_template":
-                        if (isAllRequiredInfoFilled[1] >= 2) or (isAllRequiredInfoFilled[1] <=1 and (previewEmbedDict["time"] is not None)):
+                        if (len(requiredInfoRemaining) >= 2) or (len(requiredInfoRemaining) == 1 and ("Time" not in requiredInfoRemaining)):
                             await interaction.response.send_message(f"{interaction.user.mention} Before updating the template, you need to fill out the mandatory (red buttons) information!", ephemeral=True, delete_after=10.0)
                             return
 
@@ -1536,10 +1539,10 @@ class Schedule(commands.Cog):
                     # EVENT FINISHING
                     case "submit":
                         # Check if all mandatory fields are filled
-                        if isAllRequiredInfoFilled[0] is False:
+                        if len(requiredInfoRemaining) == 0:
                             await interaction.response.send_message(f"{interaction.user.mention} Before creating the event, you need to fill out the mandatory (red buttons) information!", ephemeral=True, delete_after=10.0)
                             return
-                        
+
                         log.info(f"{interaction.user.id} [{interaction.user.display_name}] Created a '{previewEmbedDict['type']}' titled '{previewEmbedDict['title']}'")
                         # Final fixup
                         previewEmbedDict["authorId"] = interaction.user.id
@@ -1882,7 +1885,7 @@ class Schedule(commands.Cog):
                                 jsonKey = (child.label[0].lower() + child.label[1:]).replace(" ", "")
                                 if jsonKey == "linking":
                                     jsonKey = "workshopInterest"
-                                child.style = discord.ButtonStyle.secondary if template[jsonKey] is None else discord.ButtonStyle.success
+                                child.style = discord.ButtonStyle.secondary if jsonKey not in template or template[jsonKey] is None else discord.ButtonStyle.success
 
                             await eventMsgNew.edit(embed=embed, view=eventMsgView)
                             return

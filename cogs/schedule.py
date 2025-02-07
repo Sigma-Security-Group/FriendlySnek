@@ -1289,7 +1289,10 @@ class Schedule(commands.Cog):
 
                 previewEmbedDict = self.fromPreviewEmbedToDict(interaction.message.embeds[0])
 
-                isAllRequiredInfoFilled = lambda : len([child.label for child in button.view.children if isinstance(child, discord.ui.Button) and child.label != "Submit" and child.style == discord.ButtonStyle.danger and child.disabled == False]) == 0
+                requiredInfoRemaining = [
+                    child.label for child in button.view.children
+                    if isinstance(child, discord.ui.Button) and child.style == discord.ButtonStyle.danger and child.disabled == False
+                ]
 
                 match buttonLabel:
                     # INFO FIELDS
@@ -1480,7 +1483,7 @@ class Schedule(commands.Cog):
 
                     # TEMPLATES
                     case "save_as_template":
-                        if isAllRequiredInfoFilled() is False:
+                        if (len(requiredInfoRemaining) >= 2) or (len(requiredInfoRemaining) == 1 and ("Time" not in requiredInfoRemaining)):
                             await interaction.response.send_message(f"{interaction.user.mention} Before saving the event as a template, you need to fill out the mandatory (red buttons) information!", ephemeral=True, delete_after=10.0)
                             return
 
@@ -1494,7 +1497,7 @@ class Schedule(commands.Cog):
                         ))
 
                     case "update_template":
-                        if isAllRequiredInfoFilled() is False:
+                        if (len(requiredInfoRemaining) >= 2) or (len(requiredInfoRemaining) == 1 and ("Time" not in requiredInfoRemaining)):
                             await interaction.response.send_message(f"{interaction.user.mention} Before updating the template, you need to fill out the mandatory (red buttons) information!", ephemeral=True, delete_after=10.0)
                             return
 
@@ -1535,12 +1538,12 @@ class Schedule(commands.Cog):
 
                     # EVENT FINISHING
                     case "submit":
-                        log.info(f"{interaction.user.id} [{interaction.user.display_name}] Created a '{previewEmbedDict['type']}' titled '{previewEmbedDict['title']}'")
                         # Check if all mandatory fields are filled
-                        if isAllRequiredInfoFilled() is False:
+                        if len(requiredInfoRemaining) == 0:
                             await interaction.response.send_message(f"{interaction.user.mention} Before creating the event, you need to fill out the mandatory (red buttons) information!", ephemeral=True, delete_after=10.0)
                             return
 
+                        log.info(f"{interaction.user.id} [{interaction.user.display_name}] Created a '{previewEmbedDict['type']}' titled '{previewEmbedDict['title']}'")
                         # Final fixup
                         previewEmbedDict["authorId"] = interaction.user.id
                         filesRealName = []
@@ -1882,7 +1885,7 @@ class Schedule(commands.Cog):
                                 jsonKey = (child.label[0].lower() + child.label[1:]).replace(" ", "")
                                 if jsonKey == "linking":
                                     jsonKey = "workshopInterest"
-                                child.style = discord.ButtonStyle.secondary if template[jsonKey] is None else discord.ButtonStyle.success
+                                child.style = discord.ButtonStyle.secondary if jsonKey not in template or template[jsonKey] is None else discord.ButtonStyle.success
 
                             await eventMsgNew.edit(embed=embed, view=eventMsgView)
                             return

@@ -90,7 +90,7 @@ class Spreadsheet(commands.Cog):
         log.debug(LOG_COG_READY.format("Spreadsheet"))
         self.bot.cogsReady["spreadsheet"] = True
 
-        if secret.SPREADSHEET_ACTIVE and not self.kickTaggedMembers.is_running():
+        if secret.SPREADSHEET_ACTIVE and not secret.DEBUG and not self.kickTaggedMembers.is_running():
             self.kickTaggedMembers.start()
 
     @staticmethod

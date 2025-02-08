@@ -186,7 +186,7 @@ class Spreadsheet(commands.Cog):
             rowsToDelete.append(Spreadsheet.ROW_STARTING_INDEX + columnUserIds.index(userId))
 
         for row in sorted(rowsToDelete, reverse=True):
-            ws.delete_rows(row)
+            ws.update([[None, None, None, None, None, None, "Unknown", None, None, None, None]], f"B{row}")
 
 
 async def setup(bot: commands.Bot) -> None:

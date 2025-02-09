@@ -20,18 +20,6 @@ SCOPES = [
     "https://www.googleapis.com/auth/drive",
     "https://www.googleapis.com/auth/spreadsheets"
 ]
-ws = None
-credentials = Credentials.from_service_account_file("spreadsheet_account_creds.json", scopes=SCOPES)
-gc = gspread.authorize(credentials)
-sh = gc.open_by_key("17siSuyOUn0S1U1l1bf1gJGx9b7Tgrb1rzVquK_7qHmc")
-
-worksheets = sh.worksheets()
-for worksheet in worksheets:
-    if worksheet.id == TARGET_WORKSHEET_ID:
-        ws = worksheet
-        break
-
-log.debug(f"Spreadsheet: using spreadsheet '{sh.title}' and worksheet '{ws.title}' ({ws.id})")
 
 
 class Dropdown:
@@ -61,9 +49,8 @@ dropdownStatus = Dropdown(
 )
 
 
-
-
 class Spreadsheet(commands.Cog):
+    ws = None
     ROW_STARTING_INDEX = 7
     COLUMN_STARTING_INDEX = 2
 
@@ -90,13 +77,32 @@ class Spreadsheet(commands.Cog):
         log.debug(LOG_COG_READY.format("Spreadsheet"))
         self.bot.cogsReady["spreadsheet"] = True
 
+        if Spreadsheet.ws:
+            return
+
+        try:
+            credentials = Credentials.from_service_account_file("spreadsheet_account_creds.json", scopes=SCOPES)
+            gc = gspread.authorize(credentials)
+            sh = gc.open_by_key("17siSuyOUn0S1U1l1bf1gJGx9b7Tgrb1rzVquK_7qHmc")
+        except Exception as e:
+            log.exception(f"Spreadsheet: failed to authenticate or open spreadsheet: {e}")
+            return
+
+        worksheets = sh.worksheets()
+        for worksheet in worksheets:
+            if worksheet.id == TARGET_WORKSHEET_ID:
+                Spreadsheet.ws = worksheet
+                break
+
+        log.debug(f"Spreadsheet: using spreadsheet '{sh.title}' and worksheet '{Spreadsheet.ws.title}' ({Spreadsheet.ws.id})")
+
         if secret.SPREADSHEET_ACTIVE and not secret.DEBUG and not self.kickTaggedMembers.is_running():
             self.kickTaggedMembers.start()
 
     @staticmethod
     def memberJoin(member: discord.Member) -> None:
         Spreadsheet.createOrUpdateUserRow(
-            ws,
+            Spreadsheet.ws,
             displayName=member.display_name,
             dateJoined=datetime.strftime(member.joined_at, "%d/%m/%Y") if member.joined_at else None,
             userId=str(member.id),
@@ -104,12 +110,12 @@ class Spreadsheet(commands.Cog):
         )
 
     @staticmethod
-    def getNewEntryRowId(worksheet: gspread.worksheet) -> int:
+    def getNewEntryRowId(worksheet: gspread.worksheet.Worksheet) -> int:
         col_values = worksheet.col_values(Spreadsheet.WORKSHEET_COLUMNS["displayName"])
         return len(col_values) + 1
 
     @staticmethod
-    def getUserRowId(worksheet: gspread.worksheet, userId: int) -> int | None:
+    def getUserRowId(worksheet: gspread.worksheet.Worksheet, userId: int) -> int | None:
         col_values = worksheet.col_values(Spreadsheet.WORKSHEET_COLUMNS["userId"])
         for idx, value in enumerate(col_values):
             if value == str(userId):
@@ -117,7 +123,7 @@ class Spreadsheet(commands.Cog):
         return None
 
     @staticmethod
-    def createOrUpdateUserRow(worksheet: gspread.worksheet, *, rowNum: int | None = None, displayName: str | None = None, dateJoined: str | None = None, dateLastReply: str | None = None, userId: str | None = None, lastPromotion: str | None = None, status: str | None = None, position: str | None = None, seen: bool | None = None, teamId: int | None = None, teamName: str | None = None, teamDate: str | None = None) -> None:
+    def createOrUpdateUserRow(worksheet: gspread.worksheet.Worksheet | None, *, rowNum: int | None = None, displayName: str | None = None, dateJoined: str | None = None, dateLastReply: str | None = None, userId: str | None = None, lastPromotion: str | None = None, status: str | None = None, position: str | None = None, seen: bool | None = None, teamId: int | None = None, teamName: str | None = None, teamDate: str | None = None) -> None:
         # User row (starting from column B):
         # - Discord Name
         # - Date Joined
@@ -131,7 +137,7 @@ class Spreadsheet(commands.Cog):
         # - Name
         # - Date
 
-        if not secret.SPREADSHEET_ACTIVE:
+        if not worksheet or not secret.SPREADSHEET_ACTIVE:
             return
 
         if not rowNum and not userId:
@@ -144,7 +150,7 @@ class Spreadsheet(commands.Cog):
 
             # User not found
             if not rowNum:
-                newEntryRowId = Spreadsheet.getNewEntryRowId(ws)
+                newEntryRowId = Spreadsheet.getNewEntryRowId(Spreadsheet.ws)
                 worksheet.update([[displayName, dateJoined, dateLastReply, userId, lastPromotion, status, position, seen, teamId, teamName, teamDate]], f"B{newEntryRowId}")
                 log.debug(f"Spreadsheet createOrUpdateUserRow: Created row for user id '{userId}' at row number '{newEntryRowId}'")
 
@@ -160,8 +166,8 @@ class Spreadsheet(commands.Cog):
             log.exception("Spreadsheet kickTaggedMembers: guild is none")
             return
 
-        columnUserIds = ws.col_values(Spreadsheet.WORKSHEET_COLUMNS["userId"])[Spreadsheet.ROW_STARTING_INDEX - 1:]
-        columnPositions = ws.col_values(Spreadsheet.WORKSHEET_COLUMNS["position"])[Spreadsheet.ROW_STARTING_INDEX - 1:]
+        columnUserIds = Spreadsheet.ws.col_values(Spreadsheet.WORKSHEET_COLUMNS["userId"])[Spreadsheet.ROW_STARTING_INDEX - 1:]
+        columnPositions = Spreadsheet.ws.col_values(Spreadsheet.WORKSHEET_COLUMNS["position"])[Spreadsheet.ROW_STARTING_INDEX - 1:]
 
         rowsToDelete = []
         for userId, userPosition in zip(columnUserIds, columnPositions):
@@ -186,7 +192,7 @@ class Spreadsheet(commands.Cog):
             rowsToDelete.append(Spreadsheet.ROW_STARTING_INDEX + columnUserIds.index(userId))
 
         for row in sorted(rowsToDelete, reverse=True):
-            ws.update([[None, None, None, None, None, None, "Unknown", None, None, None, None]], f"B{row}")
+            Spreadsheet.ws.update([[None, None, None, None, None, None, "Unknown", None, None, None, None]], f"B{row}")
 
 
 async def setup(bot: commands.Bot) -> None:

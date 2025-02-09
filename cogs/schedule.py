@@ -1539,7 +1539,7 @@ class Schedule(commands.Cog):
                     # EVENT FINISHING
                     case "submit":
                         # Check if all mandatory fields are filled
-                        if len(requiredInfoRemaining) == 0:
+                        if len(requiredInfoRemaining) != 0:
                             await interaction.response.send_message(f"{interaction.user.mention} Before creating the event, you need to fill out the mandatory (red buttons) information!", ephemeral=True, delete_after=10.0)
                             return
 

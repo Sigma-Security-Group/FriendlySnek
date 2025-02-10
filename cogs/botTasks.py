@@ -58,28 +58,12 @@ class BotTasks(commands.Cog):
             log.exception("BotTasks on_member_join: roleProspect is not discord.Role")
             return
 
+        # Add prospect role
         try:
             await member.add_roles(roleProspect, reason="Joined guild")
         except discord.HTTPException:
             log.warning(f"BotTasks on_member_join: failed to add prospect role to member '{member.id}'")
 
-        remindTime = datetime.now() + timedelta(days=1)
-        with open(REMINDERS_FILE) as f:
-            reminders = json.load(f)
-
-        reminders[datetime.timestamp(remindTime)] = {
-            "type": "newcomer",
-            "userID": member.id
-        }
-        with open(REMINDERS_FILE, "w", encoding="utf-8") as f:
-            json.dump(reminders, f, indent=4)
-
-        channelWelcome = member.guild.get_channel(WELCOME)
-        if not isinstance(channelWelcome, discord.TextChannel):
-            log.exception("BotTasks on_member_join: channelWelcome not discord.TextChannel")
-            return
-        embed = discord.Embed(title=f"Welcome, {member.display_name}!", description=f"Your view of the Discord server is limited. Please check <#{RULES_AND_EXPECTATIONS}> and <#{SERVER_INFO}>. After that, ping @​Recruitment Team for a brief voice interview to get the correct roles.", color=discord.Color.green())
-        await channelWelcome.send(member.mention, embed=embed)
 
         # Log in Audit Logs
         if not secret.DISCORD_LOGGING.get("user_join", False):
@@ -95,6 +79,34 @@ class BotTasks(commands.Cog):
         embed.set_thumbnail(url=member.display_avatar)
         await channelAuditLogs.send(embed=embed)
 
+
+        # Send welcome message
+        channelWelcome = member.guild.get_channel(WELCOME)
+        if not isinstance(channelWelcome, discord.TextChannel):
+            log.exception("BotTasks on_member_join: channelWelcome not discord.TextChannel")
+            return
+        embed = discord.Embed(title=f"Welcome, {member.display_name}!", description=f"Your view of the Discord server is limited. Please check <#{RULES_AND_EXPECTATIONS}> and <#{SERVER_INFO}>. After that, ping @​Recruitment Team for a brief voice interview to get the correct roles.", color=discord.Color.green())
+        await channelWelcome.send(member.mention, embed=embed)
+
+
+        # Add newcomer reminder
+        remindTime = datetime.now() + timedelta(days=1)
+        with open(REMINDERS_FILE) as f:
+            reminders = json.load(f)
+
+        for reminder in reminders.items():
+            if reminder[1]["type"] == "newcomer" and reminder[1]["userID"] == member.id:
+                return
+
+        reminders[datetime.timestamp(remindTime)] = {
+            "type": "newcomer",
+            "userID": member.id
+        }
+        with open(REMINDERS_FILE, "w", encoding="utf-8") as f:
+            json.dump(reminders, f, indent=4)
+
+
+        # Add to spreadsheet
         Spreadsheet.memberJoin(member)
 
     @staticmethod

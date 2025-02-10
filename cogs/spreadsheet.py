@@ -77,7 +77,7 @@ class Spreadsheet(commands.Cog):
         log.debug(LOG_COG_READY.format("Spreadsheet"))
         self.bot.cogsReady["spreadsheet"] = True
 
-        if Spreadsheet.ws:
+        if not secret.SPREADSHEET_ACTIVE or Spreadsheet.ws:
             return
 
         try:

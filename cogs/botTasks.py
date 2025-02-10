@@ -31,9 +31,6 @@ class BotTasks(commands.Cog):
         log.debug(LOG_COG_READY.format("BotTasks"))
         self.bot.cogsReady["botTasks"] = True
 
-        if secret.MOD_UPDATE_ACTIVE and not self.checkModUpdates.is_running():
-            self.checkModUpdates.start()
-
         if not self.oneHourTasks.is_running():
             self.oneHourTasks.start()
 
@@ -108,7 +105,6 @@ class BotTasks(commands.Cog):
                     log.warning(f"BotTasks fetchWebsiteText: response.status is not 200 '{url}'")
                 return await response.text()
 
-    @tasks.loop(hours=8)
     async def checkModUpdates(self) -> None:
         """Checks mod updates, pings hampters if detected."""
 
@@ -197,6 +193,19 @@ class BotTasks(commands.Cog):
             for mod in output:
                 await channelChangelog.send(msgContent, embed=discord.Embed(title=mod["name"], url=CHANGELOG_URL.format(mod['modID']), timestamp=mod["datetime"], color=discord.Color.dark_blue()))
                 msgContent = None  # Only 1 ping
+
+
+        # Update next execution time
+        nextTime = (datetime.now(timezone.utc) + timedelta(hours=6.0))
+        nextTime = nextTime.replace(microsecond=0)
+        nextTime = datetime.timestamp(nextTime)
+
+        with open(REPEATED_MSG_DATE_LOG_FILE) as f:
+            msgDateLog = json.load(f)
+
+        msgDateLog["modUpdates"] = nextTime
+        with open(REPEATED_MSG_DATE_LOG_FILE, "w") as f:
+            json.dump(msgDateLog, f, indent=4)
 
 
 
@@ -562,6 +571,12 @@ Join Us:
             except Exception as e:
                 log.exception(f"Bottasks oneHourTasks: workshopInterestWipe")
 
+        # checkModUpdates
+        if secret.MOD_UPDATE_ACTIVE and ("modUpdates" not in msgDateLog or (datetime.fromtimestamp(msgDateLog["modUpdates"], tz=pytz.utc) < datetime.now(timezone.utc))):
+            try:
+                await self.checkModUpdates()
+            except Exception as e:
+                log.exception(f"Bottasks oneHourTasks: checkModUpdates")
 
 
     @tasks.loop(minutes=5)

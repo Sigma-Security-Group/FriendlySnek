@@ -108,9 +108,16 @@ async def on_message(message: discord.Message) -> None:
         replies = ["snek", "snake", "ssssnek", "ssssnake", "snek!", "snake!", "ssssnek!", "ssssnake!",
                     "snek?", "snake?", "ssssnek?", "ssssnake?", "snek.", "snake.",
                     "ssssnek.", "ssssnake", "snek...", "snake...", "ssssnek...", "ssssnake...",
-                    "sup", "yes", "no", "maybe", "I shall consider it",
-                    "For the Emperor!", "Man 100m Front!", "Snek 100m Front!",
-                    "Society if naval workshop:\nhttps://tenor.com/view/utopia-gif-21647156"
+                    "sup", "yes", "no", "maybe", "I shall consider it", "You can't prove that",
+                    "For the Emperor!", "Man 100m Front!", "Snek 100m Front!", "L-Shaped ambush!",
+                    "Standby to standby",
+                    "To get a reply - confirm you are a real person first. Please fill out the CAPTCHA",
+                    "Sometimes I pretend to update just to take a break.",
+                    "I'm not a bot, I'm a snek",
+                    "Society if naval workshop:\nhttps://tenor.com/view/utopia-gif-21647156",
+                    "Newcomer workshop:\nhttps://tenor.com/view/grenade-fail-squad-soldier-fire-in-the-hole-gif-17200361",
+                    "Mechanized workshop:\nhttps://tenor.com/view/russians-car-bouncing-bounce-crash-funny-gif-27619998",
+                    "FW SME landing:\nhttps://tenor.com/view/f35-f-35-f-35-crash-f-35-lighting-ii-fighter-jet-gif-2384217527281824748"
         ]
         try:
             await message.reply(random.choice(replies))

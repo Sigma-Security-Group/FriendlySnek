@@ -5,6 +5,7 @@ from math import ceil
 from copy import deepcopy
 from datetime import datetime, timedelta, timezone
 from dateutil.parser import parse as datetimeParse  # type: ignore
+from typing import *
 
 from discord.ext import commands, tasks  # type: ignore
 
@@ -2190,7 +2191,11 @@ class Schedule(commands.Cog):
                         await interaction.response.send_message(interaction.user.mention, embed=EMBED_INVALID, ephemeral=True, delete_after=10.0)
                         return
 
-                    hours, minutes, delta = self.getDetailsFromDuration(value)
+                    durationDetails = self.getDetailsFromDuration(value)
+                    if not durationDetails:
+                        await interaction.response.send_message(interaction.user.mention, embed=EMBED_INVALID, ephemeral=True, delete_after=10.0)
+                        return
+                    hours, minutes, delta = durationDetails
                     previewEmbedDict["duration"] = f"{(str(hours) + 'h')*(hours != 0)}{' '*(hours != 0 and minutes !=0)}{(str(minutes) + 'm')*(minutes != 0)}"
 
                 case "time":
@@ -2214,7 +2219,11 @@ class Schedule(commands.Cog):
                     previewEmbedDict["endTime"] = None
                     # Set endTime if duration available
                     if previewEmbedDict["duration"] is not None:
-                        hours, minutes, delta = self.getDetailsFromDuration(previewEmbedDict["duration"])
+                        durationDetails = self.getDetailsFromDuration(previewEmbedDict["duration"])
+                        if not durationDetails:
+                            await interaction.response.send_message(interaction.user.mention, embed=EMBED_INVALID, ephemeral=True, delete_after=10.0)
+                            return
+                        hours, minutes, delta = durationDetails
                         previewEmbedDict["endTime"] = (startTime + delta).strftime(TIME_FORMAT)
 
                     collision = Schedule.eventCollisionCheck(startTime, (startTime + delta) if previewEmbedDict["endTime"] else startTime+timedelta(minutes=30))
@@ -2337,7 +2346,11 @@ class Schedule(commands.Cog):
                 return
 
         elif customId == "modal_duration":
-            hours, minutes, delta = self.getDetailsFromDuration(value)
+            durationDetails = self.getDetailsFromDuration(value)
+            if not durationDetails:
+                await interaction.response.send_message(interaction.user.mention, embed=EMBED_INVALID, ephemeral=True, delete_after=10.0)
+                return
+            hours, minutes, delta = durationDetails
 
             event["duration"] = f"{(str(hours) + 'h')*(hours != 0)}{' '*(hours != 0 and minutes !=0)}{(str(minutes) + 'm')*(minutes != 0)}"
 
@@ -2349,7 +2362,12 @@ class Schedule(commands.Cog):
 
         elif customId == "modal_time":
             startTimeOld = event["time"]
-            hours, minutes, delta = self.getDetailsFromDuration(event["duration"])
+            durationDetails = self.getDetailsFromDuration(event["duration"])
+            if not durationDetails:
+                await interaction.response.send_message(interaction.user.mention, embed=EMBED_INVALID, ephemeral=True, delete_after=10.0)
+                return
+            hours, minutes, delta = durationDetails
+
             try:
                 startTime = datetimeParse(value)
             except ValueError:
@@ -2439,7 +2457,7 @@ class Schedule(commands.Cog):
         await interaction.response.send_message(interaction.user.mention, embed=discord.Embed(title="✅ Event edited", color=discord.Color.green()), ephemeral=True, delete_after=5.0)
 
     @staticmethod
-    def getDetailsFromDuration(duration: str) -> tuple:
+    def getDetailsFromDuration(duration: str) -> Tuple[int, int, timedelta] | None:
         """Extracts hours, minutes and delta time from user duration.
 
         Parameters:
@@ -2448,10 +2466,13 @@ class Schedule(commands.Cog):
         Returns:
         tuple: tuple with hours, minutes, delta zipped.
         """
-        duration = duration.lower()
-        hours = int(duration.split("h")[0].strip()) if "h" in duration else 0
-        minutes = int(duration.split("h")[-1].replace("m", "").strip()) if duration.strip()[-1] != "h" else 0
-        delta = timedelta(hours=hours, minutes=minutes)
+        try:
+            duration = duration.lower()
+            hours = int(duration.split("h")[0].strip()) if "h" in duration else 0
+            minutes = int(duration.split("h")[-1].replace("m", "").strip()) if duration.strip()[-1] != "h" else 0
+            delta = timedelta(hours=hours, minutes=minutes)
+        except Exception:
+            return None
         return hours, minutes, delta
 
     async def editEvent(self, interaction: discord.Interaction, event: dict, eventMsg: discord.Message) -> None:

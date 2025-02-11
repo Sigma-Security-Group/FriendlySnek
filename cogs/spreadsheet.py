@@ -123,7 +123,21 @@ class Spreadsheet(commands.Cog):
         return None
 
     @staticmethod
-    def createOrUpdateUserRow(worksheet: gspread.worksheet.Worksheet | None, *, rowNum: int | None = None, displayName: str | None = None, dateJoined: str | None = None, dateLastReply: str | None = None, userId: str | None = None, lastPromotion: str | None = None, status: str | None = None, position: str | None = None, seen: bool | None = None, teamId: int | None = None, teamName: str | None = None, teamDate: str | None = None) -> None:
+    def createOrUpdateUserRow(
+        worksheet: gspread.worksheet.Worksheet | None, *,
+        rowNum: int | None = None,
+        displayName: str | None = None,
+        dateJoined: str | None = None,
+        dateLastReply: str | None = None,
+        userId: str | None = None,
+        lastPromotion: str | None = None,
+        status: str | None = None,
+        position: str | None = None,
+        operationsAttended: str | None = None,
+        seen: bool | None = None,
+        teamId: int | None = None,
+        teamName: str | None = None,
+        teamDate: str | None = None) -> None:
         # User row (starting from column B):
         # - Discord Name
         # - Date Joined
@@ -151,13 +165,27 @@ class Spreadsheet(commands.Cog):
             # User not found
             if not rowNum:
                 newEntryRowId = Spreadsheet.getNewEntryRowId(Spreadsheet.ws)
-                worksheet.update([[displayName, dateJoined, dateLastReply, userId, lastPromotion, status, position, seen, teamId, teamName, teamDate]], f"B{newEntryRowId}")
+                rowNum = newEntryRowId
                 log.debug(f"Spreadsheet createOrUpdateUserRow: Created row for user id '{userId}' at row number '{newEntryRowId}'")
 
             # User found
             else:
-                worksheet.update([[displayName, dateJoined, dateLastReply, userId, lastPromotion, status, position, seen, teamId, teamName, teamDate]], f"B{rowNum}")
                 log.debug(f"Spreadsheet createOrUpdateUserRow: Updated row for user id '{userId}' at row number '{rowNum}'")
+
+            worksheet.update([[
+                displayName,
+                dateJoined,
+                dateLastReply,
+                userId,
+                lastPromotion,
+                status,
+                position,
+                operationsAttended,
+                seen,
+                teamId,
+                teamName,
+                teamDate
+            ]], f"B{rowNum}")
 
     @tasks.loop(hours=6)
     async def kickTaggedMembers(self) -> None:

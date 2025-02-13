@@ -145,20 +145,86 @@ class EmbedBuilder(commands.Cog):
 
 # ===== </Build Embed> =====
 
+    @staticmethod
+    def getDependencies(embed: discord.Embed) -> dict:
+        """Get dependency dict."""
+        return {
+            "title": {
+                "dependent": ("URL", "Timestamp", "Color", "Submit"),
+                "propertyValue": embed.title
+            },
+            "description": {
+                "dependent": ("Timestamp", "Color", "Submit"),
+                "propertyValue": embed.description
+            },
+            "thumbnail": {
+                "dependent": ("Timestamp", "Color", "Submit"),
+                "propertyValue": embed.thumbnail.url if embed.thumbnail else None
+            },
+            "image": {
+                "dependent": ("Timestamp", "Color", "Submit"),
+                "propertyValue": embed.image.url if embed.image else None
+            },
+            "author": {
+                "dependent": ("Timestamp", "Color", "Submit"),
+                "propertyValue": embed.author.name if embed.author else None
+            },
+            "footer": {
+                "dependent": ("Timestamp", "Color", "Submit"),
+                "propertyValue": embed.footer.text if embed.footer else None
+            },
+        }
 
-    async def buttonHandling(self, button: discord.ui.Button, interaction: discord.Interaction, authorId: int) -> None:
-        """Handling all embedbuilder button interactions.
 
-        Parameters:
-        message (discord.Message | None): If the message is provided, it's used along with some specific button action.
-        button (discord.ui.Button): The Discord button.
-        interaction (discord.Interaction): The Discord interaction.
-        authorId (int | None): ID of user who executed the command.
+    @staticmethod
+    def unLockDependents(view: discord.ui.View, dependencies: dict, name: str, value: str) -> None:
+        """(Un)locks view.button if other field that is a dependant is (in)active."""
+        for item in view.children:
+            # Skip if item is not dependent on the field identified by `name`
+            if item.label not in dependencies.get(name, {}).get("dependent", ()):
+                continue
 
-        Returns:
-        None.
-        """
-        if interaction.user.id != authorId:
+            if value:
+                item.disabled = False
+                continue
+
+            # If value is False, check if any other dependency keeps the button active
+            item.disabled = True  # Assume disabled unless another dependency makes it active
+            for key, dependency in dependencies.items():
+                if key != name and item.label in dependency["dependent"]:
+                    # If any other dependency has `propertyValue` True, keep the item enabled
+                    if dependency["propertyValue"]:
+                        item.disabled = False
+                        break
+
+
+    @staticmethod
+    def adaptViewAfterEmbed(view: discord.ui.View, dependencies: dict) -> None:
+        """Checks if all buttons in view are configured correctly, disabled or not depending on dependancies."""
+        for key, val in dependencies.items():
+            EmbedBuilder.unLockDependents(view, dependencies, key, val["propertyValue"])
+
+
+# ===== <Views and Buttons> =====
+
+
+class BuilderView(discord.ui.View):
+    """Handling all builder views."""
+    def __init__(self, targetChannel: int, messageId: int | None, *args, **kwargs):
+        super().__init__(timeout=None, *args, **kwargs)
+        self.targetChannel = targetChannel
+        self.messageId = messageId
+
+
+class BuilderButton(discord.ui.Button):
+    """Handling all builder buttons."""
+    def __init__(self, instance, authorId: int, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.instance = instance
+        self.authorId = authorId
+
+    async def callback(self, interaction: discord.Interaction):
+        if interaction.user.id != self.authorId:
             await interaction.response.send_message(f"{interaction.user.mention} Only the one who executed the command may interact with the buttons!", ephemeral=True, delete_after=15.0)
             return
 
@@ -172,7 +238,7 @@ class EmbedBuilder(commands.Cog):
 
 
         name = interaction.data["custom_id"][len("builder_button_"):]
-        modal = BuilderModal(self, f"Set embed {name.lower()}", f"builder_modal_{name.lower()}", interaction.message, button.view)
+        modal = BuilderModal(f"Set embed {name.lower()}", f"builder_modal_{name.lower()}", interaction.message, self.view)
         modalConfig = {
             "style": discord.TextStyle.short,
             "placeholder": None,
@@ -239,29 +305,29 @@ class EmbedBuilder(commands.Cog):
                 )
                 return
             case "submit":
-                if not hasattr(button.view, "targetChannel"):
+                if not hasattr(self.view, "targetChannel"):
                     log.exception("EmbedBuilder buttonHandling: targetChannel not set in button.view")
                     return
 
-                guild = self.bot.get_guild(GUILD_ID)
+                guild = interaction.guild
                 if not guild:
                     log.exception("EmbedBuilder buttonHandling: guild is None")
                     return
 
-                targetChannel = guild.get_channel_or_thread(button.view.targetChannel)
+                targetChannel = guild.get_channel_or_thread(self.view.targetChannel)
                 if not targetChannel:
                     log.exception("EmbedBuilder buttonHandling: targetChannel is None")
                     return
 
-                if hasattr(button.view, "messageId") and button.view.messageId:
+                if hasattr(self.view, "messageId") and self.view.messageId:
                     try:
-                        targetMessage = await targetChannel.fetch_message(button.view.messageId)
+                        targetMessage = await targetChannel.fetch_message(self.view.messageId)
                     except Exception:
-                        embed = discord.Embed(title="❌ Invalid messageid", description=f"Message with id `{button.view.messageId}` could not be found in channel `{targetChannel.mention}`!", color=discord.Color.red())
+                        embed = discord.Embed(title="❌ Invalid messageid", description=f"Message with id `{self.view.messageId}` could not be found in channel `{targetChannel.mention}`!", color=discord.Color.red())
                         await interaction.response.send_message(embed=embed, ephemeral=True, delete_after=15.0)
                         return
 
-                    log.info(f"{interaction.user.id} [{interaction.user.display_name}] Edited the embed on message '{button.view.messageId}' in '{targetChannel.name}' ({targetChannel.id})")
+                    log.info(f"{interaction.user.id} [{interaction.user.display_name}] Edited the embed on message '{self.view.messageId}' in '{targetChannel.name}' ({targetChannel.id})")
                     await targetMessage.edit(
                         embed=interaction.message.embeds[0] if len(interaction.message.embeds) > 0 else None,
                         attachments=([await interaction.message.attachments[0].to_file()]) if len(interaction.message.attachments) > 0 else []
@@ -296,77 +362,24 @@ class EmbedBuilder(commands.Cog):
         await interaction.response.send_modal(modal)
 
 
-    @staticmethod
-    def getDependencies(embed: discord.Embed) -> dict:
-        """Get dependency dict."""
-        return {
-            "title": {
-                "dependent": ("URL", "Timestamp", "Color", "Submit"),
-                "propertyValue": embed.title
-            },
-            "description": {
-                "dependent": ("Timestamp", "Color", "Submit"),
-                "propertyValue": embed.description
-            },
-            "thumbnail": {
-                "dependent": ("Timestamp", "Color", "Submit"),
-                "propertyValue": embed.thumbnail.url if embed.thumbnail else None
-            },
-            "image": {
-                "dependent": ("Timestamp", "Color", "Submit"),
-                "propertyValue": embed.image.url if embed.image else None
-            },
-            "author": {
-                "dependent": ("Timestamp", "Color", "Submit"),
-                "propertyValue": embed.author.name if embed.author else None
-            },
-            "footer": {
-                "dependent": ("Timestamp", "Color", "Submit"),
-                "propertyValue": embed.footer.text if embed.footer else None
-            },
-        }
+class BuilderModal(discord.ui.Modal):
+    """Handling all builder modals."""
+    def __init__(self, title: str, customId: str, message: discord.Message, view: discord.ui.View | None = None) -> None:
+        super().__init__(title=title, custom_id=customId)
+        self.message = message
+        self.view = view
 
-
-    @staticmethod
-    def unLockDependents(view: discord.ui.View, dependencies: dict, name: str, value: str) -> None:
-        """(Un)locks view.button if other field that is a dependant is (in)active."""
-        for item in view.children:
-            # Skip if item is not dependent on the field identified by `name`
-            if item.label not in dependencies.get(name, {}).get("dependent", ()):
-                continue
-
-            if value:
-                item.disabled = False
-                continue
-
-            # If value is False, check if any other dependency keeps the button active
-            item.disabled = True  # Assume disabled unless another dependency makes it active
-            for key, dependency in dependencies.items():
-                if key != name and item.label in dependency["dependent"]:
-                    # If any other dependency has `propertyValue` True, keep the item enabled
-                    if dependency["propertyValue"]:
-                        item.disabled = False
-                        break
-
-
-    @staticmethod
-    def adaptViewAfterEmbed(view: discord.ui.View, dependencies: dict) -> None:
-        """Checks if all buttons in view are configured correctly, disabled or not depending on dependancies."""
-        for key, val in dependencies.items():
-            EmbedBuilder.unLockDependents(view, dependencies, key, val["propertyValue"])
-
-
-    async def modalHandling(self, modal: discord.ui.Modal, interaction: discord.Interaction, message: discord.Message, view: discord.ui.View | None) -> None:
+    async def on_submit(self, interaction: discord.Interaction):
         if not isinstance(interaction.user, discord.Member):
             log.exception("EmbedBuilder modalHandling: interaction.user not discord.Member")
             return
 
-        value: str = modal.children[0].value.strip()
+        value: str = self.children[0].value.strip()
 
         stderr = None
         embed = discord.Embed()
-        if len(message.embeds) > 0:
-            embed = message.embeds[0]
+        if len(self.message.embeds) > 0:
+            embed = self.message.embeds[0]
 
         # Values depend on (any) key to be filled
         dependencies = EmbedBuilder.getDependencies(embed)
@@ -375,10 +388,10 @@ class EmbedBuilder(commands.Cog):
         match name:
             case "title":
                 embed.title = value
-                EmbedBuilder.unLockDependents(view, dependencies, name, value)
+                EmbedBuilder.unLockDependents(self.view, dependencies, name, value)
             case "description":
                 embed.description = value
-                EmbedBuilder.unLockDependents(view, dependencies, name, value)
+                EmbedBuilder.unLockDependents(self.view, dependencies, name, value)
             case "timestamp":
                 try:
                     embed.timestamp = datetimeParse(value)
@@ -413,35 +426,35 @@ class EmbedBuilder(commands.Cog):
                     embed = None
                 else:
                     embed.set_thumbnail(url=value)
-                    EmbedBuilder.unLockDependents(view, dependencies, name, value)
+                    EmbedBuilder.unLockDependents(self.view, dependencies, name, value)
             case "image":
                 if embed and not embed.title and not embed.description and not embed.thumbnail and not value and not embed.author and not embed.footer:
                     embed = None
                 else:
                     embed.set_image(url=value)
-                    EmbedBuilder.unLockDependents(view, dependencies, name, value)
+                    EmbedBuilder.unLockDependents(self.view, dependencies, name, value)
 
             case "author":
-                authorName = modal.children[0].value.strip()
-                authorURL = modal.children[1].value.strip()
-                authorIconURL = modal.children[2].value.strip()
+                authorName = self.children[0].value.strip()
+                authorURL = self.children[1].value.strip()
+                authorIconURL = self.children[2].value.strip()
                 if not authorName and (authorURL or authorIconURL):
                     stderr = "Must set Author Name if using Author URL or Author Icon URL."
                 elif embed and not embed.title and not embed.description and not embed.thumbnail and not embed.image and not authorName and not embed.footer:
                     embed = None
                 else:
                     embed.set_author(name=authorName, url=authorURL, icon_url=authorIconURL)
-                    EmbedBuilder.unLockDependents(view, dependencies, name, value)
+                    EmbedBuilder.unLockDependents(self.view, dependencies, name, value)
             case "footer":
-                footerText = modal.children[0].value.strip()
-                footerIconURL = modal.children[1].value.strip()
+                footerText = self.children[0].value.strip()
+                footerIconURL = self.children[1].value.strip()
                 if not footerText and footerIconURL:
                     stderr = "Must set Footer Text if using Footer Icon URL."
                 elif embed and not embed.title and not embed.description and not embed.thumbnail and not embed.image and not embed.author and not footerText:
                     embed = None
                 else:
                     embed.set_footer(text=footerText, icon_url=footerIconURL)
-                    EmbedBuilder.unLockDependents(view, dependencies, name, value)
+                    EmbedBuilder.unLockDependents(self.view, dependencies, name, value)
 
 
         if stderr:
@@ -453,44 +466,9 @@ class EmbedBuilder(commands.Cog):
             embed = None
 
         try:
-            await interaction.response.edit_message(embed=embed, view=view)
+            await interaction.response.edit_message(embed=embed, view=self.view)
         except Exception as e:
             await interaction.response.send_message(str(e), ephemeral=True, delete_after=15.0)
-
-
-
-# ===== <Views and Buttons> =====
-
-
-class BuilderView(discord.ui.View):
-    """Handling all builder views."""
-    def __init__(self, targetChannel: int, messageId: int | None, *args, **kwargs):
-        super().__init__(timeout=None, *args, **kwargs)
-        self.targetChannel = targetChannel
-        self.messageId = messageId
-
-
-class BuilderButton(discord.ui.Button):
-    """Handling all builder buttons."""
-    def __init__(self, instance, authorId: int, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.instance = instance
-        self.authorId = authorId
-
-    async def callback(self, interaction: discord.Interaction):
-        await self.instance.buttonHandling(self, interaction, self.authorId)
-
-
-class BuilderModal(discord.ui.Modal):
-    """Handling all builder modals."""
-    def __init__(self, instance, title: str, customId: str, message: discord.Message, view: discord.ui.View | None = None) -> None:
-        super().__init__(title=title, custom_id=customId)
-        self.instance = instance
-        self.message = message
-        self.view = view
-
-    async def on_submit(self, interaction: discord.Interaction):
-        await self.instance.modalHandling(self, interaction, self.message, self.view)
 
     async def on_error(self, interaction: discord.Interaction, error: Exception) -> None:
         log.exception(error)

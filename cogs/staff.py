@@ -609,9 +609,12 @@ class Staff(commands.Cog):
             log.debug(f"ROLE: {role.name} - {hex(role.color.value)}")
 
 
-    @staticmethod
-    async def buttonHandling(interaction: discord.Interaction) -> None:
-        """ Handling all staff buttons. """
+class StaffButton(discord.ui.Button):
+    """Handling all staff buttons."""
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    async def callback(self, interaction: discord.Interaction):
         customId = interaction.data["custom_id"]
 
         # Verify prospect from interview
@@ -693,8 +696,13 @@ class Staff(commands.Cog):
             await channelRecruitmentAndHR.send(roleRecruitmentCoordinator.mention, embed=embed)
 
 
-    async def modalHandling(self, modal: discord.ui.Modal, interaction: discord.Interaction) -> None:
-        """ Handling all staff modals. """
+class StaffModal(discord.ui.Modal):
+    """Handling all staff modals."""
+    def __init__(self, instance, title: str, customId: str) -> None:
+        super().__init__(title=title, custom_id=customId)
+        self.instance = instance
+
+    async def on_submit(self, interaction: discord.Interaction):
         if not isinstance(interaction.user, discord.Member):
             log.exception("Staff modalHandling: interaction.user not discord.Member")
             return
@@ -704,7 +712,7 @@ class Staff(commands.Cog):
             return
 
         log.info(f"{interaction.user.id} [{interaction.user.display_name}] Updating modpack maps listing")
-        value: str = modal.children[0].value.strip().split("\n")
+        value: str = self.children[0].value.strip().split("\n")
 
         with open(GENERIC_DATA_FILE) as f:
             genericData = json.load(f)
@@ -713,26 +721,6 @@ class Staff(commands.Cog):
             json.dump(genericData, f, indent=4)
 
         await interaction.response.send_message(f"Maps updated!", ephemeral=True, delete_after=30.0)
-
-
-
-class StaffButton(discord.ui.Button):
-    """Handling all staff buttons."""
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-    async def callback(self, interaction: discord.Interaction):
-        await Staff.buttonHandling(interaction)
-
-
-class StaffModal(discord.ui.Modal):
-    """Handling all staff modals."""
-    def __init__(self, instance, title: str, customId: str) -> None:
-        super().__init__(title=title, custom_id=customId)
-        self.instance = instance
-
-    async def on_submit(self, interaction: discord.Interaction):
-        await self.instance.modalHandling(self, interaction)
 
     async def on_error(self, interaction: discord.Interaction, error: Exception) -> None:
         log.exception(error)

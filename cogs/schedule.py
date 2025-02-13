@@ -1026,6 +1026,26 @@ class Schedule(commands.Cog):
                     embed.set_footer(text=f"Candidate ID: {interaction.user.id}")
                     await channelRecruitmentHr.send(embed=embed)
 
+            elif customId == "standby_btn":
+                event = [event for event in events if event["messageId"] == message.id][0]
+                if interaction.user.id in event["standby"]:
+                    event["standby"].remove(interaction.user.id)
+                    await interaction.response.send_message(embed=discord.Embed(title="✅ Standby", description="Removed from standby list", color=discord.Color.green()), ephemeral=True, delete_after=60.0)
+                else:
+                    for rsvpOption in rsvpOptions:
+                        if interaction.user.id in event[rsvpOption]:
+                            event[rsvpOption].remove(interaction.user.id)
+                    event["standby"].append(interaction.user.id)
+                    await interaction.response.send_message(embed=discord.Embed(title="✅ Standby", description="You're on the standby list. If an accepted member leaves, you will be notified about the vacant roles!", color=discord.Color.green()), ephemeral=True, delete_after=60.0)
+
+                with open(EVENTS_FILE, "w") as f:
+                    json.dump(events, f, indent=4)
+
+                embed = self.getEventEmbed(event)
+                await message.edit(embed=embed)
+                return
+
+
             elif customId == "reserve":
                 # Check if blacklisted
                 with open(ROLE_RESERVATION_BLACKLIST_FILE) as f:
@@ -1058,7 +1078,7 @@ class Schedule(commands.Cog):
                         json.dump(events, f, indent=4)
                     return
 
-                # Add to standby
+                # Add to standby if player cap reached and not on list
                 if isAcceptAndReserve and playerCapReached and interaction.user.id not in event["accepted"] and interaction.user.id not in event["standby"]:
                     for option in rsvpOptions:
                         if interaction.user.id in event[option]:
@@ -1078,7 +1098,6 @@ class Schedule(commands.Cog):
                     with open(EVENTS_FILE, "w") as f:
                         json.dump(events, f, indent=4)
                     return
-
 
 
                 # Select role to (un)reserve
@@ -1103,11 +1122,17 @@ class Schedule(commands.Cog):
                         view.add_item(ScheduleButton(self, interaction.message, row=1, label="Unreserve Current Role", style=discord.ButtonStyle.danger, custom_id="reserve_role_unreserve"))
                         break
 
-                if len(view.children) == 0:
-                    await interaction.response.send_message(content=f"{interaction.user.mention} All roles are reserved!", ephemeral=True, delete_after=60.0)
-                    return
+                # Standby button, if any role reserved
+                isStandbyButton = False
+                if isAcceptAndReserve and any(event["reservableRoles"].values()):
+                    isStandbyButton = True
+                    view.add_item(ScheduleButton(self, interaction.message, row=1, label="Standby", style=discord.ButtonStyle.success, custom_id="standby_btn"))
 
-                await interaction.response.send_message(content=interaction.user.mention, view=view, ephemeral=True, delete_after=60.0)
+                msgContent = interaction.user.mention
+                if len(view.children) <= 0 + isStandbyButton:
+                    msgContent += " All roles are reserved!"
+
+                await interaction.response.send_message(content=msgContent, view=view, ephemeral=True, delete_after=60.0)
                 return
 
             elif customId == "reserve_role_unreserve":

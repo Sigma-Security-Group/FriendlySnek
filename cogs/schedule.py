@@ -1250,78 +1250,26 @@ class Schedule(commands.Cog):
     @discord.app_commands.guilds(GUILD)
     async def timeZoneCmd(self, interaction: discord.Interaction) -> None:
         """Change your time zone preferences for your next scheduled event."""
-        await interaction.response.send_message("Changing time zone preferences...")
-        timeZoneOutput = await Schedule.changeTimeZone(interaction.user, isCommand=True)
-        if not timeZoneOutput:
-            await Schedule.cancelCommand(await Schedule.checkDMChannel(interaction.user), "Time zone preferences")
-
-    @staticmethod
-    async def changeTimeZone(author: discord.User | discord.Member, isCommand: bool = True) -> bool:
-        """Changing a personal time zone.
-
-        Parameters:
-        author (discord.Member): The command author.
-        isCommand (bool): If the command calling comes from the actual slash command.
-
-        Returns:
-        bool: If function executed successfully.
-        """
-        log.info(f"{author.id} [{author.display_name}] Is updating their time zone preferences")
-        return
+        log.info(f"{interaction.user.id} [{interaction.user.display_name}] Is updating their time zone preferences")
 
         with open(MEMBER_TIME_ZONES_FILE) as f:
             memberTimeZones = json.load(f)
 
-        timezoneOk = False
-        color = discord.Color.gold()
-        while not timezoneOk:
-            embed = discord.Embed(
-                title=":clock1: What's your preferred time zone?",
-                description=(f"Your current time zone preference is `{memberTimeZones[str(author.id)]}`." if str(author.id) in memberTimeZones else "You don't have a preferred time zone set.") + "\n\nEnter a number from the list below.\nEnter any time zone name from the column \"**TZ DATABASE NAME**\" in this [Wikipedia article](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones)." + "\nEnter `none` to erase current preferences." * isCommand,
-                color=color
-            )
-            embed.add_field(name="Popular Time Zones", value="\n".join(f"**{idx}.** {tz}" for idx, tz in enumerate(TIME_ZONES, 1)))
-            embed.set_footer(text="Enter `cancel` to abort this command.")
-            color = discord.Color.red()
-            try:
-                msg = await author.send(embed=embed)
-            except Exception as e:
-                log.exception(f"{author.id} [{author.display_name}]")
-                return False
-            dmChannel = msg.channel
-            try:
-                response = await self.bot.wait_for("message", timeout=TIME_TEN_MIN, check=lambda msg, dmChannel=dmChannel: msg.channel == dmChannel and msg.author == author)
-                timeZone = response.content.strip()
-                with open(MEMBER_TIME_ZONES_FILE) as f:
-                    memberTimeZones = json.load(f)
-                isInputNotNone = True
-                if timeZone.lower() == "cancel":
-                    return False
-                elif timeZone.isdigit() and int(timeZone) <= len(TIME_ZONES) and int(timeZone) > 0:
-                    timeZone = pytz.timezone(list(TIME_ZONES.values())[int(timeZone) - 1])
-                    memberTimeZones[str(author.id)] = timeZone.zone
-                    timezoneOk = True
-                else:
-                    try:
-                        timeZone = pytz.timezone(timeZone)
-                        memberTimeZones[str(author.id)] = timeZone.zone
-                        timezoneOk = True
-                    except pytz.exceptions.UnknownTimeZoneError:
-                        if str(author.id) in memberTimeZones:
-                            del memberTimeZones[str(author.id)]
-                        if timeZone.lower() == "none" and isCommand:
-                            isInputNotNone = False
-                            timezoneOk = True
+        setTimeZone = memberTimeZones[str(interaction.user.id)] if str(interaction.user.id) in memberTimeZones else None
+        embed = discord.Embed(
+            title=":clock1: Change Time Zone",
+            description=(f"Your current time zone preference is `{setTimeZone}`." if setTimeZone else "You don't have a preferred time zone set.")
+                + "\n\nTo change time zone, press the button and enter any time zone name from the column \"**TZ DATABASE NAME**\" in this [Wikipedia article](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones).\n\nNOTE: This is only used when scheduling events - **NOT** when viewing them in #schedule!",
+            color=discord.Color.gold()
+        )
 
-            except asyncio.TimeoutError:
-                await dmChannel.send(embed=discord.Embed(title=":clock3: You were too slow, aborting!", color=discord.Color.red()))
-                return False
+        view = ScheduleView()
+        view.add_item(ScheduleButton(None, style=discord.ButtonStyle.success, label="Change Time Zone", custom_id="schedule_change_time_zone"))
+        if setTimeZone:
+            view.add_item(ScheduleButton(None, style=discord.ButtonStyle.danger, label="Remove preferences", custom_id="schedule_remove_time_zone"))
 
-        with open(MEMBER_TIME_ZONES_FILE, "w") as f:
-            json.dump(memberTimeZones, f, indent=4)
-        embed = discord.Embed(title=f"✅ Time zone preferences changed!", description=f"Updated to `{timeZone.zone}`!" if isInputNotNone else "Preference removed!", color=discord.Color.green())
-        await dmChannel.send(embed=embed)
-        return True
+        await interaction.response.send_message(embed=embed, view=view, ephemeral=True, delete_after=180.0)
+
 
 # ===== </Change Time Zone> =====
 
@@ -1468,7 +1416,6 @@ class ScheduleButton(discord.ui.Button):
                 embed = Schedule.getEventEmbed(event, interaction.guild)
                 await self.message.edit(embed=embed)
                 return
-
 
             elif customId == "reserve":
                 # Check if blacklisted
@@ -2150,6 +2097,40 @@ class ScheduleButton(discord.ui.Button):
                 await interaction.response.edit_message(embed=embed, view=view)
                 return
 
+            elif customId == "schedule_change_time_zone":
+                default = None
+                with open(MEMBER_TIME_ZONES_FILE) as f:
+                    memberTimeZones = json.load(f)
+                if str(interaction.user.id) in memberTimeZones:
+                    default = memberTimeZones[str(interaction.user.id)]
+
+                modal = ScheduleModal(
+                    title="Change time zone",
+                    customId="modal_change_time_zone",
+                    userId=interaction.user.id,
+                    eventMsg=interaction.message,
+                )
+                modal.add_item(discord.ui.TextInput(label="Time zone", default=default, placeholder="Europe/London", min_length=1, max_length=256))
+                await interaction.response.send_modal(modal)
+                return
+
+            elif customId == "schedule_remove_time_zone":
+                with open(MEMBER_TIME_ZONES_FILE) as f:
+                    memberTimeZones = json.load(f)
+
+                if str(interaction.user.id) in memberTimeZones:
+                    del memberTimeZones[str(interaction.user.id)]
+                    with open(MEMBER_TIME_ZONES_FILE, "w") as f:
+                        json.dump(memberTimeZones, f, indent=4)
+
+                    embed = discord.Embed(title="✅ Time zone removed", description="Your configuration is now removed.", color=discord.Color.green())
+                    await interaction.response.send_message(embed=embed, ephemeral=True, delete_after=10.0)
+
+                else:
+                    embed = discord.Embed(title="❌ Invalid", description="No time zone set!", color=discord.Color.red())
+                    await interaction.response.send_message(embed=embed, ephemeral=True, delete_after=10.0)
+                return
+
 
             if scheduleNeedsUpdate:
                 try:
@@ -2574,6 +2555,30 @@ class ScheduleModal(discord.ui.Modal):
             log.exception("Schedule modalHandling: interaction.user not discord.Member")
             return
         value: str = self.children[0].value.strip()
+
+
+        if customId == "modal_change_time_zone":
+            timezoneOk = False
+            with open(MEMBER_TIME_ZONES_FILE) as f:
+                memberTimeZones = json.load(f)
+
+            try:
+                timeZone = pytz.timezone(value)
+                memberTimeZones[str(interaction.user.id)] = timeZone.zone
+                timezoneOk = True
+            except pytz.exceptions.UnknownTimeZoneError:
+                pass
+
+            if timezoneOk:
+                with open(MEMBER_TIME_ZONES_FILE, "w") as f:
+                    json.dump(memberTimeZones, f, indent=4)
+
+                embed = discord.Embed(title="✅ Time zone set", description=f"Your time zone is now set to `{timeZone.zone}`.", color=discord.Color.green())
+            else:
+                embed = discord.Embed(title="❌ Invalid time zone", description="Please provide a valid time zone.", color=discord.Color.red())
+
+            await interaction.response.send_message(embed=embed, ephemeral=True, delete_after=10.0)
+            return
 
         # == Creating Event ==
 

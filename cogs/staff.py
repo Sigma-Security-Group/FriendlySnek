@@ -622,12 +622,12 @@ class StaffButton(discord.ui.Button):
             memberId = int(customId.split("_")[-1])
 
             if not isinstance(interaction.guild, discord.Guild):
-                log.exception("Staff buttonHandling: interaction.guild is not discord.Guild")
+                log.exception("StaffButton callback: interaction.guild is not discord.Guild")
                 return
 
             member = interaction.guild.get_member(memberId)
             if not isinstance(member, discord.Member):
-                log.exception(f"Staff buttonHandling: member not discord.Member, id '{memberId}'")
+                log.exception(f"StaffButton callback: member not discord.Member, id '{memberId}'")
                 return
 
             embed = discord.Embed(title="✅ Member verified", description=f"{member.mention} verified!", color=discord.Color.green())
@@ -639,7 +639,7 @@ class StaffButton(discord.ui.Button):
             roleVerified = interaction.guild.get_role(VERIFIED)
             roleMember = interaction.guild.get_role(MEMBER)
             if roleProspect is None or roleVerified is None or roleMember is None:
-                log.exception("Staff buttonHandling: roleProspect, roleVerified, roleMember is None")
+                log.exception("StaffButton callback: roleProspect, roleVerified, roleMember is None")
                 return
 
             reason = "User verified"
@@ -653,7 +653,7 @@ class StaffButton(discord.ui.Button):
             # Logging
             channelAuditLogs = interaction.guild.get_channel(AUDIT_LOGS)
             if not isinstance(channelAuditLogs, discord.TextChannel):
-                log.exception("Staff buttonHandling: channelAuditLogs not discord.TextChannel")
+                log.exception("StaffButton callback: channelAuditLogs not discord.TextChannel")
                 return
             embed = discord.Embed(title="Member verified", description=f"Verified: {member.mention}\nInterviewer: {interaction.user.mention}", color=discord.Color.blue())
             embed.set_footer(text=f"Verified ID: {member.id} | Interviewer ID: {interaction.user.id}")
@@ -666,7 +666,7 @@ class StaffButton(discord.ui.Button):
 
             member = interaction.guild.get_member(memberId)
             if not isinstance(member, discord.Member):
-                log.exception(f"Staff buttonHandling: member not discord.Member, id '{memberId}'")
+                log.exception(f"StaffButton callback: member not discord.Member, id '{memberId}'")
                 return
 
             embed = discord.Embed(title="❌ Prospect denied", description=f"{member.mention} denied", color=discord.Color.red())
@@ -676,17 +676,17 @@ class StaffButton(discord.ui.Button):
 
             # Notify Recruitment-Coordinator
             if not isinstance(interaction.guild, discord.Guild):
-                log.exception("Staff buttonHandling: interaction.guild is not discord.Guild")
+                log.exception("StaffButton callback: interaction.guild is not discord.Guild")
                 return
 
             channelRecruitmentAndHR = interaction.guild.get_channel(RECRUITMENT_AND_HR)
             if not isinstance(channelRecruitmentAndHR, discord.TextChannel):
-                log.exception("Staff buttonHandling: channelRecruitmentAndHR not discord.TextChannel")
+                log.exception("StaffButton callback: channelRecruitmentAndHR not discord.TextChannel")
                 return
 
             roleRecruitmentCoordinator = interaction.guild.get_role(RECRUITMENT_COORDINATOR)
             if roleRecruitmentCoordinator is None:
-                log.exception("Staff buttonHandling: roleRecruitmentCoordinator is None")
+                log.exception("StaffButton callback: roleRecruitmentCoordinator is None")
                 return
 
             embed = discord.Embed(title="❌ Prospect denied", description=f"{member.mention} has been denied in interview.\nInterviewer: {interaction.user.mention}", color=discord.Color.red())
@@ -704,11 +704,11 @@ class StaffModal(discord.ui.Modal):
 
     async def on_submit(self, interaction: discord.Interaction):
         if not isinstance(interaction.user, discord.Member):
-            log.exception("Staff modalHandling: interaction.user not discord.Member")
+            log.exception("StaffModal on_submit: interaction.user not discord.Member")
             return
 
         if interaction.data["custom_id"] != "staff_modal_maps":
-            log.exception("Staff modalHandling: modal custom_id != staff_modal_maps")
+            log.exception("StaffModal on_submit: modal custom_id != staff_modal_maps")
             return
 
         log.info(f"{interaction.user.id} [{interaction.user.display_name}] Updating modpack maps listing")

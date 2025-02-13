@@ -230,66 +230,6 @@ class WorkshopInterest(commands.Cog):
         return embed
 
 
-    @staticmethod
-    async def updateInterestList(button: discord.ui.Button, interaction: discord.Interaction) -> None:
-        """Handling all workshop interest button interactions.
-
-        Parameters:
-        button (discord.ui.Button): The Discord button.
-        interaction (discord.Interaction): The Discord interaction.
-
-        Returns:
-        None.
-        """
-        try:
-            with open(WORKSHOP_INTEREST_FILE) as f:
-                workshopInterest = json.load(f)
-
-            if interaction.message is None:
-                log.exception("WSINT updateInterestList: interaction.message is None")
-                return
-
-            wsTitle = interaction.message.embeds[0].title
-            if wsTitle is None:
-                log.exception("WSINT updateInterestList: wsTitle is None")
-                return
-
-            # Brute force emoji removal, produces title
-            for i in range(len(wsTitle)):
-                if wsTitle[i:] in WORKSHOP_INTEREST_LIST:
-                    wsTitle = wsTitle[i:]
-                    break
-            wsMembers = workshopInterest[wsTitle]["members"]
-
-            if interaction.data["custom_id"] == "workshopinterest_add":
-                if interaction.user.id not in wsMembers:
-                    wsMembers.append(interaction.user.id)  # Add member to WS
-                else:
-                    await interaction.response.send_message("You are already interested!", ephemeral=True)
-                    return
-
-            elif interaction.data["custom_id"] == "workshopinterest_remove":
-                if interaction.user.id in wsMembers:
-                    wsMembers.remove(interaction.user.id)  # Remove member from WS
-                else:
-                    await interaction.response.send_message("You are already not interested!", ephemeral=True)
-                    return
-
-            with open(WORKSHOP_INTEREST_FILE, "w") as f:
-                json.dump(workshopInterest, f, indent=4)
-
-            if interaction.guild is None:
-                log.exception("WSINT updateInterestList: interaction.guild is None")
-                return
-            try:
-                await interaction.response.edit_message(embed=WorkshopInterest.getWorkshopEmbed(interaction.guild, wsTitle))
-            except Exception as e:
-                log.exception(f"{interaction.user.id} [{interaction.user.display_name}]")
-
-        except Exception as e:
-            log.exception(f"{interaction.user.id} [{interaction.user.display_name}]")
-
-
     @commands.command(name="clean-specific-workshop-interest-list")
     @commands.has_any_role(*CMD_LIMIT_CLEANWSINTEREST)
     async def cleanSpecificWorkshopInterestList(self, ctx: commands.Context, worskhopListName: str = commands.parameter(description="Name of targeted workshop"), member: str = commands.parameter(default="", description="Optional target member")) -> None:
@@ -365,7 +305,53 @@ class WorkshopInterestButton(discord.ui.DynamicItem[discord.ui.Button], template
         return cls(item.custom_id)
 
     async def callback(self, interaction: discord.Interaction):
-        await WorkshopInterest.updateInterestList(self, interaction)
+        try:
+            with open(WORKSHOP_INTEREST_FILE) as f:
+                workshopInterest = json.load(f)
+
+            if interaction.message is None:
+                log.exception("WSINT updateInterestList: interaction.message is None")
+                return
+
+            wsTitle = interaction.message.embeds[0].title
+            if wsTitle is None:
+                log.exception("WSINT updateInterestList: wsTitle is None")
+                return
+
+            # Brute force emoji removal, produces title
+            for i in range(len(wsTitle)):
+                if wsTitle[i:] in WORKSHOP_INTEREST_LIST:
+                    wsTitle = wsTitle[i:]
+                    break
+            wsMembers = workshopInterest[wsTitle]["members"]
+
+            if interaction.data["custom_id"] == "workshopinterest_add":
+                if interaction.user.id not in wsMembers:
+                    wsMembers.append(interaction.user.id)  # Add member to WS
+                else:
+                    await interaction.response.send_message("You are already interested!", ephemeral=True)
+                    return
+
+            elif interaction.data["custom_id"] == "workshopinterest_remove":
+                if interaction.user.id in wsMembers:
+                    wsMembers.remove(interaction.user.id)  # Remove member from WS
+                else:
+                    await interaction.response.send_message("You are already not interested!", ephemeral=True)
+                    return
+
+            with open(WORKSHOP_INTEREST_FILE, "w") as f:
+                json.dump(workshopInterest, f, indent=4)
+
+            if interaction.guild is None:
+                log.exception("WSINT updateInterestList: interaction.guild is None")
+                return
+            try:
+                await interaction.response.edit_message(embed=WorkshopInterest.getWorkshopEmbed(interaction.guild, wsTitle))
+            except Exception as e:
+                log.exception(f"{interaction.user.id} [{interaction.user.display_name}]")
+
+        except Exception as e:
+            log.exception(f"{interaction.user.id} [{interaction.user.display_name}]")
 
 
 async def setup(bot: commands.Bot) -> None:

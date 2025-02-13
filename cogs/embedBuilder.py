@@ -371,7 +371,7 @@ class BuilderModal(discord.ui.Modal):
 
     async def on_submit(self, interaction: discord.Interaction):
         if not isinstance(interaction.user, discord.Member):
-            log.exception("EmbedBuilder modalHandling: interaction.user not discord.Member")
+            log.exception("BuilderModal on_submit: interaction.user not discord.Member")
             return
 
         value: str = self.children[0].value.strip()

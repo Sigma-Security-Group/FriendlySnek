@@ -120,23 +120,23 @@ class PollButton(discord.ui.Button):
 
         try:
             if not isinstance(interaction.channel, discord.TextChannel):
-                log.exception("Poll buttonHandling: interaction.channel not discord.TextChannel")
+                log.exception("PollButton callback: interaction.channel not discord.TextChannel")
                 return
             if interaction.message is None:
-                log.exception("Poll buttonHandling: interaction.message is None")
+                log.exception("PollButton callback: interaction.message is None")
                 return
 
             msg = await interaction.channel.fetch_message(interaction.message.id)
 
             embed = msg.embeds[0]
             if embed.description is None:
-                log.exception("Poll buttonHandling: embed.description is None")
+                log.exception("PollButton callback: embed.description is None")
                 return
 
             optionRows = (EMOJI_NUMBERS[0] + embed.description.split(EMOJI_NUMBERS[0])[1]).split("\n")
 
             if self.view is None:
-                log.exception("Poll buttonHandling: button.view is None")
+                log.exception("PollButton callback: button.view is None")
                 return
             row = self.view
 

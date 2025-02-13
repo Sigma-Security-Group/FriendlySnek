@@ -297,7 +297,7 @@ class ButtonRolesButton(discord.ui.Button):
     async def callback(self, interaction: discord.Interaction):
         guild = interaction.guild
         if not isinstance(guild, discord.Guild):
-            log.exception("ButtonRoles buttonHandling: guild not discord.Guild")
+            log.exception("ButtonRolesButton callback: guild not discord.Guild")
             return
 
         buttonRoleMsg = await self.msgChannel.fetch_message(self.buttonRoleMsgId)
@@ -362,12 +362,12 @@ class ButtonRolesSelect(discord.ui.Select):
             case "buttonrole_select_add":
                 guild = interaction.guild
                 if not isinstance(guild, discord.Guild):
-                    log.exception("ButtonRoles selectHandling: guild not discord.Guild")
+                    log.exception("ButtonRolesSelect callback: guild not discord.Guild")
                     return
 
                 roleSelected = guild.get_role(roleIdSelected)
                 if not isinstance(roleSelected, discord.Role):
-                    log.exception("ButtonRoles selectHandling: roleSelected not discord.Role")
+                    log.exception("ButtonRolesSelect callback: roleSelected not discord.Role")
                     return
 
                 view = discord.ui.View.from_message(buttonRoleMsg, timeout=None)

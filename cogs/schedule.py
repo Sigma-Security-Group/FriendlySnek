@@ -2425,8 +2425,8 @@ class Schedule(commands.Cog):
                 if member is not None:
                     try:
                         await member.send(embed=previewEmbed)
-                    except Exception as e:
-                        log.exception(f"{member.id} [{member.display_name}]")
+                    except Exception:
+                        log.warning(f"Failed to DM {member.id} [{member.display_name}] about event time change")
 
             with open(EVENTS_FILE, "w") as f:
                 json.dump(events, f, indent=4)

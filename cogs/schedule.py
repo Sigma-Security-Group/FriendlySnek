@@ -2346,13 +2346,9 @@ class ScheduleSelect(discord.ui.Select):
                     log.exception("ScheduleSelect callback: channelRecruitmentHr not discord.TextChannel")
                     return
                 if not await Schedule.hasCandidatePinged(interaction.user.id, event["title"], channelRecruitmentHr):
-                    roleRecruitmentTeam = interaction.guild.get_role(RECRUITMENT_TEAM)
-                    if not isinstance(roleRecruitmentTeam, discord.Role):
-                        log.exception("ScheduleSelect callback: roleRecruitmentTeam not discord.Role")
-                        return
                     embed = discord.Embed(title="Candidate Accept", description=f"{interaction.user.mention} accepted operation `{event['title']}`\nReserved role `{selectedValue}`", color=discord.Color.blue())
                     embed.set_footer(text=f"Candidate ID: {interaction.user.id}")
-                    await channelRecruitmentHr.send(roleRecruitmentTeam.mention, embed=embed)
+                    await channelRecruitmentHr.send(embed=embed)
 
 
         elif customId == "edit_select":

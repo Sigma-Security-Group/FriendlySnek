@@ -428,6 +428,8 @@ class Schedule(commands.Cog):
         Returns:
         None.
         """
+        ARCHIVE_THRESHOLD_IN_DAYS = 90
+
         with open(NO_SHOW_FILE) as f:
             noShowFile = json.load(f)
 
@@ -445,20 +447,20 @@ class Schedule(commands.Cog):
         for noShow in noShowFile[str(member.id)]:
             noShowEntryTimestamp = datetime.fromtimestamp(noShow.get("date", 0), timezone.utc)
             date = discord.utils.format_dt(noShowEntryTimestamp, style="R")
-            entry = f"{date} -- '{noShow.get('operationName', 'Operation X')}'"
+            entry = f"{date} -- '{noShow.get('operationName', 'Operation UNKNOWN')}'"
             reservedRole = noShow.get('reservedRole', None)
             if reservedRole:
                 entry += f" -- '{reservedRole}'"
 
-            if noShowEntryTimestamp < datetime.now(timezone.utc) - timedelta(days=90):
+            if noShowEntryTimestamp < datetime.now(timezone.utc) - timedelta(days=ARCHIVE_THRESHOLD_IN_DAYS):
                 noShowsArchive.append(entry)
             else:
                 noShowsPresent.append(entry)
 
         if noShowsPresent:
-            embed.add_field(name="Active", value="\n".join(noShowsPresent))
+            embed.add_field(name="Active", value="\n".join(noShowsPresent), inline=False)
         if noShowsArchive:
-            embed.add_field(name="Archived", value="\n".join(noShowsArchive))
+            embed.add_field(name=f"Archived (Older than {ARCHIVE_THRESHOLD_IN_DAYS} days)", value="\n".join(noShowsArchive), inline=False)
         await interaction.response.send_message(embed=embed)
 
     @noShow.error

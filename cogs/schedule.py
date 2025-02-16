@@ -249,6 +249,141 @@ class Schedule(commands.Cog):
 
 # ===== <Tasks> =====
 
+    @staticmethod
+    async def taskAutodeleteEvents(guild: discord.Guild) -> None:
+        """Autodeletes expired events.
+
+        Parameters:
+        guild (discord.Guild): The Discord guild.
+
+        Returns:
+        None.
+        """
+        AUTODELETE_THRESHOLD_IN_MINUTES = 69
+
+        channelSchedule = guild.get_channel(SCHEDULE)
+        if not isinstance(channelSchedule, discord.TextChannel):
+            log.exception("Schedule tenMinTask: channelSchedule not discord.TextChannel")
+            return
+
+        deletedEvents = []
+        utcNow = datetime.now(timezone.utc)
+        with open(EVENTS_FILE) as f:
+            events = json.load(f)
+
+        for event in events:
+            endTime = UTC.localize(datetime.strptime(event["endTime"], TIME_FORMAT))
+            if utcNow > endTime + timedelta(minutes=AUTODELETE_THRESHOLD_IN_MINUTES):
+                if event["maxPlayers"] != "hidden":  # Save events that does not have hidden attendance
+                    await Schedule.saveEventToHistory(event, guild, autoDeleted=True)
+                log.debug(f"Schedule tenMinTask: Auto deleting event '{event['title']}'")
+                deletedEvents.append(event)
+                eventMessage = await channelSchedule.fetch_message(event["messageId"])
+                await eventMessage.delete()
+                author = guild.get_member(event["authorId"])
+                if not author:
+                    log.warning(f"Schedule tenMinTask: Could not find author '{event['authorId']}' of event '{event['title']}'")
+                    continue
+
+                embed = discord.Embed(title="Event auto deleted", description=f"Your {event['type'].lower()} has ended: `{event['title']}`\nIt has been automatically removed from the schedule. {PEEPO_POP}", color=discord.Color.orange())
+                await author.send(embed=embed)
+        for event in deletedEvents:
+            events.remove(event)
+        with open(EVENTS_FILE, "w") as f:
+            json.dump(events, f, indent=4)
+
+
+    @staticmethod
+    async def taskHandlingNoShowMembers(guild: discord.Guild) -> None:
+        """Handling no-show members by pinging and logging.
+
+        Parameters:
+        guild (discord.Guild): The Discord guild.
+
+        Returns:
+        None.
+        """
+        NO_SHOW_PING_THRESHOLD_IN_MINUTES = 30
+
+        channelArmaDiscussion = guild.get_channel(ARMA_DISCUSSION)
+        if not isinstance(channelArmaDiscussion, discord.TextChannel):
+            log.exception("Schedule tenMinTask: channelArmaDiscussion not discord.TextChannel")
+            return
+        channelCommand = guild.get_channel(COMMAND)
+        if not isinstance(channelCommand, discord.VoiceChannel):
+            log.exception("Schedule tenMinTask: channelCommand not discord.VoiceChannel")
+            return
+        channelDeployed = guild.get_channel(DEPLOYED)
+        if not isinstance(channelDeployed, discord.VoiceChannel):
+            log.exception("Schedule tenMinTask: channelDeployed not discord.VoiceChannel")
+            return
+
+        membersUnscheduled: List[discord.Member] = []
+        with open(EVENTS_FILE) as f:
+            events = json.load(f)
+
+        noShowEvents = []
+
+        for event in events:
+            if event.get("checkedAcceptedReminders", False):
+                continue
+            if event.get("type", "Operation") != "Operation":
+                continue
+            startTime = UTC.localize(datetime.strptime(event["time"], TIME_FORMAT))
+            if datetime.now(timezone.utc) > startTime + timedelta(minutes=NO_SHOW_PING_THRESHOLD_IN_MINUTES):
+                membersAccepted = [member for memberId in event["accepted"] + event["standby"] if (member := guild.get_member(memberId)) is not None]
+                membersInVC = channelCommand.members + channelDeployed.members
+                membersAcceptedNotInSchedule = [member for member in membersAccepted if member not in membersInVC]
+                noShowEvents.append({
+                    "members": membersAcceptedNotInSchedule,
+                    "event": event
+                })
+
+                membersUnscheduled += (membersAcceptedNotInSchedule + [member for member in membersInVC if member not in membersAccepted and member.id != event["authorId"]])
+
+                event["checkedAcceptedReminders"] = True
+
+        with open(EVENTS_FILE, "w") as f:
+            json.dump(events, f, indent=4)
+        if len(membersUnscheduled) == 0:
+            return
+
+        log.debug(f"Schedule tenMinTask: Pinging unscheduled members: {', '.join([member.display_name for member in membersUnscheduled])}")
+        await channelArmaDiscussion.send(" ".join(member.mention for member in membersUnscheduled) + f"\nIf you are in-game, please:\n* Get in {channelCommand.mention} or {channelDeployed.mention}\n* Hit accept ✅ on the <#{SCHEDULE}>\nIf you are not making it to this {event['type'].lower()}, please hit decline ❌ on the <#{SCHEDULE}>")
+
+        # Log no-show members in JSON
+        getReservedRoleName = lambda resRoles, userId: next((key for key, value in resRoles.items() if value == userId), None) if resRoles is not None else None
+
+        with open(NO_SHOW_FILE) as f:
+            noShowFile = json.load(f)
+        for noShowEvent in noShowEvents:
+            for noShowMember in noShowEvent["members"]:
+                if str(noShowMember.id) not in noShowFile:
+                    noShowFile[str(noShowMember.id)] = []
+                startTime = int(datetime.timestamp(UTC.localize(datetime.strptime(noShowEvent["event"]["time"], TIME_FORMAT))))
+                reservedRole = getReservedRoleName(noShowEvent["event"]["reservableRoles"], noShowMember.id)
+                noShowFile[str(noShowMember.id)].append({"date": startTime, "operationName": noShowEvent["event"]["title"], "reservedRole": reservedRole})
+        with open(NO_SHOW_FILE, "w") as f:
+            json.dump(noShowFile, f, indent=4)
+
+        # Log no-show members in Discord
+        channelAdvisorStaffComms = guild.get_channel(ADVISOR_STAFF_COMMS)
+        if not isinstance(channelAdvisorStaffComms, discord.TextChannel):
+            log.exception("Schedule tenMinTask: channelAdvisorStaffComms not discord.TextChannel")
+            return
+
+        embed = discord.Embed(title="No-show members", description=f"The following members have been registered as no-show", color=discord.Color.orange())
+        for noShowEvent in noShowEvents:
+            noShowEventEmbedFieldValue = []
+            for noShowMember in noShowEvent["members"]:
+                reservedRole = getReservedRoleName(noShowEvent["event"]["reservableRoles"], noShowMember.id)
+                noShowEventEmbedFieldValue.append(noShowMember.display_name + (f" -- **{reservedRole}**" * bool(reservedRole)))
+
+            embed.add_field(name=noShowEvent["event"]["title"], value="\n".join(noShowEventEmbedFieldValue))
+
+        await channelAdvisorStaffComms.send(embed=embed)
+
+
     @tasks.loop(minutes=10)
     async def tenMinTask(self) -> None:
         """10 minute interval tasks.
@@ -268,63 +403,11 @@ class Schedule(commands.Cog):
             return
 
         # === Check for old events and deletes them. ===
-        try:
-            with open(EVENTS_FILE) as f:
-                events = json.load(f)
-            utcNow = datetime.now(timezone.utc)
-            deletedEvents = []
-            for event in events:
-                endTime = UTC.localize(datetime.strptime(event["endTime"], TIME_FORMAT))
-                if utcNow > endTime + timedelta(minutes=69):
-                    if event["maxPlayers"] != "hidden":  # Save events that does not have hidden attendance
-                        await Schedule.saveEventToHistory(event, guild, autoDeleted=True)
-                    log.debug(f"Schedule tenMinTask: Auto deleting event '{event['title']}'")
-                    deletedEvents.append(event)
-                    eventMessage = await guild.get_channel(SCHEDULE).fetch_message(event["messageId"])
-                    await eventMessage.delete()
-                    author = guild.get_member(event["authorId"])
-                    embed = discord.Embed(title="Event auto deleted", description=f"Your {event['type'].lower()} has ended: `{event['title']}`\nIt has been automatically removed from the schedule. {PEEPO_POP}", color=discord.Color.orange())
-                    await author.send(embed=embed)
-            for event in deletedEvents:
-                events.remove(event)
-            with open(EVENTS_FILE, "w") as f:
-                json.dump(events, f, indent=4)
-        except Exception as e:
-            log.exception(e)
-
+        await Schedule.taskAutodeleteEvents(guild)
 
         # === Checks if players have accepted the event and joined the voice channel. ===
+        await Schedule.taskHandlingNoShowMembers(guild)
 
-        try:
-            with open(EVENTS_FILE) as f:
-                events = json.load(f)
-            utcNow = datetime.now(timezone.utc)
-
-            channelArmaDiscussion = self.bot.get_channel(ARMA_DISCUSSION)
-            if not isinstance(channelArmaDiscussion, discord.TextChannel):
-                log.exception("Schedule tenMinTask: channelArmaDiscussion not discord.TextChannel")
-                return
-
-            for event in events:
-                if event.get("checkedAcceptedReminders", False):
-                    continue
-                if event.get("type", "Operation") != "Operation":
-                    continue
-                startTime = UTC.localize(datetime.strptime(event["time"], TIME_FORMAT))
-                if utcNow > startTime + timedelta(minutes=30):
-                    membersAccepted = [member for memberId in event["accepted"] + event["standby"] if (member := guild.get_member(memberId)) is not None]
-                    membersInVC = self.bot.get_channel(COMMAND).members + self.bot.get_channel(DEPLOYED).members
-
-                    membersUnscheduled = [member for member in membersAccepted if member not in membersInVC] + [member for member in membersInVC if member not in membersAccepted and member.id != event["authorId"]]
-
-                    event["checkedAcceptedReminders"] = True
-                    with open(EVENTS_FILE, "w") as f:
-                        json.dump(events, f, indent=4)
-                    if len(membersUnscheduled) > 0:
-                        log.debug(f"Schedule tenMinTask: Pinging unscheduled members: {', '.join([member.display_name for member in membersUnscheduled])}")
-                        await channelArmaDiscussion.send(" ".join(member.mention for member in membersUnscheduled) + f"\nIf you are in-game, please:\n* Get in <#{COMMAND}> or <#{DEPLOYED}>\n* Hit accept ✅ on the <#{SCHEDULE}>\nIf you are not making it to this {event['type'].lower()}, please hit decline ❌ on the <#{SCHEDULE}>")
-        except Exception as e:
-            log.exception(e)
 
 # ===== </Tasks> =====
 

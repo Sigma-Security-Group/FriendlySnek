@@ -415,6 +415,75 @@ class Schedule(commands.Cog):
         await channelAdvisorStaffComms.send(embed=embed)
 
 
+    @discord.app_commands.command(name="no-show")
+    @discord.app_commands.guilds(GUILD)
+    @discord.app_commands.checks.has_any_role(*CMD_LIMIT_STAFF_ADVISOR)
+    async def noShow(self, interaction: discord.Interaction, member: discord.Member) -> None:
+        """Checks no-show logs for specified member.
+
+        Parameters:
+        interaction (discord.Interaction): The Discord interaction.
+        member (discord.Member): The target member.
+
+        Returns:
+        None.
+        """
+        with open(NO_SHOW_FILE) as f:
+            noShowFile = json.load(f)
+
+        if str(member.id) not in noShowFile:
+            embed = discord.Embed(title="Not Found", description="Target member does not have any recorded no-shows.", color=discord.Color.gold())
+            embed.set_author(name=member.display_name, icon_url=member.display_avatar)
+
+            await interaction.response.send_message(embed=embed)
+            return
+
+        embed = discord.Embed(color=discord.Color.gold())
+        embed.set_author(name=member.display_name, icon_url=member.display_avatar)
+        noShowsPresent = []
+        noShowsArchive = []
+        for noShow in noShowFile[str(member.id)]:
+            noShowEntryTimestamp = datetime.fromtimestamp(noShow.get("date", 0), timezone.utc)
+            date = discord.utils.format_dt(noShowEntryTimestamp, style="R")
+            entry = f"{date} -- '{noShow.get('operationName', 'Operation X')}'"
+            reservedRole = noShow.get('reservedRole', None)
+            if reservedRole:
+                entry += f" -- '{reservedRole}'"
+
+            if noShowEntryTimestamp < datetime.now(timezone.utc) - timedelta(days=90):
+                noShowsArchive.append(entry)
+            else:
+                noShowsPresent.append(entry)
+
+        if noShowsPresent:
+            embed.add_field(name="Active", value="\n".join(noShowsPresent))
+        if noShowsArchive:
+            embed.add_field(name="Archived", value="\n".join(noShowsArchive))
+        await interaction.response.send_message(embed=embed)
+
+    @noShow.error
+    async def onNoShowError(self, interaction: discord.Interaction, error: discord.app_commands.AppCommandError) -> None:
+        """noShow errors - dedicated for the discord.app_commands.errors.MissingAnyRole error.
+
+        Parameters:
+        interaction (discord.Interaction): The Discord interaction.
+        error (discord.app_commands.AppCommandError): The end user error.
+
+        Returns:
+        None.
+        """
+        if type(error) == discord.app_commands.errors.MissingAnyRole:
+            guild = self.bot.get_guild(GUILD_ID)
+            if guild is None:
+                log.exception("Schedule onNoShowError: guild is None")
+                return
+
+            embed = discord.Embed(title="❌ Missing permissions", description=f"You do not have the permissions to execute the command!\nThe permitted roles are: {', '.join([guild.get_role(role).name for role in CMD_LIMIT_STAFF_ADVISOR])}.", color=discord.Color.red())
+            await interaction.response.send_message(embed=embed, ephemeral=True)
+            return
+        log.exception(error)
+
+
     @tasks.loop(minutes=10)
     async def tenMinTask(self) -> None:
         """10 minute interval tasks.

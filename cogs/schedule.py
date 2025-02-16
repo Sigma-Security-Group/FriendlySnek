@@ -294,8 +294,8 @@ class Schedule(commands.Cog):
 
 
     @staticmethod
-    async def taskHandlingNoShowMembers(guild: discord.Guild) -> None:
-        """Handling no-show members by pinging and logging.
+    async def tasknoShowsPing(guild: discord.Guild, channelCommand: discord.TextChannel, channelDeployed: discord.TextChannel) -> None:
+        """Handling no-show members by pinging.
 
         Parameters:
         guild (discord.Guild): The Discord guild.
@@ -307,22 +307,12 @@ class Schedule(commands.Cog):
 
         channelArmaDiscussion = guild.get_channel(ARMA_DISCUSSION)
         if not isinstance(channelArmaDiscussion, discord.TextChannel):
-            log.exception("Schedule tenMinTask: channelArmaDiscussion not discord.TextChannel")
-            return
-        channelCommand = guild.get_channel(COMMAND)
-        if not isinstance(channelCommand, discord.VoiceChannel):
-            log.exception("Schedule tenMinTask: channelCommand not discord.VoiceChannel")
-            return
-        channelDeployed = guild.get_channel(DEPLOYED)
-        if not isinstance(channelDeployed, discord.VoiceChannel):
-            log.exception("Schedule tenMinTask: channelDeployed not discord.VoiceChannel")
+            log.exception("Schedule tasknoShowsPing: channelArmaDiscussion not discord.TextChannel")
             return
 
         membersUnscheduled: List[discord.Member] = []
         with open(EVENTS_FILE) as f:
             events = json.load(f)
-
-        noShowEvents = []
 
         for event in events:
             if event.get("checkedAcceptedReminders", False):
@@ -331,6 +321,49 @@ class Schedule(commands.Cog):
                 continue
             startTime = UTC.localize(datetime.strptime(event["time"], TIME_FORMAT))
             if datetime.now(timezone.utc) > startTime + timedelta(minutes=NO_SHOW_PING_THRESHOLD_IN_MINUTES):
+                event["checkedAcceptedReminders"] = True
+                membersAccepted = [member for memberId in event["accepted"] + event["standby"] if (member := guild.get_member(memberId)) is not None]
+                membersInVC = channelCommand.members + channelDeployed.members
+                membersUnscheduled += ([member for member in membersAccepted if member not in membersInVC] + [member for member in membersInVC if member not in membersAccepted and member.id != event["authorId"]])
+
+        with open(EVENTS_FILE, "w") as f:
+            json.dump(events, f, indent=4)
+        if len(membersUnscheduled) == 0:
+            return
+
+        log.debug(f"Schedule tasknoShowsPing: Pinging unscheduled members: {', '.join([member.display_name for member in membersUnscheduled])}")
+        await channelArmaDiscussion.send(" ".join(member.mention for member in membersUnscheduled) + f"\nIf you are in-game, please:\n* Get in {channelCommand.mention} or {channelDeployed.mention}\n* Hit accept ✅ on the <#{SCHEDULE}>\nIf you are not making it to this {event['type'].lower()}, please hit decline ❌ on the <#{SCHEDULE}>")
+
+
+    @staticmethod
+    async def tasknoShowsLogging(guild: discord.Guild, channelCommand: discord.TextChannel, channelDeployed: discord.TextChannel) -> None:
+        """Handling no-show members by logging.
+
+        Parameters:
+        guild (discord.Guild): The Discord guild.
+
+        Returns:
+        None.
+        """
+        NO_SHOW_LOG_THRESHOLD_IN_MINUTES = 50
+
+        getReservedRoleName = lambda resRoles, userId: next((key for key, value in resRoles.items() if value == userId), None) if resRoles is not None else None
+
+        noShowEvents = []
+        with open(EVENTS_FILE) as f:
+            events = json.load(f)
+
+        # Fetch no-show members
+        for event in events:
+            if event.get("checkedNoShowLogging", False):
+                continue
+            if event.get("type", "Operation") != "Operation":
+                continue
+
+            startTime = UTC.localize(datetime.strptime(event["time"], TIME_FORMAT))
+            if datetime.now(timezone.utc) > startTime + timedelta(minutes=NO_SHOW_LOG_THRESHOLD_IN_MINUTES):
+                event["checkedNoShowLogging"] = True
+
                 membersAccepted = [member for memberId in event["accepted"] + event["standby"] if (member := guild.get_member(memberId)) is not None]
                 membersInVC = channelCommand.members + channelDeployed.members
                 membersAcceptedNotInSchedule = [member for member in membersAccepted if member not in membersInVC]
@@ -339,32 +372,30 @@ class Schedule(commands.Cog):
                     "event": event
                 })
 
-                membersUnscheduled += (membersAcceptedNotInSchedule + [member for member in membersInVC if member not in membersAccepted and member.id != event["authorId"]])
-
-                event["checkedAcceptedReminders"] = True
-
         with open(EVENTS_FILE, "w") as f:
             json.dump(events, f, indent=4)
-        if len(membersUnscheduled) == 0:
+
+        if not noShowEvents:
             return
 
-        log.debug(f"Schedule tenMinTask: Pinging unscheduled members: {', '.join([member.display_name for member in membersUnscheduled])}")
-        await channelArmaDiscussion.send(" ".join(member.mention for member in membersUnscheduled) + f"\nIf you are in-game, please:\n* Get in {channelCommand.mention} or {channelDeployed.mention}\n* Hit accept ✅ on the <#{SCHEDULE}>\nIf you are not making it to this {event['type'].lower()}, please hit decline ❌ on the <#{SCHEDULE}>")
-
-        # Log no-show members in JSON
-        getReservedRoleName = lambda resRoles, userId: next((key for key, value in resRoles.items() if value == userId), None) if resRoles is not None else None
-
+        noShowMembersListForLogging = []
         with open(NO_SHOW_FILE) as f:
             noShowFile = json.load(f)
+
+        # Log no-show members in JSON
         for noShowEvent in noShowEvents:
             for noShowMember in noShowEvent["members"]:
+                noShowMembersListForLogging.append(noShowMember)
                 if str(noShowMember.id) not in noShowFile:
                     noShowFile[str(noShowMember.id)] = []
                 startTime = int(datetime.timestamp(UTC.localize(datetime.strptime(noShowEvent["event"]["time"], TIME_FORMAT))))
                 reservedRole = getReservedRoleName(noShowEvent["event"]["reservableRoles"], noShowMember.id)
                 noShowFile[str(noShowMember.id)].append({"date": startTime, "operationName": noShowEvent["event"]["title"], "reservedRole": reservedRole})
+
         with open(NO_SHOW_FILE, "w") as f:
             json.dump(noShowFile, f, indent=4)
+
+        log.debug(f"Schedule tasknoShowsLogging: No-show members, {', '.join([member.display_name for member in noShowMembersListForLogging])}")
 
         # Log no-show members in Discord
         channelAdvisorStaffComms = guild.get_channel(ADVISOR_STAFF_COMMS)
@@ -405,8 +436,20 @@ class Schedule(commands.Cog):
         # === Check for old events and deletes them. ===
         await Schedule.taskAutodeleteEvents(guild)
 
-        # === Checks if players have accepted the event and joined the voice channel. ===
-        await Schedule.taskHandlingNoShowMembers(guild)
+        # === Ping no-show players. ===
+        channelCommand = guild.get_channel(COMMAND)
+        if not isinstance(channelCommand, discord.VoiceChannel):
+            log.exception("Schedule tenMinTask: channelCommand not discord.VoiceChannel")
+            return
+        channelDeployed = guild.get_channel(DEPLOYED)
+        if not isinstance(channelDeployed, discord.VoiceChannel):
+            log.exception("Schedule tenMinTask: channelDeployed not discord.VoiceChannel")
+            return
+
+        await Schedule.tasknoShowsPing(guild, channelCommand, channelDeployed)
+
+        # === Log no-show players. ===
+        await Schedule.tasknoShowsLogging(guild, channelCommand, channelDeployed)
 
 
 # ===== </Tasks> =====

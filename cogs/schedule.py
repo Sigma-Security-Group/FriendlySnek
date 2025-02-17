@@ -418,6 +418,7 @@ class Schedule(commands.Cog):
     @discord.app_commands.command(name="no-show")
     @discord.app_commands.guilds(GUILD)
     @discord.app_commands.checks.has_any_role(*CMD_LIMIT_STAFF_ADVISOR)
+    @discord.app_commands.describe(member = "Target member to check.")
     async def noShow(self, interaction: discord.Interaction, member: discord.Member) -> None:
         """Checks no-show logs for specified member.
 
@@ -437,7 +438,7 @@ class Schedule(commands.Cog):
             embed = discord.Embed(title="Not Found", description="Target member does not have any recorded no-shows.", color=discord.Color.red())
             embed.set_author(name=member.display_name, icon_url=member.display_avatar)
 
-            await interaction.response.send_message(embed=embed)
+            await interaction.response.send_message(embed=embed, ephemeral=True, delete_after=30.0)
             return
 
         embed = discord.Embed(color=discord.Color.orange())

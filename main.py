@@ -52,6 +52,7 @@ DATA_FILES = {
     REPEATED_MSG_DATE_LOG_FILE: {},
     GENERIC_DATA_FILE: {},
     WORKSHOP_INTEREST_FILE: {},
+    NO_SHOW_FILE: {},
 }
 for filePath, dump in DATA_FILES.items():
     setupJSONDataFile(filePath, dump)

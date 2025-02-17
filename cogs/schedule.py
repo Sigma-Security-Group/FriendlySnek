@@ -641,6 +641,28 @@ class Schedule(commands.Cog):
 # ===== <Schedule Functions> =====
 
     @staticmethod
+    def clearUserRSVP(event: Dict, userId: int) -> None:
+        """Clears a specific user from all RSVP.
+
+        Parameters:
+        event (Dict): The event.
+        userId (int): Target user id.
+
+        Returns:
+        None.
+        """
+        RSVP_OPTIONS = ("accepted", "declined", "tentative", "standby")
+        for rsvpOption in RSVP_OPTIONS:
+            if userId in event[rsvpOption]:
+                event[rsvpOption].remove(userId)
+
+        if event["reservableRoles"]:
+            for reservableRole in event["reservableRoles"]:
+                if event["reservableRoles"][reservableRole] == userId:
+                    event["reservableRoles"][reservableRole] = None
+
+
+    @staticmethod
     async def updateSchedule(guild: discord.Guild) -> None:
         """Updates the schedule channel with all messages."""
         channelSchedule = guild.get_channel(SCHEDULE)
@@ -1589,13 +1611,11 @@ class ScheduleButton(discord.ui.Button):
 
             elif customId == "standby_btn":
                 event = [event for event in events if event["messageId"] == self.message.id][0]
+                Schedule.clearUserRSVP(event, interaction.user.id)
+
                 if interaction.user.id in event["standby"]:
-                    event["standby"].remove(interaction.user.id)
                     await interaction.response.send_message(embed=discord.Embed(title="✅ Standby", description="Removed from standby list", color=discord.Color.green()), ephemeral=True, delete_after=60.0)
                 else:
-                    for rsvpOption in rsvpOptions:
-                        if interaction.user.id in event[rsvpOption]:
-                            event[rsvpOption].remove(interaction.user.id)
                     event["standby"].append(interaction.user.id)
                     await interaction.response.send_message(embed=discord.Embed(title="✅ Standby", description="You're on the standby list. If an accepted member leaves, you will be notified about the vacant roles!", color=discord.Color.green()), ephemeral=True, delete_after=60.0)
 
@@ -1640,9 +1660,7 @@ class ScheduleButton(discord.ui.Button):
 
                 # Add to standby if player cap reached and not on list
                 if isAcceptAndReserve and playerCapReached and interaction.user.id not in event["accepted"] and interaction.user.id not in event["standby"]:
-                    for option in rsvpOptions:
-                        if interaction.user.id in event[option]:
-                            event[option].remove(interaction.user.id)
+                    Schedule.clearUserRSVP(event, interaction.user.id)
                     event["standby"].append(interaction.user.id)
 
                     await interaction.response.send_message(embed=discord.Embed(title="✅ On standby list", description="The event player limit is reached!\nYou have been placed on the standby list. If an accepted member leaves, you will be notified about the vacant roles!", color=discord.Color.green()), ephemeral=True, delete_after=60.0)

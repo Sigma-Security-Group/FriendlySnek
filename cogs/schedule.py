@@ -1424,13 +1424,9 @@ class Schedule(commands.Cog):
                 memberTimeZones = json.load(f)
 
             if str(interaction.user.id) not in memberTimeZones:
-                timeZoneOutput = await Schedule.changeTimeZone(interaction.user, isCommand=False)
-                if not timeZoneOutput:
-                    await Schedule.cancelCommand(await Schedule.checkDMChannel(interaction.user), "Timestamp creation")
-                    await interaction.edit_original_response(embed=discord.Embed(title="❌ Timestamp creation canceled", description="You must provide a time zone in your DMs!", color=discord.Color.red()))
-                    return
-                with open(MEMBER_TIME_ZONES_FILE) as f:
-                    memberTimeZones = json.load(f)
+                await interaction.edit_original_response(embed=discord.Embed(title="❌ Apply timezone", description="You must provide a time zone. Execute the command `/changetimezone`", color=discord.Color.red()))
+                return
+
             timeZone = pytz.timezone(memberTimeZones[str(interaction.user.id)])
 
         else:  # Custom time zone
@@ -1938,10 +1934,7 @@ class ScheduleButton(discord.ui.Button):
                         with open(MEMBER_TIME_ZONES_FILE) as f:
                             memberTimeZones = json.load(f)
                         if str(interaction.user.id) not in memberTimeZones:
-                            await interaction.response.send_message(f"{interaction.user.mention} Please retry after you've set a time zone in DMs!", ephemeral=True, delete_after=10.0)
-                            timeZoneOutput = await Schedule.changeTimeZone(interaction.user)
-                            if timeZoneOutput is False:
-                                await interaction.followup.send(embed=discord.Embed(title="❌ Timezone configuration canceled", description="You must provide a time zone in your DMs!", color=discord.Color.red()))
+                            await interaction.response.send_message(embed=discord.Embed(title="❌ Apply timezone", description="You must provide a time zone. Execute the command `/changetimezone`", color=discord.Color.red()))
                             return
 
                         timeZone = pytz.timezone(memberTimeZones[str(interaction.user.id)])
@@ -2736,10 +2729,7 @@ class ScheduleSelect(discord.ui.Select):
                     with open(MEMBER_TIME_ZONES_FILE) as f:
                         memberTimeZones = json.load(f)
                     if str(interaction.user.id) not in memberTimeZones:
-                        await interaction.response.send_message("Please retry after you've set a time zone in DMs!", ephemeral=True, delete_after=60.0)
-                        timeZoneOutput = await Schedule.changeTimeZone(interaction.user)
-                        if timeZoneOutput is False:
-                            await interaction.followup.send(embed=discord.Embed(title="❌ Event Editing canceled", description="You must provide a time zone in your DMs!", color=discord.Color.red()))
+                        await interaction.response.send_message(embed=discord.Embed(title="❌ Apply timezone", description="You must provide a time zone. Execute the command `/changetimezone`", color=discord.Color.red()))
                         return
 
                     # Send modal

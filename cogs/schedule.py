@@ -395,6 +395,9 @@ class Schedule(commands.Cog):
         with open(NO_SHOW_FILE, "w") as f:
             json.dump(noShowFile, f, indent=4)
 
+        if not noShowMembersListForLogging:
+            return
+
         log.debug(f"Schedule tasknoShowsLogging: No-show members, {', '.join([member.display_name for member in noShowMembersListForLogging])}")
 
         # Log no-show members in Discord

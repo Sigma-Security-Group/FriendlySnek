@@ -2581,6 +2581,8 @@ class ScheduleSelect(discord.ui.Select):
                 return
 
             noShowFile[userId].remove(entry)
+            if len(noShowFile[userId]) == 0:
+                noShowFile.pop(userId, None)
 
             with open(NO_SHOW_FILE, "w") as f:
                 json.dump(noShowFile, f, indent=4)

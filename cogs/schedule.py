@@ -469,7 +469,7 @@ class Schedule(commands.Cog):
         view = discord.ui.View(timeout=None)
         view.add_item(ScheduleButton(interaction.message, style=discord.ButtonStyle.success, label="Add entry", custom_id=f"schedule_noshow_add_{member.id}"))
         view.add_item(ScheduleButton(interaction.message, style=discord.ButtonStyle.danger, label="Remove entry", custom_id=f"schedule_noshow_remove_{member.id}"))
-        await interaction.response.send_message(embed=embed, view=view)
+        await interaction.response.send_message(embed=embed, view=view, ephemeral=True, delete_after=180.0)
 
     @noShow.error
     async def onNoShowError(self, interaction: discord.Interaction, error: discord.app_commands.AppCommandError) -> None:
@@ -2573,7 +2573,7 @@ class ScheduleSelect(discord.ui.Select):
                     if entry.get("reservedRole", None):
                         embedDescription += f"\n**Reserved Role:** `{entry['reservedRole']}`"
                     embed = discord.Embed(title="Entry removed", description=embedDescription, color=discord.Color.green())
-                    await interaction.response.send_message(embed=embed, ephemeral=True, delete_after=30.0)
+                    await interaction.response.send_message("Execute /no-show again to view the updated listing.", embed=embed, ephemeral=True, delete_after=30.0)
                     break
             else:
                 embed = discord.Embed(title="Entry not found", description=f"Target entry not found in no-show entries. Selected value '{selectedValue}'", color=discord.Color.red())
@@ -2869,7 +2869,7 @@ class ScheduleModal(discord.ui.Modal):
             if value2:
                 embedDescription += f"\n**Reserved Role:** `{value2}`"
             embed = discord.Embed(title="Entry added", description=embedDescription, color=discord.Color.green())
-            await interaction.response.send_message(embed=embed, ephemeral=True, delete_after=30.0)
+            await interaction.response.send_message("Execute /no-show again to view the updated listing.", embed=embed, ephemeral=True, delete_after=30.0)
             return
 
 

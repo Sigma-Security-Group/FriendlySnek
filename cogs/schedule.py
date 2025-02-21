@@ -51,7 +51,7 @@ EVENT_TYPE_COLORS = {
     "Event": discord.Color.gold()
 }
 
-SCHEDULE_EVENT_VIEW: dict[str, dict[str, discord.ButtonStyle | bool | int | None]] = {
+SCHEDULE_EVENT_VIEW: Dict[str, Dict[str, discord.ButtonStyle | bool | int | None]] = {
     "Type": {
         "required": True,
         "row": 0,
@@ -694,9 +694,9 @@ class Schedule(commands.Cog):
                 await channelSchedule.send(":cry:")
                 return
 
-            newEvents: list[dict] = []
+            newEvents: List[Dict] = []
             for event in sorted(events, key=lambda e: datetime.strptime(e["time"], TIME_FORMAT), reverse=True):
-                Schedule.applyMissingEventKeys(event)
+                Schedule.applyMissingEventKeys(event, keySet="event")
                 msg = await channelSchedule.send(embed=Schedule.getEventEmbed(event, guild), view=Schedule.getEventView(event), files=Schedule.getEventFiles(event))
                 event["messageId"] = msg.id
                 newEvents.append(event)
@@ -707,16 +707,16 @@ class Schedule(commands.Cog):
             log.exception(e)
 
     @staticmethod
-    def applyMissingEventKeys(event: dict) -> None:
+    def applyMissingEventKeys(event: Dict, *, keySet: Literal["event", "template"]) -> None:
         """Applies missing keys to the event.
 
         Parameters:
-        event (dict): The event.
+        event (Dict): The event.
+        keySet (Literal): The applied key set.
 
         Returns:
         None.
         """
-        event.setdefault("authorId", None)
         event.setdefault("type", None)
         event.setdefault("title", None)
         event.setdefault("description", None)
@@ -724,22 +724,29 @@ class Schedule(commands.Cog):
         event.setdefault("reservableRoles", None)
         event.setdefault("maxPlayers", None)
         event.setdefault("map", None)
-        event.setdefault("time", None)
-        event.setdefault("endTime", None)
         event.setdefault("duration", None)
-        event.setdefault("messageId", None)
-        event.setdefault("accepted", [])
-        event.setdefault("declined", [])
-        event.setdefault("tentative", [])
-        event.setdefault("standby", [])
         event.setdefault("files", [])
 
+        if keySet == "event":
+            event.setdefault("authorId", None)
+            event.setdefault("time", None)
+            event.setdefault("endTime", None)
+            event.setdefault("messageId", None)
+            event.setdefault("accepted", [])
+            event.setdefault("declined", [])
+            event.setdefault("tentative", [])
+            event.setdefault("standby", [])
+            event.setdefault("checkedAcceptedReminders", False)
+            event.setdefault("checkedNoShowLogging", False)
+        elif keySet == "template":
+            event.setdefault("templateName", None)
+
     @staticmethod
-    def getEventEmbed(event: dict, guild: discord.Guild) -> discord.Embed:
+    def getEventEmbed(event: Dict, guild: discord.Guild) -> discord.Embed:
         """Generates an embed from the given event.
 
         Parameters:
-        event (dict): The event.
+        event (Dict): The event.
 
         Returns:
         discord.Embed: The generated embed.
@@ -798,7 +805,7 @@ class Schedule(commands.Cog):
         return embed
 
     @staticmethod
-    def getEventView(event: dict) -> discord.ui.View:
+    def getEventView(event: Dict) -> discord.ui.View:
         view = ScheduleView()
         items = []
 
@@ -825,14 +832,14 @@ class Schedule(commands.Cog):
         return view
 
     @staticmethod
-    def getEventFiles(event: dict) -> list[discord.File]:
+    def getEventFiles(event: Dict) -> List[discord.File]:
         """Generates a list of files from the given event.
 
         Parameters:
-        event (dict): The event.
+        event (Dict): The event.
 
         Returns:
-        list[discord.File]: The list of files.
+        List[discord.File]: The list of files.
         """
         if "files" not in event or not event["files"]:
             return None
@@ -848,12 +855,12 @@ class Schedule(commands.Cog):
         return discordFiles
 
     @staticmethod
-    def getUserFileUploads(userId: str, isDiscordFormat = False, fullFilename = False) -> list[discord.File] | list[str]:
+    def getUserFileUploads(userId: str, isDiscordFormat = False, fullFilename = False) -> List[discord.File] | List[str]:
         """Filters uploaded files to specified user id.
 
         Parameters:
         userId (str): User id for filter.
-        isDiscordFormat (bool): Return as list[discord.File]
+        isDiscordFormat (bool): Return as List[discord.File]
         fullFilename (bool): Filename is "DATETIME_AUTHORID_FILENAME", or "FILENAME"
 
         Returns:
@@ -871,7 +878,7 @@ class Schedule(commands.Cog):
         return files
 
     @staticmethod
-    def fromPreviewEmbedToDict(embed: discord.Embed) -> dict:
+    def fromPreviewEmbedToDict(embed: discord.Embed) -> Dict:
         """Generates event dict from preview embed."""
         # Finds a field's position if found (int), if none found (None)
         findFieldPos = lambda fieldName : None if embed.fields is None else (
@@ -880,25 +887,15 @@ class Schedule(commands.Cog):
             ) > 0 else None
         )
 
-        outputDict = {
-            "authorId": None,
-            "title": embed.title,
-            "description": embed.description,
-            "externalURL": None if (findFieldPosURL := findFieldPos("External URL")) is None else embed.fields[findFieldPosURL].value,
-            "reservableRoles": None,
-            "maxPlayers": None,
-            "map": None if (findFieldPosMap := findFieldPos("Map")) is None else embed.fields[findFieldPosMap].value,
-            "time": None,
-            "endTime": None,
-            "duration": None if (findFieldPosDuration := findFieldPos("Duration")) is None else embed.fields[findFieldPosDuration].value,
-            "messageId": None,
-            "accepted": [],
-            "declined": [],
-            "tentative": [],
-            "standby": [],
-            "type": [eventType for eventType in EVENT_TYPE_COLORS if EVENT_TYPE_COLORS[eventType] == embed.color][0] if embed.color in EVENT_TYPE_COLORS.values() else None,
-            "files": []
-        }
+        outputDict = {}
+        Schedule.applyMissingEventKeys(outputDict, keySet="event")
+
+        outputDict["title"] = embed.title
+        outputDict["description"] = embed.description
+        outputDict["externalURL"] = None if (findFieldPosURL := findFieldPos("External URL")) is None else embed.fields[findFieldPosURL].value
+        outputDict["map"] = None if (findFieldPosMap := findFieldPos("Map")) is None else embed.fields[findFieldPosMap].value
+        outputDict["duration"] = None if (findFieldPosDuration := findFieldPos("Duration")) is None else embed.fields[findFieldPosDuration].value
+        outputDict["type"] = [eventType for eventType in EVENT_TYPE_COLORS if EVENT_TYPE_COLORS[eventType] == embed.color][0] if embed.color in EVENT_TYPE_COLORS.values() else None
 
         # Reservable Roles
         fieldPos = findFieldPos("Reservable Roles")
@@ -931,7 +928,7 @@ class Schedule(commands.Cog):
                     outputDict["endTime"] = datetime.fromtimestamp(float(matches[1])).astimezone(pytz.utc).strftime(TIME_FORMAT)
 
         # Workshop Interest
-        if outputDict["type"] == "Workshop":
+        if outputDict.get("type", None) == "Workshop":
             outputDict["workshopInterest"] = None
             if embed.author.name is not None:
                 workshop = embed.author.name[len("Linking: "):]
@@ -945,7 +942,7 @@ class Schedule(commands.Cog):
         return outputDict
 
     @staticmethod
-    def fromDictToPreviewEmbed(previewDict: dict, guild: discord.Guild) -> discord.Embed:
+    def fromDictToPreviewEmbed(previewDict: Dict, guild: discord.Guild) -> discord.Embed:
         """Generates event dict from preview embed."""
         # Title, Description, Color
         embed = discord.Embed(title=previewDict["title"], description=previewDict["description"], color=None if previewDict["type"] is None else EVENT_TYPE_COLORS[previewDict["type"]])
@@ -1015,7 +1012,7 @@ class Schedule(commands.Cog):
         return embed
 
     @staticmethod
-    def fromDictToPreviewView(previewDict: dict, selectedTemplate: str) -> discord.ui.View:
+    def fromDictToPreviewView(previewDict: Dict, selectedTemplate: str) -> discord.ui.View:
         """Generates preview view from event dict."""
         view = ScheduleView(authorId=previewDict["authorId"])
         for label, data in SCHEDULE_EVENT_VIEW.items():
@@ -1112,12 +1109,12 @@ class Schedule(commands.Cog):
         return False
 
     @staticmethod
-    async def blockVerifiedRoleRSVP(interaction: discord.Interaction, event: dict) -> bool:
+    async def blockVerifiedRoleRSVP(interaction: discord.Interaction, event: Dict) -> bool:
         """Checks if user has Verified role, and feedbacks blocking
 
         Parameters:
         interaction (discord.Interaction): The Discord interaction.
-        event (dict): Target event.
+        event (Dict): Target event.
 
         Returns:
         bool: True on block/quit. False on continue.
@@ -1136,11 +1133,11 @@ class Schedule(commands.Cog):
         return False
 
     @staticmethod
-    def generateSelectView(options: list[discord.SelectOption], noneOption: bool, setOptionLabel: str | None, eventMsg: discord.Message, placeholder: str, customId: str, userId: int, eventMsgView: discord.ui.View | None = None):
+    def generateSelectView(options: List[discord.SelectOption], noneOption: bool, setOptionLabel: str | None, eventMsg: discord.Message, placeholder: str, customId: str, userId: int, eventMsgView: discord.ui.View | None = None):
         """Generates good select menu view - ceil(len(options)/25) dropdowns.
 
         Parameters:
-        options (list[discord.SelectOption]): All select menu options
+        options (List[discord.SelectOption]): All select menu options
         noneOption (bool): Adds an option for None.
         setOptionLabel (str): Removes this (selected) option from the options.
         eventMsg (discord.Message): The event message.
@@ -1191,12 +1188,12 @@ class Schedule(commands.Cog):
         return hours, minutes, delta
 
     @staticmethod
-    async def editEvent(interaction: discord.Interaction, event: dict, eventMsg: discord.Message) -> None:
+    async def editEvent(interaction: discord.Interaction, event: Dict, eventMsg: discord.Message) -> None:
         """Edits a preexisting event.
 
         Parameters:
         interaction (discord.Interaction): The Discord interaction.
-        event (dict): The event.
+        event (Dict): The event.
         eventMsg (discord.Message): The preexisting event to edit.
 
         Returns:
@@ -1520,7 +1517,7 @@ class ScheduleButton(discord.ui.Button):
 
             scheduleNeedsUpdate = True
             fetchMsg = False
-            eventList: list[dict] = [event for event in events if event["messageId"] == interaction.message.id]
+            eventList: List[Dict] = [event for event in events if event["messageId"] == interaction.message.id]
 
             rsvpOptions = ("accepted", "declined", "tentative", "standby")
             if customId in rsvpOptions:
@@ -2113,7 +2110,7 @@ class ScheduleButton(discord.ui.Button):
 
                         templateIndex = None
                         for idx, template in enumerate(templates):
-                            if template["templateName"] == templateName:
+                            if template.get("templateName", None) == templateName:
                                 templateIndex = idx
                                 break
                         else:
@@ -2234,7 +2231,7 @@ class ScheduleButton(discord.ui.Button):
                 if buttonLabel.startswith("select_template"):
                     filename = f"data/{previewEmbedDict['type'].lower()}Templates.json"
                     with open(filename) as f:
-                        templates: list[dict] = json.load(f)
+                        templates: List[Dict] = json.load(f)
                     templates.sort(key=lambda template : template["templateName"])
 
                     options = [discord.SelectOption(label=template["templateName"], description=template["description"][:100]) for template in templates]
@@ -2403,7 +2400,7 @@ class ScheduleButton(discord.ui.Button):
 
 class ScheduleSelect(discord.ui.Select):
     """Handling all schedule dropdowns."""
-    def __init__(self, eventMsg: discord.Message, placeholder: str, minValues: int, maxValues: int, customId: str, userId: int, row: int, options: list[discord.SelectOption], disabled: bool = False, eventMsgView: discord.ui.View | None = None, *args, **kwargs):
+    def __init__(self, eventMsg: discord.Message, placeholder: str, minValues: int, maxValues: int, customId: str, userId: int, row: int, options: List[discord.SelectOption], disabled: bool = False, eventMsgView: discord.ui.View | None = None, *args, **kwargs):
         # Append userId to customId to not collide on multi-user simultaneous execution
         super().__init__(placeholder=placeholder, min_values=minValues, max_values=maxValues, custom_id=f"{customId}_{userId}", row=row, options=options, disabled=disabled, *args, **kwargs)
         self.eventMsg = eventMsg
@@ -2488,9 +2485,9 @@ class ScheduleSelect(discord.ui.Select):
                     with open(filename) as f:
                         templates = json.load(f)
                     for template in templates:
-                        if template["templateName"] == selectedValue:
+                        if template.get("templateName", None) == selectedValue:
                             template["authorId"] = interaction.user.id
-                            template["time"] = template["endTime"] = None
+                            Schedule.applyMissingEventKeys(template, keySet="template")
                             template["type"] = previewEmbedDict["type"]
                             embed = Schedule.fromDictToPreviewEmbed(template, interaction.guild)
                             for child in self.eventMsgView.children:
@@ -2994,7 +2991,7 @@ class ScheduleModal(discord.ui.Modal):
                     # Write to file
                     filename = f"data/{previewEmbedDict['type'].lower()}Templates.json"
                     with open(filename) as f:
-                        templates: list[dict] = json.load(f)
+                        templates: List[Dict] = json.load(f)
                     templateOverwritten = (False, 0)
                     for idx, template in enumerate(templates):
                         if template["templateName"] == previewEmbedDict["templateName"]:

@@ -718,6 +718,8 @@ class Schedule(commands.Cog):
         None.
         """
         event.setdefault("type", None)
+        event.setdefault("time", None)
+        event.setdefault("endTime", None)
         event.setdefault("title", None)
         event.setdefault("description", None)
         event.setdefault("externalURL", None)
@@ -729,8 +731,6 @@ class Schedule(commands.Cog):
 
         if keySet == "event":
             event.setdefault("authorId", None)
-            event.setdefault("time", None)
-            event.setdefault("endTime", None)
             event.setdefault("messageId", None)
             event.setdefault("accepted", [])
             event.setdefault("declined", [])

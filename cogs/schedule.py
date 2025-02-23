@@ -364,7 +364,7 @@ class Schedule(commands.Cog):
             if datetime.now(timezone.utc) > startTime + timedelta(minutes=NO_SHOW_LOG_THRESHOLD_IN_MINUTES):
                 event["checkedNoShowLogging"] = True
 
-                membersAccepted = [member for memberId in event["accepted"] + event["standby"] if (member := guild.get_member(memberId)) is not None]
+                membersAccepted = [member for memberId in event["accepted"] if (member := guild.get_member(memberId)) is not None]
                 membersInVC = channelCommand.members + channelDeployed.members
                 membersAcceptedNotInSchedule = [member for member in membersAccepted if member not in membersInVC]
                 noShowEvents.append({

@@ -434,6 +434,9 @@ class Schedule(commands.Cog):
         """
         ARCHIVE_THRESHOLD_IN_DAYS = 90
 
+        view = discord.ui.View(timeout=None)
+        view.add_item(ScheduleButton(interaction.message, style=discord.ButtonStyle.success, label="Add entry", custom_id=f"schedule_noshow_add_{member.id}"))
+
         with open(NO_SHOW_FILE) as f:
             noShowFile = json.load(f)
 
@@ -441,7 +444,7 @@ class Schedule(commands.Cog):
             embed = discord.Embed(title="Not Found", description="Target member does not have any recorded no-shows.", color=discord.Color.red())
             embed.set_author(name=member.display_name, icon_url=member.display_avatar)
 
-            await interaction.response.send_message(embed=embed, ephemeral=True, delete_after=30.0)
+            await interaction.response.send_message(embed=embed, view=view, ephemeral=True, delete_after=30.0)
             return
 
         embed = discord.Embed(color=discord.Color.orange())
@@ -466,8 +469,6 @@ class Schedule(commands.Cog):
         if noShowsArchive:
             embed.add_field(name=f"Archived (Older than {ARCHIVE_THRESHOLD_IN_DAYS} days)", value="\n".join(noShowsArchive), inline=False)
 
-        view = discord.ui.View(timeout=None)
-        view.add_item(ScheduleButton(interaction.message, style=discord.ButtonStyle.success, label="Add entry", custom_id=f"schedule_noshow_add_{member.id}"))
         view.add_item(ScheduleButton(interaction.message, style=discord.ButtonStyle.danger, label="Remove entry", custom_id=f"schedule_noshow_remove_{member.id}"))
         await interaction.response.send_message(embed=embed, view=view, ephemeral=True, delete_after=180.0)
 

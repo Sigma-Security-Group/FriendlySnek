@@ -2970,7 +2970,7 @@ class ScheduleModal(discord.ui.Modal):
 
                 case "reservable_roles":
                     previewEmbedDict["reservableRoles"] = None if value == "" else {role.strip(): None for role in value.split("\n") if role.strip() != ""}
-                    if len(previewEmbedDict["reservableRoles"]) > 20:
+                    if previewEmbedDict["reservableRoles"] and len(previewEmbedDict["reservableRoles"]) > 20:
                         previewEmbedDict["reservableRoles"] = None
                         await interaction.response.send_message(embed=discord.Embed(title="❌ Too many roles", description=f"Due to Discord character limitation, we've set the cap to 20 roles.\nLink your order, e.g. OPORD, under URL if you require more flexibility.\n\nYour roles:\n{value}"[:4096], color=discord.Color.red()), ephemeral=True, delete_after=10.0)
                         return

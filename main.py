@@ -227,6 +227,7 @@ async def on_member_remove(member: discord.Member) -> None:
     if not auditEntries or auditEntries[0].action == discord.AuditLogAction.unban:  # To not log ban when leaving after ban
         if not secret.DISCORD_LOGGING.get("user_leave", False):
             return
+        embed.add_field(name="Roles", value=", ".join([role.mention for role in member.roles if role.name != "@everyone"]))
         await channelAuditLogs.send(embed=embed)
         return
 
@@ -236,9 +237,10 @@ async def on_member_remove(member: discord.Member) -> None:
             return
         embed.set_author(name="Member Kicked", icon_url=member.display_avatar)
         embed.description = None
-        embed.add_field(name="User", value=f"{member.mention}\n{member.name}", inline=True)
-        embed.add_field(name="Moderator", value=f"{auditEntries[0].user.mention}\n{auditEntries[0].user.name}", inline=True)
-        embed.add_field(name="Reason", value=auditEntries[0].reason, inline=False)
+        embed.add_field(name="User", value=f"{member.mention}\n{member.name}")
+        embed.add_field(name="Moderator", value=f"{auditEntries[0].user.mention}\n{auditEntries[0].user.name}")
+        embed.add_field(name="Reason", value=auditEntries[0].reason)
+        embed.add_field(name="Roles", value=", ".join([role.mention for role in member.roles if role.name != "@everyone"]))
         embed.set_footer(text=f"Member ID: {member.id} | Moderator ID: {auditEntries[0].user_id}")
         embed.timestamp = auditEntries[0].created_at
         await channelAuditLogs.send(embed=embed)
@@ -250,9 +252,10 @@ async def on_member_remove(member: discord.Member) -> None:
             return
         embed.set_author(name="Member Banned", icon_url=member.display_avatar)
         embed.description = None
-        embed.add_field(name="User", value=f"{member.mention}\n{member.name}", inline=True)
-        embed.add_field(name="Moderator", value=f"{auditEntries[0].user.mention}\n{auditEntries[0].user.name}", inline=True)
-        embed.add_field(name="Reason", value=auditEntries[0].reason, inline=False)
+        embed.add_field(name="User", value=f"{member.mention}\n{member.name}")
+        embed.add_field(name="Moderator", value=f"{auditEntries[0].user.mention}\n{auditEntries[0].user.name}")
+        embed.add_field(name="Reason", value=auditEntries[0].reason)
+        embed.add_field(name="Roles", value=", ".join([role.mention for role in member.roles if role.name != "@everyone"]))
         embed.set_footer(text=f"Member ID: {member.id} | Moderator ID: {auditEntries[0].user_id}")
         embed.timestamp = auditEntries[0].created_at
         await channelAuditLogs.send(embed=embed)

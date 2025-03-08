@@ -1680,7 +1680,7 @@ class ScheduleButton(discord.ui.Button):
                     log.exception("ScheduleButton callback: interaction.user not discord.Member")
                     return
 
-                vacantRoles = [btnRoleName for btnRoleName, memberId in event["reservableRoles"].items() if memberId is None or interaction.user.guild.get_member(memberId) is None]
+                vacantRoles = [btnRoleName for btnRoleName, memberId in event["reservableRoles"].items() if (memberId is None or interaction.user.guild.get_member(memberId) is None) and 1 <= len(btnRoleName) <= 100]
 
                 view = ScheduleView()
                 options = []

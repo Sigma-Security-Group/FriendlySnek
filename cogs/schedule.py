@@ -2040,7 +2040,7 @@ class ScheduleButton(discord.ui.Button):
                         await interaction.response.send_message(interaction.user.mention, embed=embed, view=view, ephemeral=True, delete_after=300.0)
 
                     case "files_add":
-                        messageNew = await interaction.channel.fetch_message(message.id)
+                        messageNew = await interaction.channel.fetch_message(self.message.id)
                         if not isinstance(messageNew, discord.Message):
                             log.exception("ScheduleButton callback files_add: messageNew not discord.Message")
                             return
@@ -2057,7 +2057,7 @@ class ScheduleButton(discord.ui.Button):
                         await interaction.response.edit_message(embed=embed, view=view)
 
                     case "files_remove":
-                        messageNew = await interaction.channel.fetch_message(message.id)
+                        messageNew = await interaction.channel.fetch_message(self.message.id)
                         if not isinstance(messageNew, discord.Message):
                             log.exception("ScheduleButton callback files_remove: messageNew not discord.Message")
                             return
@@ -2259,7 +2259,7 @@ class ScheduleButton(discord.ui.Button):
                 return
 
             elif customId == "event_edit_files_add":
-                messageNew = await interaction.channel.fetch_message(message.id)
+                messageNew = await interaction.channel.fetch_message(self.message.id)
                 if not isinstance(messageNew, discord.Message):
                     log.exception("ScheduleButton callback event_edit_files_add: messageNew not discord.Message")
                     return
@@ -2280,7 +2280,7 @@ class ScheduleButton(discord.ui.Button):
                 return
 
             elif customId == "event_edit_files_remove":
-                messageNew = await interaction.channel.fetch_message(message.id)
+                messageNew = await interaction.channel.fetch_message(self.message.id)
                 if not isinstance(messageNew, discord.Message):
                     log.exception("ScheduleButton callback event_edit_files_remove: messageNew not discord.Message")
                     return

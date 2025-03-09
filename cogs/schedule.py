@@ -1773,12 +1773,9 @@ class ScheduleButton(discord.ui.Button):
                     return
 
                 view = ScheduleView()
-                items = [
-                    ScheduleButton(interaction.message, row=0, label="Edit", style=discord.ButtonStyle.primary, custom_id="edit"),
-                    ScheduleButton(interaction.message, row=0, label="Delete", style=discord.ButtonStyle.danger, custom_id="delete")
-                ]
-                for item in items:
-                    view.add_item(item)
+                view.add_item(ScheduleButton(interaction.message, row=0, label="Edit", style=discord.ButtonStyle.primary, custom_id="edit"))
+                view.add_item(ScheduleButton(interaction.message, row=0, label="Delete", style=discord.ButtonStyle.danger, custom_id="delete"))
+                view.add_item(ScheduleButton(interaction.message, row=0, label="List RSVP", style=discord.ButtonStyle.secondary, custom_id="event_list_accepted"))
                 await interaction.response.send_message(content=f"{interaction.user.mention} What would you like to configure?", view=view, ephemeral=True, delete_after=30.0)
 
             elif customId == "edit":
@@ -1862,6 +1859,33 @@ class ScheduleButton(discord.ui.Button):
                     item.disabled = True
                 await interaction.response.edit_message(view=self.view)
                 await interaction.followup.send(embed=discord.Embed(title=f"❌ Event deletion canceled!", color=discord.Color.red()), ephemeral=True)
+                return
+
+            elif customId == "event_list_accepted":
+                if self.message is None:
+                    log.exception("ScheduleButton callback event_list_accepted: self.message is None")
+                    return
+
+                event = [event for event in events if event["messageId"] == self.message.id][0]
+
+                description = ""
+                accepted = [member.mention for memberId in event["accepted"] if (member := interaction.guild.get_member(memberId)) is not None]
+                description += f"**Accepted ({len(accepted)}):**\n`{' '.join(accepted)}`\n\n" if accepted else ""
+
+                standby = [member.mention for memberId in event["standby"] if (member := interaction.guild.get_member(memberId)) is not None]
+                if standby:
+                    description += f"**Standby ({len(standby)}):**\n`{' '.join(standby)}`\n\n"
+
+                tentative = [member.mention for memberId in event["tentative"] if (member := interaction.guild.get_member(memberId)) is not None]
+                if tentative:
+                    description += f"**Tentative ({len(tentative)}):**\n`{' '.join(tentative)}`\n\n"
+
+                declined = [member.mention for memberId in event["declined"] if (member := interaction.guild.get_member(memberId)) is not None]
+                if declined:
+                    description += f"**Declined ({len(declined)}):**\n`{' '.join(declined)}`"
+
+                embed = discord.Embed(title=f"RSVP Listing", description=description.strip()[:4096], color=discord.Color.gold())
+                await interaction.response.send_message(embed=embed, ephemeral=True, delete_after=60.0)
                 return
 
             elif customId is not None and customId.startswith("event_schedule_"):

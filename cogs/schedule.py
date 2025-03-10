@@ -1697,9 +1697,9 @@ class ScheduleButton(discord.ui.Button):
                         view.add_item(ScheduleButton(interaction.message, row=1, label="Unreserve Current Role", style=discord.ButtonStyle.danger, custom_id="reserve_role_unreserve"))
                         break
 
-                # Standby button, if any role reserved
+                # Standby button; if any role reserved, but not accepted
                 isStandbyButton = False
-                if isAcceptAndReserve and any(event["reservableRoles"].values()):
+                if isAcceptAndReserve and any(event["reservableRoles"].values()) and interaction.user.id not in event["standby"]:
                     isStandbyButton = True
                     view.add_item(ScheduleButton(interaction.message, row=1, label="Standby", style=discord.ButtonStyle.success, custom_id="standby_btn"))
 

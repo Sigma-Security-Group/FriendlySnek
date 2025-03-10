@@ -1645,8 +1645,8 @@ class ScheduleButton(discord.ui.Button):
                     await interaction.response.send_message(embed=discord.Embed(title="❌ Sorry, seems like there's no space left in the :b:op!", color=discord.Color.red()), ephemeral=True, delete_after=60.0)
                     return
 
-                # Remove from standby if no vacant roles
-                if isAcceptAndReserve and interaction.user.id in event["standby"] and all(event["reservableRoles"].values()):
+                # Remove from standby; if no vacant roles, or player cap reached
+                if isAcceptAndReserve and interaction.user.id in event["standby"] and (all(event["reservableRoles"].values()) or len(event["accepted"]) == event["maxPlayers"]):
                     event["standby"].remove(interaction.user.id)
                     embed = Schedule.getEventEmbed(event, interaction.guild)
                     await interaction.response.edit_message(embed=embed)

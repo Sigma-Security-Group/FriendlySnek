@@ -5,6 +5,7 @@ from discord.ext import commands  # type: ignore
 from unidecode import unidecode
 from textwrap import wrap
 
+from utils import Utils
 from secret import DEBUG
 from constants import *
 if DEBUG:
@@ -580,22 +581,6 @@ class Staff(commands.Cog):
         await interaction.response.send_modal(modal)
         await interaction.followup.send("Modpack updated!", ephemeral=True)
 
-
-    @updatemodpack.error
-    async def onUpdatemodpackError(self, interaction: discord.Interaction, error: discord.app_commands.AppCommandError) -> None:
-        """updatemodpack errors - dedicated for the discord.app_commands.errors.MissingAnyRole error."""
-        if type(error) == discord.app_commands.errors.MissingAnyRole:
-            guild = self.bot.get_guild(GUILD_ID)
-            if guild is None:
-                log.exception("Schedule onUpdatemodpackError: guild is None")
-                return
-
-            embed = discord.Embed(title="❌ Missing permissions", description=f"You do not have the permissions to upload a mission file!\nThe permitted roles are: {', '.join([role.name for allowedRole in CMD_LIMIT_DATACENTER if (role := guild.get_role(allowedRole)) is not None])}.", color=discord.Color.red())
-            await interaction.response.send_message(embed=embed, ephemeral=True, delete_after=30.0)
-            return
-        log.exception(error)
-
-
     # Snek Lord command
     @commands.command(name="sneklord")
     @commands.has_any_role(SNEK_LORD)
@@ -727,4 +712,6 @@ class StaffModal(discord.ui.Modal):
 
 
 async def setup(bot: commands.Bot) -> None:
+    Staff.interview.error(Utils.onSlashError)
+    Staff.updatemodpack.error(Utils.onSlashError)
     await bot.add_cog(Staff(bot))

@@ -10,6 +10,7 @@ from typing import *
 from discord.ext import commands, tasks  # type: ignore
 
 from .workshopInterest import WorkshopInterest  # type: ignore
+from utils import Utils  # type: ignore
 import secret
 from constants import *
 if secret.DEBUG:
@@ -182,37 +183,6 @@ class Schedule(commands.Cog):
         await Schedule.updateSchedule(guild)
         if not self.tenMinTask.is_running():
             self.tenMinTask.start()
-
-    @staticmethod
-    async def onSlashError(instance, interaction: discord.Interaction, error: discord.app_commands.AppCommandError) -> None:
-        """Handles errors for slash commands.
-
-        Parameters:
-        instance: Cog instance.
-        interaction (discord.Interaction): The Discord interaction.
-        error (discord.app_commands.AppCommandError): The error that occurred.
-
-        Returns:
-        None.
-        """
-        if type(error) == discord.app_commands.errors.MissingAnyRole:
-            guild = interaction.guild
-            if guild is None:
-                log.exception("Schedule onSlashError: guild is None")
-                return
-
-            missingRolesList = []
-            for missingRole in error.missing_roles:
-                if isinstance(missingRole, int):
-                    fetchedRole = guild.get_role(missingRole)
-                    if fetchedRole is None:
-                        continue
-                missingRolesList.append(fetchedRole.mention)
-
-            embed = discord.Embed(title="❌ Missing permissions", description=f"You do not have the permissions to execute this command!\nThe permitted roles are: {', '.join(missingRolesList)}.", color=discord.Color.red())
-            await interaction.response.send_message(embed=embed, ephemeral=True, delete_after=30.0)
-            return
-        log.exception(error)
 
     @staticmethod
     async def cancelCommand(channel: discord.DMChannel, abortText: str) -> None:
@@ -3173,8 +3143,8 @@ class ScheduleModal(discord.ui.Modal):
 
 
 async def setup(bot: commands.Bot) -> None:
-    Schedule.noShow.error(Schedule.onSlashError)
-    Schedule.refreshSchedule.error(Schedule.onSlashError)
-    Schedule.aar.error(Schedule.onSlashError)
-    Schedule.scheduleOperation.error(Schedule.onSlashError)
+    Schedule.noShow.error(Utils.onSlashError)
+    Schedule.refreshSchedule.error(Utils.onSlashError)
+    Schedule.aar.error(Utils.onSlashError)
+    Schedule.scheduleOperation.error(Utils.onSlashError)
     await bot.add_cog(Schedule(bot))

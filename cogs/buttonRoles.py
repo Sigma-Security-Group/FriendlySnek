@@ -2,6 +2,7 @@ import re, math, discord, collections.abc, logging
 
 from discord.ext import commands  # type: ignore
 
+from utils import Utils
 from secret import DEBUG
 from constants import *
 if DEBUG:
@@ -426,5 +427,7 @@ class ButtonRolesSelect(discord.ui.Select):
 # ===== </Views and Buttons> =====
 
 async def setup(bot: commands.Bot) -> None:
+    ButtonRoles.buttonRoleCreate.error(Utils.onSlashError)
+    ButtonRoles.buttonRoleEdit.error(Utils.onSlashError)
     await bot.add_cog(ButtonRoles(bot))
     bot.add_dynamic_items(ButtonRolesPersistentButton)

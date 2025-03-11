@@ -5,6 +5,7 @@ from dateutil.parser import parse as datetimeParse  # type: ignore
 
 from discord.ext import commands # type: ignore
 
+from utils import Utils
 from secret import DEBUG
 from constants import *
 if DEBUG:
@@ -120,28 +121,6 @@ class EmbedBuilder(commands.Cog):
             embed = discord.Embed(title="⚠️ Removing attachment", description="The target message (messageid) currently has an attachment.\nYou have not provided an attachment.\n**This means that on submit, the attachment will be removed!**", color=discord.Color.orange())
             await interaction.followup.send(interaction.user.mention, embed=embed, ephemeral=True)
 
-
-    @buildEmbed.error
-    async def onBuildEmbedError(self, interaction: discord.Interaction, error: discord.app_commands.AppCommandError) -> None:
-        """buildEmbed errors - dedicated for the discord.app_commands.errors.MissingAnyRole error.
-
-        Parameters:
-        interaction (discord.Interaction): The Discord interaction.
-        error (discord.app_commands.AppCommandError): The end user error.
-
-        Returns:
-        None.
-        """
-        if type(error) == discord.app_commands.errors.MissingAnyRole:
-            guild = self.bot.get_guild(GUILD_ID)
-            if guild is None:
-                log.exception("EmbedBuilder onBuildEmbedError: guild is None")
-                return
-
-            embed = discord.Embed(title="❌ Missing permissions", description=f"You do not have the permissions to build embeds!\nThe permitted roles are: {', '.join([guild.get_role(role).name for role in CMD_LIMIT_STAFF])}.", color=discord.Color.red())
-            await interaction.response.send_message(embed=embed, ephemeral=True, delete_after=15.0)
-            return
-        log.exception(error)
 
 # ===== </Build Embed> =====
 
@@ -479,4 +458,5 @@ class BuilderModal(discord.ui.Modal):
 
 
 async def setup(bot: commands.Bot) -> None:
+    EmbedBuilder.buildEmbed.error(Utils.onSlashError)
     await bot.add_cog(EmbedBuilder(bot))

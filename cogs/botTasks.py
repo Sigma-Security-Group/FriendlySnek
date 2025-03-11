@@ -174,8 +174,6 @@ class BotTasks(commands.Cog):
                     "name": name,
                     "datetime": utcTime
                 })
-            else:
-                log.debug(f"BotTasks checkModUpdates: Arma mod update IGNORE '{name}' - '{utcTime}'")
 
 
         if len(output) > 0:

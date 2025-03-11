@@ -1232,7 +1232,7 @@ class Schedule(commands.Cog):
         """
         # Cap file size to ~25 MB
         if file.size > 26_250_000:
-            await interaction.response.send_message(embed=discord.Embed(title="❌ Invalid filesize", description="Max allowed filesize is 25 MB!", color=discord.Color.red()), ephemeral=True)
+            await interaction.response.send_message(embed=discord.Embed(title="❌ Invalid filesize", description="Max allowed filesize is 25 MB!", color=discord.Color.red()), ephemeral=True, delete_after=30.0)
             return
 
         channelAuditLogs = self.bot.get_channel(AUDIT_LOGS)
@@ -1257,7 +1257,7 @@ class Schedule(commands.Cog):
             embed = discord.Embed(title="❌ File upload blocked", description=f"User {interaction.user.mention} ({interaction.user.id}) uploaded the file '{file.filename}'.\nThis action has been blocked since the file extension is blacklisted.", color=discord.Color.red())
             await channelAuditLogs.send(roleSnekLord.mention, embed=embed)
 
-            await interaction.response.send_message(embed=discord.Embed(title="❌ Invalid file extension", description="This file extension is blacklisted for security purposes.", color=discord.Color.red()), ephemeral=True)
+            await interaction.response.send_message(embed=discord.Embed(title="❌ Invalid file extension", description="This file extension is blacklisted for security purposes.", color=discord.Color.red()), ephemeral=True, delete_after=30.0)
             return
 
 
@@ -1265,7 +1265,7 @@ class Schedule(commands.Cog):
         filenameCap = file.filename[:200]
         filenameExists = any([re.match(fr"\d+_{interaction.user.id}_{filenameCap}", file) for file in os.listdir("tmp/fileUpload/")])
         if filenameExists:
-            await interaction.response.send_message(embed=discord.Embed(title="❌ Invalid filename", description="You have already uploaded a file with this name before!", color=discord.Color.red()), ephemeral=True)
+            await interaction.response.send_message(embed=discord.Embed(title="❌ Invalid filename", description="You have already uploaded a file with this name before!", color=discord.Color.red()), ephemeral=True, delete_after=30.0)
             return
 
 
@@ -1329,7 +1329,7 @@ class Schedule(commands.Cog):
         try:
             timeParsed = datetimeParse(time)
         except ValueError:
-            await interaction.response.send_message(embed=discord.Embed(title="❌ Invalid time", description="Provide a valid time!", color=discord.Color.red()), ephemeral=True)
+            await interaction.response.send_message(embed=discord.Embed(title="❌ Invalid time", description="Provide a valid time!", color=discord.Color.red()), ephemeral=True, delete_after=30.0)
             return
 
         await interaction.response.defer()
@@ -1874,7 +1874,7 @@ class ScheduleButton(discord.ui.Button):
                         with open(MEMBER_TIME_ZONES_FILE) as f:
                             memberTimeZones = json.load(f)
                         if str(interaction.user.id) not in memberTimeZones:
-                            await interaction.response.send_message(embed=discord.Embed(title="❌ Apply timezone", description="You must provide a time zone. Execute the command `/changetimezone`", color=discord.Color.red()))
+                            await interaction.response.send_message(embed=discord.Embed(title="❌ Apply timezone", description="You must provide a time zone. Execute the command `/changetimezone`", color=discord.Color.red()), ephemeral=True, delete_after=30.0)
                             return
 
                         timeZone = pytz.timezone(memberTimeZones[str(interaction.user.id)])
@@ -2677,7 +2677,7 @@ class ScheduleSelect(discord.ui.Select):
                     with open(MEMBER_TIME_ZONES_FILE) as f:
                         memberTimeZones = json.load(f)
                     if str(interaction.user.id) not in memberTimeZones:
-                        await interaction.response.send_message(embed=discord.Embed(title="❌ Apply timezone", description="You must provide a time zone. Execute the command `/changetimezone`", color=discord.Color.red()))
+                        await interaction.response.send_message(embed=discord.Embed(title="❌ Apply timezone", description="You must provide a time zone. Execute the command `/changetimezone`", color=discord.Color.red()), ephemeral=True, delete_after=30.0)
                         return
 
                     # Send modal

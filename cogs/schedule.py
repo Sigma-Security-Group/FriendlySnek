@@ -184,6 +184,37 @@ class Schedule(commands.Cog):
             self.tenMinTask.start()
 
     @staticmethod
+    async def onSlashError(instance, interaction: discord.Interaction, error: discord.app_commands.AppCommandError) -> None:
+        """Handles errors for slash commands.
+
+        Parameters:
+        instance: Cog instance.
+        interaction (discord.Interaction): The Discord interaction.
+        error (discord.app_commands.AppCommandError): The error that occurred.
+
+        Returns:
+        None.
+        """
+        if type(error) == discord.app_commands.errors.MissingAnyRole:
+            guild = interaction.guild
+            if guild is None:
+                log.exception("Schedule onSlashError: guild is None")
+                return
+
+            missingRolesList = []
+            for missingRole in error.missing_roles:
+                if isinstance(missingRole, int):
+                    fetchedRole = guild.get_role(missingRole)
+                    if fetchedRole is None:
+                        continue
+                missingRolesList.append(fetchedRole.mention)
+
+            embed = discord.Embed(title="❌ Missing permissions", description=f"You do not have the permissions to execute this command!\nThe permitted roles are: {', '.join(missingRolesList)}.", color=discord.Color.red())
+            await interaction.response.send_message(embed=embed, ephemeral=True, delete_after=30.0)
+            return
+        log.exception(error)
+
+    @staticmethod
     async def cancelCommand(channel: discord.DMChannel, abortText: str) -> None:
         """Sends an abort response to the user.
 
@@ -472,28 +503,6 @@ class Schedule(commands.Cog):
         view.add_item(ScheduleButton(interaction.message, style=discord.ButtonStyle.danger, label="Remove entry", custom_id=f"schedule_noshow_remove_{member.id}"))
         await interaction.response.send_message(embed=embed, view=view, ephemeral=True, delete_after=180.0)
 
-    @noShow.error
-    async def onNoShowError(self, interaction: discord.Interaction, error: discord.app_commands.AppCommandError) -> None:
-        """noShow errors - dedicated for the discord.app_commands.errors.MissingAnyRole error.
-
-        Parameters:
-        interaction (discord.Interaction): The Discord interaction.
-        error (discord.app_commands.AppCommandError): The end user error.
-
-        Returns:
-        None.
-        """
-        if type(error) == discord.app_commands.errors.MissingAnyRole:
-            guild = self.bot.get_guild(GUILD_ID)
-            if guild is None:
-                log.exception("Schedule onNoShowError: guild is None")
-                return
-
-            embed = discord.Embed(title="❌ Missing permissions", description=f"You do not have the permissions to execute the command!\nThe permitted roles are: {', '.join([guild.get_role(role).name for role in CMD_LIMIT_STAFF_ADVISOR])}.", color=discord.Color.red())
-            await interaction.response.send_message(embed=embed, ephemeral=True)
-            return
-        log.exception(error)
-
 
     @tasks.loop(minutes=10)
     async def tenMinTask(self) -> None:
@@ -558,27 +567,6 @@ class Schedule(commands.Cog):
 
         await Schedule.updateSchedule(interaction.guild)
 
-    @refreshSchedule.error
-    async def onRefreshScheduleError(self, interaction: discord.Interaction, error: discord.app_commands.AppCommandError) -> None:
-        """refreshSchedule errors - dedicated for the discord.app_commands.errors.MissingAnyRole error.
-
-        Parameters:
-        interaction (discord.Interaction): The Discord interaction.
-        error (discord.app_commands.AppCommandError): The end user error.
-
-        Returns:
-        None.
-        """
-        if type(error) == discord.app_commands.errors.MissingAnyRole:
-            guild = self.bot.get_guild(GUILD_ID)
-            if guild is None:
-                log.exception("Schedule onRefreshScheduleError: guild is None")
-                return
-
-            embed = discord.Embed(title="❌ Missing permissions", description=f"You do not have the permissions to refresh the schedule!\nThe permitted roles are: {', '.join([guild.get_role(role).name for role in CMD_LIMIT_REFRESHSCHEDULE])}.", color=discord.Color.red())
-            await interaction.response.send_message(embed=embed, ephemeral=True)
-            return
-        log.exception(error)
 
 # ===== </Refresh Schedule> =====
 
@@ -616,28 +604,6 @@ class Schedule(commands.Cog):
             except Exception:
                 log.warning(f"Schedule aar: failed to move {member.id} [{member.display_name}]")
 
-
-    @aar.error
-    async def onaAarError(self, interaction: discord.Interaction, error: discord.app_commands.AppCommandError) -> None:
-        """aar errors - dedicated for the discord.app_commands.errors.MissingAnyRole error.
-
-        Parameters:
-        interaction (discord.Interaction): The Discord interaction.
-        error (discord.app_commands.AppCommandError): The end user error.
-
-        Returns:
-        None.
-        """
-        if type(error) == discord.app_commands.errors.MissingAnyRole:
-            guild = self.bot.get_guild(GUILD_ID)
-            if guild is None:
-                log.exception("Schedule onAarError: guild is None")
-                return
-
-            embed = discord.Embed(title="❌ Missing permissions", description=f"You do not have the permissions to move all users to command!\nThe permitted roles are: {', '.join([guild.get_role(role).name for role in CMD_LIMIT_ZEUS])}.", color=discord.Color.red())
-            await interaction.response.send_message(embed=embed, ephemeral=True)
-            return
-        log.exception(error)
 
 # ===== </AAR> ====
 
@@ -1234,32 +1200,6 @@ class Schedule(commands.Cog):
     async def scheduleOperation(self, interaction: discord.Interaction) -> None:
         """Create an operation to add to the schedule."""
         await Schedule.scheduleEventInteraction(interaction, "Operation")
-
-    @scheduleOperation.error
-    async def onBopError(self, interaction: discord.Interaction, error: discord.app_commands.AppCommandError) -> None:
-        """Bop errors - dedicated for the discord.app_commands.errors.MissingAnyRole error.
-
-        Parameters:
-        interaction (discord.Interaction): The Discord interaction.
-        error (discord.app_commands.AppCommandError): The end user error.
-
-        Returns:
-        None.
-        """
-        if isinstance(error, discord.app_commands.errors.MissingAnyRole):
-            if interaction.guild is None:
-                log.exception("Schedule onBopError: interaction.guild is None")
-                return
-
-            channelZeusGuidelines = interaction.guild.get_channel(ZEUS_GUIDELINES)
-            if not isinstance(channelZeusGuidelines, discord.TextChannel):
-                log.exception("Schedule onBopError: channelZeusGuidelines not discord.TextChannel")
-                return
-
-            embed = discord.Embed(title="❌ Missing permissions", description=f"You do not have the permissions to schedule an operation!\nPlease reference the {channelZeusGuidelines.mention} for more information!", color=discord.Color.red())
-            await interaction.response.send_message(embed=embed, ephemeral=True)
-            return
-        log.exception(error)
 
     @discord.app_commands.command(name="ws")
     @discord.app_commands.guilds(GUILD)
@@ -3214,4 +3154,8 @@ class ScheduleModal(discord.ui.Modal):
 
 
 async def setup(bot: commands.Bot) -> None:
+    Schedule.noShow.error(Schedule.onSlashError)
+    Schedule.refreshSchedule.error(Schedule.onSlashError)
+    Schedule.aar.error(Schedule.onSlashError)
+    Schedule.scheduleOperation.error(Schedule.onSlashError)
     await bot.add_cog(Schedule(bot))

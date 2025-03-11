@@ -674,7 +674,7 @@ class Schedule(commands.Cog):
             log.exception(e)
 
     @staticmethod
-    def applyMissingEventKeys(event: Dict, *, keySet: Literal["event", "template"]) -> None:
+    def applyMissingEventKeys(event: Dict, *, keySet: Literal["event", "template"], removeKeys:bool = False) -> None:
         """Applies missing keys to the event.
 
         Parameters:
@@ -707,6 +707,11 @@ class Schedule(commands.Cog):
             event.setdefault("checkedNoShowLogging", False)
         elif keySet == "template":
             event.setdefault("templateName", None)
+            if removeKeys:
+                validKeys = {"title", "description", "externalURL", "reservableRoles", "maxPlayers", "map", "duration", "files", "templateName"}
+                invalidKeys = set(event.keys()) - validKeys
+                for key in invalidKeys:
+                    del event[key]
 
     @staticmethod
     def getEventEmbed(event: Dict, guild: discord.Guild) -> discord.Embed:
@@ -2067,9 +2072,10 @@ class ScheduleButton(discord.ui.Button):
                         if templateName == "":
                             log.exception("ScheduleButton callback: templateName is empty")
                             return
-                        log.info(f"{interaction.user.id} [{interaction.user.display_name}] Updated template '{templateName}'")
+
                         # Write to file
                         filename = f"data/{previewEmbedDict['type'].lower()}Templates.json"
+                        Schedule.applyMissingEventKeys(previewEmbedDict, keySet="template", removeKeys=True)
                         with open(filename) as f:
                             templates = json.load(f)
 
@@ -2083,14 +2089,19 @@ class ScheduleButton(discord.ui.Button):
                             return
 
                         previewEmbedDict["templateName"] = templateName
-                        for shit in SCHEDULE_TEMPLATE_REMOVE_FROM_EVENT:
-                            previewEmbedDict.pop(shit, None)
+                        if previewEmbedDict in templates:
+                            embed = discord.Embed(title="❌ No diff", description="The new template data does not differ from the old template.\nTemplate not updated.", color=discord.Color.red())
+                            await interaction.response.send_message(embed=embed, ephemeral=True, delete_after=30.0)
+                            return
+
+                        log.info(f"{interaction.user.id} [{interaction.user.display_name}] Updated template '{templateName}'")
                         templates[templateIndex] = previewEmbedDict
                         with open(filename, "w") as f:
                             json.dump(templates, f, indent=4)
 
                         # Reply
-                        await interaction.response.send_message(f"✅ Updated template: `{templateName}`", ephemeral=True, delete_after=10.0)
+                        embed = discord.Embed(title="✅ Updated", description=f"Updated template: `{templateName}`", color=discord.Color.green())
+                        await interaction.response.send_message(embed=embed, ephemeral=True, delete_after=30.0)
 
 
                     # EVENT FINISHING
@@ -2959,16 +2970,23 @@ class ScheduleModal(discord.ui.Modal):
                     filename = f"data/{previewEmbedDict['type'].lower()}Templates.json"
                     with open(filename) as f:
                         templates: List[Dict] = json.load(f)
+
+                    Schedule.applyMissingEventKeys(previewEmbedDict, keySet="template", removeKeys=True)
+
+                    if previewEmbedDict in templates:
+                        await interaction.response.send_message(embed=discord.Embed(title="❌ No diff", description="The new template data does not differ from the old template.\nTemplate not overwritten.", color=discord.Color.red()), ephemeral=True, delete_after=30.0)
+                        return
+
                     templateOverwritten = (False, 0)
                     for idx, template in enumerate(templates):
                         if template["templateName"] == previewEmbedDict["templateName"]:
                             templateOverwritten = (True, idx)
                             break
-                    log.info(f"{interaction.user.id} [{interaction.user.display_name}] Saved {('[Overwritten] ') * templateOverwritten[0]}a template as '{previewEmbedDict['templateName']}'")
+
+                    status = "[Overwritten]" if templateOverwritten[0] else "[New]"
+                    log.info(f"{interaction.user.id} [{interaction.user.display_name}] Saved {status} a template as '{previewEmbedDict['templateName']}'")
                     if templateOverwritten[0]:
                         templates.pop(templateOverwritten[1])
-                    for shit in SCHEDULE_TEMPLATE_REMOVE_FROM_EVENT:
-                        previewEmbedDict.pop(shit, None)
 
                     templates.append(previewEmbedDict)
                     templates.sort(key=lambda template : template["templateName"])
@@ -2986,7 +3004,8 @@ class ScheduleModal(discord.ui.Modal):
                             child.disabled = False
 
                     # Reply & edit msg
-                    await interaction.response.send_message(f"✅ Saved {('[Overwritten] ') * templateOverwritten[0]}template as: `{value}`", ephemeral=True, delete_after=10.0)
+                    embed = discord.Embed(title=f"✅ Saved {status}", description=f"Saved template as: `{value}`", color=discord.Color.green())
+                    await interaction.response.send_message(embed=embed, ephemeral=True, delete_after=10.0)
                     await self.eventMsg.edit(view=self.view)
                     return
 

@@ -20,10 +20,3 @@ TIME_TEN_MIN = 600
 ####################
 
 POLL_PERCENT_REGEX = r"\(\d+\.?\d*%\)\s*"
-
-
-####################
-# Schedule.py
-####################
-
-SCHEDULE_TEMPLATE_REMOVE_FROM_EVENT = ("authorId", "type", "time", "endTime", "messageId", "accepted", "declined", "tentative")

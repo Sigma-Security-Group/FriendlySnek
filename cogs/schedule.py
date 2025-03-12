@@ -1561,7 +1561,7 @@ class ScheduleButton(discord.ui.Button):
                     return
 
                 # Remove from standby; if no vacant roles, or player cap reached
-                if isAcceptAndReserve and interaction.user.id in event["standby"] and (all(event["reservableRoles"].values()) or len(event["accepted"]) == event["maxPlayers"]):
+                if isAcceptAndReserve and interaction.user.id in event["standby"] and (all(event["reservableRoles"].values()) or playerCapReached):
                     event["standby"].remove(interaction.user.id)
                     embed = Schedule.getEventEmbed(event, interaction.guild)
                     await interaction.response.edit_message(embed=embed)

@@ -1817,6 +1817,9 @@ class ScheduleButton(discord.ui.Button):
                 if declined:
                     description += f"**Declined ({len(declined)}):**\n`{' '.join(declined)}`"
 
+                if not description:
+                    description = "No RSVPs yet!"
+
                 embed = discord.Embed(title=f"RSVP Listing", description=description.strip()[:4096], color=discord.Color.gold())
                 await interaction.response.send_message(embed=embed, ephemeral=True, delete_after=60.0)
                 return

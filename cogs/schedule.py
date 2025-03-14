@@ -784,7 +784,7 @@ class Schedule(commands.Cog):
         List[discord.File]: The list of files.
         """
         if "files" not in event or not event["files"]:
-            return None
+            return []
 
         discordFiles = []
         for eventFile in event["files"]:

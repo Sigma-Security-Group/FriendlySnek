@@ -1425,6 +1425,8 @@ class ScheduleButton(discord.ui.Button):
             log.exception("ScheduleButton callback: interaction.guild not discord.Guild")
             return
 
+        embedDeclineRsvpSelf = discord.Embed(title="❌ RSVP", description="You cannot RSVP to your own event!", color=discord.Color.red())
+
         customId = interaction.data["custom_id"]
 
         try:
@@ -1438,6 +1440,11 @@ class ScheduleButton(discord.ui.Button):
             rsvpOptions = ("accepted", "declined", "tentative", "standby")
             if customId in rsvpOptions:
                 event = eventList[0]
+
+                # Decline if author
+                if event["authorId"] == interaction.user.id:
+                    await interaction.response.send_message(interaction.user.mention, embed=embedDeclineRsvpSelf, ephemeral=True, delete_after=30.0)
+                    return
 
                 if await Schedule.blockVerifiedRoleRSVP(interaction, event):
                     return
@@ -1523,6 +1530,12 @@ class ScheduleButton(discord.ui.Button):
 
             elif customId == "standby_btn":
                 event = [event for event in events if event["messageId"] == self.message.id][0]
+
+                # Decline if author
+                if event["authorId"] == interaction.user.id:
+                    await interaction.response.send_message(interaction.user.mention, embed=embedDeclineRsvpSelf, ephemeral=True, delete_after=30.0)
+                    return
+
                 Schedule.clearUserRSVP(event, interaction.user.id)
 
                 if interaction.user.id in event["standby"]:
@@ -1539,6 +1552,11 @@ class ScheduleButton(discord.ui.Button):
                 return
 
             elif customId == "reserve":
+                # Decline if author
+                if event["authorId"] == interaction.user.id:
+                    await interaction.response.send_message(interaction.user.mention, embed=embedDeclineRsvpSelf, ephemeral=True, delete_after=30.0)
+                    return
+
                 # Check if blacklisted
                 with open(ROLE_RESERVATION_BLACKLIST_FILE) as f:
                     blacklist = json.load(f)

@@ -2924,6 +2924,7 @@ class ScheduleModal(discord.ui.Modal):
 
                     collision = Schedule.eventCollisionCheck(startTime, (startTime + delta) if previewEmbedDict["endTime"] else startTime+timedelta(minutes=30))
                     if collision:
+                        followupMsg["content"] = interaction.user.mention
                         followupMsg["embed"] = discord.Embed(title="❌ There is a collision with another event!", description=collision, color=discord.Color.red())
                         followupMsg["embed"].set_footer(text="You may still continue with the provided time - but not recommended.")
 
@@ -2941,6 +2942,12 @@ class ScheduleModal(discord.ui.Modal):
                         await interaction.response.send_message(embed=discord.Embed(title="❌ Too many roles", description=f"Due to Discord character limitation, we've set the cap to 20 roles.\nLink your order, e.g. OPORD, under URL if you require more flexibility.\n\nYour roles:\n{value}"[:4096], color=discord.Color.red()), ephemeral=True, delete_after=10.0)
                         return
 
+                    # Check if too few slots
+                    if previewEmbedDict["reservableRoles"] and isinstance(previewEmbedDict["maxPlayers"], int) and previewEmbedDict["maxPlayers"] < len(previewEmbedDict["reservableRoles"]):
+                        followupMsg["content"] = interaction.user.mention
+                        followupMsg["embed"] = discord.Embed(title="⚠️ Too few slots", description="You have more reservable roles than slots available.\nPlease increase the number of slots or remove some roles.", color=discord.Color.orange())
+                        followupMsg["embed"].set_footer(text="You may still continue with the provided slots - but not recommended.")
+
                 case "max_players":
                     valueLower = value.lower()
                     if valueLower not in ("none", "hidden", "anonymous") and not value.isdigit():
@@ -2953,6 +2960,12 @@ class ScheduleModal(discord.ui.Modal):
                         previewEmbedDict["maxPlayers"] = 50 if int(value) > MAX_SERVER_ATTENDANCE else max(int(value), 1)
                     else:
                         previewEmbedDict["maxPlayers"] = valueLower
+
+                    # Check if too few slots
+                    if previewEmbedDict["reservableRoles"] and isinstance(previewEmbedDict["maxPlayers"], int) and previewEmbedDict["maxPlayers"] < len(previewEmbedDict["reservableRoles"]):
+                        followupMsg["content"] = interaction.user.mention
+                        followupMsg["embed"] = discord.Embed(title="⚠️ Too few slots", description="You have more reservable roles than slots available.\nPlease increase the number of slots or remove some roles.", color=discord.Color.orange())
+                        followupMsg["embed"].set_footer(text="You may still continue with the provided slots - but not recommended.")
 
                 case "save_as_template":
                     previewEmbedDict["templateName"] = value
@@ -3016,6 +3029,7 @@ class ScheduleModal(discord.ui.Modal):
 
         # == Editing Event ==
 
+        followupMsg = {}
         with open(EVENTS_FILE) as f:
             events = json.load(f)
         event = [event for event in events if event["messageId"] == self.eventMsg.id][0]
@@ -3037,6 +3051,12 @@ class ScheduleModal(discord.ui.Modal):
             else:
                 event["reservableRoles"] = {role.strip(): event["reservableRoles"][role.strip()] if role in event["reservableRoles"] else None for role in reservableRoles}
 
+            # Check if too few slots
+            if event["reservableRoles"] and isinstance(event["maxPlayers"], int) and event["maxPlayers"] < len(event["reservableRoles"]):
+                followupMsg["content"] = interaction.user.mention
+                followupMsg["embed"] = discord.Embed(title="⚠️ Too few slots", description="You have more reservable roles than slots available.\nPlease increase the number of slots or remove some roles.", color=discord.Color.orange())
+                followupMsg["embed"].set_footer(text="You may still continue with the provided slots - but not recommended.")
+
         elif customId == "modal_maxPlayers":
             valueLower = value.lower()
             if valueLower == "none":
@@ -3048,6 +3068,12 @@ class ScheduleModal(discord.ui.Modal):
             else:
                 await interaction.response.send_message(interaction.user.mention, embed=EMBED_INVALID, ephemeral=True, delete_after=10.0)
                 return
+
+            # Check if too few slots
+            if event["reservableRoles"] and isinstance(event["maxPlayers"], int) and event["maxPlayers"] < len(event["reservableRoles"]):
+                followupMsg["content"] = interaction.user.mention
+                followupMsg["embed"] = discord.Embed(title="⚠️ Too few slots", description="You have more reservable roles than slots available.\nPlease increase the number of slots or remove some roles.", color=discord.Color.orange())
+                followupMsg["embed"].set_footer(text="You may still continue with the provided slots - but not recommended.")
 
         elif customId == "modal_duration":
             durationDetails = Schedule.getDetailsFromDuration(value)
@@ -3154,6 +3180,9 @@ class ScheduleModal(discord.ui.Modal):
 
         await self.eventMsg.edit(embed=Schedule.getEventEmbed(event, interaction.guild), view=Schedule.getEventView(event))
         await interaction.response.send_message(interaction.user.mention, embed=discord.Embed(title="✅ Event edited", color=discord.Color.green()), ephemeral=True, delete_after=5.0)
+
+        if followupMsg:
+            await interaction.followup.send(followupMsg["content"] if "content" in followupMsg else None, embed=(followupMsg["embed"] if "embed" in followupMsg else None), ephemeral=True)
 
 
     async def on_error(self, interaction: discord.Interaction, error: Exception) -> None:

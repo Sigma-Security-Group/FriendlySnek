@@ -1552,11 +1552,6 @@ class ScheduleButton(discord.ui.Button):
                 return
 
             elif customId == "reserve":
-                # Decline if author
-                if event["authorId"] == interaction.user.id:
-                    await interaction.response.send_message(interaction.user.mention, embed=embedDeclineRsvpSelf, ephemeral=True, delete_after=30.0)
-                    return
-
                 # Check if blacklisted
                 with open(ROLE_RESERVATION_BLACKLIST_FILE) as f:
                     blacklist = json.load(f)
@@ -1566,6 +1561,11 @@ class ScheduleButton(discord.ui.Button):
 
                 event = eventList[0]
                 scheduleNeedsUpdate = False
+
+                # Decline if author
+                if event["authorId"] == interaction.user.id:
+                    await interaction.response.send_message(interaction.user.mention, embed=embedDeclineRsvpSelf, ephemeral=True, delete_after=30.0)
+                    return
 
                 if await Schedule.blockVerifiedRoleRSVP(interaction, event):
                     return

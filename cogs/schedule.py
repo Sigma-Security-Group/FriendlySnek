@@ -3107,7 +3107,7 @@ class ScheduleModal(discord.ui.Modal):
 
                     # Edit msg to match position
                     msg = await channelSchedule.fetch_message(msgIds[idx])
-                    await msg.edit(embed=Schedule.getEventEmbed(sortedEvents[idx], interaction.guild), view=Schedule.getEventView(sortedEvents[idx]))
+                    await msg.edit(embed=Schedule.getEventEmbed(sortedEvents[idx], interaction.guild), view=Schedule.getEventView(sortedEvents[idx]), attachments=Schedule.getEventFiles(sortedEvents[idx]))
 
             if anyEventChange is False:
                 msg = await channelSchedule.fetch_message(event["messageId"])

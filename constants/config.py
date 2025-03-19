@@ -14,6 +14,8 @@ LOG_COG_READY = "{0} cog is ready!"
 ## Time in seconds
 TIME_TEN_MIN = 600
 
+## No-show archive threshold
+NOSHOW_ARCHIVE_THRESHOLD_IN_DAYS = 90
 
 ###################
 # Poll.py

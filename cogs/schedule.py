@@ -411,8 +411,14 @@ class Schedule(commands.Cog):
         for noShowEvent in noShowEvents:
             noShowEventEmbedFieldValue = []
             for noShowMember in noShowEvent["members"]:
+                # Warn if member has 3 no-shows in the last 90 days
+                warningMsg = ""
+                noshowCount = len([entry for entry in noShowFile[str(noShowMember.id)] if datetime.fromtimestamp(entry["date"], timezone.utc) > datetime.now(timezone.utc) - timedelta(days=NOSHOW_ARCHIVE_THRESHOLD_IN_DAYS)])
+                if noshowCount >= 3:
+                    warningMsg = f"⚠️ {noshowCount} no-shows in the last 90 days"
+
                 reservedRole = getReservedRoleName(noShowEvent["event"]["reservableRoles"], noShowMember.id)
-                noShowEventEmbedFieldValue.append(noShowMember.display_name + (f" -- **{reservedRole}**" * bool(reservedRole)))
+                noShowEventEmbedFieldValue.append(noShowMember.display_name + (f" -- **{reservedRole}**" * bool(reservedRole)) + f" {warningMsg}")
 
             embed.add_field(name=noShowEvent["event"]["title"], value="\n".join(noShowEventEmbedFieldValue))
 
@@ -433,7 +439,6 @@ class Schedule(commands.Cog):
         Returns:
         None.
         """
-        ARCHIVE_THRESHOLD_IN_DAYS = 90
 
         view = discord.ui.View(timeout=None)
         view.add_item(ScheduleButton(interaction.message, style=discord.ButtonStyle.success, label="Add entry", custom_id=f"schedule_noshow_add_{member.id}"))
@@ -460,7 +465,7 @@ class Schedule(commands.Cog):
             if reservedRole:
                 entry += f" -- `{reservedRole}`"
 
-            if noShowEntryTimestamp < datetime.now(timezone.utc) - timedelta(days=ARCHIVE_THRESHOLD_IN_DAYS):
+            if noShowEntryTimestamp < datetime.now(timezone.utc) - timedelta(days=NOSHOW_ARCHIVE_THRESHOLD_IN_DAYS):
                 noShowsArchive.append(entry)
             else:
                 noShowsPresent.append(entry)
@@ -468,7 +473,7 @@ class Schedule(commands.Cog):
         if noShowsPresent:
             embed.add_field(name="Active", value="\n".join(noShowsPresent), inline=False)
         if noShowsArchive:
-            embed.add_field(name=f"Archived (Older than {ARCHIVE_THRESHOLD_IN_DAYS} days)", value="\n".join(noShowsArchive), inline=False)
+            embed.add_field(name=f"Archived (Older than {NOSHOW_ARCHIVE_THRESHOLD_IN_DAYS} days)", value="\n".join(noShowsArchive), inline=False)
 
         view.add_item(ScheduleButton(interaction.message, style=discord.ButtonStyle.danger, label="Remove entry", custom_id=f"schedule_noshow_remove_{member.id}"))
         await interaction.response.send_message(embed=embed, view=view, ephemeral=True, delete_after=180.0)

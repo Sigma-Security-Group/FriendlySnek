@@ -408,7 +408,7 @@ class Staff(commands.Cog):
                         event["reservableRoles"][reservableRole] = None
             with open(EVENTS_FILE, "w") as f:
                 json.dump(events, f, indent=4)
-            await self.bot.get_cog("Schedule").updateSchedule()
+            await self.bot.get_cog("Schedule").updateSchedule(guild)
 
         embed = discord.Embed(title="✅ Member blacklisted", description=f"{targetMember.mention} is no longer allowed to reserve roles!", color=discord.Color.green())
         embed.set_footer(text=f"ID: {targetMember.id}")

@@ -1,5 +1,4 @@
 import os, re, json, asyncio, discord, logging
-import owo  # april fools
 import pytz  # type: ignore
 
 from math import ceil
@@ -699,8 +698,7 @@ class Schedule(commands.Cog):
         Returns:
         discord.Embed: The generated embed.
         """
-        # owo april fools
-        embed = discord.Embed(title=event["title"], description=owo.owo(event["description"]), color=EVENT_TYPE_COLORS[event.get("type", "Operation")])
+        embed = discord.Embed(title=event["title"], description=event["description"], color=EVENT_TYPE_COLORS[event.get("type", "Operation")])
 
         if event["reservableRoles"] is not None:
             embed.add_field(name="\u200B", value="\u200B", inline=False)

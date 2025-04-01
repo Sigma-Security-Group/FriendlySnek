@@ -9,4 +9,3 @@ beautifulsoup4
 asyncpraw
 unidecode
 gspread
-text-to-owo

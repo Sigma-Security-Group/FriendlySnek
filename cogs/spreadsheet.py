@@ -101,6 +101,7 @@ class Spreadsheet(commands.Cog):
 
     @staticmethod
     def memberJoin(member: discord.Member) -> None:
+        log.debug(f"Spreadsheet memberJoin: {Spreadsheet.ws}, {member.display_name}, ({member.id}), {dropdownStatus.values[0]}")
         Spreadsheet.createOrUpdateUserRow(
             Spreadsheet.ws,
             displayName=member.display_name,
@@ -146,12 +147,14 @@ class Spreadsheet(commands.Cog):
         # - Last Promotion
         # - Status
         # - Position
+        # - Operations Attended
         # - Seen
         # - Team ID
         # - Name
         # - Date
 
         if not worksheet or not secret.SPREADSHEET_ACTIVE:
+            log.debug("Spreadsheet createOrUpdateUserRow: spreadsheet not active or worksheet is none")
             return
 
         if not rowNum and not userId:

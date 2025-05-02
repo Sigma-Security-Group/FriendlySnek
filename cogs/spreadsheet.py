@@ -50,7 +50,6 @@ dropdownStatus = Dropdown(
 
 
 class Spreadsheet(commands.Cog):
-    ws = None
     ROW_STARTING_INDEX = 7
     COLUMN_STARTING_INDEX = 2
 
@@ -72,38 +71,40 @@ class Spreadsheet(commands.Cog):
         super().__init__()
         self.bot = bot
 
-    @commands.Cog.listener()
-    async def on_ready(self) -> None:
-        log.debug(LOG_COG_READY.format("Spreadsheet"))
-        self.bot.cogsReady["spreadsheet"] = True
-
-        if not secret.SPREADSHEET_ACTIVE or Spreadsheet.ws:
-            return
-
+    @staticmethod
+    def getWorksheet() -> gspread.worksheet.Worksheet:
         try:
             credentials = Credentials.from_service_account_file("spreadsheet_account_creds.json", scopes=SCOPES)
             gc = gspread.authorize(credentials)
             sh = gc.open_by_key("17siSuyOUn0S1U1l1bf1gJGx9b7Tgrb1rzVquK_7qHmc")
         except Exception as e:
-            log.exception(f"Spreadsheet: failed to authenticate or open spreadsheet: {e}")
+            log.exception(f"Spreadsheet getWorksheet: failed to authenticate or open spreadsheet: {e}")
             return
 
         worksheets = sh.worksheets()
         for worksheet in worksheets:
             if worksheet.id == TARGET_WORKSHEET_ID:
-                Spreadsheet.ws = worksheet
-                break
+                log.debug(f"Spreadsheet getWorksheet: using spreadsheet '{sh.title}' and worksheet '{worksheet.title}' ({worksheet.id})")
+                return worksheet
+        log.warning(f"Spreadsheet getWorksheet: worksheet with id '{TARGET_WORKSHEET_ID}' not found")
 
-        log.debug(f"Spreadsheet: using spreadsheet '{sh.title}' and worksheet '{Spreadsheet.ws.title}' ({Spreadsheet.ws.id})")
+    @commands.Cog.listener()
+    async def on_ready(self) -> None:
+        log.debug(LOG_COG_READY.format("Spreadsheet"))
+        self.bot.cogsReady["spreadsheet"] = True
+
+        if not secret.SPREADSHEET_ACTIVE:
+            return
 
         if secret.SPREADSHEET_ACTIVE and not secret.DEBUG and not self.kickTaggedMembers.is_running():
             self.kickTaggedMembers.start()
 
     @staticmethod
     def memberJoin(member: discord.Member) -> None:
-        log.debug(f"Spreadsheet memberJoin: {Spreadsheet.ws}, {member.display_name}, ({member.id}), {dropdownStatus.values[0]}")
+        worksheet = Spreadsheet.getWorksheet()
+
         Spreadsheet.createOrUpdateUserRow(
-            Spreadsheet.ws,
+            worksheet,
             displayName=member.display_name,
             dateJoined=datetime.strftime(member.joined_at, "%d/%m/%Y") if member.joined_at else None,
             userId=str(member.id),
@@ -167,7 +168,7 @@ class Spreadsheet(commands.Cog):
 
             # User not found
             if not rowNum:
-                newEntryRowId = Spreadsheet.getNewEntryRowId(Spreadsheet.ws)
+                newEntryRowId = Spreadsheet.getNewEntryRowId(worksheet)
                 rowNum = newEntryRowId
                 log.debug(f"Spreadsheet createOrUpdateUserRow: Created row for user id '{userId}' at row number '{newEntryRowId}'")
 
@@ -197,8 +198,10 @@ class Spreadsheet(commands.Cog):
             log.exception("Spreadsheet kickTaggedMembers: guild is none")
             return
 
-        columnUserIds = Spreadsheet.ws.col_values(Spreadsheet.WORKSHEET_COLUMNS["userId"])[Spreadsheet.ROW_STARTING_INDEX - 1:]
-        columnPositions = Spreadsheet.ws.col_values(Spreadsheet.WORKSHEET_COLUMNS["position"])[Spreadsheet.ROW_STARTING_INDEX - 1:]
+        worksheet = Spreadsheet.getWorksheet()
+
+        columnUserIds = worksheet.col_values(Spreadsheet.WORKSHEET_COLUMNS["userId"])[Spreadsheet.ROW_STARTING_INDEX - 1:]
+        columnPositions = worksheet.col_values(Spreadsheet.WORKSHEET_COLUMNS["position"])[Spreadsheet.ROW_STARTING_INDEX - 1:]
 
         rowsToDelete = []
         for userId, userPosition in zip(columnUserIds, columnPositions):
@@ -223,7 +226,7 @@ class Spreadsheet(commands.Cog):
             rowsToDelete.append(Spreadsheet.ROW_STARTING_INDEX + columnUserIds.index(userId))
 
         for row in sorted(rowsToDelete, reverse=True):
-            Spreadsheet.ws.update([["", "", "", "", "", "", "Unknown", "", "", "", ""]], f"B{row}")
+            worksheet.update([["", "", "", "", "", "", "Unknown", "", "", "", ""]], f"B{row}")
 
 
 async def setup(bot: commands.Bot) -> None:

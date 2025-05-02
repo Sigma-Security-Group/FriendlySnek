@@ -287,7 +287,11 @@ class Schedule(commands.Cog):
                     continue
 
                 embed = discord.Embed(title="Event auto deleted", description=f"Your {event['type'].lower()} has ended: `{event['title']}`\nIt has been automatically removed from the schedule. {PEEPO_POP}", color=discord.Color.orange())
-                await author.send(embed=embed)
+                try:
+                    await author.send(embed=embed)
+                except Exception:
+                    log.warning(f"Schedule tenMinTask: Failed to DM author '{author.display_name}' about autodeleted event '{event['title']}'")
+
         for event in deletedEvents:
             events.remove(event)
         with open(EVENTS_FILE, "w") as f:

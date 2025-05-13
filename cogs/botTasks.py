@@ -128,6 +128,11 @@ class BotTasks(commands.Cog):
                 log.exception("BotTasks checkModUpdates: modpackIds not in genericData")
                 return
 
+            if "jcaCounter" not in genericData:
+                genericData["jcaCounter"] = 0
+
+        jcaModUpdateFound = False
+
         date = ""
         for modID in genericData["modpackIds"]:
             # Fetch mod & parse HTML
@@ -175,6 +180,11 @@ class BotTasks(commands.Cog):
                     "datetime": utcTime
                 })
 
+                # JCA counter
+                if modID in (3333302397, 3337555434):
+                    genericData["jcaCounter"] += 1
+                    jcaModUpdateFound = True
+
 
         if len(output) > 0:
             # Create message
@@ -199,7 +209,10 @@ class BotTasks(commands.Cog):
                 return
 
             # Each mod update will be sent in a separate message
-            msgContent: str | None = roleHampter.mention + " " + roleGuinea.mention + (f" ({len(output)})" if len(output) > 1 else "") + "\n\n"  # Ping for first message
+            msgContent: str | None = roleHampter.mention + " " + roleGuinea.mention + (f" ({len(output)})" if len(output) > 1 else "") + "\n"  # Ping for first message
+            if jcaModUpdateFound:
+                msgContent += f"The Holy JCA Developer; wisdom tally: {genericData['jcaCounter']}"
+
             for mod in output:
                 await channelChangelog.send(msgContent, embed=discord.Embed(title=mod["name"], url=CHANGELOG_URL.format(mod['modID']), timestamp=mod["datetime"], color=discord.Color.dark_blue()))
                 msgContent = None  # Only 1 ping

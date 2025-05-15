@@ -186,6 +186,9 @@ class BotTasks(commands.Cog):
                     jcaModUpdateFound = True
 
 
+        with open(GENERIC_DATA_FILE, "w") as f:
+            json.dump(genericData, f, indent=4)
+
         if len(output) > 0:
             # Create message
             guild = self.bot.get_guild(GUILD_ID)

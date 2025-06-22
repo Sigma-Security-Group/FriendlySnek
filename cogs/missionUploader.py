@@ -49,7 +49,7 @@ class MissionUploader(commands.Cog):
     @discord.app_commands.command(name="uploadmission")
     @discord.app_commands.guilds(GUILD)
     @discord.app_commands.describe(
-        missionfile="Missionfile to upload. Naming: 'YYYY_MM_DD_Operation_Name.Map.pbo'",
+        missionfile="Missionfile to upload. Naming: 'YYYY_MM_DD_Operation_Name_V1.Map.pbo'",
         server="Which server to upload to?"
     )
     @discord.app_commands.choices(server = [discord.app_commands.Choice(name=srv["Name"], value=srv["Host"]) for srv in SERVERS])

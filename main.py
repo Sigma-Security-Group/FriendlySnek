@@ -206,8 +206,12 @@ async def analyzeChannel(client, message: discord.Message, channelID: int, attac
 @client.event
 async def on_guild_channel_create(channel: discord.abc.GuildChannel) -> None:
     """On guild channel create event."""
+    if channel.guild.id != GUILD_ID:  # Ignore messages from other servers
+        return
+
     if not secret.DISCORD_LOGGING.get("channel_create", False):
         return
+
     channelAuditLogs = channel.guild.get_channel(AUDIT_LOGS)
     if not isinstance(channelAuditLogs, discord.TextChannel):
         log.exception("on_guild_channel_create: channelAuditLogs not discord.TextChannel")
@@ -220,8 +224,12 @@ async def on_guild_channel_create(channel: discord.abc.GuildChannel) -> None:
 @client.event
 async def on_guild_channel_delete(channel: discord.abc.GuildChannel) -> None:
     """On guild channel delete event."""
+    if channel.guild.id != GUILD_ID:  # Ignore messages from other servers
+        return
+
     if not secret.DISCORD_LOGGING.get("channel_delete", False):
         return
+
     channelAuditLogs = channel.guild.get_channel(AUDIT_LOGS)
     if not isinstance(channelAuditLogs, discord.TextChannel):
         log.exception("on_guild_channel_delete: channelAuditLogs not discord.TextChannel")
@@ -235,6 +243,8 @@ async def on_guild_channel_delete(channel: discord.abc.GuildChannel) -> None:
 @client.event
 async def on_member_remove(member: discord.Member) -> None:
     """On member remove (leave/kick/ban) event."""
+    if member.guild.id != GUILD_ID:  # Ignore members from other servers
+        return
 
     channelAuditLogs = client.get_channel(AUDIT_LOGS)
     if not isinstance(channelAuditLogs, discord.TextChannel):
@@ -295,8 +305,12 @@ async def on_member_remove(member: discord.Member) -> None:
 @client.event
 async def on_member_unban(guild: discord.Guild, user: discord.User) -> None:
     """On member unban event."""
+    if guild.id != GUILD_ID:  # Ignore other servers
+        return
+
     if not secret.DISCORD_LOGGING.get("user_unban", False):
         return
+
     channelAuditLogs = client.get_channel(AUDIT_LOGS)
     if not isinstance(channelAuditLogs, discord.TextChannel):
         log.exception("on_member_unban: channelAuditLogs is not discord.TextChannel")

@@ -796,12 +796,27 @@ class Schedule(commands.Cog):
             return []
 
         discordFiles = []
+        eventFilesForRemoval = []
+
         for eventFile in event["files"]:
             try:
+                filenameShort = eventFile.split("_", 2)[2]
+                # Check if file already in discordFiles
+                if any(f.filename == filenameShort for f in discordFiles):
+                    # Remove duplicate entry from event["files"]
+                    eventFilesForRemoval.append(eventFile)
+                    continue
                 with open(f"tmp/fileUpload/{eventFile}", "rb") as f:
-                    discordFiles.append(discord.File(f, filename=eventFile.split("_", 2)[2]))
+                    discordFiles.append(discord.File(f, filename=filenameShort))
             except Exception as e:
-                pass
+                log.warning(f"Schedule getEventFiles: Failed to open file '{eventFile}': {e}")
+                # Remove from the event files
+                eventFilesForRemoval.append(eventFile)
+
+        # Remove files that were not found or duplicates
+        for eventFile in eventFilesForRemoval:
+            if eventFile in event["files"]:
+                event["files"].remove(eventFile)
 
         return discordFiles
 

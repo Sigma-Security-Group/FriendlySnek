@@ -199,8 +199,8 @@ async def analyzeChannel(client, message: discord.Message, channelID: int, attac
         DEVS = ", ".join([f"**{message.guild.get_member(name)}**" for name in DEVELOPERS if message.guild is not None and message.guild.get_member(name) is not None])
 
         await message.author.send(embed=discord.Embed(title="❌ Message removed", description=f"The message you just posted in <#{channelID}> was deleted because no {attachmentContentType} was detected in it.\n\nIf this is an error, then please ask **staff** to post the {attachmentContentType} for you, and inform: {DEVS}", color=discord.Color.red()))
-    except Exception as e:
-        log.exception(f"{message.author.id} [{message.author.display_name}]")
+    except Exception:
+        log.warning(f"analyzeChannel: Failed to DM {message.author.id} [{message.author.display_name}] about message removal")
 
 
 @client.event

@@ -120,7 +120,6 @@ class BotTasks(commands.Cog):
     async def checkModUpdates(self) -> None:
         """Checks mod updates, pings hampters if detected."""
 
-        log.debug("checkModUpdates executing")
         output = []
         with open(GENERIC_DATA_FILE) as f:
             genericData = json.load(f)

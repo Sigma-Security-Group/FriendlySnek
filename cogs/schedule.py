@@ -297,6 +297,9 @@ class Schedule(commands.Cog):
         with open(EVENTS_FILE, "w") as f:
             json.dump(events, f, indent=4)
 
+        if deletedEvents and len(events) == 0:
+            await Schedule.updateSchedule(guild)
+
 
     @staticmethod
     async def tasknoShowsPing(guild: discord.Guild, channelCommand: discord.TextChannel, channelDeployed: discord.TextChannel) -> None:
@@ -622,15 +625,22 @@ class Schedule(commands.Cog):
         scheduleIntroMessage = f"__Welcome to the schedule channel!__\n🟩 Schedule operations: `/operation` (`/bop`)\n🟦 Workshops: `/workshop` (`/ws`)\n🟨 Generic events: `/event`\n\nThe datetime you see in here are based on __your local time zone__.\nChange timezone when scheduling events with `/changetimezone`.\n\nSuggestions/bugs contact: {', '.join([f'**{developerName.display_name}**' for name in DEVELOPERS if (developerName := channelSchedule.guild.get_member(name)) is not None])} -- <https://github.com/Sigma-Security-Group/FriendlySnek>"
 
         # Do not purge intro message if unchanged
-        sendIntroMessage = True
+        isFoundMessageIntro = False
         await channelSchedule.purge(limit=None,
                             check=lambda m: (
                                 m.author.id in FRIENDLY_SNEKS and m.content != scheduleIntroMessage
-                            ) or (m.content == scheduleIntroMessage and (isFoundIntroMessage := False))
+                            )
         )
+        # Search for intro message
+        async for message in channelSchedule.history(limit=10, oldest_first=True):
+            if message.content == scheduleIntroMessage:
+                isFoundMessageIntro = True
+                break
 
-        if not sendIntroMessage:
+        # Send intro message if not found
+        if not isFoundMessageIntro:
             await channelSchedule.send(scheduleIntroMessage)
+
 
         try:
             with open(EVENTS_FILE) as f:
@@ -2386,6 +2396,8 @@ class ScheduleButton(discord.ui.Button):
 
             with open(EVENTS_FILE, "w") as f:
                 json.dump(events, f, indent=4)
+            if len(events) == 0:
+                await Schedule.updateSchedule(interaction.guild)
         except Exception as e:
             log.exception(f"{interaction.user.id} | [{interaction.user.display_name}]")
 

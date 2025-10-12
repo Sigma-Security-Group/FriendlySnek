@@ -1,5 +1,5 @@
 import os, contextlib, secret, discord, logging
-import pysftp, pytz  # type: ignore
+import paramiko, pytz  # type: ignore
 
 from datetime import datetime, timezone
 from discord.ext import commands  # type: ignore
@@ -24,7 +24,13 @@ SERVERS = [
         "Directory": "217.217.30.246_2322/mpmissions",
         "Host": "217.217.30.246",
         "Port": 8822
-    }
+    },
+    {
+        "Name": "SSG - Event Server 2",
+        "Directory": "148.251.151.145_2322/mpmissions",
+        "Host": "148.251.151.145",
+        "Port": 8822
+    },
 ]
 
 log = logging.getLogger("FriendlySnek")
@@ -57,10 +63,6 @@ class MissionUploader(commands.Cog):
     async def uploadMission(self, interaction: discord.Interaction, missionfile: discord.Attachment, server: discord.app_commands.Choice[str]) -> None:
         """Upload a mission PBO file to the server."""
 
-        # await interaction.response.send_message("Mission uploading is temporarily disabled. Please contact Unit Staff or Server Hampters for assistance.", ephemeral=True, delete_after=30.0)
-        # log.debug(f"{interaction.user.display_name} ({interaction.user}) attempted to upload a mission file while upload was disabled.")
-        # return
-
         log.debug(f"{interaction.user.id} [{interaction.user.display_name}] Is uploading a mission file")
 
         # Only allow .pbo files
@@ -73,45 +75,74 @@ class MissionUploader(commands.Cog):
             await interaction.response.send_message(embed=discord.Embed(title="❌ Invalid filesize", description="Max allowed filesize is 25 MB!", color=discord.Color.red()), ephemeral=True, delete_after=30.0)
             return
 
-        await interaction.response.send_message(embed=discord.Embed(title="Uploading mission file...", description="Standby, this can take a minute...", color=discord.Color.green()))
         serverDict = [srv for srv in SERVERS if srv["Host"] == server.value][0]
+        if serverDict["Host"] not in secret.SFTP:
+            await interaction.response.send_message(embed=discord.Embed(title="❌ Invalid server", description="The selected server is not available. Please contact a snek lord!", color=discord.Color.red()), ephemeral=True, delete_after=30.0)
+            log.error(f"MissionUploader uploadMission: Server {serverDict['Host']} not in secret.SFTP")
+            return
+
+        await interaction.response.send_message(embed=discord.Embed(title="Uploading mission file...", description="Standby, this can take a minute...", color=discord.Color.green()))
+
         sftp = None
-        cnopts = pysftp.CnOpts()
-        cnopts.hostkeys = None
-
         try:
-            with pysftp.Connection(serverDict["Host"], port=serverDict["Port"], username=secret.SFTP[serverDict["Host"]]["username"], password=secret.SFTP[serverDict["Host"]]["password"], cnopts=cnopts, default_path=serverDict["Directory"]) as sftp:
-                missionFilesOnServer = [file.filename for file in sftp.listdir_attr()]
-                if missionfile.filename in missionFilesOnServer:
-                    await interaction.edit_original_response(embed=discord.Embed(title="❌ Invalid filename", description=f"This file already exists. Please rename the file and reupload it!\nFilename: `{missionfile.filename}`", color=discord.Color.red()))
-                    return
+            transport = paramiko.Transport((serverDict["Host"], serverDict["Port"]))
+            transport.connect(
+                username=secret.SFTP[serverDict["Host"]]["username"],
+                password=secret.SFTP[serverDict["Host"]]["password"]
+            )
+            sftp = paramiko.SFTPClient.from_transport(transport)
+            if sftp is None:
+                raise Exception("missionUploader uploadMission: sftp is None after connection")
 
-                # Saving file locally
-                with open(f"tmp/missionUpload/{missionfile.filename}", "wb") as f:
-                    await missionfile.save(f)
+            # Change remote directory if defined
+            if "Directory" in serverDict and serverDict["Directory"]:
+                sftp.chdir(serverDict["Directory"])
 
-                if not secret.DEBUG:
-                    try:
-                        # Upload file from tmp
-                        with open(f"tmp/missionUpload/{missionfile.filename}", "rb") as f:
-                            sftp.put(f"tmp/missionUpload/{missionfile.filename}")
-                    except Exception as e:
-                        log.exception(f"{interaction.user.id} [{interaction.user.display_name}]")
-        except Exception as e:
-            log.exception(f"{interaction.user.id} [{interaction.user.display_name}]")
-            await interaction.response.send_message(embed=discord.Embed(title="❌ Connection error", description="There was an error connecting to the server. Please try again later!", color=discord.Color.red()), ephemeral=True, delete_after=30.0)
+            missionFilesOnServer = [attr.filename for attr in sftp.listdir_attr()]
+            if missionfile.filename in missionFilesOnServer:
+                await interaction.edit_original_response(embed=discord.Embed(
+                    title="❌ Invalid filename",
+                    description=f"This file already exists. Please rename the file and reupload it!\nFilename: `{missionfile.filename}`",
+                    color=discord.Color.red()
+                ))
+                return
+
+            # Save file locally
+            filepath = f"tmp/missionUpload/{missionfile.filename}"
+            with open(filepath, "wb") as f:
+                await missionfile.save(f)
+
+            if not secret.DEBUG:
+                try:
+                    # Upload file
+                    sftp.put(filepath, missionfile.filename)
+                except Exception:
+                    log.exception(f"{interaction.user.id} [{interaction.user.display_name}] Failed to put mission file on server")
+
+        except Exception:
+            log.exception(f"{interaction.user.id} [{interaction.user.display_name}] Failed to upload mission file")
+            await interaction.edit_original_response(embed=discord.Embed(
+                title="❌ Connection error",
+                description="There was an error connecting to the server. Please try again later!",
+                color=discord.Color.red()
+            ))
             return
 
         finally:
             with contextlib.suppress(Exception):
                 if sftp is not None:
                     sftp.close()
+                if "transport" in locals():
+                    transport.close()
 
+
+        # Cleanup
         try:
             os.remove(f"tmp/missionUpload/{missionfile.filename}")
         except Exception as e:
             log.exception("MissionUploader uploadMission: Failed to delete mission file after upload")
 
+        # Log the upload
         with open(MISSIONS_UPLOADED_FILE, "a") as f:
             f.write(f"\nFilename: {missionfile.filename}\n"
                 f"Server: {serverDict['Name']}\n"
@@ -137,7 +168,7 @@ class MissionUploader(commands.Cog):
 
             await channelAuditLogs.send(embed=embed)
 
-        log.info(f"{interaction.user.id} [{interaction.user.display_name}] Uploaded the mission file '{missionfile.filename}'")
+        log.info(f"{interaction.user.id} [{interaction.user.display_name}] Uploaded the mission file '{missionfile.filename}'" + (" (DEBUG)"*secret.DEBUG))
         await interaction.edit_original_response(content=f"Mission file successfully uploaded: `{missionfile.filename}`" + (" (DEBUG)"*secret.DEBUG), embed=None)
 
 

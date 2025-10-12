@@ -4,7 +4,7 @@ pytz
 colorama
 requests
 python-dateutil
-pysftp
+paramiko
 beautifulsoup4
 asyncpraw
 unidecode

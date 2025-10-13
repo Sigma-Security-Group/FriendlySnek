@@ -27,7 +27,7 @@ SERVERS = [
     },
     {
         "Name": "SSG - Event Server 2",
-        "Directory": "148.251.151.145_2322/mpmissions",
+        "Directory": "148.251.151.145_2302/mpmissions",
         "Host": "148.251.151.145",
         "Port": 8822
     },

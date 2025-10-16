@@ -395,8 +395,8 @@ class BuilderModal(discord.ui.Modal):
                         stderr = "Invalid color value."
 
             case "url":
-                if not re.match(r"^https?:\/\/.*", value):
-                    stderr = "URL must be a valid HTTP or HTTP link."
+                if not re.match(r"https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()!@:%_\+.~#?&\/\/=]*)", value):
+                    stderr = "URL must be a valid HTTP(S) link."
                 else:
                     embed.url = value
 

@@ -690,11 +690,12 @@ Join Us:
 
             # Link button
             view = discord.ui.View()
-            view.add_item(discord.ui.Button(
-                label="Go to original message",
-                style=discord.ButtonStyle.link,
-                url=f"https://discord.com/channels/{GUILD_ID}/{details['channelID']}/{details['messageID']}"
-            ))
+            if details["messageID"]:
+                view.add_item(discord.ui.Button(
+                    label="Go to original message",
+                    style=discord.ButtonStyle.link,
+                    url=f"https://discord.com/channels/{GUILD_ID}/{details['channelID']}/{details['messageID']}"
+                ))
 
             # Send msg
             pings = re.findall(r"<@&\d+>|<@!?\d+>", details["message"])

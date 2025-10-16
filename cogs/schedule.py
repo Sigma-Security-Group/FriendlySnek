@@ -2202,8 +2202,8 @@ class ScheduleButton(discord.ui.Button):
                         embed = discord.Embed(title="Are you sure you want to cancel this event scheduling?", color=discord.Color.orange())
                         view = ScheduleView(authorId=interaction.user.id)
                         items = [
-                            ScheduleButton(interaction.message, row=0, label="Cancel", style=discord.ButtonStyle.success, custom_id="event_schedule_cancel_confirm"),
-                            ScheduleButton(interaction.message, row=0, label="No, I changed my mind", style=discord.ButtonStyle.danger, custom_id="event_schedule_cancel_decline"),
+                            ScheduleButton(interaction.message, row=0, label="Cancel", style=discord.ButtonStyle.danger, custom_id="event_schedule_cancel_confirm"),
+                            ScheduleButton(interaction.message, row=0, label="No, I changed my mind", style=discord.ButtonStyle.secondary, custom_id="event_schedule_cancel_decline"),
                         ]
                         for item in items:
                             view.add_item(item)

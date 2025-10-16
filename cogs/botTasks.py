@@ -688,9 +688,17 @@ Join Us:
                 embed.timestamp = datetime.fromtimestamp(float(time)) + timedelta(seconds=details["timedeltaSeconds"])
                 updateTimeList.append(time)
 
+            # Link button
+            view = discord.ui.View()
+            view.add_item(discord.ui.Button(
+                label="Go to original message",
+                style=discord.ButtonStyle.link,
+                url=f"https://discord.com/channels/{GUILD_ID}/{details['channelID']}/{details['messageID']}"
+            ))
+
             # Send msg
             pings = re.findall(r"<@&\d+>|<@!?\d+>", details["message"])
-            await channel.send(member.mention + (" | " * (len(pings) > 0)) + " ".join(pings), embed=embed)
+            await channel.send(member.mention + (" | " * (len(pings) > 0)) + " ".join(pings), embed=embed, view=view)
             removalList.append(time)
 
 
@@ -831,19 +839,21 @@ class Reminders(commands.GroupCog, name="reminder"):
             "type": "reminder",
             "userID": interaction.user.id,
             "channelID": interaction.channel.id,
+            "messageID": None,
             "message": text or "",
             "setTime": datetime.timestamp(datetime.now()),
             "timedeltaSeconds": (reminderTime - datetime.now()).total_seconds(),
             "repeat": repeat or False
         }
-        with open(REMINDERS_FILE, "w", encoding="utf-8") as f:
-            json.dump(reminders, f, indent=4)
 
         embedDescription = "I will remind you " + discord.utils.format_dt(reminderTime, style="R") + (f"\n{text}" if text else "")
         embed=discord.Embed(description=embedDescription, color=discord.Color.green())
         embed.set_author(name=interaction.user, icon_url=interaction.user.display_avatar)
-        await interaction.response.send_message(embed=embed)
 
+        messageInteraction = await interaction.response.send_message(embed=embed)
+        reminders[datetime.timestamp(reminderTime)]["messageID"] = messageInteraction.message_id
+        with open(REMINDERS_FILE, "w", encoding="utf-8") as f:
+            json.dump(reminders, f, indent=4)
 
     @discord.app_commands.command(name="list")
     async def reminderList(self, interaction: discord.Interaction) -> None:

@@ -334,7 +334,7 @@ class BuilderButton(discord.ui.Button):
 
 
         if len(modalConfig["customitems"]) == 0:
-            modal.add_item(discord.ui.TextInput(label=name, style=modalConfig["style"], placeholder=modalConfig["placeholder"], default=modalConfig["default"], required=False, max_length=modalConfig["maxLength"]))
+            modal.add_item(discord.ui.TextInput(label=name.title(), style=modalConfig["style"], placeholder=modalConfig["placeholder"], default=modalConfig["default"], required=False, max_length=modalConfig["maxLength"]))
         else:
             for item in modalConfig["customitems"]:
                 modal.add_item(item)

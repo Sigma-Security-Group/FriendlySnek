@@ -1959,7 +1959,9 @@ class ScheduleButton(discord.ui.Button):
                         placeholder = "Actual\n2IC\nA-10C Pilot"
                         default = ""
                         if previewEmbedDict["reservableRoles"] is not None:
-                            default = placeholder = "\n".join(previewEmbedDict["reservableRoles"])[:100]
+                            resRolesOriginal = "\n".join(previewEmbedDict["reservableRoles"])
+                            placeholder = resRolesOriginal[:100]  # Discord limit
+                            default = resRolesOriginal[:512]  # Program limit, avoid overriding embed field value limit
 
                         await interaction.response.send_modal(generateModal(discord.TextStyle.long, placeholder, default, False, 1, 512))
 

@@ -1957,7 +1957,7 @@ class ScheduleButton(discord.ui.Button):
 
                     case "reservable_roles":
                         placeholder = "Actual\n2IC\nA-10C Pilot"
-                        default = ""
+                        default = "Co-Zeus\nActual\n2IC\nCMD Medic\nH1 Rifleman 1\nH1 Rifleman 2\nH1 Rifleman 3\nH2 TL\nH2 2IC\nH2 Medic\nH2 Rifleman 1\nH2 Rifleman 2\nH2 Rifleman 3"
                         if previewEmbedDict["reservableRoles"] is not None:
                             resRolesOriginal = "\n".join(previewEmbedDict["reservableRoles"])
                             placeholder = resRolesOriginal[:100]  # Discord limit

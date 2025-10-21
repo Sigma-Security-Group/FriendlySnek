@@ -15,22 +15,16 @@ UTC = pytz.utc
 SERVERS = [
     {
         "Name": "SSG - Operations Server",
-        "Directory": "148.251.192.96_2322/mpmissions",
-        "Host": "148.251.192.96",
-        "Port": 8822
-    },
-    {
-        "Name": "SSG - Event Server",
-        "Directory": "217.217.30.246_2322/mpmissions",
-        "Host": "217.217.30.246",
-        "Port": 8822
-    },
-    {
-        "Name": "SSG - Event Server 2",
         "Directory": "148.251.151.145_2302/mpmissions",
         "Host": "148.251.151.145",
         "Port": 8822
     },
+    {
+        "Name": "SSG - Event Server",
+        "Directory": "148.251.192.96_2322/mpmissions",
+        "Host": "148.251.192.96",
+        "Port": 8822
+    }
 ]
 
 log = logging.getLogger("FriendlySnek")

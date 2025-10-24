@@ -406,7 +406,7 @@ class Schedule(commands.Cog):
         if not noShowMembersListForLogging:
             return
 
-        log.debug(f"Schedule tasknoShowsLogging: No-show members, {', '.join([member.display_name for member in noShowMembersListForLogging])}")
+        log.debug(f"Schedule tasknoShowsLogging: No-show members: {', '.join([member.display_name for member in noShowMembersListForLogging])}")
 
         # Log no-show members in Discord
         channelAdvisorStaffComms = guild.get_channel(ADVISOR_STAFF_COMMS)
@@ -2220,6 +2220,7 @@ class ScheduleButton(discord.ui.Button):
                                 child.disabled = True
                         await interaction.response.edit_message(view=self.view)
                         await self.message.edit(content="Nvm guys, didn't wanna bop.", embed=None, view=None)
+                        log.info(f"{interaction.user.id} [{interaction.user.display_name}] Cancelled '{previewEmbedDict['type']}' creation")
 
                     case "cancel_decline":
                         if self.message is None:
@@ -2453,7 +2454,6 @@ class ScheduleSelect(discord.ui.Select):
             # Do preview embed edits
             match infoLabel:
                 case "type":
-                    log.debug(f"{interaction.user.id} [{interaction.user.display_name}] selected event type '{selectedValue}'")
                     previewEmbedDict["type"] = selectedValue
 
                     templateName = "None"

@@ -311,39 +311,46 @@ class Staff(commands.Cog):
 
     @commands.command(name="searchmodlogs")
     @commands.has_any_role(*CMD_LIMIT_STAFF)
-    async def searchModLogs(self, ctx: commands.Context, *, member: str = commands.parameter(description="Target member")) -> None:
+    async def searchModLogs(self, ctx: commands.Context, *, search_term: str = commands.parameter(description="Search term for a user/member. Surround in quotes for raw search")) -> None:
         """Fetch all occurrencesances in the moderation log related to a member."""
-        channelStaffChat = self.bot.get_channel(STAFF_CHAT)
         channelModerationLog = self.bot.get_channel(MODERATION_LOG)
-        if not isinstance(channelStaffChat, discord.TextChannel) or not isinstance(channelModerationLog, discord.TextChannel):
-            log.exception("Staff searchmodlogs: channelStaffChat or channelModerationLog not discord.TextChannel")
+        if not isinstance(channelModerationLog, discord.TextChannel):
+            log.exception("Staff searchmodlogs: channelModerationLog not discord.TextChannel")
             return
 
         if not isinstance(ctx.guild, discord.Guild):
             log.exception("Staff searchmodlogs: ctx.guild not discord.Guild")
             return
-        targetMember = Staff._getMember(member, ctx.guild)
+
+
+        targetMember = Staff._getMember(search_term, ctx.guild)
+        if search_term[0] == "\"" and search_term[-1] == "\"": # Raw search if in quotes
+            targetMember = None
+            search_term = search_term[1:-1]
+
         if targetMember is None:
-            log.warning(f"{ctx.author.id} [{ctx.author.display_name}] No member found for search term '{member}'")
-            log.info(f"{ctx.author.id} [{ctx.author.display_name}] Searching moderation logs for search term '{member}'")
-            await channelStaffChat.send(f"Searching Moderation Logs for search term: {member}")
+            log.info(f"{ctx.author.id} [{ctx.author.display_name}] Searching moderation logs for search term '{search_term}'")
+            log.warning(f"{ctx.author.id} [{ctx.author.display_name}] No member found for search term '{search_term}'")
+            await ctx.send(f"Searching Moderation Logs for search term: {search_term}")
             messageLinksList = []
             numMessages = 0
             async for message in channelModerationLog.history(limit=None):
                 numMessages += 1
-                if member in message.content.lower():
+                if search_term in message.content.lower():
                     messageLinksList.append(message.jump_url)
 
             if len(messageLinksList) > 0:
-                messageLinks = "\n".join(messageLinksList[::-1])
-                await channelStaffChat.send(f"Moderation Logs related to search term: {member}\n{messageLinks}")
+                messageLinks = "\n".join(
+                    [f"{i+1}. {link}" for i, link in enumerate(messageLinksList[::-1])]
+                )
+                await ctx.send(f"Moderation Logs related to search term: {search_term}\n{messageLinks}")
             else:
-                await channelStaffChat.send(f"No Moderation Logs related to search term: {member}")
+                await ctx.send(f"No Moderation Logs related to search term: {search_term}")
             return
 
 
         log.info(f"{ctx.author.id} [{ctx.author.display_name}] Searching moderation logs for {targetMember.id} [{targetMember.display_name}]")
-        await channelStaffChat.send(f"Searching Moderation Logs for {targetMember.display_name} ({targetMember})")
+        await ctx.send(f"Searching Moderation Logs for {targetMember.display_name} ({targetMember})")
         messageLinksList = []
         numMessages = 0
         async for message in channelModerationLog.history(limit=None):
@@ -370,9 +377,9 @@ class Staff(commands.Cog):
 
         if len(messageLinksList) > 0:
             messageLinks = "\n".join(messageLinksList[::-1])
-            await channelStaffChat.send(f"Moderation Logs related to {targetMember.display_name} ({targetMember}):\n{messageLinks}")
+            await ctx.send(f"Moderation Logs related to {targetMember.display_name} ({targetMember}):\n{messageLinks}")
         else:
-            await channelStaffChat.send(f"No Moderation Logs related to {targetMember.display_name} ({targetMember})")
+            await ctx.send(f"No Moderation Logs related to {targetMember.display_name} ({targetMember})")
 
     @commands.command(name="disablerolereservation")
     @commands.has_any_role(*CMD_LIMIT_STAFF)

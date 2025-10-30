@@ -326,6 +326,8 @@ class Staff(commands.Cog):
         """Fetch all occurrencesances in the moderation log related to a member."""
         # TODO
         # When seraching for a found target member, also search for display name (str)
+        #
+        # Implement filtering by context. E.g. only show logs where user was Reporter
         channelModerationLog = self.bot.get_channel(MODERATION_LOG)
         if not isinstance(channelModerationLog, discord.TextChannel):
             log.exception("Staff searchmodlogs: channelModerationLog not discord.TextChannel")
@@ -362,7 +364,7 @@ class Staff(commands.Cog):
                     # Enum list, and format message
                     [f"{i+1}. {msg['url']}: `{msg['context']}`" for i, msg in enumerate(messageLinksList[::-1])]
                 )
-                await ctx.send(f"Moderation Logs related to search term: {search_term}\n{messageLinks}")
+                await ctx.send(f"Moderation Logs related to search term: {search_term}\n{messageLinks}"[:2000]) # Discord message limit
             else:
                 await ctx.send(f"No Moderation Logs related to search term: {search_term}")
             return
@@ -409,7 +411,7 @@ class Staff(commands.Cog):
                 # Enum list, and format message
                 [f"{i+1}. {msg['url']}: `{msg['context']}`" for i, msg in enumerate(messageLinksList[::-1])]
             )
-            await ctx.send(f"Moderation Logs related to {targetMember.display_name} ({targetMember}):\n{messageLinks}")
+            await ctx.send(f"Moderation Logs related to {targetMember.display_name} ({targetMember}):\n{messageLinks}"[:2000]) # Discord message limit
         else:
             await ctx.send(f"No Moderation Logs related to {targetMember.display_name} ({targetMember})")
 

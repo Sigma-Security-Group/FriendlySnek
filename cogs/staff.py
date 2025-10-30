@@ -309,6 +309,17 @@ class Staff(commands.Cog):
             embed.timestamp = datetime.now()
             await ctx.send(embed=embed)
 
+    @staticmethod
+    def _getModLogContext(message: discord.Message, search_term: str) -> str:
+        preSearch = message.content[:message.content.lower().index(search_term)-2].split("\n")[-1]
+        if preSearch.startswith("Reporter"):
+            return "Reporter"
+        if preSearch.startswith("Subject"):
+            return "Subject"
+        if preSearch.startswith("Handler"):
+            return "Handler"
+        return ""
+
     @commands.command(name="searchmodlogs")
     @commands.has_any_role(*CMD_LIMIT_STAFF)
     async def searchModLogs(self, ctx: commands.Context, *, search_term: str = commands.parameter(description="Search term for a user/member. Surround in quotes for raw search")) -> None:
@@ -338,9 +349,7 @@ class Staff(commands.Cog):
                 numMessages += 1
                 if search_term in message.content.lower():
                     # Context is the role of the target Member: "Reporter", "Subject", "Handler"
-                    context = message.content[message.content.lower().index(search_term)-10:message.content.lower().index(search_term)-2].strip()
-                    if context not in ("Reporter", "Subject", "Handler"):
-                        context = ""
+                    context = Staff._getModLogContext(message, search_term)
                     messageLinksList.append({
                         "url": message.jump_url,
                         "context": context
@@ -371,9 +380,7 @@ class Staff(commands.Cog):
                     (targetMember.mention.replace("<@!", "<@") in message.content and not re.match(r"\w", message.content[message.content.index(targetMember.mention.replace("<@!", "<@")) - 1]) and not re.match(r"\w", message.content[message.content.index(targetMember.mention.replace("<@!", "<@")) + len(targetMember.mention.replace("<@!", "<@"))])) or\
                     str(targetMember.id) in message.content:
 
-                    context = message.content[message.content.lower().index(search_term)-10:message.content.lower().index(search_term)-2].strip()
-                    if context not in ("Reporter", "Subject", "Handler"):
-                        context = ""
+                    context = Staff._getModLogContext(message, search_term)
                     messageLinksList.append({
                         "url": message.jump_url,
                         "context": context
@@ -387,9 +394,7 @@ class Staff(commands.Cog):
                         (targetMember.mention.replace("<@!", "<@") in message.content and not re.match(r"\w", message.content[message.content.index(targetMember.mention.replace("<@!", "<@")) - 1])) or\
                         str(targetMember.id) in message.content:
 
-                        context = message.content[message.content.lower().index(search_term)-10:message.content.lower().index(search_term)-2].strip()
-                        if context not in ("Reporter", "Subject", "Handler"):
-                            context = ""
+                        context = Staff._getModLogContext(message, search_term)
                         messageLinksList.append({
                             "url": message.jump_url,
                             "context": context

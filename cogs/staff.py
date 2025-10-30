@@ -380,7 +380,7 @@ class Staff(commands.Cog):
                     (targetMember.mention.replace("<@!", "<@") in message.content and not re.match(r"\w", message.content[message.content.index(targetMember.mention.replace("<@!", "<@")) - 1]) and not re.match(r"\w", message.content[message.content.index(targetMember.mention.replace("<@!", "<@")) + len(targetMember.mention.replace("<@!", "<@"))])) or\
                     str(targetMember.id) in message.content:
 
-                    context = Staff._getModLogContext(message, search_term)
+                    context = Staff._getModLogContext(message, str(targetMember.id))
                     messageLinksList.append({
                         "url": message.jump_url,
                         "context": context
@@ -394,7 +394,7 @@ class Staff(commands.Cog):
                         (targetMember.mention.replace("<@!", "<@") in message.content and not re.match(r"\w", message.content[message.content.index(targetMember.mention.replace("<@!", "<@")) - 1])) or\
                         str(targetMember.id) in message.content:
 
-                        context = Staff._getModLogContext(message, search_term)
+                        context = Staff._getModLogContext(message, str(targetMember.id))
                         messageLinksList.append({
                             "url": message.jump_url,
                             "context": context

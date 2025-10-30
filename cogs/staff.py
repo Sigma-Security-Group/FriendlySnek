@@ -324,6 +324,8 @@ class Staff(commands.Cog):
     @commands.has_any_role(*CMD_LIMIT_STAFF)
     async def searchModLogs(self, ctx: commands.Context, *, search_term: str = commands.parameter(description="Search term for a user/member. Surround in quotes for raw search")) -> None:
         """Fetch all occurrencesances in the moderation log related to a member."""
+        # TODO
+        # When seraching for a found target member, also search for display name (str)
         channelModerationLog = self.bot.get_channel(MODERATION_LOG)
         if not isinstance(channelModerationLog, discord.TextChannel):
             log.exception("Staff searchmodlogs: channelModerationLog not discord.TextChannel")

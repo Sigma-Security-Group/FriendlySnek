@@ -337,16 +337,19 @@ class Staff(commands.Cog):
             async for message in channelModerationLog.history(limit=None):
                 numMessages += 1
                 if search_term in message.content.lower():
-                    # Context is the role of the target Member: "Reporter", "Subject", "Handler"d
+                    # Context is the role of the target Member: "Reporter", "Subject", "Handler"
                     context = message.content[message.content.lower().index(search_term)-10:message.content.lower().index(search_term)-2].strip()
+                    if context not in ("Reporter", "Subject", "Handler"):
+                        context = ""
                     messageLinksList.append({
-                        "url": message.jump_url
+                        "url": message.jump_url,
+                        "context": context
                     })
 
             if len(messageLinksList) > 0:
                 messageLinks = "\n".join(
                     # Enum list, and format message
-                    [f"{i+1}. {msg['url']}" for i, msg in enumerate(messageLinksList[::-1])]
+                    [f"{i+1}. {msg['url']}: `{msg['context']}`" for i, msg in enumerate(messageLinksList[::-1])]
                 )
                 await ctx.send(f"Moderation Logs related to search term: {search_term}\n{messageLinks}")
             else:
@@ -367,8 +370,13 @@ class Staff(commands.Cog):
                     (targetMember.mention.replace("<@", "<@!") in message.content and not re.match(r"\w", message.content[message.content.index(targetMember.mention.replace("<@", "<@!")) - 1]) and not re.match(r"\w", message.content[message.content.index(targetMember.mention.replace("<@", "<@!")) + len(targetMember.mention.replace("<@", "<@!"))])) or\
                     (targetMember.mention.replace("<@!", "<@") in message.content and not re.match(r"\w", message.content[message.content.index(targetMember.mention.replace("<@!", "<@")) - 1]) and not re.match(r"\w", message.content[message.content.index(targetMember.mention.replace("<@!", "<@")) + len(targetMember.mention.replace("<@!", "<@"))])) or\
                     str(targetMember.id) in message.content:
+
+                    context = message.content[message.content.lower().index(search_term)-10:message.content.lower().index(search_term)-2].strip()
+                    if context not in ("Reporter", "Subject", "Handler"):
+                        context = ""
                     messageLinksList.append({
-                        "url": message.jump_url
+                        "url": message.jump_url,
+                        "context": context
                     })
             except Exception:
                 try:
@@ -378,8 +386,13 @@ class Staff(commands.Cog):
                         (targetMember.mention.replace("<@", "<@!") in message.content and not re.match(r"\w", message.content[message.content.index(targetMember.mention.replace("<@", "<@!")) - 1])) or\
                         (targetMember.mention.replace("<@!", "<@") in message.content and not re.match(r"\w", message.content[message.content.index(targetMember.mention.replace("<@!", "<@")) - 1])) or\
                         str(targetMember.id) in message.content:
+
+                        context = message.content[message.content.lower().index(search_term)-10:message.content.lower().index(search_term)-2].strip()
+                        if context not in ("Reporter", "Subject", "Handler"):
+                            context = ""
                         messageLinksList.append({
-                            "url": message.jump_url
+                            "url": message.jump_url,
+                            "context": context
                         })
                 except Exception:
                     log.exception(f"Staff searchModLogs: message\n\n{message.content}\n")
@@ -387,7 +400,7 @@ class Staff(commands.Cog):
         if len(messageLinksList) > 0:
             messageLinks = "\n".join(
                 # Enum list, and format message
-                [f"{i+1}. {msg['url']}" for i, msg in enumerate(messageLinksList[::-1])]
+                [f"{i+1}. {msg['url']}: `{msg['context']}`" for i, msg in enumerate(messageLinksList[::-1])]
             )
             await ctx.send(f"Moderation Logs related to {targetMember.display_name} ({targetMember}):\n{messageLinks}")
         else:

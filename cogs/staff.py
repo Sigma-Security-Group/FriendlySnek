@@ -340,14 +340,13 @@ class Staff(commands.Cog):
                     # Context is the role of the target Member: "Reporter", "Subject", "Handler"d
                     context = message.content[message.content.lower().index(search_term)-10:message.content.lower().index(search_term)-2].strip()
                     messageLinksList.append({
-                        "url": message.jump_url,
-                        "context": context
+                        "url": message.jump_url
                     })
 
             if len(messageLinksList) > 0:
                 messageLinks = "\n".join(
                     # Enum list, and format message
-                    [f"{i+1}. {msg['url']}: `{msg['context']}`" for i, msg in enumerate(messageLinksList[::-1])]
+                    [f"{i+1}. {msg['url']}" for i, msg in enumerate(messageLinksList[::-1])]
                 )
                 await ctx.send(f"Moderation Logs related to search term: {search_term}\n{messageLinks}")
             else:
@@ -368,7 +367,9 @@ class Staff(commands.Cog):
                     (targetMember.mention.replace("<@", "<@!") in message.content and not re.match(r"\w", message.content[message.content.index(targetMember.mention.replace("<@", "<@!")) - 1]) and not re.match(r"\w", message.content[message.content.index(targetMember.mention.replace("<@", "<@!")) + len(targetMember.mention.replace("<@", "<@!"))])) or\
                     (targetMember.mention.replace("<@!", "<@") in message.content and not re.match(r"\w", message.content[message.content.index(targetMember.mention.replace("<@!", "<@")) - 1]) and not re.match(r"\w", message.content[message.content.index(targetMember.mention.replace("<@!", "<@")) + len(targetMember.mention.replace("<@!", "<@"))])) or\
                     str(targetMember.id) in message.content:
-                    messageLinksList.append(message.jump_url)
+                    messageLinksList.append({
+                        "url": message.jump_url
+                    })
             except Exception:
                 try:
                     if (targetMember.display_name.lower() in message.content.lower() and not re.match(r"\w", message.content.lower()[message.content.lower().index(targetMember.display_name.lower()) - 1])) or\
@@ -377,12 +378,17 @@ class Staff(commands.Cog):
                         (targetMember.mention.replace("<@", "<@!") in message.content and not re.match(r"\w", message.content[message.content.index(targetMember.mention.replace("<@", "<@!")) - 1])) or\
                         (targetMember.mention.replace("<@!", "<@") in message.content and not re.match(r"\w", message.content[message.content.index(targetMember.mention.replace("<@!", "<@")) - 1])) or\
                         str(targetMember.id) in message.content:
-                        messageLinksList.append(message.jump_url)
+                        messageLinksList.append({
+                            "url": message.jump_url
+                        })
                 except Exception:
                     log.exception(f"Staff searchModLogs: message\n\n{message.content}\n")
 
         if len(messageLinksList) > 0:
-            messageLinks = "\n".join(messageLinksList[::-1])
+            messageLinks = "\n".join(
+                # Enum list, and format message
+                [f"{i+1}. {msg['url']}" for i, msg in enumerate(messageLinksList[::-1])]
+            )
             await ctx.send(f"Moderation Logs related to {targetMember.display_name} ({targetMember}):\n{messageLinks}")
         else:
             await ctx.send(f"No Moderation Logs related to {targetMember.display_name} ({targetMember})")

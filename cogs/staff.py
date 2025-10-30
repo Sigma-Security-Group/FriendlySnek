@@ -337,11 +337,17 @@ class Staff(commands.Cog):
             async for message in channelModerationLog.history(limit=None):
                 numMessages += 1
                 if search_term in message.content.lower():
-                    messageLinksList.append(message.jump_url)
+                    # Context is the role of the target Member: "Reporter", "Subject", "Handler"d
+                    context = message.content[message.content.lower().index(search_term)-10:message.content.lower().index(search_term)-2].strip()
+                    messageLinksList.append({
+                        "url": message.jump_url,
+                        "context": context
+                    })
 
             if len(messageLinksList) > 0:
                 messageLinks = "\n".join(
-                    [f"{i+1}. {link}" for i, link in enumerate(messageLinksList[::-1])]
+                    # Enum list, and format message
+                    [f"{i+1}. {msg['url']}: `{msg['context']}`" for i, msg in enumerate(messageLinksList[::-1])]
                 )
                 await ctx.send(f"Moderation Logs related to search term: {search_term}\n{messageLinks}")
             else:

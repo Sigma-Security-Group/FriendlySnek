@@ -311,7 +311,7 @@ class Staff(commands.Cog):
 
     @staticmethod
     def _getModLogContext(message: discord.Message, search_term: str) -> str:
-        preSearch = message.content[:message.content.lower().index(search_term)-2].split("\n")[-1]
+        preSearch = message.content[:message.content.lower().index(search_term)-2].split("\n")[-1].lstrip("*").strip()
         if preSearch.startswith("Reporter"):
             return "Reporter"
         if preSearch.startswith("Subject"):

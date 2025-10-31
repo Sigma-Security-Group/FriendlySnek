@@ -286,7 +286,14 @@ class Schedule(commands.Cog):
                     log.warning(f"Schedule tenMinTask: Could not find author '{event['authorId']}' of event '{event['title']}'")
                     continue
 
-                embed = discord.Embed(title="Event auto deleted", description=f"Your {event['type'].lower()} has ended: `{event['title']}`\nIt has been automatically removed from the schedule. {PEEPO_POP}", color=discord.Color.orange())
+                embed = discord.Embed(
+                    title="Event auto deleted",
+                    description=f"Your {event['type'].lower()} has ended: `{event['title']}`\n" \
+                    f"It has been automatically removed from the schedule. {PEEPO_POP}\n\n" \
+                    f"{event['type'].title()} start: {discord.utils.format_dt(UTC.localize(datetime.strptime(event['time'], TIME_FORMAT)), style='F')}\n" \
+                    f"{event['type'].title()} end: {discord.utils.format_dt(UTC.localize(datetime.strptime(event['endTime'], TIME_FORMAT)), style='F')}",
+                    color=discord.Color.orange()
+                )
                 try:
                     await author.send(embed=embed)
                 except Exception:

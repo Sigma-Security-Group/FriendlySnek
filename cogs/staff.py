@@ -318,7 +318,7 @@ class Staff(commands.Cog):
             return "Subject"
         if preSearch.startswith("Handler"):
             return "Handler"
-        return ""
+        return "Mention"
 
     @commands.command(name="searchmodlogs")
     @commands.has_any_role(*CMD_LIMIT_STAFF)
@@ -364,7 +364,9 @@ class Staff(commands.Cog):
                     # Enum list, and format message
                     [f"{i+1}. {msg['url']}: `{msg['context']}`" for i, msg in enumerate(messageLinksList[::-1])]
                 )
-                await ctx.send(f"Moderation Logs related to search term: {search_term}\n{messageLinks}"[:2000]) # Discord message limit
+                embed = discord.Embed(title=f"Moderation logs for: {search_term}", description=f"{messageLinks}"[:4000], color=discord.Color.red())
+                embed.timestamp = datetime.now()
+                await ctx.send(embed=embed)
             else:
                 await ctx.send(f"No Moderation Logs related to search term: {search_term}")
             return
@@ -411,7 +413,9 @@ class Staff(commands.Cog):
                 # Enum list, and format message
                 [f"{i+1}. {msg['url']}: `{msg['context']}`" for i, msg in enumerate(messageLinksList[::-1])]
             )
-            await ctx.send(f"Moderation Logs related to {targetMember.display_name} ({targetMember}):\n{messageLinks}"[:2000]) # Discord message limit
+            embed = discord.Embed(title=f"Moderation logs for: {targetMember.display_name} ({targetMember})", description=f"{messageLinks}"[:4000], color=discord.Color.red())
+            embed.timestamp = datetime.now()
+            await ctx.send(embed=embed)
         else:
             await ctx.send(f"No Moderation Logs related to {targetMember.display_name} ({targetMember})")
 

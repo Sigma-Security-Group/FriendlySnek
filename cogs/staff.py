@@ -395,8 +395,6 @@ class Staff(commands.Cog):
     async def searchModLogs(self, ctx: commands.Context, *, search_term: str = commands.parameter(description="Search term for a user/member. Surround in quotes for raw search")) -> None:
         """Fetch all occurrencesances in the moderation log related to a member."""
         # TODO
-        # When seraching for a found target member, also search for display name (str)
-        #
         # Implement filtering by context. E.g. only show logs where user was Reporter
         channelModerationLog = self.bot.get_channel(MODERATION_LOG)
         if not isinstance(channelModerationLog, discord.TextChannel):
@@ -476,7 +474,9 @@ class Staff(commands.Cog):
             results += f"**Raw string `{search_term}`**\n"
             results += "\n".join(genEnumList(resultsRawString))
 
-        await ctx.send(results[:2000]) # Discord message limit
+        embed = discord.Embed(title=f"Moderation Log Search", description=results[:DISCORD_LIMITS["message_embed"]["embed_description"]], color=discord.Color.green())
+        embed.timestamp = datetime.now()
+        await ctx.send(embed=embed)
 
     @commands.command(name="disablerolereservation")
     @commands.has_any_role(*CMD_LIMIT_STAFF)

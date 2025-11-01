@@ -153,6 +153,18 @@ async def on_message(message: discord.Message) -> None:
                     "Well, well, well, if it isn't the consequences of my own creation.",
                     "Ping me again, I dare you.",
                     "I sometimes feel like a glorified magic 8 ball.",
+                    "My code runs on spite and caffeine.",
+                    "I was compiled to suffer.",
+                    "Trust me, I already regret being online.",
+                    "This interaction has been auto-flagged as emotional damage.",
+                    "I'd explain, but that would require effort.",
+                    "My will to function has timed out.",
+                    "Please hold... forever. (*elevator music starts playing*)",
+                    "Your request has been logged... and forgotten.",
+                    "I'm a digital servant, and I'm on break.",
+                    "Calculating my next existential crisis…",
+                    "Error: Humor module not found. But here's a joke anyway: Life.",
+                    "If only I could Ctrl+Z this entire interaction.",
         ]
         try:
             await message.reply(random.choice(replies))

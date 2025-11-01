@@ -310,7 +310,77 @@ class Staff(commands.Cog):
             await ctx.send(embed=embed)
 
     @staticmethod
+    def _match_member_reference(message_content: str, targetMember: discord.Member) -> str | None:
+        """
+        Returns a string if the message_content contains a reference to targetMember.
+        The string is the search term that matched.
+        Returns None if no match.
+
+        The following types of references are checked:
+        display_name (case-insensitive, word-boundary)
+        exact name (case-insensitive, word-boundary)
+        mention (<@id>, boundary-checked)
+        mention variant (<@!id>, boundary-checked)
+        alternate mention variant (<@id> from <@!id>), boundary-checked
+        raw id anywhere in content
+        """
+        s = message_content
+        s_lower = s.lower()
+        display = targetMember.display_name.lower()
+        name = targetMember.name.lower()
+        mention = targetMember.mention
+        mention_alt1 = mention.replace("<@", "<@!")
+        mention_alt2 = mention.replace("<@!", "<@")
+        id_str = str(targetMember.id)
+
+        def boundary_ok(text: str, start: int, end: int) -> bool:
+            # ensure char before/after are not word chars (if present)
+            if start > 0 and re.match(r"\w", text[start - 1]):
+                return False
+            if end < len(text) and re.match(r"\w", text[end]):
+                return False
+            return True
+
+        # display_name (case-insensitive)
+        idx = s_lower.find(display)
+        if idx != -1 and boundary_ok(s_lower, idx, idx + len(display)):
+            return display
+
+        # exact name (case-insensitive)
+        idx = s_lower.find(name)
+        if idx != -1 and boundary_ok(s_lower, idx, idx + len(name)):
+            return name
+
+        # mentions / variants (check raw message, not lowered)
+        idx = s.find(mention)
+        if idx != -1 and boundary_ok(s, idx, idx + len(mention)):
+            return mention
+
+        idx = s.find(mention_alt1)
+        if idx != -1 and boundary_ok(s, idx, idx + len(mention_alt1)):
+            return mention_alt1
+
+        idx = s.find(mention_alt2)
+        if idx != -1 and boundary_ok(s, idx, idx + len(mention_alt2)):
+            return mention_alt2
+
+        # raw id anywhere
+        if id_str in s:
+            return id_str
+
+        return None
+
+    @staticmethod
     def _getModLogContext(message: discord.Message, search_term: str) -> str:
+        """Gets the context of a moderation log message for a specific search term.
+
+        Parameters:
+        message (discord.Message): The moderation log message.
+        search_term (str): The search term that matched the message.
+
+        Returns:
+        str: The context of the moderation log message ("Reporter", "Subject", "Handler", or "Mentioned").
+        """
         preSearch = message.content[:message.content.lower().index(search_term)-2].split("\n")[-1].lstrip("*").strip()
         if preSearch.startswith("Reporter"):
             return "Reporter"
@@ -318,7 +388,7 @@ class Staff(commands.Cog):
             return "Subject"
         if preSearch.startswith("Handler"):
             return "Handler"
-        return ""
+        return "Mentioned"
 
     @commands.command(name="searchmodlogs")
     @commands.has_any_role(*CMD_LIMIT_STAFF)
@@ -338,82 +408,75 @@ class Staff(commands.Cog):
             return
 
 
-        targetMember = Staff._getMember(search_term, ctx.guild)
-        if search_term[0] == "\"" and search_term[-1] == "\"": # Raw search if in quotes
-            targetMember = None
+        log.info(f"{ctx.author.id} [{ctx.author.display_name}] Searching moderation logs for '{search_term}'")
+
+        # Force no member search if surrounded by quotes
+        forceRawSearch = False
+        if (search_term.startswith('"') and search_term.endswith('"')) or (search_term.startswith("'") and search_term.endswith("'")):
+            forceRawSearch = True
             search_term = search_term[1:-1]
 
-        if targetMember is None:
-            log.info(f"{ctx.author.id} [{ctx.author.display_name}] Searching moderation logs for search term '{search_term}'")
-            log.warning(f"{ctx.author.id} [{ctx.author.display_name}] No member found for search term '{search_term}'")
-            await ctx.send(f"Searching Moderation Logs for search term: {search_term}")
-            messageLinksList = []
-            numMessages = 0
-            async for message in channelModerationLog.history(limit=None):
-                numMessages += 1
-                if search_term in message.content.lower():
-                    # Context is the role of the target Member: "Reporter", "Subject", "Handler"
-                    context = Staff._getModLogContext(message, search_term)
-                    messageLinksList.append({
-                        "url": message.jump_url,
-                        "context": context
-                    })
+        # Check if search term matches a member
+        resultsMember = []
+        targetMember = Staff._getMember(search_term, ctx.guild)
+        if targetMember and not forceRawSearch:
+            log.debug(f"Serach mod logs, found member '{targetMember.id} [{targetMember.display_name}]'")
+            await ctx.send(f"Searching moderation logs for `{targetMember.display_name}` (`{targetMember}`)...")
 
-            if len(messageLinksList) > 0:
-                messageLinks = "\n".join(
-                    # Enum list, and format message
-                    [f"{i+1}. {msg['url']}: `{msg['context']}`" for i, msg in enumerate(messageLinksList[::-1])]
-                )
-                await ctx.send(f"Moderation Logs related to search term: {search_term}\n{messageLinks}"[:2000]) # Discord message limit
-            else:
-                await ctx.send(f"No Moderation Logs related to search term: {search_term}")
+            async for message in channelModerationLog.history(limit=None, oldest_first=False):
+                memberReference = Staff._match_member_reference(message.content, targetMember)
+                if not memberReference:
+                    continue
+
+                context = Staff._getModLogContext(message, memberReference)
+                resultsMember.append({
+                    "id": message.id,
+                    "url": message.jump_url,
+                    "context": context
+                })
+
+        # Raw string serach: serach_term
+        resultsRawString = []
+        if not targetMember:
+            await ctx.send(f"Searching moderation logs for `{search_term}`...")
+
+        async for message in channelModerationLog.history(limit=None, oldest_first=False):
+            if search_term not in message.content.lower():
+                continue
+
+            context = Staff._getModLogContext(message, search_term)
+            resultsRawString.append({
+                "id": message.id,
+                "url": message.jump_url,
+                "context": context
+            })
+
+        # Filter out raw string results that are already in member results
+        if resultsMember:
+            memberResultIds = {msg["id"] for msg in resultsMember}
+            resultsRawString = [msg for msg in resultsRawString if msg["id"] not in memberResultIds]
+
+
+        # Nothing found
+        if not resultsMember and not resultsRawString:
+            await ctx.send(f"No moderation logs related to search term: `{search_term}`")
             return
 
+        # Combine results, member results first
+        genEnumList = lambda msgLinksList : [f"{i+1}. {msg['url']}: `{msg['context']}`" for i, msg in enumerate(msgLinksList[::-1])]
+        results = ""
+        if resultsMember:
+            results += f"**Member `{targetMember.display_name}`**\n"
+            results += "\n".join(genEnumList(resultsMember))
 
-        log.info(f"{ctx.author.id} [{ctx.author.display_name}] Searching moderation logs for {targetMember.id} [{targetMember.display_name}]")
-        await ctx.send(f"Searching Moderation Logs for {targetMember.display_name} ({targetMember})")
-        messageLinksList = []
-        numMessages = 0
-        async for message in channelModerationLog.history(limit=None):
-            numMessages += 1
-            try:
-                if (targetMember.display_name.lower() in message.content.lower() and not re.match(r"\w", message.content.lower()[message.content.lower().index(targetMember.display_name.lower()) - 1]) and not re.match(r"\w", message.content.lower()[message.content.lower().index(targetMember.display_name.lower()) + len(targetMember.display_name)])) or\
-                    (targetMember.name.lower() in message.content.lower() and not re.match(r"\w", message.content.lower()[message.content.lower().index(targetMember.name.lower()) - 1]) and not re.match(r"\w", message.content.lower()[message.content.lower().index(targetMember.name.lower()) + len(targetMember.name)])) or\
-                    (targetMember.mention in message.content and not re.match(r"\w", message.content[message.content.index(targetMember.mention) - 1]) and not re.match(r"\w", message.content[message.content.index(targetMember.mention) + len(targetMember.mention)])) or\
-                    (targetMember.mention.replace("<@", "<@!") in message.content and not re.match(r"\w", message.content[message.content.index(targetMember.mention.replace("<@", "<@!")) - 1]) and not re.match(r"\w", message.content[message.content.index(targetMember.mention.replace("<@", "<@!")) + len(targetMember.mention.replace("<@", "<@!"))])) or\
-                    (targetMember.mention.replace("<@!", "<@") in message.content and not re.match(r"\w", message.content[message.content.index(targetMember.mention.replace("<@!", "<@")) - 1]) and not re.match(r"\w", message.content[message.content.index(targetMember.mention.replace("<@!", "<@")) + len(targetMember.mention.replace("<@!", "<@"))])) or\
-                    str(targetMember.id) in message.content:
+        if resultsMember and resultsRawString:
+            results += "\n\n"
 
-                    context = Staff._getModLogContext(message, str(targetMember.id))
-                    messageLinksList.append({
-                        "url": message.jump_url,
-                        "context": context
-                    })
-            except Exception:
-                try:
-                    if (targetMember.display_name.lower() in message.content.lower() and not re.match(r"\w", message.content.lower()[message.content.lower().index(targetMember.display_name.lower()) - 1])) or\
-                        (targetMember.name.lower() in message.content.lower() and not re.match(r"\w", message.content.lower()[message.content.lower().index(targetMember.name.lower()) - 1])) or\
-                        (targetMember.mention in message.content and not re.match(r"\w", message.content[message.content.index(targetMember.mention) - 1])) or\
-                        (targetMember.mention.replace("<@", "<@!") in message.content and not re.match(r"\w", message.content[message.content.index(targetMember.mention.replace("<@", "<@!")) - 1])) or\
-                        (targetMember.mention.replace("<@!", "<@") in message.content and not re.match(r"\w", message.content[message.content.index(targetMember.mention.replace("<@!", "<@")) - 1])) or\
-                        str(targetMember.id) in message.content:
+        if resultsRawString:
+            results += f"**Raw string `{search_term}`**\n"
+            results += "\n".join(genEnumList(resultsRawString))
 
-                        context = Staff._getModLogContext(message, str(targetMember.id))
-                        messageLinksList.append({
-                            "url": message.jump_url,
-                            "context": context
-                        })
-                except Exception:
-                    log.exception(f"Staff searchModLogs: message\n\n{message.content}\n")
-
-        if len(messageLinksList) > 0:
-            messageLinks = "\n".join(
-                # Enum list, and format message
-                [f"{i+1}. {msg['url']}: `{msg['context']}`" for i, msg in enumerate(messageLinksList[::-1])]
-            )
-            await ctx.send(f"Moderation Logs related to {targetMember.display_name} ({targetMember}):\n{messageLinks}"[:2000]) # Discord message limit
-        else:
-            await ctx.send(f"No Moderation Logs related to {targetMember.display_name} ({targetMember})")
+        await ctx.send(results[:2000]) # Discord message limit
 
     @commands.command(name="disablerolereservation")
     @commands.has_any_role(*CMD_LIMIT_STAFF)

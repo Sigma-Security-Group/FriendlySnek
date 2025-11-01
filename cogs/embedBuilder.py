@@ -101,6 +101,7 @@ class EmbedBuilder(commands.Cog):
 
             BuilderButton(self, authorId=interaction.user.id, row=2, label="Cancel", style=discord.ButtonStyle.danger, custom_id="builder_button_cancel"),
             BuilderButton(self, authorId=interaction.user.id, row=2, label="Submit", style=discord.ButtonStyle.primary, custom_id="builder_button_submit", disabled=(not attachment)),
+            BuilderButton(self, authorId=interaction.user.id, row=2, label="Submit as new", style=discord.ButtonStyle.primary, custom_id="builder_button_submit_as_new", disabled=(not attachment)),
         ]
         for item in items:
             view.add_item(item)
@@ -129,27 +130,27 @@ class EmbedBuilder(commands.Cog):
         """Get dependency dict."""
         return {
             "title": {
-                "dependent": ("URL", "Timestamp", "Color", "Submit"),
+                "dependent": ("URL", "Timestamp", "Color", "Submit", "Submit as new"),
                 "propertyValue": embed.title
             },
             "description": {
-                "dependent": ("Timestamp", "Color", "Submit"),
+                "dependent": ("Timestamp", "Color", "Submit", "Submit as new"),
                 "propertyValue": embed.description
             },
             "thumbnail": {
-                "dependent": ("Timestamp", "Color", "Submit"),
+                "dependent": ("Timestamp", "Color", "Submit", "Submit as new"),
                 "propertyValue": embed.thumbnail.url if embed.thumbnail else None
             },
             "image": {
-                "dependent": ("Timestamp", "Color", "Submit"),
+                "dependent": ("Timestamp", "Color", "Submit", "Submit as new"),
                 "propertyValue": embed.image.url if embed.image else None
             },
             "author": {
-                "dependent": ("Timestamp", "Color", "Submit"),
+                "dependent": ("Timestamp", "Color", "Submit", "Submit as new"),
                 "propertyValue": embed.author.name if embed.author else None
             },
             "footer": {
-                "dependent": ("Timestamp", "Color", "Submit"),
+                "dependent": ("Timestamp", "Color", "Submit", "Submit as new"),
                 "propertyValue": embed.footer.text if embed.footer else None
             },
         }
@@ -332,6 +333,33 @@ class BuilderButton(discord.ui.Button):
                 )
                 return
 
+            case "submit_as_new":
+                if not hasattr(self.view, "targetChannel"):
+                    log.exception("EmbedBuilder buttonHandling: targetChannel not set in button.view")
+                    return
+
+                guild = interaction.guild
+                if not guild:
+                    log.exception("EmbedBuilder buttonHandling: guild is None")
+                    return
+
+                targetChannel = guild.get_channel_or_thread(self.view.targetChannel)
+                if not targetChannel:
+                    log.exception("EmbedBuilder buttonHandling: targetChannel is None")
+                    return
+
+                log.info(f"{interaction.user.id} [{interaction.user.display_name}] Built an embed and sent it to '{targetChannel.id}' [{targetChannel.name}]")
+                await targetChannel.send(
+                    embed=interaction.message.embeds[0] if len(interaction.message.embeds) > 0 else None,
+                    file=(await interaction.message.attachments[0].to_file()) if len(interaction.message.attachments) > 0 else None
+                )
+                await interaction.response.edit_message(
+                    content=f"Embed sent to {targetChannel.mention}!",
+                    embed=None,
+                    attachments=[],
+                    view=None
+                )
+                return
 
         if len(modalConfig["customitems"]) == 0:
             modal.add_item(discord.ui.TextInput(label=name.title(), style=modalConfig["style"], placeholder=modalConfig["placeholder"], default=modalConfig["default"], required=False, max_length=modalConfig["maxLength"]))

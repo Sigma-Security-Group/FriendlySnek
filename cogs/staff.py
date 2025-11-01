@@ -364,7 +364,7 @@ class Staff(commands.Cog):
                     # Enum list, and format message
                     [f"{i+1}. {msg['url']}: `{msg['context']}`" for i, msg in enumerate(messageLinksList[::-1])]
                 )
-                embed = discord.Embed(title=f"Moderation logs for: {search_term}", description=f"{messageLinks}"[:4000], color=discord.Color.red())
+                embed = discord.Embed(title=f"Moderation logs for: {search_term}", description=f"{messageLinks}"[:DISCORD_LIMITS["message_embed"]["embed_description"]], color=discord.Color.red())
                 embed.timestamp = datetime.now()
                 await ctx.send(embed=embed)
             else:
@@ -413,7 +413,7 @@ class Staff(commands.Cog):
                 # Enum list, and format message
                 [f"{i+1}. {msg['url']}: `{msg['context']}`" for i, msg in enumerate(messageLinksList[::-1])]
             )
-            embed = discord.Embed(title=f"Moderation logs for: {targetMember.display_name} ({targetMember})", description=f"{messageLinks}"[:4000], color=discord.Color.red())
+            embed = discord.Embed(title=f"Moderation logs for: {targetMember.display_name} ({targetMember})", description=f"{messageLinks}"[:DISCORD_LIMITS["message_embed"]["embed_description"]], color=discord.Color.red())
             embed.timestamp = datetime.now()
             await ctx.send(embed=embed)
         else:
@@ -578,7 +578,7 @@ class Staff(commands.Cog):
 
         alphanumerics = re.compile(r"[\W_]+", re.UNICODE)
         cmdline = ";".join(sorted(["@" + re.sub(alphanumerics, "", mod) for mod in mods], key=str.casefold))  # Casefold = caseinsensitive
-        cmdline = wrap(unidecode(cmdline), 1990)  # Max content len == 2000
+        cmdline = wrap(unidecode(cmdline), DISCORD_LIMITS["message_embed"]["message_chars"]-10)
 
         for index, chunk in enumerate(cmdline):
             if index == 0:

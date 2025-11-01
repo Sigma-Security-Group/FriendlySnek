@@ -871,7 +871,7 @@ class Reminders(commands.GroupCog, name="reminder"):
                 desc += discord.utils.format_dt(datetime.fromtimestamp(float(reminderTime), tz=pytz.utc)) + ":\n"
                 desc += reminderDetails["message"] + "\n\n"
                 reminderCount += 1
-        embed.description = desc[:4096]
+        embed.description = desc[:DISCORD_LIMITS["message_embed"]["embed_description"]]
         embed.set_footer(text=f"{reminderCount} reminder{'s' * (reminderCount > 1)}")
 
         if reminderCount == 0:
@@ -925,7 +925,7 @@ class Reminders(commands.GroupCog, name="reminder"):
             return [
                 discord.app_commands.Choice(name=reminder["name"], value=reminder["value"])
                 for reminder in userReminders if current.lower() in reminder["name"].lower()
-            ][:25]
+            ][:DISCORD_LIMITS["interactions"]["autocomplete_choices"]]
 
     @discord.app_commands.command(name="delete")
     @discord.app_commands.autocomplete(reminder=reminderDeleteAutocomplete)

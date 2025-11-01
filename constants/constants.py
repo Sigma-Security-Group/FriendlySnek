@@ -208,3 +208,38 @@ CMD_LIMIT_UPLOADMISSION = (UNIT_STAFF, SNEK_LORD, SERVER_HAMSTER, MISSION_BUILDE
 CMD_LIMIT_ZEUS = (UNIT_STAFF, SNEK_LORD, CURATOR, ZEUS, ZEUS_IN_TRAINING)
 CMD_LIMIT_INTERVIEW = (UNIT_STAFF, SNEK_LORD, SERVER_HAMSTER, ADVISOR, RECRUITMENT_COORDINATOR, RECRUITMENT_TEAM)
 CMD_LIMIT_CLEANWSINTEREST = (UNIT_STAFF, SNEK_LORD, SME_RW_PILOT, SME_FW_PILOT, SME_JTAC, SME_MEDIC, SME_HEAVY_WEAPONS, SME_MARKSMAN, SME_MECHANISED, SME_ARTILLERY)
+
+
+####################
+# DISCORD LIMITATIONS
+####################
+DISCORD_LIMITS = {
+    "rates": {
+        "bulk_delete": 100,  # messages
+        "bulk_delete_age_days": 14,  # days
+    },
+    "message_embed": {
+        "message_chars": 2000,
+        "embed_title": 256,
+        "embed_description": 4096,
+        "embed_field": 25, # Max number of fields in a single embed
+        "embeds_per_message": 10,
+        "attachment_size_mb": 25,  # 8MB for standard, 25MB for bots, 50-500MB for Nitro
+    },
+    "guild": {
+        "roles_per_guild": 250,
+        "channels_per_guild": 500,
+    },
+    "interactions": {
+        "slash_command_name": 32,
+        "slash_command_option": 25,
+        "action_rows_per_message": 5,
+        "buttons_per_row": 5,
+        "buttons_per_message": 25,
+        "select_menu_option": 25,
+        "select_option_description": 100,
+        "modal_items": 5,
+        "text_input_placeholder": 100,
+        "autocomplete_choices": 25,
+    }
+}

@@ -221,8 +221,8 @@ class ButtonRoles(commands.GroupCog, group_name="button-role"):
         # Chunk all roles into select menus with max 25 options each
         # Max 4 select menus allowed (cope and seethe)
         for i in range(min(math.ceil(len(iterable) / 25), 4)):
-            yield ButtonRolesSelect(msgChannel=msgChannel, buttonRoleMsgId=buttonRoleMsgId, whitelistRoleId=whitelistRoleId, placeholder=placeholder, minValues=1, maxValues=1, customId=f"{customId}_REMOVE{i}", row=i, options=iterable[:25])
-            iterable = iterable[25:]
+            yield ButtonRolesSelect(msgChannel=msgChannel, buttonRoleMsgId=buttonRoleMsgId, whitelistRoleId=whitelistRoleId, placeholder=placeholder, minValues=1, maxValues=1, customId=f"{customId}_REMOVE{i}", row=i, options=iterable[:DISCORD_LIMITS["interactions"]["select_menu_option"]])
+            iterable = iterable[DISCORD_LIMITS["interactions"]["select_menu_option"]:]
 
 
     @staticmethod

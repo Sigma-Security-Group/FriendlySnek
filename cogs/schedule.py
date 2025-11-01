@@ -1145,9 +1145,9 @@ class Schedule(commands.Cog):
 
         # Generate view
         view = ScheduleView(previousMessageView=(eventMsgView.previousMessageView if hasattr(eventMsgView, "previousMessageView") else None))
-        for i in range(ceil(len(options) / 25)):
-            view.add_item(ScheduleSelect(eventMsg=eventMsg, placeholder=placeholder, minValues=1, maxValues=1, customId=f"{customId}_REMOVE{i}", userId=userId, row=i, options=options[:25], eventMsgView=eventMsgView))
-            options = options[25:]
+        for i in range(ceil(len(options) / DISCORD_LIMITS["interactions"]["select_menu_option"])):
+            view.add_item(ScheduleSelect(eventMsg=eventMsg, placeholder=placeholder, minValues=1, maxValues=1, customId=f"{customId}_REMOVE{i}", userId=userId, row=i, options=options[:DISCORD_LIMITS["interactions"]["select_menu_option"]], eventMsgView=eventMsgView))
+            options = options[DISCORD_LIMITS["interactions"]["select_menu_option"]:]
 
         return view
 
@@ -1861,7 +1861,7 @@ class ScheduleButton(discord.ui.Button):
                 if not description:
                     description = "No RSVPs yet!"
 
-                embed = discord.Embed(title=f"RSVP Listing", description=description.strip()[:4096], color=discord.Color.gold())
+                embed = discord.Embed(title=f"RSVP Listing", description=description.strip()[:DISCORD_LIMITS["message_embed"]["embed_description"]], color=discord.Color.gold())
                 await interaction.response.send_message(embed=embed, ephemeral=True, delete_after=60.0)
                 return
 
@@ -1922,7 +1922,7 @@ class ScheduleButton(discord.ui.Button):
                         await interaction.response.send_modal(generateModal(discord.TextStyle.short, placeholder, default, True, 1, 256))
 
                     case "description":
-                        placeholder = "Wazzup beijing" if previewEmbedDict["description"] == SCHEDULE_EVENT_PREVIEW_EMBED["description"] else previewEmbedDict["description"][:100]
+                        placeholder = "Wazzup beijing" if previewEmbedDict["description"] == SCHEDULE_EVENT_PREVIEW_EMBED["description"] else previewEmbedDict["description"][:DISCORD_LIMITS["interactions"]["text_input_placeholder"]]
                         default = None if previewEmbedDict["description"] == SCHEDULE_EVENT_PREVIEW_EMBED["description"] else previewEmbedDict["description"]
                         await interaction.response.send_modal(generateModal(discord.TextStyle.long, placeholder, default, True, 1, 4000))
 
@@ -1958,7 +1958,7 @@ class ScheduleButton(discord.ui.Button):
                         ))
 
                     case "external_url":
-                        placeholder = "https://www.gnu.org" if previewEmbedDict["externalURL"] is None else previewEmbedDict["externalURL"][:100]
+                        placeholder = "https://www.gnu.org" if previewEmbedDict["externalURL"] is None else previewEmbedDict["externalURL"][:DISCORD_LIMITS["interactions"]["text_input_placeholder"]]
                         default = "" if previewEmbedDict["externalURL"] is None else previewEmbedDict["externalURL"]
                         await interaction.response.send_modal(generateModal(discord.TextStyle.short, placeholder, default, False, None, 1024))
 
@@ -1967,7 +1967,7 @@ class ScheduleButton(discord.ui.Button):
                         default = "Co-Zeus\nActual\n2IC\nCMD Medic\nH1 Rifleman 1\nH1 Rifleman 2\nH1 Rifleman 3\nH2 TL\nH2 2IC\nH2 Medic\nH2 Rifleman 1\nH2 Rifleman 2\nH2 Rifleman 3"
                         if previewEmbedDict["reservableRoles"] is not None:
                             resRolesOriginal = "\n".join(previewEmbedDict["reservableRoles"])
-                            placeholder = resRolesOriginal[:100]  # Discord limit
+                            placeholder = resRolesOriginal[:DISCORD_LIMITS["interactions"]["text_input_placeholder"]]
                             default = resRolesOriginal[:512]  # Program limit, avoid overriding embed field value limit
 
                         await interaction.response.send_modal(generateModal(discord.TextStyle.long, placeholder, default, False, 1, 512))
@@ -2245,7 +2245,7 @@ class ScheduleButton(discord.ui.Button):
                         templates: List[Dict] = json.load(f)
                     templates.sort(key=lambda template : template["templateName"])
 
-                    options = [discord.SelectOption(label=template["templateName"], description=template["description"][:100]) for template in templates]
+                    options = [discord.SelectOption(label=template["templateName"], description=template["description"][:DISCORD_LIMITS["interactions"]["select_option_description"]]) for template in templates]
                     setOptionLabel = ""
                     for child in self.view.children:
                         if isinstance(child, discord.ui.Button) and child.label is not None and child.label.startswith("Select Template"):
@@ -2984,7 +2984,7 @@ class ScheduleModal(discord.ui.Modal):
                     previewEmbedDict["reservableRoles"] = None if value == "" else {role.strip(): None for role in value.split("\n") if role.strip() != ""}
                     if previewEmbedDict["reservableRoles"] and len(previewEmbedDict["reservableRoles"]) > 20:
                         previewEmbedDict["reservableRoles"] = None
-                        await interaction.response.send_message(embed=discord.Embed(title="❌ Too many roles", description=f"Due to Discord character limitation, we've set the cap to 20 roles.\nLink your order, e.g. OPORD, under URL if you require more flexibility.\n\nYour roles:\n{value}"[:4096], color=discord.Color.red()), ephemeral=True, delete_after=10.0)
+                        await interaction.response.send_message(embed=discord.Embed(title="❌ Too many roles", description=f"Due to Discord character limitation, we've set the cap to 20 roles.\nLink your order, e.g. OPORD, under URL if you require more flexibility.\n\nYour roles:\n{value}"[:DISCORD_LIMITS["message_embed"]["embed_description"]], color=discord.Color.red()), ephemeral=True, delete_after=10.0)
                         return
 
                     # Check if too few slots
@@ -3085,7 +3085,7 @@ class ScheduleModal(discord.ui.Modal):
         elif customId == "modal_reservableRoles":
             reservableRoles = value.split("\n")
             if len(reservableRoles) > 20:
-                await interaction.response.send_message(embed=discord.Embed(title="❌ Too many roles", description=f"Due to Discord character limitation, we've set the cap to 20 roles.\nLink your order, e.g. OPORD, under URL if you require more flexibility.\n\nYour roles:\n{value}"[:4096], color=discord.Color.red()), ephemeral=True, delete_after=10.0)
+                await interaction.response.send_message(embed=discord.Embed(title="❌ Too many roles", description=f"Due to Discord character limitation, we've set the cap to 20 roles.\nLink your order, e.g. OPORD, under URL if you require more flexibility.\n\nYour roles:\n{value}"[:DISCORD_LIMITS["message_embed"]["embed_description"]], color=discord.Color.red()), ephemeral=True, delete_after=10.0)
                 return
 
             # No res roles or all roles are unoccupied

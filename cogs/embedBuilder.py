@@ -99,6 +99,7 @@ class EmbedBuilder(commands.Cog):
             BuilderButton(self, authorId=interaction.user.id, row=1, label="Author", style=discord.ButtonStyle.secondary, custom_id="builder_button_author"),
             BuilderButton(self, authorId=interaction.user.id, row=1, label="Footer", style=discord.ButtonStyle.secondary, custom_id="builder_button_footer"),
 
+            BuilderButton(self, authorId=interaction.user.id, row=2, label="Change Channel", style=discord.ButtonStyle.success, custom_id="builder_button_change_channel"),
             BuilderButton(self, authorId=interaction.user.id, row=2, label="Cancel", style=discord.ButtonStyle.danger, custom_id="builder_button_cancel"),
             BuilderButton(self, authorId=interaction.user.id, row=2, label="Submit", style=discord.ButtonStyle.primary, custom_id="builder_button_submit", disabled=(not attachment)),
             BuilderButton(self, authorId=interaction.user.id, row=2, label="Submit as new", style=discord.ButtonStyle.primary, custom_id="builder_button_submit_as_new", disabled=(not attachment)),
@@ -275,6 +276,28 @@ class BuilderButton(discord.ui.Button):
                     discord.ui.TextInput(label="Footer Text", default=embed.footer.text if embed and embed.footer and embed.footer.text else None, required=False, max_length=2048),
                     discord.ui.TextInput(label="Footer Icon URL", default=embed.footer.icon_url if embed and embed.footer and embed.footer.icon_url else None, required=False)
                 ]
+            case "change_channel":
+                select = discord.ui.ChannelSelect(
+                    placeholder="Select the new target channel"
+                )
+
+                async def select_callback(inner_interaction: discord.Interaction):
+                    selected_channel = select.values[0]
+                    self.view.targetChannel = selected_channel.id
+                    await inner_interaction.response.edit_message(content=f"Target channel changed to {selected_channel.mention}.", view=None)
+                    view.stop()
+
+                select.callback = select_callback
+                view = discord.ui.View(timeout=180)
+                view.add_item(select)
+
+                await interaction.response.send_message("Select a new channel:", view=view, ephemeral=True)
+                await view.wait()
+                try:
+                    await interaction.delete_original_response()
+                except discord.NotFound:
+                    pass # Message was already deleted or expired
+                return
 
             case "cancel":
                 await interaction.response.edit_message(
@@ -303,7 +326,7 @@ class BuilderButton(discord.ui.Button):
                     try:
                         targetMessage = await targetChannel.fetch_message(self.view.messageId)
                     except Exception:
-                        embed = discord.Embed(title="❌ Invalid messageid", description=f"Message with id `{self.view.messageId}` could not be found in channel `{targetChannel.mention}`!", color=discord.Color.red())
+                        embed = discord.Embed(title="❌ Invalid messageid", description=f"Message with id `{self.view.messageId}` could not be found in channel `{targetChannel.mention}`!\n\n# If you are trying to reference a message from another channel, please click Submit as new instead.", color=discord.Color.red())
                         await interaction.response.send_message(embed=embed, ephemeral=True, delete_after=15.0)
                         return
 

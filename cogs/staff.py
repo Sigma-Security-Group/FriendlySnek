@@ -364,7 +364,7 @@ class Staff(commands.Cog):
                     # Enum list, and format message
                     [f"{i+1}. {msg['url']}: `{msg['context']}`" for i, msg in enumerate(messageLinksList[::-1])]
                 )
-                embed = discord.Embed(title=f"Moderation logs for: {search_term}", description=f"{messageLinks}"[:DISCORD_LIMITS["message_embed"]["embed_description"]], color=discord.Color.red())
+                embed = discord.Embed(title=f"Moderation logs for: {search_term}", description=f"{messageLinks}"[:DISCORD_LIMITS["message_embed"]["embed_description"]], color=discord.Color.green())
                 embed.timestamp = datetime.now()
                 await ctx.send(embed=embed)
             else:
@@ -413,7 +413,7 @@ class Staff(commands.Cog):
                 # Enum list, and format message
                 [f"{i+1}. {msg['url']}: `{msg['context']}`" for i, msg in enumerate(messageLinksList[::-1])]
             )
-            embed = discord.Embed(title=f"Moderation logs for: {targetMember.display_name} ({targetMember})", description=f"{messageLinks}"[:DISCORD_LIMITS["message_embed"]["embed_description"]], color=discord.Color.red())
+            embed = discord.Embed(title=f"Moderation logs for: {targetMember.display_name} ({targetMember})", description=f"{messageLinks}"[:DISCORD_LIMITS["message_embed"]["embed_description"]], color=discord.Color.green())
             embed.timestamp = datetime.now()
             await ctx.send(embed=embed)
         else:

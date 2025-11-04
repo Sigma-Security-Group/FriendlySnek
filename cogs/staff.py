@@ -475,29 +475,29 @@ class Staff(commands.Cog):
             results += "\n".join(genEnumList(resultsRawString))
 
         # Check Discord limits and make multiple embeds if needed, if next 8 characters are not https:// go back to the next https:// and split there
-        if len(results) > DISCORD_LIMITS["message_embed"]["embed_description"]:
-            result_parts = []
-            current_part = ""
-            for line in results.split('\n'):
-                if len(current_part) + len(line) + 1 > DISCORD_LIMITS["message_embed"]["embed_description"]:
-                    result_parts.append(current_part)
-                    current_part = line
-                else:
-                    if current_part:
-                        current_part += "\n"
-                    current_part += line
-            if current_part:
-                result_parts.append(current_part)
-
-            for i, resultPart in enumerate(result_parts):
-                embed = discord.Embed(title=f"Moderation Log Search (Part {i+1}/{len(result_parts)})", description=resultPart, color=discord.Color.green())
-                embed.timestamp = datetime.now()
-                await ctx.send(embed=embed)
+        if len(results) <= DISCORD_LIMITS["message_embed"]["embed_description"]:
+            embed = discord.Embed(title=f"Moderation Log Search", description=results, color=discord.Color.green())
+            embed.timestamp = datetime.now()
+            await ctx.send(embed=embed)
             return
+        resultParts = []
+        currentPart = ""
+        for line in results.split('\n'):
+            if len(currentPart) + len(line) + 1 > DISCORD_LIMITS["message_embed"]["embed_description"]:
+                resultParts.append(currentPart)
+                currentPart = line
+            else:
+                if currentPart:
+                    currentPart += "\n"
+                currentPart += line
+        if currentPart:
+            resultParts.append(currentPart)
 
-        embed = discord.Embed(title=f"Moderation Log Search", description=results, color=discord.Color.green())
-        embed.timestamp = datetime.now()
-        await ctx.send(embed=embed)
+        for i, resultPart in enumerate(resultParts, 1):
+            embed = discord.Embed(title=f"Moderation Log Search (Part {i}/{len(resultParts)})", description=resultPart, color=discord.Color.green())
+            embed.timestamp = datetime.now()
+            await ctx.send(embed=embed)
+        return
 
     @commands.command(name="disablerolereservation")
     @commands.has_any_role(*CMD_LIMIT_STAFF)

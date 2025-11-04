@@ -474,7 +474,7 @@ class Staff(commands.Cog):
             results += f"**Raw string `{search_term}`**\n"
             results += "\n".join(genEnumList(resultsRawString))
 
-        # Check Discord limits and make multiple embeds if needed, if next 8 characters are not https:// go back to the next https:// and split there
+        # Check Discord limits and make multiple embeds if needed
         resultParts = []
         currentPart = ""
         resultList = results.split("\n") if len(results) > DISCORD_LIMITS["message_embed"]["embed_description"] else [results]

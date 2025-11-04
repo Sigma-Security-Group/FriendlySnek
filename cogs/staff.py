@@ -474,9 +474,30 @@ class Staff(commands.Cog):
             results += f"**Raw string `{search_term}`**\n"
             results += "\n".join(genEnumList(resultsRawString))
 
-        embed = discord.Embed(title=f"Moderation Log Search", description=results[:DISCORD_LIMITS["message_embed"]["embed_description"]], color=discord.Color.green())
-        embed.timestamp = datetime.now()
-        await ctx.send(embed=embed)
+        # Check Discord limits and make multiple embeds if needed
+        resultParts = []
+        currentPart = ""
+        resultList = results.split("\n") if len(results) > DISCORD_LIMITS["message_embed"]["embed_description"] else [results]
+        for line in resultList:
+            if len(currentPart) + len(line) + 1 > DISCORD_LIMITS["message_embed"]["embed_description"]:
+                resultParts.append(currentPart)
+                currentPart = line
+            else:
+                if currentPart:
+                    currentPart += "\n"
+                currentPart += line
+        if currentPart:
+            resultParts.append(currentPart)
+
+        for i, resultPart in enumerate(resultParts, 1):
+            embed = discord.Embed(
+                title=f"Moderation Log Search " +  (f"(Part {i}/{len(resultParts)})" if len(resultParts) > 1 else ""),
+                description=resultPart,
+                color=discord.Color.green()
+            )
+            embed.timestamp = datetime.now()
+            await ctx.send(embed=embed)
+        return
 
     @commands.command(name="disablerolereservation")
     @commands.has_any_role(*CMD_LIMIT_STAFF)

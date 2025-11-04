@@ -474,7 +474,28 @@ class Staff(commands.Cog):
             results += f"**Raw string `{search_term}`**\n"
             results += "\n".join(genEnumList(resultsRawString))
 
-        embed = discord.Embed(title=f"Moderation Log Search", description=results[:DISCORD_LIMITS["message_embed"]["embed_description"]], color=discord.Color.green())
+        # Check Discord limits and make multiple embeds if needed, if next 8 characters are not https:// go back to the next https:// and split there
+        if len(results) > DISCORD_LIMITS["message_embed"]["embed_description"]:
+            result_parts = []
+            current_part = ""
+            for line in results.split('\n'):
+                if len(current_part) + len(line) + 1 > DISCORD_LIMITS["message_embed"]["embed_description"]:
+                    result_parts.append(current_part)
+                    current_part = line
+                else:
+                    if current_part:
+                        current_part += "\n"
+                    current_part += line
+            if current_part:
+                result_parts.append(current_part)
+
+            for i, resultPart in enumerate(result_parts):
+                embed = discord.Embed(title=f"Moderation Log Search (Part {i+1}/{len(result_parts)})", description=resultPart, color=discord.Color.green())
+                embed.timestamp = datetime.now()
+                await ctx.send(embed=embed)
+            return
+
+        embed = discord.Embed(title=f"Moderation Log Search", description=results, color=discord.Color.green())
         embed.timestamp = datetime.now()
         await ctx.send(embed=embed)
 

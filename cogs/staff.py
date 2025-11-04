@@ -477,7 +477,8 @@ class Staff(commands.Cog):
         # Check Discord limits and make multiple embeds if needed, if next 8 characters are not https:// go back to the next https:// and split there
         resultParts = []
         currentPart = ""
-        for line in results.split("\n") if len(results) > DISCORD_LIMITS["message_embed"]["embed_description"] else [results]:
+        resultList = results.split("\n") if len(results) > DISCORD_LIMITS["message_embed"]["embed_description"] else [results]
+        for line in resultList:
             if len(currentPart) + len(line) + 1 > DISCORD_LIMITS["message_embed"]["embed_description"]:
                 resultParts.append(currentPart)
                 currentPart = line
@@ -489,7 +490,11 @@ class Staff(commands.Cog):
             resultParts.append(currentPart)
 
         for i, resultPart in enumerate(resultParts, 1):
-            embed = discord.Embed(title=f"Moderation Log Search (Part {i}/{len(resultParts)})" if len(resultParts) > 1 else "Moderation Log Search", description=resultPart, color=discord.Color.green())
+            embed = discord.Embed(
+                title=f"Moderation Log Search " +  (f"(Part {i}/{len(resultParts)})" if len(resultParts) > 1 else ""),
+                description=resultPart,
+                color=discord.Color.green()
+                )
             embed.timestamp = datetime.now()
             await ctx.send(embed=embed)
         return

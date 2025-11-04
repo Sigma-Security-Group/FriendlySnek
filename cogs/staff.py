@@ -494,7 +494,7 @@ class Staff(commands.Cog):
                 title=f"Moderation Log Search " +  (f"(Part {i}/{len(resultParts)})" if len(resultParts) > 1 else ""),
                 description=resultPart,
                 color=discord.Color.green()
-                )
+            )
             embed.timestamp = datetime.now()
             await ctx.send(embed=embed)
         return

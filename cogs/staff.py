@@ -457,14 +457,21 @@ class Staff(commands.Cog):
 
         # Nothing found
         if not resultsMember and not resultsRawString:
-            await ctx.send(f"No moderation logs related to search term: `{search_term}`")
+            embed = discord.Embed(
+                title="❌ No moderation logs found",
+                description=f"No moderation logs related to search term: `{search_term}`",
+                color=discord.Color.red()
+            )
+            await ctx.send(embed=embed)
             return
-
-        # Combine results, member results first
-        genEnumList = lambda msgLinksList : [f"{i+1}. {msg['url']}: `{msg['context']}`" for i, msg in enumerate(msgLinksList[::-1])]
+        # Generate result messages
+        genEnumList = lambda msgLinksList: [
+            f"{i+1}. {msg['url']}: {(_x := '``' + (msg['context']) + '``') if (msg['context'] != 'Subject') else '**Subject**'}"
+            for i, msg in enumerate(msgLinksList[::-1])
+        ]
         results = ""
         if resultsMember:
-            results += f"**Member `{targetMember.display_name}`**\n"
+            results += f"**Member <@{targetMember.id}>**\n"
             results += "\n".join(genEnumList(resultsMember))
 
         if resultsMember and resultsRawString:

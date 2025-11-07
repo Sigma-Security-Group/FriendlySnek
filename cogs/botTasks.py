@@ -81,13 +81,12 @@ class BotTasks(commands.Cog):
                 log.exception("Bottasks on_member_join: roleUnitStaff is None")
                 return
 
-            createTime = pytz.utc.localize(member.created_at)
-            createTimeFormat = createTime.strftime(TIME_FORMAT)
+            createTimeFormat = member.created_at.strftime(TIME_FORMAT)
             log.info(f"BotTasks on_member_join: Suspicious Account detected {member.id} ({member.display_name}). Account Created: {createTimeFormat}")
 
             embed = discord.Embed(
                 title="Suspicious Account Detected",
-                description=f"Account Created: {discord.utils.format_dt(createTime, style='F')} ({discord.utils.format_dt(createTime, style='R')})",
+                description=f"{member.mention} {member.name}\n**Account Created**\n{discord.utils.format_dt(member.created_at, style='F')} ({discord.utils.format_dt(member.created_at, style='R')})",
                 color=discord.Color.red(),
                 timestamp=datetime.now(timezone.utc)
             )

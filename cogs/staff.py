@@ -65,7 +65,7 @@ class Staff(commands.Cog):
         embed.set_author(icon_url=targetMember.display_avatar, name=targetMember)
         embed.set_thumbnail(url=avatar)
         embed.add_field(name="Joined", value="`Unknown`" if targetMember.joined_at is None else discord.utils.format_dt(targetMember.joined_at, style="f"), inline=True)
-        embed.add_field(name="Registered", value=discord.utils.format_dt(targetMember.created_at, style="f"), inline=True)
+        embed.add_field(name="Created", value=discord.utils.format_dt(targetMember.created_at, style="f"), inline=True)
 
         roles = [role.mention for role in targetMember.roles]  # Fetch all member roles
         roles.pop(0)  # Remove @everyone role

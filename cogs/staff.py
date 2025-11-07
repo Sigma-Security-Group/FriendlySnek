@@ -383,12 +383,12 @@ class Staff(commands.Cog):
         """
         preSearch = message.content[:message.content.lower().index(search_term)-2].split("\n")[-1].lstrip("*").strip()
         if preSearch.startswith("Reporter"):
-            return "Reporter"
+            return "`Reporter`"
         if preSearch.startswith("Subject"):
-            return "Subject"
+            return "**`Subject`**"
         if preSearch.startswith("Handler"):
-            return "Handler"
-        return "Mention"
+            return "`Handler`"
+        return "`Mention`"
 
     @commands.command(name="searchmodlogs")
     @commands.has_any_role(*CMD_LIMIT_STAFF)
@@ -466,12 +466,12 @@ class Staff(commands.Cog):
             return
         # Generate result messages
         genEnumList = lambda msgLinksList: [
-            f"{i+1}. {msg['url']}: {(_x := '``' + (msg['context']) + '``') if (msg['context'] != 'Subject') else '**Subject**'}"
+            f"{i+1}. {msg['url']}: {msg['context']}"
             for i, msg in enumerate(msgLinksList[::-1])
         ]
         results = ""
         if resultsMember:
-            results += f"**Member <@{targetMember.id}>**\n"
+            results += f"**Member {targetMember.mention}**\n"
             results += "\n".join(genEnumList(resultsMember))
 
         if resultsMember and resultsRawString:

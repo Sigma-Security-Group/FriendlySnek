@@ -53,7 +53,7 @@ class BotTasks(commands.Cog):
         if guild.id != GUILD_ID:
             return
 
-        #if Member account was created less than 30 days ago, post a message in staff chat
+        #if Member account was created less than 30 days ago, alert unit staff and assign only suspicious account role
         if (datetime.now(timezone.utc) - member.created_at) < timedelta(days=30):
             channelStaffChat = guild.get_channel(STAFF_CHAT)
             createTime: datetime = member.created_at

@@ -94,10 +94,6 @@ class BotTasks(commands.Cog):
             embed.set_thumbnail(url=member.display_avatar)
             await channelStaffChat.send(f"{roleUnitStaff.mention}", embed=embed)
 
-            if not isinstance(channelStaffChat, discord.TextChannel):
-                log.exception("BotTasks on_member_join: channelStaffChat not discord.TextChannel")
-                return
-
             try:
                 await member.remove_roles(member.roles, reason="Suspicious Account")
             except Exception:

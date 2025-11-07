@@ -90,6 +90,8 @@ class BotTasks(commands.Cog):
                 color=discord.Color.red(),
                 timestamp=datetime.now(timezone.utc)
             )
+            embed.set_footer(text=f"Member ID: {member.id}")
+            embed.set_thumbnail(url=member.display_avatar)
             await channelStaffChat.send(f"{roleUnitStaff.mention}", embed=embed)
 
             if not isinstance(channelStaffChat, discord.TextChannel):

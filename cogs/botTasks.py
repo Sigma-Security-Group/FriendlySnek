@@ -53,6 +53,7 @@ class BotTasks(commands.Cog):
         if guild.id != GUILD_ID:
             return
 
+<<<<<<< HEAD
         #if Member account was created less than 30 days ago, post a message in staff chat
         if (datetime.now(timezone.utc) - member.created_at) < timedelta(days=30):
             channelStaffChat = guild.get_channel(STAFF_CHAT)
@@ -94,6 +95,8 @@ class BotTasks(commands.Cog):
             log.warning(f"BotTasks on_member_join: failed to add prospect role to member '{member.id}'")
 
 
+=======
+>>>>>>> 75d646ed49e56d744055c2643d199456649d07d6
         # Log in Audit Logs
         if not secret.DISCORD_LOGGING.get("user_join", False):
             return
@@ -101,12 +104,68 @@ class BotTasks(commands.Cog):
         if not isinstance(channelAuditLogs, discord.TextChannel):
             log.exception("BotTasks on_member_join: channelAuditLogs not discord.TextChannel")
             return
-        memberJoined = discord.utils.format_dt(member.joined_at, style="F") if member.joined_at else "Unknown"
-        embed = discord.Embed(description=f"{member.mention} {member.name}\n**Account Registered**\n{memberJoined}", color=discord.Color.green(), timestamp=datetime.now(timezone.utc))
+        memberJoined = discord.utils.format_dt(member.created_at, style="F") if member.created_at else "Unknown"
+        embed = discord.Embed(description=f"{member.mention} {member.name}\n**Account Created**\n{memberJoined}", color=discord.Color.green(), timestamp=datetime.now(timezone.utc))
         embed.set_author(name="Member Joined", icon_url=member.display_avatar)
         embed.set_footer(text=f"Member ID: {member.id}")
         embed.set_thumbnail(url=member.display_avatar)
         await channelAuditLogs.send(embed=embed)
+
+        # Add to spreadsheet
+        Spreadsheet.memberJoin(member)
+
+        #if Member account was created less than 30 days ago, alert unit staff and assign only suspicious account role
+        if (datetime.now(timezone.utc) - member.created_at) < timedelta(days=30):
+            channelStaffChat = guild.get_channel(STAFF_CHAT)
+            if not isinstance(channelStaffChat, discord.TextChannel):
+                log.exception("BotTasks on_member_join: channelStaffChat not discord.TextChannel")
+                return
+            roleUnitStaff = guild.get_role(UNIT_STAFF)
+            if roleUnitStaff is None:
+                log.exception("Bottasks on_member_join: roleUnitStaff is None")
+                return
+
+            createTimeFormat = member.created_at.strftime(TIME_FORMAT)
+            log.info(f"BotTasks on_member_join: Suspicious Account detected {member.id} ({member.display_name}). Account Created: {createTimeFormat}")
+
+            embed = discord.Embed(
+                title="Suspicious Account Detected",
+                description=f"{member.mention} {member.name}\n**Account Created**\n{discord.utils.format_dt(member.created_at, style='F')} ({discord.utils.format_dt(member.created_at, style='R')})",
+                color=discord.Color.red(),
+                timestamp=datetime.now(timezone.utc)
+            )
+            embed.set_footer(text=f"Member ID: {member.id}")
+            embed.set_thumbnail(url=member.display_avatar)
+            await channelStaffChat.send(f"{roleUnitStaff.mention}", embed=embed)
+
+            try:
+                await member.remove_roles(member.roles, reason="Suspicious Account")
+            except Exception:
+                if (str(member.roles[0]) != "@everyone"):
+                    log.warning(f"BotTasks on_member_join: failed to remove {member.roles} roles from suspicious member '{member.id}' ({member.display_name})")
+
+            roleSuspiciousAccount = guild.get_role(SUSPICIOUS_ACCOUNT)
+            if roleSuspiciousAccount is None:
+                log.exception("Bottasks on_member_join: roleSuspiciousAccount is None")
+                return
+
+            try:
+                await member.add_roles(roleSuspiciousAccount, reason="Suspicious Account")
+                return
+            except Exception:
+                log.warning(f"BotTasks on_member_join: failed to add suspicious role to member '{member.id}' ({member.display_name})")
+
+
+        # Add prospect role
+        roleProspect = guild.get_role(PROSPECT)
+        if not isinstance(roleProspect, discord.Role):
+            log.exception("BotTasks on_member_join: roleProspect is not discord.Role")
+            return
+
+        try:
+            await member.add_roles(roleProspect, reason="Joined guild")
+        except discord.HTTPException:
+            log.warning(f"BotTasks on_member_join: failed to add prospect role to member '{member.id}'")
 
 
         # Send welcome message
@@ -135,8 +194,7 @@ class BotTasks(commands.Cog):
             json.dump(reminders, f, indent=4)
 
 
-        # Add to spreadsheet
-        Spreadsheet.memberJoin(member)
+
 
     @staticmethod
     async def fetchWebsiteText(url: str) -> str:

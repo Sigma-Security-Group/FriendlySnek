@@ -101,6 +101,8 @@ class Spreadsheet(commands.Cog):
 
     @staticmethod
     def memberJoin(member: discord.Member) -> None:
+        if not secret.SPREADSHEET_ACTIVE:
+            return
         worksheet = Spreadsheet.getWorksheet()
 
         Spreadsheet.createOrUpdateUserRow(

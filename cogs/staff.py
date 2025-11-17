@@ -65,7 +65,7 @@ class Staff(commands.Cog):
         embed.set_author(icon_url=targetMember.display_avatar, name=targetMember)
         embed.set_thumbnail(url=avatar)
         embed.add_field(name="Joined", value="`Unknown`" if targetMember.joined_at is None else discord.utils.format_dt(targetMember.joined_at, style="f"), inline=True)
-        embed.add_field(name="Registered", value=discord.utils.format_dt(targetMember.created_at, style="f"), inline=True)
+        embed.add_field(name="Created", value=discord.utils.format_dt(targetMember.created_at, style="f"), inline=True)
 
         roles = [role.mention for role in targetMember.roles]  # Fetch all member roles
         roles.pop(0)  # Remove @everyone role
@@ -383,12 +383,12 @@ class Staff(commands.Cog):
         """
         preSearch = message.content[:message.content.lower().index(search_term)-2].split("\n")[-1].lstrip("*").strip()
         if preSearch.startswith("Reporter"):
-            return "Reporter"
+            return "`Reporter`"
         if preSearch.startswith("Subject"):
-            return "Subject"
+            return "**`Subject`**"
         if preSearch.startswith("Handler"):
-            return "Handler"
-        return "Mention"
+            return "`Handler`"
+        return "`Mention`"
 
     @commands.command(name="searchmodlogs")
     @commands.has_any_role(*CMD_LIMIT_STAFF)
@@ -466,12 +466,20 @@ class Staff(commands.Cog):
             return
         # Generate result messages
         genEnumList = lambda msgLinksList: [
+<<<<<<< HEAD
             f"{i+1}. {msg['url']}: {(_x := '``' + (msg['context']) + '``') if (msg['context'] != 'Subject') else '**Subject**'}"
+=======
+            f"{i+1}. {msg['url']}: {msg['context']}"
+>>>>>>> 75d646ed49e56d744055c2643d199456649d07d6
             for i, msg in enumerate(msgLinksList[::-1])
         ]
         results = ""
         if resultsMember:
+<<<<<<< HEAD
             results += f"**Member <@{targetMember.id}>**\n"
+=======
+            results += f"**Member {targetMember.mention}**\n"
+>>>>>>> 75d646ed49e56d744055c2643d199456649d07d6
             results += "\n".join(genEnumList(resultsMember))
 
         if resultsMember and resultsRawString:

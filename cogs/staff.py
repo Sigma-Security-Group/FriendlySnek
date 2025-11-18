@@ -608,6 +608,7 @@ class Staff(commands.Cog):
     async def banmember(self, interaction: discord.Interaction, user: discord.User, reason: str, delete_message_days: int) -> None:
         """Ban a user from the Discord server."""
         await interaction.response.defer(ephemeral=True, thinking=True)
+        log.info(f"{interaction.user.id} [{interaction.user.display_name}] Attempting to ban {user.id} [{user.display_name}] from the server")
 
         guild = self.bot.get_guild(GUILD_ID)
         if guild is None:
@@ -615,33 +616,35 @@ class Staff(commands.Cog):
             return
 
         # Prevent banning yourself or the bot
-        if user.id == interaction.user.id:
-            embed = discord.Embed(title="❌ Ban failed", description="You cannot ban yourself!", color=discord.Color.red())
+        if user.id in (interaction.user.id, self.bot.user.id):
+            log.warning(f"{interaction.user.id} [{interaction.user.display_name}] Tried to ban {user.id} [{user.display_name}] (self-ban or bot-ban)")
+            embed = discord.Embed(title="❌ Ban failed", description="You cannot ban yourself or the bot!", color=discord.Color.red())
             embed.timestamp = datetime.now()
             await interaction.followup.send(embed=embed, ephemeral=True)
             return
 
-        if user.id == self.bot.user.id:
-            embed = discord.Embed(title="❌ Ban failed", description="I cannot ban myself!", color=discord.Color.red())
-            embed.timestamp = datetime.now()
-            await interaction.followup.send(embed=embed, ephemeral=True)
-            return
-
-        if guild.fetch_ban(user):
+        # Check if user is already banned
+        try:
+            await guild.fetch_ban(user)
             embed = discord.Embed(title="❌ Ban failed", description=f"{user.mention} is already banned!", color=discord.Color.red())
             embed.timestamp = datetime.now()
             await interaction.followup.send(embed=embed, ephemeral=True)
+            log.warning(f"{interaction.user.id} [{interaction.user.display_name}] Tried to ban already banned user {user.id} [{user.display_name}]")
             return
-
-        ban_reason = f"Banned by {interaction.user} via /banmember command. Reason: {reason}"
-
-        # Attempt to ban the user
-        try:
-            await guild.ban(user, reason=ban_reason, delete_message_days=delete_message_days)
+        except discord.NotFound:
+            # Attempt to ban the user
+            ban_reason = f"Banned by {interaction.user} via /banmember command.\nReason: {reason}"
+            try:
+                await guild.ban(user, reason=ban_reason, delete_message_days=delete_message_days)
+            except:
+                error_msg = f"Failed to ban {user.mention}! Insufficient permissions or target has higher role?"
+                log.warning(f"{interaction.user.id} [{interaction.user.display_name}] Failed to ban {user.id} [{user.display_name}] - insufficient permissions")
+                embed = discord.Embed(title="❌ Ban failed", description=error_msg, color=discord.Color.red())
+                embed.timestamp = datetime.now()
+                await interaction.followup.send(embed=embed, ephemeral=True)
         except:
-            error_msg = f"Failed to ban {user.mention}! Insufficient permissions or target has higher role?"
-            log.warning(f"{interaction.user.id} [{interaction.user.display_name}] Failed to ban {user.id} [{user.display_name}] - insufficient permissions")
-            embed = discord.Embed(title="❌ Ban failed", description=error_msg, color=discord.Color.red())
+            log.exception(f"Staff banmember: Failed to fetch ban for user {user.id} [{user.display_name}]")
+            embed = discord.Embed(title="❌ Ban failed", description="An error occurred while checking ban status!", color=discord.Color.red())
             embed.timestamp = datetime.now()
             await interaction.followup.send(embed=embed, ephemeral=True)
             return
@@ -651,6 +654,7 @@ class Staff(commands.Cog):
         embed.set_footer(text=f"ID: {user.id}")
         embed.timestamp = datetime.now()
         await interaction.followup.send(embed=embed, ephemeral=True)
+        await self.bot.get_cog("ModLog").logBanAction(guild, user, interaction.user, reason, ban_reason, delete_message_days)
 
     @discord.app_commands.command(name="unbanmember")
     @discord.app_commands.describe(user_id="Target user ID to be unbanned.")
@@ -659,6 +663,7 @@ class Staff(commands.Cog):
     async def unbanmember(self, interaction: discord.Interaction, user_id: str) -> None:
         """Unban a user from the Discord server."""
         await interaction.response.defer(ephemeral=True, thinking=True)
+        log.info(f"{interaction.user.id} [{interaction.user.display_name}] Attempting to unban user ID {user_id} from the server")
 
         guild = self.bot.get_guild(GUILD_ID)
         if guild is None:

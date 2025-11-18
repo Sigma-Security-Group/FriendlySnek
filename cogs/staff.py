@@ -604,7 +604,7 @@ class Staff(commands.Cog):
         discord.app_commands.Choice(name="7 days", value=7)
     ])
     @discord.app_commands.guilds(GUILD)
-    @discord.app_commands.checks.has_role(UNIT_STAFF)
+    @discord.app_commands.checks.has_any_role(UNIT_STAFF)
     async def banmember(self, interaction: discord.Interaction, user: discord.User, reason: str, delete_message_days: int) -> None:
         """Ban a user from the Discord server."""
         await interaction.response.defer(ephemeral=True, thinking=True)
@@ -627,32 +627,20 @@ class Staff(commands.Cog):
             await interaction.followup.send(embed=embed, ephemeral=True)
             return
 
-        ban_reason = f"Banned by {interaction.user} via /banmember command. Reason: {reason}"
-
-        try:
-            # Check if user is already banned
-            try:
-                await guild.fetch_ban(user)
-                embed = discord.Embed(title="❌ Ban failed", description=f"{user.mention} is already banned!", color=discord.Color.red())
-                embed.timestamp = datetime.now()
-                await interaction.followup.send(embed=embed, ephemeral=True)
-                log.warning(f"{interaction.user.id} [{interaction.user.display_name}] Tried to ban already banned user {user.id} [{user.display_name}]")
-                return
-            except discord.NotFound:
-                # User is not banned, proceed with ban
-                pass
-
-            await guild.ban(user, reason=ban_reason, delete_message_days=delete_message_days)
-        except discord.Forbidden:
-            error_msg = f"Failed to ban {user.mention}! Insufficient permissions or target has higher role?"
-            log.warning(f"{interaction.user.id} [{interaction.user.display_name}] Failed to ban {user.id} [{user.display_name}] - insufficient permissions")
-            embed = discord.Embed(title="❌ Ban failed", description=error_msg, color=discord.Color.red())
+        if guild.fetch_ban(user):
+            embed = discord.Embed(title="❌ Ban failed", description=f"{user.mention} is already banned!", color=discord.Color.red())
             embed.timestamp = datetime.now()
             await interaction.followup.send(embed=embed, ephemeral=True)
             return
-        except discord.HTTPException as e:
-            error_msg = f"Failed to ban {user.mention}! An error occurred: {e}"
-            log.error(f"{interaction.user.id} [{interaction.user.display_name}] Failed to ban {user.id} [{user.display_name}] - HTTP error: {e}")
+
+        ban_reason = f"Banned by {interaction.user} via /banmember command. Reason: {reason}"
+
+        # Attempt to ban the user
+        try:
+            await guild.ban(user, reason=ban_reason, delete_message_days=delete_message_days)
+        except:
+            error_msg = f"Failed to ban {user.mention}! Insufficient permissions or target has higher role?"
+            log.warning(f"{interaction.user.id} [{interaction.user.display_name}] Failed to ban {user.id} [{user.display_name}] - insufficient permissions")
             embed = discord.Embed(title="❌ Ban failed", description=error_msg, color=discord.Color.red())
             embed.timestamp = datetime.now()
             await interaction.followup.send(embed=embed, ephemeral=True)
@@ -667,7 +655,7 @@ class Staff(commands.Cog):
     @discord.app_commands.command(name="unbanmember")
     @discord.app_commands.describe(user_id="Target user ID to be unbanned.")
     @discord.app_commands.guilds(GUILD)
-    @discord.app_commands.checks.has_role(UNIT_STAFF)
+    @discord.app_commands.checks.has_any_role(UNIT_STAFF)
     async def unbanmember(self, interaction: discord.Interaction, user_id: str) -> None:
         """Unban a user from the Discord server."""
         await interaction.response.defer(ephemeral=True, thinking=True)
@@ -701,7 +689,6 @@ class Staff(commands.Cog):
         embed = discord.Embed(title="❌ Unban failed", description=error_msg, color=discord.Color.red())
         embed.timestamp = datetime.now()
         await interaction.followup.send(embed=embed, ephemeral=True)
-
 
     # Recruitment Team command
     @discord.app_commands.command(name="recruitment-interview")
@@ -955,4 +942,6 @@ class StaffModal(discord.ui.Modal):
 async def setup(bot: commands.Bot) -> None:
     Staff.interview.error(Utils.onSlashError)
     Staff.updatemodpack.error(Utils.onSlashError)
+    Staff.banmember.error(Utils.onSlashError)
+    Staff.unbanmember.error(Utils.onSlashError)
     await bot.add_cog(Staff(bot))

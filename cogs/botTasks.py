@@ -53,7 +53,6 @@ class BotTasks(commands.Cog):
         if guild.id != GUILD_ID:
             return
 
-<<<<<<< HEAD
         #if Member account was created less than 30 days ago, post a message in staff chat
         if (datetime.now(timezone.utc) - member.created_at) < timedelta(days=30):
             channelStaffChat = guild.get_channel(STAFF_CHAT)
@@ -95,8 +94,6 @@ class BotTasks(commands.Cog):
             log.warning(f"BotTasks on_member_join: failed to add prospect role to member '{member.id}'")
 
 
-=======
->>>>>>> 75d646ed49e56d744055c2643d199456649d07d6
         # Log in Audit Logs
         if not secret.DISCORD_LOGGING.get("user_join", False):
             return

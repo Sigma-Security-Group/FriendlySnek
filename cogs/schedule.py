@@ -597,6 +597,42 @@ class Schedule(commands.Cog):
 # ===== </AAR> ====
 
 
+# ===== </Commend> =====
+
+    @discord.app_commands.command(name="commend")
+    @discord.app_commands.describe(member="Member to commend.", reason="Reason for the commendation.")
+    @discord.app_commands.guilds(GUILD)
+    @discord.app_commands.checks.has_any_role(MEMBER)
+    async def commend(self, interaction: discord.Interaction, member: discord.Member, *, reason: str | None = None) -> None:
+        """Pick a member to commend. Rason is optional.
+
+        Parameters:
+        interaction (discord.Interaction): The Discord interaction.
+        member (discord.Member): Member to commend.
+        reason (str | None): Reason for the commendation.
+
+        Returns:
+        None.
+        """
+
+        if member.bot or member.id == interaction.user.id:
+            await interaction.response.send_message("You cannot commend bots or yourself.", ephemeral=True)
+            return
+
+        embed = discord.Embed(title = f"{member.display_name} has been commended!", description=f"{interaction.user.mention} has commended {member.mention}.", color=discord.Color.green())
+        if reason:
+            embed.add_field(name="Reason:", value=reason, inline=False)
+        embed.set_footer(text="I think they like you!")
+        embed.timestamp = datetime.now(timezone.utc)
+        channel = interaction.guild.get_channel(COMMENDATIONS)
+
+        await channel.send(embed=embed)
+        await channel.send(f"🎉🎉🎉{member.mention}🎉🎉🎉")
+        await interaction.response.send_message(f"Commendation posted in {channel.mention}.", ephemeral=True)
+
+# ===== </Commend> =====
+
+
 # ===== <Schedule Functions> =====
 
     @staticmethod
@@ -3242,4 +3278,5 @@ async def setup(bot: commands.Bot) -> None:
     Schedule.refreshSchedule.error(Utils.onSlashError)
     Schedule.aar.error(Utils.onSlashError)
     Schedule.scheduleOperation.error(Utils.onSlashError)
+    Schedule.commend.error(Utils.onSlashError)
     await bot.add_cog(Schedule(bot))

@@ -6,6 +6,7 @@ from copy import deepcopy
 from datetime import datetime, timedelta, timezone
 from dateutil.parser import parse as datetimeParse  # type: ignore
 from typing import *
+from random import randint
 
 from discord.ext import commands, tasks  # type: ignore
 
@@ -614,21 +615,58 @@ class Schedule(commands.Cog):
         Returns:
         None.
         """
+        await interaction.response.defer(ephemeral=True, thinking=True)
 
         if member.bot or member.id == interaction.user.id:
-            await interaction.response.send_message("You cannot commend bots or yourself.", ephemeral=True)
+            await interaction.followup.send("You cannot commend bots or yourself.", ephemeral=True)
             return
+
+        # Commendation Bonus
+        walletsPath = "data/wallets.json"
+        try:
+            with open(walletsPath) as f:
+                wallets = json.load(f)
+        except Exception:
+            wallets = []
+
+        def get_wallet_entry(user_id: int) -> Dict[str, int]:
+            entry = next((e for e in wallets if e.get("User") == user_id), None)
+            if entry is None:
+                entry = {"User": user_id, "Money": 0, "Times Commended": 0, "Sent Commendations": 0, "Money Spent": 0}
+                wallets.append(entry)
+            return entry
+
+        targetEntry = get_wallet_entry(member.id)
+        senderEntry = get_wallet_entry(interaction.user.id)
+
+        # Update base stats
+        targetEntry["Times Commended"] = int(targetEntry.get("Times Commended", 0)) + 1
+        senderEntry["Sent Commendations"] = int(senderEntry.get("Sent Commendations", 0)) + 1
+        bonusAmount = [randint(50, 500), False]
+
+        if randint(1, 100) <= 10:
+            bonusAmount[1] = True
+            targetEntry["Money"] = int(targetEntry.get("Money", 0)) + bonusAmount[0]
+            await interaction.followup.send(f"🎉 Bonus Commendation! {member.mention} received {bonusAmount[0]} SnekCoins.", ephemeral=True)
+        # Persist changes
+        try:
+            with open(walletsPath, "w") as f:
+                json.dump(wallets, f, indent=4)
+        except Exception:
+            log.warning("Failed to persist wallet changes.")
 
         embed = discord.Embed(title = f"{member.display_name} has been commended!", description=f"{interaction.user.mention} has commended {member.mention}.", color=discord.Color.green())
         if reason:
             embed.add_field(name="Reason:", value=reason, inline=False)
+        if bonusAmount[1]:
+            embed.add_field(name="Bonus:", value=f"Received {bonusAmount[0]} SnekCoins!", inline=False)
         embed.set_footer(text="I think they like you!")
         embed.timestamp = datetime.now(timezone.utc)
         channel = interaction.guild.get_channel(COMMENDATIONS)
 
         await channel.send(embed=embed)
         await channel.send(f"🎉🎉🎉{member.mention}🎉🎉🎉")
-        await interaction.response.send_message(f"Commendation posted in {channel.mention}.", ephemeral=True)
+        await interaction.followup.send(f"Commendation posted in {channel.mention}.", ephemeral=True)
 
 # ===== </Commend> =====
 

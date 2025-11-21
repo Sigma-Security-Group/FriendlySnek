@@ -22,6 +22,7 @@ REMINDERS_FILE = "data/reminders.json"
 REPEATED_MSG_DATE_LOG_FILE = "data/repeatedMsgDateLog.json"
 GENERIC_DATA_FILE = "data/genericData.json"
 WALLETS_FILE = "data/wallets.json"
+CANDIDATE_TRACKING_FILE = "data/candidateTracking.json"
 
 # Staff
 ROLE_RESERVATION_BLACKLIST_FILE = "data/roleReservationBlacklist.json"

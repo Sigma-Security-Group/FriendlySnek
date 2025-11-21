@@ -534,6 +534,64 @@ class Schedule(commands.Cog):
 # ===== </Tasks> =====
 
 
+# ===== </Track-a-Candidate> =====
+    @discord.app_commands.command(name="trackacandidate")
+    @discord.app_commands.guilds(GUILD)
+    @discord.app_commands.checks.has_any_role(*CMD_LIMIT_ZEUS)
+    @discord.app_commands.describe(member="Member to track")
+    async def trackACandidate(self, interaction: discord.Interaction, member: discord.Member) -> None:
+        """Track a candidate's amount of operations attended.
+
+        Parameters:
+        interaction (discord.Interaction): The Discord interaction.
+        member (discord.Member): Member to track.
+
+        Returns:
+        None.
+        """
+        await interaction.response.defer(ephemeral=True, thinking=True)
+        log.info(f"{interaction.user.id} [{interaction.user.display_name}] is tracking candidate {member.id} [{member.display_name}]")
+
+        try:
+            with open(CANDIDATE_TRACKING_FILE) as f:
+                candidateTracking = json.load(f)
+        except Exception:
+            candidateTracking = {}
+
+        channel = interaction.guild.get_channel(COMMENDATIONS)
+        key = str(member.id)
+        roleUnitStaff = interaction.guild.get_role(UNIT_STAFF)
+        if candidateTracking.get(key) is None:
+            candidateTracking[key] = {
+                "name": member.display_name,
+                "user": member.id,
+                "operationsAttended": 0
+            }
+
+        candidateTracking[key]["operationsAttended"] += 1
+        if candidateTracking[key]["operationsAttended"] < 3:
+            embed = discord.Embed(title="Track-a-Candidate", description=f"{member.mention} has attended {candidateTracking[key]['operationsAttended']} operations.", color=discord.Color.dark_blue())
+            await interaction.followup.send("Tracking submitted!", ephemeral=True)
+            await channel.send(embed=embed)
+        else:
+            embed = discord.Embed(
+                title="🎉 Candidate Graduated! 🎉",
+                description=f"{member.mention} has attended 3 operations and has now graduated from Candidate! Congratulations!\n",
+                color=discord.Color.purple()
+                )
+
+            await interaction.followup.send("Candidate has graduated!", ephemeral=True)
+            await channel.send(embed=embed)
+            await channel.send(f"{roleUnitStaff.mention} GET SOME TAGS ON THEM ASAP")
+            del candidateTracking[key]
+
+
+        with open(CANDIDATE_TRACKING_FILE, "w") as f:
+              json.dump(candidateTracking, f, indent=4)
+
+# ===== </Track-a-Candidate> =====
+
+
 # ===== <Refresh Schedule> =====
 
     @discord.app_commands.command(name="refreshschedule")

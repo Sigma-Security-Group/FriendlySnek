@@ -604,7 +604,7 @@ class Staff(commands.Cog):
         discord.app_commands.Choice(name="7 days", value=7)
     ])
     @discord.app_commands.guilds(GUILD)
-    @discord.app_commands.checks.has_any_role(UNIT_STAFF)
+    @discord.app_commands.checks.has_any_role(*CMD_LIMIT_STAFF)
     async def banmember(self, interaction: discord.Interaction, user: discord.User, reason: str, delete_message_days: int) -> None:
         """Ban a user from the Discord server."""
         await interaction.response.defer(ephemeral=True, thinking=True)
@@ -642,6 +642,7 @@ class Staff(commands.Cog):
                 embed = discord.Embed(title="❌ Ban failed", description=error_msg, color=discord.Color.red())
                 embed.timestamp = datetime.now()
                 await interaction.followup.send(embed=embed, ephemeral=True)
+                return
         except:
             log.exception(f"Staff banmember: Failed to fetch ban for user {user.id} [{user.display_name}]")
             embed = discord.Embed(title="❌ Ban failed", description="An error occurred while checking ban status!", color=discord.Color.red())
@@ -659,7 +660,7 @@ class Staff(commands.Cog):
     @discord.app_commands.command(name="unbanmember")
     @discord.app_commands.describe(user_id="Target user ID to be unbanned.")
     @discord.app_commands.guilds(GUILD)
-    @discord.app_commands.checks.has_any_role(UNIT_STAFF)
+    @discord.app_commands.checks.has_any_role(*CMD_LIMIT_STAFF)
     async def unbanmember(self, interaction: discord.Interaction, user_id: str) -> None:
         """Unban a user from the Discord server."""
         await interaction.response.defer(ephemeral=True, thinking=True)

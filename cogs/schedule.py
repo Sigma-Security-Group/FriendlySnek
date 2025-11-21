@@ -6,7 +6,7 @@ from copy import deepcopy
 from datetime import datetime, timedelta, timezone
 from dateutil.parser import parse as datetimeParse  # type: ignore
 from typing import *
-from random import randint
+from random import random, randint
 
 from discord.ext import commands, tasks  # type: ignore
 
@@ -641,12 +641,9 @@ class Schedule(commands.Cog):
         # Update base stats
         targetEntry["timesCommended"] = int(targetEntry.get("timesCommended", 0)) + 1
         senderEntry["sentCommendations"] = int(senderEntry.get("sentCommendations", 0)) + 1
-        bonusAmount = [randint(50, 500), False]
+        bonusAmount = 0
 
-        if randint(1, 100) <= 10:
-            bonusAmount[1] = True
-            targetEntry["money"] = int(targetEntry.get("money", 0)) + bonusAmount[0]
-            await interaction.followup.send(f"🎉 Bonus Commendation! {member.mention} received {bonusAmount[0]} SnekCoins.", ephemeral=True)
+
         # Persist changes
         try:
             with open(WALLETS_FILE, "w") as f:
@@ -657,15 +654,20 @@ class Schedule(commands.Cog):
         embed = discord.Embed(title = f"{member.display_name} has been commended!", description=f"{interaction.user.mention} has commended {member.mention}.", color=discord.Color.green())
         if reason:
             embed.add_field(name="Reason:", value=reason, inline=False)
-        if bonusAmount[1]:
-            embed.add_field(name="Bonus:", value=f"Received {bonusAmount[0]} SnekCoins!", inline=False)
+            if random() < 0.50:
+                bonusAmount = randint(100, 500)
+        elif random() < 0.25:
+            bonusAmount = randint(50, 100)
+        if bonusAmount > 0:
+            embed.add_field(name="Bonus:", value=f"Received {bonusAmount} SnekCoins!", inline=False)
+            targetEntry["money"] = int(targetEntry.get("money", 0)) + bonusAmount
         embed.set_footer(text="I think they like you!")
         embed.timestamp = datetime.now(timezone.utc)
         channel = interaction.guild.get_channel(COMMENDATIONS)
+        msgCtx = f"You have commended {member.display_name}.{'' if bonusAmount == 0 else f'\n🎉🎉🎉Bonus Commendation! {member.mention} received {bonusAmount} SnekCoins.🎉🎉🎉'}\nThe commendation has been posted in {channel.mention}"
 
-        await channel.send(embed=embed)
-        await channel.send(f"🎉🎉🎉{member.mention}🎉🎉🎉")
-        await interaction.followup.send(f"Commendation posted in {channel.mention}.", ephemeral=True)
+        await channel.send(embed=embed, content=f"🎉🎉🎉{member.mention}🎉🎉🎉")
+        await interaction.followup.send(msgCtx, ephemeral=True)
 
 # ===== </Commend> =====
 

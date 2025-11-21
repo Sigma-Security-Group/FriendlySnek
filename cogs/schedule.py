@@ -622,9 +622,8 @@ class Schedule(commands.Cog):
             return
 
         # Commendation Bonus
-        walletsPath = "data/wallets.json"
         try:
-            with open(walletsPath) as f:
+            with open(WALLETS_FILE) as f:
                 wallets = json.load(f)
         except Exception:
             wallets = []
@@ -650,7 +649,7 @@ class Schedule(commands.Cog):
             await interaction.followup.send(f"🎉 Bonus Commendation! {member.mention} received {bonusAmount[0]} SnekCoins.", ephemeral=True)
         # Persist changes
         try:
-            with open(walletsPath, "w") as f:
+            with open(WALLETS_FILE, "w") as f:
                 json.dump(wallets, f, indent=4)
         except Exception:
             log.warning("Failed to persist wallet changes.")

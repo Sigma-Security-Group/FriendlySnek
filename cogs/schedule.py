@@ -601,11 +601,11 @@ class Schedule(commands.Cog):
 # ===== </Commend> =====
 
     @discord.app_commands.command(name="commend")
-    @discord.app_commands.describe(member="Member to commend.", reason="Reason for the commendation.")
+    @discord.app_commands.describe(member="Member to commend", reason="Reason for the commendation (optional)")
     @discord.app_commands.guilds(GUILD)
     @discord.app_commands.checks.has_any_role(MEMBER)
     async def commend(self, interaction: discord.Interaction, member: discord.Member, *, reason: str | None = None) -> None:
-        """Pick a member to commend. Rason is optional.
+        """Pick a member to commend. Reason is optional.
 
         Parameters:
         interaction (discord.Interaction): The Discord interaction.
@@ -630,9 +630,9 @@ class Schedule(commands.Cog):
             wallets = []
 
         def get_wallet_entry(user_id: int) -> Dict[str, int]:
-            entry = next((e for e in wallets if e.get("User") == user_id), None)
+            entry = next((e for e in wallets if e.get("user") == user_id), None)
             if entry is None:
-                entry = {"User": user_id, "Money": 0, "Times Commended": 0, "Sent Commendations": 0, "Money Spent": 0}
+                entry = {"user": user_id, "money": 0, "timesCommended": 0, "sentCommendations": 0, "moneySpent": 0}
                 wallets.append(entry)
             return entry
 
@@ -640,13 +640,13 @@ class Schedule(commands.Cog):
         senderEntry = get_wallet_entry(interaction.user.id)
 
         # Update base stats
-        targetEntry["Times Commended"] = int(targetEntry.get("Times Commended", 0)) + 1
-        senderEntry["Sent Commendations"] = int(senderEntry.get("Sent Commendations", 0)) + 1
+        targetEntry["timesCommended"] = int(targetEntry.get("timesCommended", 0)) + 1
+        senderEntry["sentCommendations"] = int(senderEntry.get("sentCommendations", 0)) + 1
         bonusAmount = [randint(50, 500), False]
 
         if randint(1, 100) <= 10:
             bonusAmount[1] = True
-            targetEntry["Money"] = int(targetEntry.get("Money", 0)) + bonusAmount[0]
+            targetEntry["money"] = int(targetEntry.get("money", 0)) + bonusAmount[0]
             await interaction.followup.send(f"🎉 Bonus Commendation! {member.mention} received {bonusAmount[0]} SnekCoins.", ephemeral=True)
         # Persist changes
         try:

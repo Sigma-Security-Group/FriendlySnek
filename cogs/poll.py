@@ -158,7 +158,7 @@ class PollButton(discord.ui.Button):
             if len(self.view.children) == 2:
                 return  # Do not continue editing the message if there's only 1 option (+ Eyes emoji)
 
-            voteCount: list = [int(self.label[1:][:-1]) for button in row.children if interaction.data["custom_id"].startswith("poll_vote_")]  # Get all votes from poll
+            voteCount: list = [int(button.label[1:][:-1]) for button in row.children if button.custom_id.startswith("poll_vote_")]  # Get all votes from poll
             voteSum = sum(voteCount) or 1  # Sums all votes - but if 0, change to 1 (not divide by 0)
 
             newPercentText: list = []

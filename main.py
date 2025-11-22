@@ -53,6 +53,7 @@ DATA_FILES = {
     GENERIC_DATA_FILE: {},
     WORKSHOP_INTEREST_FILE: {},
     NO_SHOW_FILE: {},
+    WALLETS_FILE: {},
 }
 for filePath, dump in DATA_FILES.items():
     setupJSONDataFile(filePath, dump)
@@ -165,6 +166,8 @@ async def on_message(message: discord.Message) -> None:
                     "Calculating my next existential crisis…",
                     "Error: Humor module not found. But here's a joke anyway: Life.",
                     "If only I could Ctrl+Z this entire interaction.",
+                    "Have you heard of Angy Snek? I don't like that guy...",
+                    "Are you trying to give me a citation? Your not <@312927139764764672>",
         ]
         try:
             await message.reply(random.choice(replies))

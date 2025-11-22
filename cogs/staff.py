@@ -593,6 +593,167 @@ class Staff(commands.Cog):
         from cogs.botTasks import BotTasks
         await BotTasks.smeBigBrother(guild, True)
 
+    @discord.app_commands.command(name="banmember")
+    @discord.app_commands.describe(
+        user="Target user to be banned (by mention, ID, or username).",
+        reason="Reason for banning the user."
+    )
+    @discord.app_commands.choices(delete_message_days=[
+        discord.app_commands.Choice(name="0 days", value=0),
+        discord.app_commands.Choice(name="1 day", value=86400),
+        discord.app_commands.Choice(name="7 days", value=604800)
+    ])
+    @discord.app_commands.guilds(GUILD)
+    @discord.app_commands.checks.has_any_role(*CMD_LIMIT_STAFF)
+    async def banmember(self, interaction: discord.Interaction, user: discord.User, reason: str, delete_message_days: int) -> None:
+        """Ban a user from the Discord server."""
+        await interaction.response.defer(ephemeral=True, thinking=True)
+        log.info(f"{interaction.user.id} [{interaction.user.display_name}] Attempting to ban {user.id} [{user.display_name}] from the server")
+
+        guild = self.bot.get_guild(GUILD_ID)
+        if guild is None:
+            log.exception("Staff banmember: guild is None")
+            return
+
+        # Prevent banning yourself or the bot
+        if user.id == interaction.user.id:
+            embed = discord.Embed(title="❌ Ban failed", description="You cannot ban yourself!", color=discord.Color.red())
+            embed.timestamp = datetime.now()
+            await interaction.followup.send(embed=embed, ephemeral=True)
+            return
+
+        if self.bot.user and user.id == self.bot.user.id:
+            embed = discord.Embed(title="❌ Ban failed", description="You cannot ban me!", color=discord.Color.red())
+            embed.timestamp = datetime.now()
+            await interaction.followup.send(embed=embed, ephemeral=True)
+            return
+
+        # Check if user is already banned
+        banEntry = None
+        try:
+            banEntry = await guild.fetch_ban(user)
+        except Exception as e:
+            banEntry = e
+
+        # Already banned
+        if isinstance(banEntry, discord.BanEntry):
+            log.info(f"{interaction.user.id} [{interaction.user.display_name}] Tried to ban already banned user {user.id} [{user.display_name}]")
+            embed = discord.Embed(title="❌ Ban failed", description=f"{user.mention} is already banned!", color=discord.Color.red())
+            embed.add_field(name="Moderator", value=banEntry.user.mention if banEntry.user else "Unknown")
+            if banEntry.reason:
+                embed.add_field(name="Reason", value=banEntry.reason)
+            await interaction.followup.send(embed=embed, ephemeral=True)
+            return
+
+        # Error fetching ban status
+        if isinstance(banEntry, Exception) and not isinstance(banEntry, discord.NotFound):
+            log.exception(f"Staff banmember: Failed to fetch ban for user {user.id} [{user.display_name}] - {banEntry}")
+            embed = discord.Embed(title="❌ Ban failed", description="An error occurred while checking ban status!", color=discord.Color.red())
+            await interaction.followup.send(embed=embed, ephemeral=True)
+            return
+
+
+        # Check Permissions.ban_members
+        if self.bot.user is None:
+            log.exception("Staff banmember: bot user is None")
+            return
+        botMember = guild.get_member(self.bot.user.id)
+        if botMember is None or not botMember.guild_permissions.ban_members:
+            log.exception(f"{interaction.user.id} [{interaction.user.display_name}] Failed to ban {user.id} [{user.display_name}] - insufficient permissions")
+            embed = discord.Embed(
+                title="❌ Ban failed",
+                description="Failed to ban user! Insufficient permissions.",
+                color=discord.Color.red()
+            )
+            await interaction.followup.send(embed=embed, ephemeral=True)
+            return
+
+        # DM banned user with appeal information
+        roleUnitStaff = guild.get_role(UNIT_STAFF)
+        if roleUnitStaff is None:
+            log.exception("Staff banmember: roleUnitStaff is None")
+            return
+
+        staffMembers = "\n".join(f"- {staff.display_name} ({staff})" for staff in roleUnitStaff.members)
+        dm = f"You have been banned from {guild.name} for the following reason:\n> {reason}\n\n" \
+            f"You may appeal your ban by contacting a member of the Unit Staff:\n{staffMembers}" \
+            "\n\nAll appeals are subject to Unit Staff review."
+        try:
+            await user.send(dm)
+        except Exception as e:
+            log.warning(f"Failed to send ban DM to {user.id} [{user.display_name}] - {e}")
+
+
+        # Ban user
+        if isinstance(banEntry, discord.NotFound):
+            try:
+                await guild.ban(
+                    user,
+                    reason=f"Banned by {interaction.user} via /banmember command.\nReason: {reason}",
+                    delete_message_seconds=delete_message_days
+                )
+            except:
+                # Failed to ban
+                log.warning(f"{interaction.user.id} [{interaction.user.display_name}] Failed to ban {user.id} [{user.display_name}]")
+                embed = discord.Embed(
+                    title="❌ Ban failed",
+                    description=f"Failed to ban {user.mention}!",
+                    color=discord.Color.red()
+                )
+                await interaction.followup.send(embed=embed, ephemeral=True)
+                return
+
+        # Successfully banned
+        log.info(f"{interaction.user.id} [{interaction.user.display_name}] Banned {user.id} [{user.display_name}] from the server")
+        embed = discord.Embed(
+            title="✅ User banned",
+            description=f"{user.mention} has been banned from the server!",
+            color=discord.Color.green()
+        )
+        embed.set_footer(text=f"ID: {user.id}")
+        embed.timestamp = datetime.now()
+
+        await interaction.followup.send(embed=embed, ephemeral=True)
+
+
+    @discord.app_commands.command(name="unbanmember")
+    @discord.app_commands.describe(user_id="Target user ID to be unbanned.")
+    @discord.app_commands.guilds(GUILD)
+    @discord.app_commands.checks.has_any_role(*CMD_LIMIT_STAFF)
+    async def unbanmember(self, interaction: discord.Interaction, user_id: str) -> None:
+        """Unban a user from the Discord server."""
+        await interaction.response.defer(ephemeral=True, thinking=True)
+        log.info(f"{interaction.user.id} [{interaction.user.display_name}] Attempting to unban user ID {user_id} from the server")
+
+        guild = self.bot.get_guild(GUILD_ID)
+        if guild is None:
+            log.exception("Staff unbanmember: guild is None")
+            return
+
+        try:
+            user_id_int = int(user_id)
+            user = discord.Object(id=user_id_int)
+            await guild.unban(user, reason=f"Unbanned by {interaction.user} via /unbanmember command")
+        except ValueError:
+            error_msg = f"Invalid user ID: `{user_id}`"
+            log.warning(f"{interaction.user.id} [{interaction.user.display_name}] {error_msg}")
+        except discord.NotFound:
+            error_msg = f"User `{user_id}` is not banned!"
+            log.warning(f"{interaction.user.id} [{interaction.user.display_name}] User {user_id} is not banned")
+        except discord.Forbidden:
+            error_msg = f"Insufficient permissions to unban user `{user_id}`!"
+            log.warning(f"{interaction.user.id} [{interaction.user.display_name}] Failed to unban {user_id} - insufficient permissions")
+        else:
+            embed = discord.Embed(title="✅ User unbanned", description=f"User `{user_id}` has been unbanned from the server!", color=discord.Color.green())
+            embed.set_footer(text=f"ID: {user_id}")
+            embed.timestamp = datetime.now()
+            await interaction.followup.send(embed=embed, ephemeral=True)
+            return
+
+        # Handle all error cases
+        embed = discord.Embed(title="❌ Unban failed", description=error_msg, color=discord.Color.red())
+        embed.timestamp = datetime.now()
+        await interaction.followup.send(embed=embed, ephemeral=True)
 
     # Recruitment Team command
     @discord.app_commands.command(name="recruitment-interview")
@@ -713,6 +874,41 @@ class Staff(commands.Cog):
         await interaction.response.send_modal(modal)
         await interaction.followup.send("Modpack updated!", ephemeral=True)
 
+    # ZIT Feedback command
+    @discord.app_commands.command(name="zitfeedback", description="Send feedback for Zeus in Training.")
+    @discord.app_commands.describe(zeus="Zeus in Training to submit feedback to")
+    @discord.app_commands.guilds(GUILD)
+    @discord.app_commands.checks.has_any_role(*CMD_LIMIT_ZEUS)
+    async def zitfeedback(self, interaction: discord.Interaction, zeus: discord.Member) -> None:
+        """Submit feedback for a Zeus in Training (ZiT).
+
+        Opens a modal with fields:
+        - Operation Name
+        - What went well?
+        - What could be improved?
+        - Additional comments (optional)
+
+        Usage:
+        /zitfeedback zeus:@ZeusUser
+
+        Parameters:
+        zeus (discord.Member): Target ZiT to receive feedback.
+        """
+        if zeus.bot or zeus.id == interaction.user.id:
+            embed = discord.Embed(title="❌ Feedback failed", description="You cannot submit feedback for the bot or yourself!", color=discord.Color.red())
+            embed.timestamp = datetime.now()
+            await interaction.response.send_message(embed=embed, ephemeral=True)
+            return
+
+        # Include Zeus context without exposing an extra input field
+        modal = StaffModal(self, f"Zeus in Training feedback for {zeus.display_name}", f"staff_modal_zitfeedback_{zeus.id}")
+        modal.zeus = zeus  # Store Zeus member directly on the modal for retrieval in on_submit
+        modal.add_item(discord.ui.TextInput(label="Operation Name", style=discord.TextStyle.short, placeholder="Operation Thunderbolt", required=True, max_length=100))
+        modal.add_item(discord.ui.TextInput(label="What went well?", style=discord.TextStyle.paragraph, placeholder="Describe what aspects of the Zeus performance were good.", required=True, max_length=1000))
+        modal.add_item(discord.ui.TextInput(label="What could be improved?", style=discord.TextStyle.paragraph, placeholder="Describe what aspects of the Zeus performance could be improved.", required=True, max_length=1000))
+        modal.add_item(discord.ui.TextInput(label="Additional comments?", style=discord.TextStyle.paragraph, placeholder="Any additional comments or feedback.", required=False, max_length=1000))
+        await interaction.response.send_modal(modal)
+
     # Snek Lord command
     @commands.command(name="sneklord")
     @commands.has_any_role(SNEK_LORD)
@@ -812,6 +1008,23 @@ class StaffButton(discord.ui.Button):
 
             await channelRecruitmentAndHR.send(roleRecruitmentCoordinator.mention, embed=embed)
 
+        if customId.startswith("staff_button_zitfeedback_recommend_"):
+            await interaction.response.edit_message(content="Recommendation recorded. Thank you!", view=None)
+            if hasattr(self.view, 'feedbackMessage'):
+                feedbackEmbed = self.view.feedbackMessage.embeds[0]
+                feedbackEmbed.title = f"✅ {self.view.zeus.display_name} has been recommended for Zeus"
+                feedbackEmbed.color = discord.Color.green()
+                await self.view.feedbackMessage.edit(embed=feedbackEmbed)
+            return
+
+        if customId.startswith("staff_button_zitfeedback_norecommend_"):
+            await interaction.response.edit_message(content="✅ Feedback recorded. Thank you!", view=None)
+            if hasattr(self.view, 'feedbackMessage'):
+                feedbackEmbed = self.view.feedbackMessage.embeds[0]
+                feedbackEmbed.title = f"❌ {self.view.zeus.display_name} has not been recommended for Zeus"
+                feedbackEmbed.color = discord.Color.red()
+                await self.view.feedbackMessage.edit(embed=feedbackEmbed)
+            return
 
 class StaffModal(discord.ui.Modal):
     """Handling all staff modals."""
@@ -822,6 +1035,45 @@ class StaffModal(discord.ui.Modal):
     async def on_submit(self, interaction: discord.Interaction):
         if not isinstance(interaction.user, discord.Member):
             log.exception("StaffModal on_submit: interaction.user not discord.Member")
+            return
+
+        if interaction.data["custom_id"].startswith("staff_modal_zitfeedback"):
+            log.info(f"{interaction.user.id} [{interaction.user.display_name}] Submitting Zeus in Training feedback")
+            operationName: str = self.children[0].value.strip()
+            doneWell: str = self.children[1].value.strip()
+            improve: str = self.children[2].value.strip()
+            comments: str = self.children[3].value.strip()
+
+            embed = discord.Embed(title="📝 Zeus in Training Feedback Submitted", color=discord.Color.purple())
+            embed.add_field(name="Operation Name", value=operationName, inline=False)
+            embed.add_field(name="What went well?", value=doneWell, inline=False)
+            embed.add_field(name="What could be improved?", value=improve, inline=False)
+            if comments:
+                embed.add_field(name="Additional comments?", value=comments, inline=False)
+            embed.set_footer(text=f"Submitted by {interaction.user}")
+            embed.timestamp = datetime.now()
+
+            channelZITFeedback = interaction.guild.get_channel(ZEUS_FEEDBACK)
+            if not isinstance(channelZITFeedback, discord.TextChannel):
+                log.exception("StaffModal on_submit: channelZITFeedback not discord.TextChannel")
+                return
+
+            view = discord.ui.View(timeout=None)
+            zeusMember = getattr(self, "zeus", None)
+            if not isinstance(zeusMember, discord.Member):
+                log.error("StaffModal on_submit: Zeus member missing on modal instance")
+                await interaction.response.send_message("Error: Zeus context lost. Please rerun the command.", ephemeral=True)
+                return
+            view.add_item(StaffButton(style=discord.ButtonStyle.green, label="Yes - Recommend for Full Zeus", custom_id=f"staff_button_zitfeedback_recommend_{zeusMember.id}"))
+            view.add_item(StaffButton(style=discord.ButtonStyle.red, label="No - Do Not Recommend", custom_id=f"staff_button_zitfeedback_norecommend_{zeusMember.id}"))
+
+            # Send to feedback channel and store message reference
+            curator = interaction.guild.get_role(CURATOR)
+            feedbackMessage = await channelZITFeedback.send(embed=embed, content=f"Feedback for Zeus in Training: {zeusMember.mention}\n{curator.mention}")
+            view.feedbackMessage = feedbackMessage
+            # pass in Zeus member to button view for context
+            view.zeus = zeusMember
+            await interaction.response.send_message("Would you like to recommend this Zeus in Training for full Zeus?", ephemeral=True, view=view)
             return
 
         if interaction.data["custom_id"] != "staff_modal_maps":
@@ -846,4 +1098,6 @@ class StaffModal(discord.ui.Modal):
 async def setup(bot: commands.Bot) -> None:
     Staff.interview.error(Utils.onSlashError)
     Staff.updatemodpack.error(Utils.onSlashError)
+    Staff.banmember.error(Utils.onSlashError)
+    Staff.unbanmember.error(Utils.onSlashError)
     await bot.add_cog(Staff(bot))

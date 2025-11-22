@@ -654,8 +654,21 @@ class Staff(commands.Cog):
         embed = discord.Embed(title="✅ User banned", description=f"{user.mention} has been banned from the server!", color=discord.Color.green())
         embed.set_footer(text=f"ID: {user.id}")
         embed.timestamp = datetime.now()
+
+        currentStaff = interaction.guild.get_role(UNIT_STAFF).members
+
+        # Attempt to DM the banned user with appeal information
+        try:
+            staff_lines = "\n".join(f"- {staff.display_name} ({staff})" for staff in currentStaff)
+            dm = (
+                f"You have been banned from {guild.name} for the following reason:\n{reason}\n\n"
+                f"You may appeal your ban by contacting a member of the Unit Staff:\n{staff_lines}"
+                "\n\nAll appeals are subject to Unit Staff review."
+            )
+            await user.send(dm)
+        except Exception as e:
+            log.warning(f"Failed to send ban DM to {user.id} [{getattr(user, 'display_name', user)}] - {e}")
         await interaction.followup.send(embed=embed, ephemeral=True)
-        await self.bot.get_cog("ModLog").logBanAction(guild, user, interaction.user, reason, ban_reason, delete_message_days)
 
     @discord.app_commands.command(name="unbanmember")
     @discord.app_commands.describe(user_id="Target user ID to be unbanned.")

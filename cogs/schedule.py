@@ -683,8 +683,14 @@ class Schedule(commands.Cog):
         """
         await interaction.response.defer(ephemeral=True, thinking=True)
 
-        if member.bot or member.id == interaction.user.id:
-            await interaction.followup.send("You cannot commend bots or yourself.", ephemeral=True)
+        if member.bot:
+            embed = discord.Embed(title="❌ Invalid target", description="You cannot commend bots.", color=discord.Color.red())
+            await interaction.followup.send(embed=embed, ephemeral=True)
+            return
+
+        if member.id == interaction.user.id:
+            embed = discord.Embed(title="❌ Invalid target", description="You cannot commend yourself.", color=discord.Color.red())
+            await interaction.followup.send(embed=embed, ephemeral=True)
             return
 
         # Commendation Bonus
@@ -692,32 +698,30 @@ class Schedule(commands.Cog):
             with open(WALLETS_FILE) as f:
                 wallets = json.load(f)
         except Exception:
-            wallets = []
+            wallets = {}
 
-        def get_wallet_entry(user_id: int) -> Dict[str, int]:
-            entry = next((e for e in wallets if e.get("user") == user_id), None)
-            if entry is None:
-                entry = {"user": user_id, "money": 0, "timesCommended": 0, "sentCommendations": 0, "moneySpent": 0}
-                wallets.append(entry)
-            return entry
 
-        targetEntry = get_wallet_entry(member.id)
-        senderEntry = get_wallet_entry(interaction.user.id)
+        # Sender
+        senderEntry = wallets.get(str(interaction.user.id), {"timesCommended": 0, "sentCommendations": 0, "money": 0, "moneySpent": 0})
+
+        # Target
+        targetEntry = wallets.get(str(member.id), {"timesCommended": 0, "sentCommendations": 0, "money": 0, "moneySpent": 0})
 
         # Update base stats
-        targetEntry["timesCommended"] = int(targetEntry.get("timesCommended", 0)) + 1
-        senderEntry["sentCommendations"] = int(senderEntry.get("sentCommendations", 0)) + 1
+        targetEntry["timesCommended"] = targetEntry.get("timesCommended", 0) + 1
+        senderEntry["sentCommendations"] = senderEntry.get("sentCommendations", 0) + 1
         bonusAmount = 0
 
+        # Update wallets
+        wallets[str(interaction.user.id)] = senderEntry
+        wallets[str(member.id)] = targetEntry
 
-        # Persist changes
-        try:
-            with open(WALLETS_FILE, "w") as f:
-                json.dump(wallets, f, indent=4)
-        except Exception:
-            log.warning("Failed to persist wallet changes.")
-
-        embed = discord.Embed(title = f"{member.display_name} has been commended!", description=f"{interaction.user.mention} has commended {member.mention}.", color=discord.Color.green())
+        # Output to user
+        embed = discord.Embed(
+            title=f"{member.display_name} has been commended!",
+            description=f"{interaction.user.mention} has commended {member.mention}.",
+            color=discord.Color.green()
+        )
         if reason:
             embed.add_field(name="Reason:", value=reason, inline=False)
             if random() < 0.50:
@@ -725,15 +729,28 @@ class Schedule(commands.Cog):
         elif random() < 0.25:
             bonusAmount = randint(50, 100)
         if bonusAmount > 0:
-            embed.add_field(name="Bonus:", value=f"Received {bonusAmount} SnekCoins!", inline=False)
+            embed.add_field(name="Bonus:", value=f"Received `{bonusAmount}` SnekCoins! 🪙", inline=False)
             targetEntry["money"] = int(targetEntry.get("money", 0)) + bonusAmount
+
+        try:
+            with open(WALLETS_FILE, "w") as f:
+                json.dump(wallets, f, indent=4)
+        except Exception:
+            log.warning("Schedule commend: Failed to save wallets file.")
+
         embed.set_footer(text="I think they like you!")
         embed.timestamp = datetime.now(timezone.utc)
-        channel = interaction.guild.get_channel(COMMENDATIONS)
-        msgCtx = f"You have commended {member.display_name}.{'' if bonusAmount == 0 else f'\n🎉🎉🎉Bonus Commendation! {member.mention} received {bonusAmount} SnekCoins.🎉🎉🎉'}\nThe commendation has been posted in {channel.mention}"
+        channel = member.guild.get_channel(COMMENDATIONS)
+        if not isinstance(channel, discord.TextChannel):
+            log.exception("Schedule commend: channel not discord.TextChannel")
+            return
+        msgContent = f"You have commended {member.mention}." \
+            f"{'' if bonusAmount == 0 else f'\n🎉 They received `{bonusAmount}` SnekCoins 🎉'}\n" \
+            f"Check it out in {channel.mention}!"
 
-        await channel.send(embed=embed, content=f"🎉🎉🎉{member.mention}🎉🎉🎉")
-        await interaction.followup.send(msgCtx, ephemeral=True)
+        await interaction.followup.send(msgContent, ephemeral=True)
+        await channel.send(f"🎉 {member.mention} 🎉", embed=embed)
+
 
 # ===== </Commend> =====
 

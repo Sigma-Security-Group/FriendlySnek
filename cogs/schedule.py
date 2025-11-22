@@ -549,6 +549,12 @@ class Schedule(commands.Cog):
         Returns:
         None.
         """
+        OPERATIONS_REQUIRED_TO_ATTEND = 3
+
+        if interaction.guild is None:
+            log.exception("Schedule trackACandidate: guild is None")
+            return
+
         await interaction.response.defer(ephemeral=True, thinking=True)
         log.info(f"{interaction.user.id} [{interaction.user.display_name}] is tracking candidate {member.id} [{member.display_name}]")
 
@@ -558,31 +564,33 @@ class Schedule(commands.Cog):
         except Exception:
             candidateTracking = {}
 
-        channel = interaction.guild.get_channel(COMMENDATIONS)
-        key = str(member.id)
+        channelCommendations = interaction.guild.get_channel(COMMENDATIONS)
+        if not isinstance(channelCommendations, discord.TextChannel):
+            log.exception("Schedule trackACandidate: channelCommendations not discord.TextChannel")
+            return
         roleUnitStaff = interaction.guild.get_role(UNIT_STAFF)
-        if candidateTracking.get(key) is None:
-            candidateTracking[key] = {
-                "name": member.display_name,
-                "user": member.id,
-                "operationsAttended": 0
-            }
+        if roleUnitStaff is None:
+            log.exception("Schedule trackACandidate: roleUnitStaff is None")
+            return
 
-        candidateTracking[key]["operationsAttended"] += 1
-        if candidateTracking[key]["operationsAttended"] < 3:
-            embed = discord.Embed(title="Track-a-Candidate", description=f"{member.mention} has attended {candidateTracking[key]['operationsAttended']} operations.", color=discord.Color.dark_blue())
+        key = str(member.id)
+        if candidateTracking.get(key) is None:
+            candidateTracking[key] = 0
+
+        candidateTracking[key] += 1
+        if candidateTracking[key] < OPERATIONS_REQUIRED_TO_ATTEND:
             await interaction.followup.send("Tracking submitted!", ephemeral=True)
-            await channel.send(embed=embed)
+            embed = discord.Embed(title="Track-a-Candidate", description=f"{member.mention} has attended {candidateTracking[key]} operations.", color=discord.Color.dark_blue())
+            await channelCommendations.send(embed=embed)
         else:
             embed = discord.Embed(
                 title="🎉 Candidate Graduated! 🎉",
-                description=f"{member.mention} has attended 3 operations and has now graduated from Candidate! Congratulations!\n",
+                description=f"{member.mention} has attended {OPERATIONS_REQUIRED_TO_ATTEND} operations and has now graduated from Candidate! Congratulations!\n",
                 color=discord.Color.purple()
-                )
+            )
 
             await interaction.followup.send("Candidate has graduated!", ephemeral=True)
-            await channel.send(embed=embed)
-            await channel.send(f"{roleUnitStaff.mention} GET SOME TAGS ON THEM ASAP")
+            await channelCommendations.send(f"{roleUnitStaff.mention} This candidate need a levelup!", embed=embed)
             del candidateTracking[key]
 
 

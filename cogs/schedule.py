@@ -535,7 +535,7 @@ class Schedule(commands.Cog):
 
 
 # ===== </Track-a-Candidate> =====
-    @discord.app_commands.command(name="trackacandidate")
+    @discord.app_commands.command(name="track-a-candidate")
     @discord.app_commands.guilds(GUILD)
     @discord.app_commands.checks.has_any_role(*CMD_LIMIT_ZEUS)
     @discord.app_commands.describe(member="Member to track")
@@ -3397,8 +3397,9 @@ class ScheduleModal(discord.ui.Modal):
 
 async def setup(bot: commands.Bot) -> None:
     Schedule.noShow.error(Utils.onSlashError)
+    Schedule.trackACandidate.error(Utils.onSlashError)
     Schedule.refreshSchedule.error(Utils.onSlashError)
     Schedule.aar.error(Utils.onSlashError)
-    Schedule.scheduleOperation.error(Utils.onSlashError)
     Schedule.commend.error(Utils.onSlashError)
+    Schedule.scheduleOperation.error(Utils.onSlashError)
     await bot.add_cog(Schedule(bot))

@@ -593,7 +593,7 @@ class Staff(commands.Cog):
         from cogs.botTasks import BotTasks
         await BotTasks.smeBigBrother(guild, True)
 
-    @discord.app_commands.command(name="banmember")
+    @discord.app_commands.command(name="ban")
     @discord.app_commands.describe(
         user="Target user to be banned (by mention, ID, or username).",
         reason="Reason for banning the user.",
@@ -606,7 +606,7 @@ class Staff(commands.Cog):
     ])
     @discord.app_commands.guilds(GUILD)
     @discord.app_commands.checks.has_any_role(*CMD_LIMIT_STAFF)
-    async def banmember(self, interaction: discord.Interaction, user: discord.User, reason: str, delete_message_days: int) -> None:
+    async def ban(self, interaction: discord.Interaction, user: discord.User, reason: str, delete_message_days: int) -> None:
         """Ban a user from the Discord server."""
         await interaction.response.defer(ephemeral=True, thinking=True)
         log.info(f"{interaction.user.id} [{interaction.user.display_name}] Attempting to ban {user.id} [{user.display_name}] from the server")
@@ -717,11 +717,11 @@ class Staff(commands.Cog):
         await interaction.followup.send(embed=embed, ephemeral=True)
 
 
-    @discord.app_commands.command(name="unbanmember")
+    @discord.app_commands.command(name="unban")
     @discord.app_commands.describe(user_id="Target user ID to be unbanned.")
     @discord.app_commands.guilds(GUILD)
     @discord.app_commands.checks.has_any_role(*CMD_LIMIT_STAFF)
-    async def unbanmember(self, interaction: discord.Interaction, user_id: str) -> None:
+    async def unban(self, interaction: discord.Interaction, user_id: str) -> None:
         """Unban a user from the Discord server."""
         await interaction.response.defer(ephemeral=True, thinking=True)
         log.info(f"{interaction.user.id} [{interaction.user.display_name}] Attempting to unban user ID {user_id} from the server")
@@ -887,7 +887,7 @@ class Staff(commands.Cog):
         await interaction.followup.send("Modpack updated!", ephemeral=True)
 
     # ZIT Feedback command
-    @discord.app_commands.command(name="zitfeedback", description="Send feedback for Zeus in Training.")
+    @discord.app_commands.command(name="zit-feedback", description="Send feedback for Zeus in Training.")
     @discord.app_commands.describe(zeus="Zeus in Training to submit feedback to")
     @discord.app_commands.guilds(GUILD)
     @discord.app_commands.checks.has_any_role(*CMD_LIMIT_ZEUS)
@@ -1110,6 +1110,6 @@ class StaffModal(discord.ui.Modal):
 async def setup(bot: commands.Bot) -> None:
     Staff.interview.error(Utils.onSlashError)
     Staff.updatemodpack.error(Utils.onSlashError)
-    Staff.banmember.error(Utils.onSlashError)
-    Staff.unbanmember.error(Utils.onSlashError)
+    Staff.ban.error(Utils.onSlashError)
+    Staff.unban.error(Utils.onSlashError)
     await bot.add_cog(Staff(bot))

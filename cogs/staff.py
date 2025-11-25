@@ -900,21 +900,27 @@ class Staff(commands.Cog):
         - What could be improved?
         - Additional comments (optional)
 
-        Usage:
-        /zitfeedback zeus:@ZeusUser
-
         Parameters:
         zeus (discord.Member): Target ZiT to receive feedback.
         """
-        if zeus.bot or zeus.id == interaction.user.id:
-            embed = discord.Embed(title="❌ Feedback failed", description="You cannot submit feedback for the bot or yourself!", color=discord.Color.red())
-            embed.timestamp = datetime.now()
+        if zeus.bot:
+            embed = discord.Embed(title="❌ Feedback failed", description="You cannot submit feedback for the bot!", color=discord.Color.red())
+            await interaction.response.send_message(embed=embed, ephemeral=True)
+            return
+
+        if zeus.id == interaction.user.id:
+            embed = discord.Embed(title="❌ Feedback failed", description="You cannot submit feedback for yourself!", color=discord.Color.red())
+            await interaction.response.send_message(embed=embed, ephemeral=True)
+            return
+
+        if all(role.id != ZEUS_IN_TRAINING for role in zeus.roles):
+            embed = discord.Embed(title="❌ Feedback failed", description=f"{zeus.mention} is not a Zeus in Training!", color=discord.Color.red())
             await interaction.response.send_message(embed=embed, ephemeral=True)
             return
 
         # Include Zeus context without exposing an extra input field
-        modal = StaffModal(self, f"Zeus in Training feedback for {zeus.display_name}", f"staff_modal_zitfeedback_{zeus.id}")
-        modal.zeus = zeus  # Store Zeus member directly on the modal for retrieval in on_submit
+        modal = StaffModal(self, title=f"Zeus in Training feedback for {zeus.display_name}", customId=f"staff_modal_zitfeedback_{zeus.id}")
+        modal.zeusId = zeus.id  # Store Zeus member directly on the modal for retrieval in on_submit
         modal.add_item(discord.ui.TextInput(label="Operation Name", style=discord.TextStyle.short, placeholder="Operation Thunderbolt", required=True, max_length=100))
         modal.add_item(discord.ui.TextInput(label="What went well?", style=discord.TextStyle.paragraph, placeholder="Describe what aspects of the Zeus performance were good.", required=True, max_length=1000))
         modal.add_item(discord.ui.TextInput(label="What could be improved?", style=discord.TextStyle.paragraph, placeholder="Describe what aspects of the Zeus performance could be improved.", required=True, max_length=1000))
@@ -1020,22 +1026,50 @@ class StaffButton(discord.ui.Button):
 
             await channelRecruitmentAndHR.send(roleRecruitmentCoordinator.mention, embed=embed)
 
+
         if customId.startswith("staff_button_zitfeedback_recommend_"):
             await interaction.response.edit_message(content="Recommendation recorded. Thank you!", view=None)
-            if hasattr(self.view, 'feedbackMessage'):
-                feedbackEmbed = self.view.feedbackMessage.embeds[0]
-                feedbackEmbed.title = f"✅ {self.view.zeus.display_name} has been recommended for Zeus"
+            if not interaction.guild:
+                log.exception("StaffButton callback: interaction.guild is None")
+                return
+            channelZeusFeedback = interaction.guild.get_channel(ZEUS_FEEDBACK)
+            if not isinstance(channelZeusFeedback, discord.TextChannel):
+                log.exception("StaffButton callback: channelZeusFeedback not discord.TextChannel")
+                return
+            zeus = interaction.guild.get_member(self.view.zeusId)
+            if not isinstance(zeus, discord.Member):
+                log.exception("StaffButton callback: zeus not discord.Member")
+                return
+
+            if hasattr(self.view, "feedbackMessageId"):
+                msg = await channelZeusFeedback.fetch_message(self.view.feedbackMessageId)
+                feedbackEmbed = msg.embeds[0]
+                feedbackEmbed.title = f"✅ {zeus.display_name} has been recommended for Zeus"
                 feedbackEmbed.color = discord.Color.green()
-                await self.view.feedbackMessage.edit(embed=feedbackEmbed)
+                await msg.edit(embed=feedbackEmbed)
             return
 
+
         if customId.startswith("staff_button_zitfeedback_norecommend_"):
-            await interaction.response.edit_message(content="✅ Feedback recorded. Thank you!", view=None)
-            if hasattr(self.view, 'feedbackMessage'):
-                feedbackEmbed = self.view.feedbackMessage.embeds[0]
-                feedbackEmbed.title = f"❌ {self.view.zeus.display_name} has not been recommended for Zeus"
+            if not interaction.guild:
+                log.exception("StaffButton callback: interaction.guild is None")
+                return
+            channelZeusFeedback = interaction.guild.get_channel(ZEUS_FEEDBACK)
+            if not isinstance(channelZeusFeedback, discord.TextChannel):
+                log.exception("StaffButton callback: channelZeusFeedback not discord.TextChannel")
+                return
+            zeus = interaction.guild.get_member(self.view.zeusId)
+            if not isinstance(zeus, discord.Member):
+                log.exception("StaffButton callback: zeus not discord.Member")
+                return
+
+            await interaction.response.edit_message(content="Feedback recorded. Thank you!", view=None)
+            if hasattr(self.view, "feedbackMessageId"):
+                msg = await channelZeusFeedback.fetch_message(self.view.feedbackMessageId)
+                feedbackEmbed = msg.embeds[0]
+                feedbackEmbed.title = f"❌ {zeus.display_name} has not been recommended for Zeus"
                 feedbackEmbed.color = discord.Color.red()
-                await self.view.feedbackMessage.edit(embed=feedbackEmbed)
+                await msg.edit(embed=feedbackEmbed)
             return
 
 class StaffModal(discord.ui.Modal):
@@ -1047,6 +1081,9 @@ class StaffModal(discord.ui.Modal):
     async def on_submit(self, interaction: discord.Interaction):
         if not isinstance(interaction.user, discord.Member):
             log.exception("StaffModal on_submit: interaction.user not discord.Member")
+            return
+        if interaction.guild is None:
+            log.exception("StaffModal on_submit: interaction.guild is None")
             return
 
         if interaction.data["custom_id"].startswith("staff_modal_zitfeedback"):
@@ -1071,20 +1108,24 @@ class StaffModal(discord.ui.Modal):
                 return
 
             view = discord.ui.View(timeout=None)
-            zeusMember = getattr(self, "zeus", None)
+            zeusId = getattr(self, "zeusId", None)
+            zeusMember = interaction.guild.get_member(zeusId) if zeusId else None
             if not isinstance(zeusMember, discord.Member):
                 log.error("StaffModal on_submit: Zeus member missing on modal instance")
                 await interaction.response.send_message("Error: Zeus context lost. Please rerun the command.", ephemeral=True)
                 return
-            view.add_item(StaffButton(style=discord.ButtonStyle.green, label="Yes - Recommend for Full Zeus", custom_id=f"staff_button_zitfeedback_recommend_{zeusMember.id}"))
-            view.add_item(StaffButton(style=discord.ButtonStyle.red, label="No - Do Not Recommend", custom_id=f"staff_button_zitfeedback_norecommend_{zeusMember.id}"))
+            view.add_item(StaffButton(style=discord.ButtonStyle.green, label="Yes - Recommend for Full Zeus", custom_id=f"staff_button_zitfeedback_recommend_{zeusId}"))
+            view.add_item(StaffButton(style=discord.ButtonStyle.red, label="No - Do Not Recommend", custom_id=f"staff_button_zitfeedback_norecommend_{zeusId}"))
 
             # Send to feedback channel and store message reference
             curator = interaction.guild.get_role(CURATOR)
-            feedbackMessage = await channelZITFeedback.send(embed=embed, content=f"Feedback for Zeus in Training: {zeusMember.mention}\n{curator.mention}")
-            view.feedbackMessage = feedbackMessage
+            if curator is None:
+                log.exception("StaffModal on_submit: curator role is None")
+                return
+            feedbackMessage = await channelZITFeedback.send(f"{curator.mention}\nFeedback for Zeus in Training: {zeusMember.mention}", embed=embed)
+            view.feedbackMessageId = feedbackMessage.id
             # pass in Zeus member to button view for context
-            view.zeus = zeusMember
+            view.zeusId = zeusId
             await interaction.response.send_message("Would you like to recommend this Zeus in Training for full Zeus?", ephemeral=True, view=view)
             return
 

@@ -227,6 +227,8 @@ DISCORD_LIMITS = {
         "embed_title": 256,
         "embed_description": 4096,
         "embed_field": 25, # Max number of fields in a single embed
+        "embed_field_name": 256,
+        "embed_field_value": 1024,
         "embeds_per_message": 10,
         "attachment_size_mb": 25,  # 8MB for standard, 25MB for bots, 50-500MB for Nitro
     },

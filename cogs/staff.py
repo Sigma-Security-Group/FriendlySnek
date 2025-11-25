@@ -613,7 +613,7 @@ class Staff(commands.Cog):
 
         guild = self.bot.get_guild(GUILD_ID)
         if guild is None:
-            log.exception("Staff banmember: guild is None")
+            log.exception("Staff ban: guild is None")
             return
 
         # Prevent banning yourself or the bot
@@ -648,7 +648,7 @@ class Staff(commands.Cog):
 
         # Error fetching ban status
         if isinstance(banEntry, Exception) and not isinstance(banEntry, discord.NotFound):
-            log.exception(f"Staff banmember: Failed to fetch ban for user {user.id} [{user.display_name}] - {banEntry}")
+            log.exception(f"Staff ban: Failed to fetch ban for user {user.id} [{user.display_name}] - {banEntry}")
             embed = discord.Embed(title="❌ Ban failed", description="An error occurred while checking ban status!", color=discord.Color.red())
             await interaction.followup.send(embed=embed, ephemeral=True)
             return
@@ -656,7 +656,7 @@ class Staff(commands.Cog):
 
         # Check Permissions.ban_members
         if self.bot.user is None:
-            log.exception("Staff banmember: bot user is None")
+            log.exception("Staff ban: bot user is None")
             return
         botMember = guild.get_member(self.bot.user.id)
         if botMember is None or not botMember.guild_permissions.ban_members:
@@ -672,7 +672,7 @@ class Staff(commands.Cog):
         # DM banned user with appeal information
         roleUnitStaff = guild.get_role(UNIT_STAFF)
         if roleUnitStaff is None:
-            log.exception("Staff banmember: roleUnitStaff is None")
+            log.exception("Staff ban: roleUnitStaff is None")
             return
 
         staffMembers = "\n".join(f"- {staff.display_name} ({staff})" for staff in roleUnitStaff.members)
@@ -690,7 +690,7 @@ class Staff(commands.Cog):
             try:
                 await guild.ban(
                     user,
-                    reason=f"Banned by {interaction.user} via /banmember command.\nReason: {reason}",
+                    reason=f"Banned by {interaction.user} via /ban command.\nReason: {reason}",
                     delete_message_seconds=delete_message_days
                 )
             except:
@@ -728,7 +728,7 @@ class Staff(commands.Cog):
 
         guild = self.bot.get_guild(GUILD_ID)
         if guild is None:
-            log.exception("Staff unbanmember: guild is None")
+            log.exception("Staff unban: guild is None")
             return
 
         errMsg = ""
@@ -738,7 +738,7 @@ class Staff(commands.Cog):
                 errMsg = f"No user found with ID: `{user_id}`"
                 raise Exception("User not found")
 
-            await guild.unban(user, reason=f"Unbanned by {interaction.user} via /unbanmember command")
+            await guild.unban(user, reason=f"Unbanned by {interaction.user} via /unban command")
         except ValueError:
             errMsg = f"Invalid user ID: `{user_id}`"
         except discord.NotFound:
@@ -922,9 +922,9 @@ class Staff(commands.Cog):
         modal = StaffModal(self, title=f"Zeus in Training feedback for {zeus.display_name}", customId=f"staff_modal_zitfeedback_{zeus.id}")
         modal.zeusId = zeus.id  # Store Zeus member directly on the modal for retrieval in on_submit
         modal.add_item(discord.ui.TextInput(label="Operation Name", style=discord.TextStyle.short, placeholder="Operation Thunderbolt", required=True, max_length=100))
-        modal.add_item(discord.ui.TextInput(label="What went well?", style=discord.TextStyle.paragraph, placeholder="Describe what aspects of the Zeus performance were good.", required=True, max_length=1000))
-        modal.add_item(discord.ui.TextInput(label="What could be improved?", style=discord.TextStyle.paragraph, placeholder="Describe what aspects of the Zeus performance could be improved.", required=True, max_length=1000))
-        modal.add_item(discord.ui.TextInput(label="Additional comments?", style=discord.TextStyle.paragraph, placeholder="Any additional comments or feedback.", required=False, max_length=1000))
+        modal.add_item(discord.ui.TextInput(label="What went well?", style=discord.TextStyle.paragraph, placeholder="Describe what aspects of the Zeus performance were good.", required=True, max_length=DISCORD_LIMITS["message_embed"]["embed_field_value"]))
+        modal.add_item(discord.ui.TextInput(label="What could be improved?", style=discord.TextStyle.paragraph, placeholder="Describe what aspects of the Zeus performance could be improved.", required=True, max_length=DISCORD_LIMITS["message_embed"]["embed_field_value"]))
+        modal.add_item(discord.ui.TextInput(label="Additional comments?", style=discord.TextStyle.paragraph, placeholder="Any additional comments or feedback.", required=False, max_length=DISCORD_LIMITS["message_embed"]["embed_field_value"]))
         await interaction.response.send_modal(modal)
 
     # Snek Lord command

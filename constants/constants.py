@@ -13,7 +13,6 @@ EVENTS_HISTORY_FILE = "data/eventsHistory.json"
 # Templates
 EVENT_TEMPLATES_FILE = "data/eventTemplates.json"
 WORKSHOP_TEMPLATES_FILE = "data/workshopTemplates.json"
-#WORKSHOP_TEMPLATES_DELETED_FILE = "data/workshopDeletedTemplates.json"  # Maybe remove?
 
 # Misc
 MEMBER_TIME_ZONES_FILE = "data/memberTimeZones.json"
@@ -217,6 +216,7 @@ CMD_LIMIT_CLEANWSINTEREST = (UNIT_STAFF, SNEK_LORD, SME_RW_PILOT, SME_FW_PILOT, 
 ####################
 # DISCORD LIMITATIONS
 ####################
+
 DISCORD_LIMITS = {
     "rates": {
         "bulk_delete": 100,  # messages

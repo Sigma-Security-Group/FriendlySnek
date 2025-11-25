@@ -596,7 +596,8 @@ class Staff(commands.Cog):
     @discord.app_commands.command(name="banmember")
     @discord.app_commands.describe(
         user="Target user to be banned (by mention, ID, or username).",
-        reason="Reason for banning the user."
+        reason="Reason for banning the user.",
+        delete_message_days="Number of days of messages to delete from the user."
     )
     @discord.app_commands.choices(delete_message_days=[
         discord.app_commands.Choice(name="0 days", value=0),
@@ -710,7 +711,7 @@ class Staff(commands.Cog):
             description=f"{user.mention} has been banned from the server!",
             color=discord.Color.green()
         )
-        embed.set_footer(text=f"ID: {user.id}")
+        embed.set_footer(text=f"User ID: {user.id}")
         embed.timestamp = datetime.now()
 
         await interaction.followup.send(embed=embed, ephemeral=True)
@@ -730,30 +731,41 @@ class Staff(commands.Cog):
             log.exception("Staff unbanmember: guild is None")
             return
 
+        errMsg = ""
         try:
-            user_id_int = int(user_id)
-            user = discord.Object(id=user_id_int)
+            user = self.bot.get_user(int(user_id))
+            if user is None:
+                errMsg = f"No user found with ID: `{user_id}`"
+                raise Exception("User not found")
+
             await guild.unban(user, reason=f"Unbanned by {interaction.user} via /unbanmember command")
         except ValueError:
-            error_msg = f"Invalid user ID: `{user_id}`"
-            log.warning(f"{interaction.user.id} [{interaction.user.display_name}] {error_msg}")
+            errMsg = f"Invalid user ID: `{user_id}`"
         except discord.NotFound:
-            error_msg = f"User `{user_id}` is not banned!"
-            log.warning(f"{interaction.user.id} [{interaction.user.display_name}] User {user_id} is not banned")
+            errMsg = f"User `{user_id}` is not banned!"
         except discord.Forbidden:
-            error_msg = f"Insufficient permissions to unban user `{user_id}`!"
-            log.warning(f"{interaction.user.id} [{interaction.user.display_name}] Failed to unban {user_id} - insufficient permissions")
-        else:
-            embed = discord.Embed(title="✅ User unbanned", description=f"User `{user_id}` has been unbanned from the server!", color=discord.Color.green())
-            embed.set_footer(text=f"ID: {user_id}")
+            log.exception(f"{interaction.user.id} [{interaction.user.display_name}] Failed to unban {user_id} - insufficient permissions")
+            errMsg = f"Insufficient permissions to unban user `{user_id}`!"
+        except Exception:
+            pass
+
+        # Handle all error cases
+        if errMsg:
+            embed = discord.Embed(title="❌ Unban failed", description=errMsg, color=discord.Color.red())
             embed.timestamp = datetime.now()
             await interaction.followup.send(embed=embed, ephemeral=True)
             return
 
-        # Handle all error cases
-        embed = discord.Embed(title="❌ Unban failed", description=error_msg, color=discord.Color.red())
+        # Successfully unbanned
+        embed = discord.Embed(
+            title="✅ User unbanned",
+            description=f"{user.mention} ({user}) has been unbanned from the server!",
+            color=discord.Color.green()
+        )
+        embed.set_footer(text=f"User ID: {user_id}")
         embed.timestamp = datetime.now()
         await interaction.followup.send(embed=embed, ephemeral=True)
+
 
     # Recruitment Team command
     @discord.app_commands.command(name="recruitment-interview")

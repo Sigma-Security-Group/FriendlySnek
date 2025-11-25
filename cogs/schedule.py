@@ -6,6 +6,7 @@ from copy import deepcopy
 from datetime import datetime, timedelta, timezone
 from dateutil.parser import parse as datetimeParse  # type: ignore
 from typing import *
+from random import random, randint
 
 from discord.ext import commands, tasks  # type: ignore
 
@@ -533,6 +534,72 @@ class Schedule(commands.Cog):
 # ===== </Tasks> =====
 
 
+# ===== </Track-a-Candidate> =====
+    @discord.app_commands.command(name="track-a-candidate")
+    @discord.app_commands.guilds(GUILD)
+    @discord.app_commands.checks.has_any_role(*CMD_LIMIT_ZEUS)
+    @discord.app_commands.describe(member="Member to track")
+    async def trackACandidate(self, interaction: discord.Interaction, member: discord.Member) -> None:
+        """Track a candidate's amount of operations attended.
+
+        Parameters:
+        interaction (discord.Interaction): The Discord interaction.
+        member (discord.Member): Member to track.
+
+        Returns:
+        None.
+        """
+        OPERATIONS_REQUIRED_TO_ATTEND = 3
+
+        if interaction.guild is None:
+            log.exception("Schedule trackACandidate: guild is None")
+            return
+
+        await interaction.response.defer(ephemeral=True, thinking=True)
+        log.info(f"{interaction.user.id} [{interaction.user.display_name}] is tracking candidate {member.id} [{member.display_name}]")
+
+        try:
+            with open(CANDIDATE_TRACKING_FILE) as f:
+                candidateTracking = json.load(f)
+        except Exception:
+            candidateTracking = {}
+
+        channelCommendations = interaction.guild.get_channel(COMMENDATIONS)
+        if not isinstance(channelCommendations, discord.TextChannel):
+            log.exception("Schedule trackACandidate: channelCommendations not discord.TextChannel")
+            return
+        roleUnitStaff = interaction.guild.get_role(UNIT_STAFF)
+        if roleUnitStaff is None:
+            log.exception("Schedule trackACandidate: roleUnitStaff is None")
+            return
+
+        key = str(member.id)
+        if candidateTracking.get(key) is None:
+            candidateTracking[key] = 0
+
+        candidateTracking[key] += 1
+        if candidateTracking[key] < OPERATIONS_REQUIRED_TO_ATTEND:
+            await interaction.followup.send("Tracking submitted!", ephemeral=True)
+            embed = discord.Embed(title="Track-a-Candidate", description=f"{member.mention} has attended {candidateTracking[key]} operations.", color=discord.Color.dark_blue())
+            await channelCommendations.send(embed=embed)
+        else:
+            embed = discord.Embed(
+                title="🎉 Candidate Graduated! 🎉",
+                description=f"{member.mention} has attended {OPERATIONS_REQUIRED_TO_ATTEND} operations and has now graduated from Candidate! Congratulations!\n",
+                color=discord.Color.purple()
+            )
+
+            await interaction.followup.send("Candidate has graduated!", ephemeral=True)
+            await channelCommendations.send(f"{roleUnitStaff.mention} This candidate need a levelup!", embed=embed)
+            del candidateTracking[key]
+
+
+        with open(CANDIDATE_TRACKING_FILE, "w") as f:
+              json.dump(candidateTracking, f, indent=4)
+
+# ===== </Track-a-Candidate> =====
+
+
 # ===== <Refresh Schedule> =====
 
     @discord.app_commands.command(name="refreshschedule")
@@ -595,6 +662,97 @@ class Schedule(commands.Cog):
 
 
 # ===== </AAR> ====
+
+
+# ===== </Commend> =====
+
+    @discord.app_commands.command(name="commend")
+    @discord.app_commands.describe(member="Member to commend", reason="Reason for the commendation (optional)")
+    @discord.app_commands.guilds(GUILD)
+    @discord.app_commands.checks.has_any_role(MEMBER)
+    async def commend(self, interaction: discord.Interaction, member: discord.Member, *, reason: str | None = None) -> None:
+        """Pick a member to commend. Reason is optional.
+
+        Parameters:
+        interaction (discord.Interaction): The Discord interaction.
+        member (discord.Member): Member to commend.
+        reason (str | None): Reason for the commendation.
+
+        Returns:
+        None.
+        """
+        await interaction.response.defer(ephemeral=True, thinking=True)
+
+        if member.bot:
+            embed = discord.Embed(title="❌ Invalid target", description="You cannot commend bots.", color=discord.Color.red())
+            await interaction.followup.send(embed=embed, ephemeral=True)
+            return
+
+        if member.id == interaction.user.id:
+            embed = discord.Embed(title="❌ Invalid target", description="You cannot commend yourself.", color=discord.Color.red())
+            await interaction.followup.send(embed=embed, ephemeral=True)
+            return
+
+        # Commendation Bonus
+        try:
+            with open(WALLETS_FILE) as f:
+                wallets = json.load(f)
+        except Exception:
+            wallets = {}
+
+
+        # Sender
+        senderEntry = wallets.get(str(interaction.user.id), {"timesCommended": 0, "sentCommendations": 0, "money": 0, "moneySpent": 0})
+
+        # Target
+        targetEntry = wallets.get(str(member.id), {"timesCommended": 0, "sentCommendations": 0, "money": 0, "moneySpent": 0})
+
+        # Update base stats
+        targetEntry["timesCommended"] = targetEntry.get("timesCommended", 0) + 1
+        senderEntry["sentCommendations"] = senderEntry.get("sentCommendations", 0) + 1
+        bonusAmount = 0
+
+        # Update wallets
+        wallets[str(interaction.user.id)] = senderEntry
+        wallets[str(member.id)] = targetEntry
+
+        # Output to user
+        embed = discord.Embed(
+            title=f"{member.display_name} has been commended!",
+            description=f"{interaction.user.mention} has commended {member.mention}.",
+            color=discord.Color.green()
+        )
+        if reason:
+            embed.add_field(name="Reason:", value=reason, inline=False)
+            if random() < 0.50:
+                bonusAmount = randint(100, 500)
+        elif random() < 0.25:
+            bonusAmount = randint(50, 100)
+        if bonusAmount > 0:
+            embed.add_field(name="Bonus:", value=f"Received `{bonusAmount}` SnekCoins! 🪙", inline=False)
+            targetEntry["money"] = int(targetEntry.get("money", 0)) + bonusAmount
+
+        try:
+            with open(WALLETS_FILE, "w") as f:
+                json.dump(wallets, f, indent=4)
+        except Exception:
+            log.warning("Schedule commend: Failed to save wallets file.")
+
+        embed.set_footer(text="I think they like you!")
+        embed.timestamp = datetime.now(timezone.utc)
+        channel = member.guild.get_channel(COMMENDATIONS)
+        if not isinstance(channel, discord.TextChannel):
+            log.exception("Schedule commend: channel not discord.TextChannel")
+            return
+        msgContent = f"You have commended {member.mention}." \
+            f"{'' if bonusAmount == 0 else f'\n🎉 They received `{bonusAmount}` SnekCoins 🎉'}\n" \
+            f"Check it out in {channel.mention}!"
+
+        await interaction.followup.send(msgContent, ephemeral=True)
+        await channel.send(f"🎉 {member.mention} 🎉", embed=embed)
+
+
+# ===== </Commend> =====
 
 
 # ===== <Schedule Functions> =====
@@ -3239,7 +3397,9 @@ class ScheduleModal(discord.ui.Modal):
 
 async def setup(bot: commands.Bot) -> None:
     Schedule.noShow.error(Utils.onSlashError)
+    Schedule.trackACandidate.error(Utils.onSlashError)
     Schedule.refreshSchedule.error(Utils.onSlashError)
     Schedule.aar.error(Utils.onSlashError)
+    Schedule.commend.error(Utils.onSlashError)
     Schedule.scheduleOperation.error(Utils.onSlashError)
     await bot.add_cog(Schedule(bot))

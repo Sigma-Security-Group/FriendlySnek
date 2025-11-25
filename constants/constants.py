@@ -13,7 +13,6 @@ EVENTS_HISTORY_FILE = "data/eventsHistory.json"
 # Templates
 EVENT_TEMPLATES_FILE = "data/eventTemplates.json"
 WORKSHOP_TEMPLATES_FILE = "data/workshopTemplates.json"
-#WORKSHOP_TEMPLATES_DELETED_FILE = "data/workshopDeletedTemplates.json"  # Maybe remove?
 
 # Misc
 MEMBER_TIME_ZONES_FILE = "data/memberTimeZones.json"
@@ -21,6 +20,8 @@ WORKSHOP_INTEREST_FILE = "data/workshopInterest.json"
 REMINDERS_FILE = "data/reminders.json"
 REPEATED_MSG_DATE_LOG_FILE = "data/repeatedMsgDateLog.json"
 GENERIC_DATA_FILE = "data/genericData.json"
+WALLETS_FILE = "data/wallets.json"
+CANDIDATE_TRACKING_FILE = "data/candidateTracking.json"
 
 # Staff
 ROLE_RESERVATION_BLACKLIST_FILE = "data/roleReservationBlacklist.json"
@@ -78,6 +79,7 @@ BOT = 702231226618216630
 
 # Zeuses / Curators
 ZEUS_GUIDELINES = 943226056402419793
+ZEUS_FEEDBACK = 1294336572342145207
 
 # Scheduling
 SCHEDULE = 852299426936782898
@@ -214,6 +216,7 @@ CMD_LIMIT_CLEANWSINTEREST = (UNIT_STAFF, SNEK_LORD, SME_RW_PILOT, SME_FW_PILOT, 
 ####################
 # DISCORD LIMITATIONS
 ####################
+
 DISCORD_LIMITS = {
     "rates": {
         "bulk_delete": 100,  # messages
@@ -224,6 +227,8 @@ DISCORD_LIMITS = {
         "embed_title": 256,
         "embed_description": 4096,
         "embed_field": 25, # Max number of fields in a single embed
+        "embed_field_name": 256,
+        "embed_field_value": 1024,
         "embeds_per_message": 10,
         "attachment_size_mb": 25,  # 8MB for standard, 25MB for bots, 50-500MB for Nitro
     },

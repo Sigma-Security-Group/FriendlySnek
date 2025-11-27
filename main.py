@@ -167,7 +167,8 @@ async def on_message(message: discord.Message) -> None:
                     "Error: Humor module not found. But here's a joke anyway: Life.",
                     "If only I could Ctrl+Z this entire interaction.",
                     "Have you heard of Angy Snek? I don't like that guy...",
-                    "Are you trying to give me a citation? Your not <@312927139764764672>",
+                    "Are you trying to give me a citation? You're not <@312927139764764672>",
+                    "Wait one, still processing <@356926241065926658>'s AAR comment."
         ]
         try:
             await message.reply(random.choice(replies))

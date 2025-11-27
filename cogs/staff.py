@@ -676,9 +676,7 @@ class Staff(commands.Cog):
             return
 
         staffMembers = "\n".join(f"- {staff.display_name} ({staff})" for staff in roleUnitStaff.members)
-        dm = f"You have been banned from {guild.name} for the following reason:\n> {reason}\n\n" \
-            f"You may appeal your ban by contacting a member of the Unit Staff:\n{staffMembers}" \
-            "\n\nAll appeals are subject to Unit Staff review."
+        dm = f"You have been banned from {guild.name} for the following reason:\n> {reason}\n\nYou may appeal your ban by contacting a member of the Unit Staff:\n{staffMembers}\n\nAll appeals are subject to Unit Staff review."
         try:
             await user.send(dm)
         except Exception as e:

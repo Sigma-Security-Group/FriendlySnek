@@ -744,9 +744,10 @@ class Schedule(commands.Cog):
         if not isinstance(channel, discord.TextChannel):
             log.exception("Schedule commend: channel not discord.TextChannel")
             return
-        msgContent = f"You have commended {member.mention}." \
-            f"{'' if bonusAmount == 0 else f'\n🎉 They received `{bonusAmount}` SnekCoins 🎉'}\n" \
-            f"Check it out in {channel.mention}!"
+        msgContent = f"You have commended {member.mention}."
+        if bonusAmount != 0:
+            msgContent += f"\n🎉 They received `{bonusAmount}` SnekCoins 🎉"
+        msgContent += f"\nCheck it out in {channel.mention}!"
 
         await interaction.followup.send(msgContent, ephemeral=True)
         await channel.send(f"🎉 {member.mention} 🎉", embed=embed)

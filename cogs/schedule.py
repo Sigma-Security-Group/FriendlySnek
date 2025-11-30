@@ -581,6 +581,7 @@ class Schedule(commands.Cog):
         if candidateTracking[key] < OPERATIONS_REQUIRED_TO_ATTEND:
             await interaction.followup.send("Tracking submitted!", ephemeral=True)
             embed = discord.Embed(title="Track-a-Candidate", description=f"{member.mention} has attended {candidateTracking[key]} operations.", color=discord.Color.dark_blue())
+            embed.set_footer(text=f"Tracked by {interaction.user.display_name}")
             await channelCommendations.send(embed=embed)
         else:
             embed = discord.Embed(

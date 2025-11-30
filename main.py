@@ -53,6 +53,7 @@ DATA_FILES = {
     GENERIC_DATA_FILE: {},
     WORKSHOP_INTEREST_FILE: {},
     NO_SHOW_FILE: {},
+    CANDIDATE_TRACKING_FILE: {},
     WALLETS_FILE: {},
 }
 for filePath, dump in DATA_FILES.items():

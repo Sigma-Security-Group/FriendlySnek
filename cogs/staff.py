@@ -1064,9 +1064,9 @@ class StaffButton(discord.ui.Button):
 
             zeusRole = interaction.guild.get_role(ZEUS)
             curatorRole = interaction.guild.get_role(CURATOR)
-            embed.title = f"✅ ZiT Feedback Submitted" if recommend == True else f"❌ ZiT Feedback Submitted"
-            embed.set_field_at(4, name="Recommendation", value = f"✅ Recommending for {zeusRole.mention}" if recommend == True else f"❌ Not recommended for {zeusRole.mention}", inline=False)
-            embed.color = discord.Color.green() if recommend == True else discord.Color.purple()
+            embed.title = f"✅ ZiT Feedback Submitted" if recommend else f"❌ ZiT Feedback Submitted"
+            embed.set_field_at(4, name="Recommendation", value = f"✅ Recommending for {zeusRole.mention}" if recommend else f"❌ Not recommended for {zeusRole.mention}", inline=False)
+            embed.color = discord.Color.green() if recommend else discord.Color.purple()
             embed.timestamp = datetime.now()
             embed.description = ""
             zFeedback = interaction.guild.get_channel(ZEUS_FEEDBACK)
@@ -1076,7 +1076,8 @@ class StaffButton(discord.ui.Button):
             await interaction.response.edit_message(content = "Thank you for submitting ZiT feedback!", embed = None, view = None)
             await zFeedback.send(content = f"{curatorRole.mention} Feedback is now ready for review.\n\nFeedback submitted for {zeusMember.mention} by {interaction.user.mention}.", embed=embed)
             return
-        elif customId.endswith(("yes", "no")):
+
+        if customId.endswith(("yes", "no")):
             if not isinstance(zeusMember, discord.Member):
                 log.exception(f"StaffButton callback: zeusMember not discord.Member, id '{zeusId}'")
                 return

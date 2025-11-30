@@ -923,22 +923,31 @@ class Staff(commands.Cog):
         for _ in range(5):
             embed.add_field(name="", value="", inline=False)
 
+        viewCFG = {
+            "opName": {"label": "Operation Name & Date", "id": "opname", "row": 0, "placeholder": "Operation Honda Civic - YYYY-MM-DD"},
+            "wentWell": {"label": "Things Done Well", "id": "wentwell" , "row": 0, "placeholder": "Refer to #zeus-guidelines and Zeus Promotion Criteria Document.\n(Max 1024 characters)"},
+            "couldImprove": {"label": "Points for Improvement", "id": "couldimprove", "row": 0, "placeholder": "Refer to #zeus-guidelines and Zeus Promotion Criteria Document.\n(Max 1024 characters)"},
+            "additionalComments": {"label": "Additional Comments", "id": "additionalcomments", "row": 0, "placeholder": "Enter any additional comments.\n(Max 1024 characters)\n(Max 1024 characters)"},
+            "recommend_yes": {"label": "[Recommend for Full Zeus Tags]", "id": "recommend_yes", "row": 1},
+            "recommend_no": {"label": "[Don't Recommended for Full Zeus Tags]", "id": "recommend_no", "row": 1},
+            "submit": {"label": "Submit", "id": "submit", "row": 2}
+        }
+
         view = discord.ui.View(timeout=None)
-        view.add_item(StaffButton(style = discord.ButtonStyle.primary, label="Operation Name & Date", custom_id=f"staff_button_zitfeedback_opname"))
-        view.add_item(StaffButton(style = discord.ButtonStyle.primary, label="Things Done Well", custom_id=f"staff_button_zitfeedback_wentwell"))
-        view.add_item(StaffButton(style = discord.ButtonStyle.primary, label="Points for Improvement", custom_id=f"staff_button_zitfeedback_couldimprove"))
-        view.add_item(StaffButton(style = discord.ButtonStyle.secondary, label="Additional Comments", custom_id=f"staff_button_zitfeedback_additionalcomments"))
-        view.add_item(StaffButton(style=discord.ButtonStyle.primary, row=1, label="[Recommend for Full Zeus Tags]", custom_id=f"staff_button_zitfeedback_recommend_yes"))
-        view.add_item(StaffButton(style=discord.ButtonStyle.primary, row=1, label="[Don't Recommended for Full Zeus Tags]", custom_id=f"staff_button_zitfeedback_recommend_no"))
-        view.add_item(StaffButton(style=discord.ButtonStyle.gray, row=2, label="Submit", custom_id=f"staff_button_zitfeedback_submit", disabled=True))
+
+        for id, customId in viewCFG.items():
+            view.add_item(StaffButton(
+                style = discord.ButtonStyle.primary if id in ["opName", "wentWell", "couldImprove", "recommend_yes", "recommend_no"] else discord.ButtonStyle.secondary,
+                label = customId["label"],
+                custom_id = f"staff_button_zitfeedback_{customId['id']}",
+                row = customId.get("row", 0)
+            ))
 
         # Store zeusId in view for later use and initialize required fields
         view.zeusId = zeus.id
         view.requiredFieldsFilled = {"opName": None, "wentWell": None, "couldImprove": None, "recommend": None
         }
-        view.opName = ""  # type: ignore
-        view.wentWell = ""  # type: ignore
-        view.couldImprove = ""  # type: ignore
+        view.CFG = viewCFG
         await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
 
 
@@ -1043,16 +1052,17 @@ class StaffButton(discord.ui.Button):
             return
 
         # ZiT Feedback buttons
+        view: discord.ui.View = self.view  # type: ignore
+        zeusId = view.zeusId  # type: ignore
+        zeusMember = interaction.guild.get_member(zeusId)
+        embed = interaction.message.embeds[0]
+
         if customId.endswith("submit"):
-            view: discord.ui.View = self.view  # type: ignore
-            zeusId = view.zeusId  # type: ignore
-            zeusMember = interaction.guild.get_member(zeusId)
             if not isinstance(zeusMember, discord.Member):
                 log.exception(f"StaffButton callback: zeusMember not discord.Member, id '{zeusId}'")
                 return
 
             recommend = view.requiredFieldsFilled["recommend"]  # type: ignore
-            embed = interaction.message.embeds[0]
 
             zeusRole = interaction.guild.get_role(ZEUS)
             curatorRole = interaction.guild.get_role(CURATOR)
@@ -1069,10 +1079,6 @@ class StaffButton(discord.ui.Button):
             await zFeedback.send(content = f"{curatorRole.mention} Feedback is now ready for review.\n\nFeedback submitted for {zeusMember.mention} by {interaction.user.mention}.", embed=embed)
             return
         elif customId.endswith(("yes", "no")):
-            embed = interaction.message.embeds[0]
-            view: discord.ui.View = self.view  # type: ignore
-            zeusId = view.zeusId  # type: ignore
-            zeusMember = interaction.guild.get_member(zeusId)
             if not isinstance(zeusMember, discord.Member):
                 log.exception(f"StaffButton callback: zeusMember not discord.Member, id '{zeusId}'")
                 return
@@ -1106,27 +1112,15 @@ class StaffButton(discord.ui.Button):
                 await interaction.response.edit_message(embed=embed, view=view)
                 pass
 
-        fieldLabel = customId.split("_")[3]
-        promptMap = {
-            "opname": "Operation Name & Date:",
-            "wentwell": "Things the Zeus did well:",
-            "couldimprove": "Points the Zeus could improve on:",
-            "additionalcomments": "Additional comments (optional):"
-        }
-        placeholderMap = {
-            "opname": "Operation Honda Civic - YYYY-MM-DD",
-            "wentwell": "Refer to #zeus-guidelines and Zeus Promotion Criteria Document.\n(Max 1024 characters)",
-            "couldimprove": "Refer to #zeus-guidelines and Zeus Promotion Criteria Document.\n(Max 1024 characters)",
-            "additionalcomments": "Enter any additional comments.\n(Max 1024 characters)"
-        }
-        prompt = promptMap.get(fieldLabel)
+        fieldId = customId.split("_")[3]
+        cfg = next((c for c in view.CFG.values() if c.get("id") == fieldId), {})  # type: ignore
 
-        modal = StaffModal(self.view, f"ZiT Feedback", f"staff_modal_zitfeedback_{fieldLabel}")
+        modal = StaffModal(self.view, f"ZiT Feedback", f"staff_modal_zitfeedback_{fieldId}")
         modal.add_item(discord.ui.TextInput(
-            label = prompt,
-            placeholder=placeholderMap.get(fieldLabel),
-            style=discord.TextStyle.paragraph if fieldLabel != "opname" else discord.TextStyle.short,
-            required = (fieldLabel != "additionalcomments"),
+            label = cfg.get("label", ""),
+            placeholder = str(cfg.get("placeholder", ""))[:100],
+            style = discord.TextStyle.short if (cfg.get("id") == "opname") else discord.TextStyle.paragraph,
+            required = (cfg.get("id") != "additionalcomments"),
             max_length = 1024
             ))
         modal.embed = interaction.message.embeds[0]  # store embed in modal for later use
@@ -1149,28 +1143,22 @@ class StaffModal(discord.ui.Modal):
 
         if interaction.data["custom_id"].startswith("staff_modal_zitfeedback"):
             embed = self.embed  # type: ignore
-            fieldLabel = interaction.data["custom_id"].split("_")[-1]
+            fieldId = interaction.data["custom_id"].split("_")[-1]
             view: discord.ui.View = self.instance  # type: ignore
             userInput = self.children[0].value.strip()
 
-            if fieldLabel == "opname":
-                view.opName = userInput
-                btn = view.children[0]  # type: ignore
+            cfgKey, _ = next(((k, v) for k, v in view.CFG.items() if v.get("id") == fieldId), (None, {}))  # type: ignore
+
+            if cfgKey == "opName":
                 embed.set_field_at(0, name="Operation Name & Date", value=f"{userInput}", inline=False)
                 view.requiredFieldsFilled["opName"] = True
-            elif fieldLabel == "wentwell":
-                view.wentWell = userInput
-                btn = view.children[1]  # type: ignore
+            elif cfgKey == "wentWell":
                 embed.set_field_at(1, name="Things Done Well", value=f"{userInput}", inline=False)
                 view.requiredFieldsFilled["wentWell"] = True
-            elif fieldLabel == "couldimprove":
-                view.couldImprove = userInput
-                btn = view.children[2]  # type: ignore
+            elif cfgKey == "couldImprove":
                 embed.set_field_at(2, name="Points for Improvement", value=f"{userInput}", inline=False)
                 view.requiredFieldsFilled["couldImprove"] = True
-            elif fieldLabel == "additionalcomments":
-                view.additionalComments = userInput
-                btn = view.children[3]  # type: ignore
+            elif cfgKey == "additionalComments":
                 embed.set_field_at(3, name="Additional Comments", value=f"{userInput}", inline=False)
 
             # Enable submit button only when required fields are filled

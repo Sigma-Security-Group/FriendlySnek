@@ -1191,6 +1191,7 @@ class StaffModal(discord.ui.Modal):
 async def setup(bot: commands.Bot) -> None:
     Staff.interview.error(Utils.onSlashError)
     Staff.updatemodpack.error(Utils.onSlashError)
+    Staff.zitfeedback.error(Utils.onSlashError)
     Staff.ban.error(Utils.onSlashError)
     Staff.unban.error(Utils.onSlashError)
     await bot.add_cog(Staff(bot))

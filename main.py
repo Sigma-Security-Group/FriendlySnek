@@ -106,6 +106,10 @@ async def on_message(message: discord.Message) -> None:
     if message.guild is None or message.guild.id != GUILD_ID:  # Ignore messages that were not sent on the correct server
         return
 
+    if message.author.id == DISBOARD:
+        await message.delete()
+        return
+
     # Snek replies
     if [True for mention in message.mentions if mention.id in FRIENDLY_SNEKS]:
         replies = ["snek", "snake", "ssssnek", "ssssnake", "snek!", "snake!", "ssssnek!", "ssssnake!",

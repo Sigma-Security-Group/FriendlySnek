@@ -106,11 +106,11 @@ async def on_message(message: discord.Message) -> None:
     if message.guild is None or message.guild.id != GUILD_ID:  # Ignore messages that were not sent on the correct server
         return
 
-    if message.author.id == DISBOARD: # Auto delete Disboard bump messages
+    if message.author.id == DISBOARD: # Auto delete Disboard bump messages, replace with a thank you message
         embed = message.embeds[0] if message.embeds else None
         if embed and embed.description and "Bump done" in embed.description:
             log.info(f"Auto-deleting Disboard message in #{message.channel} from {message.author.id} [{message.author.display_name}]")
-            await message.channel.send(content = f"Thank you for the /bump! :snake:\nThe trout population thanks you.", file = discord.File("constants/trout.png"))
+            await message.channel.send(content = f":snake:Thank you for the /bump! :snake:\nThe trout population thanks you.{TROUT}")
             await message.delete()
             return
 

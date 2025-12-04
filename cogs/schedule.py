@@ -6,7 +6,7 @@ from copy import deepcopy
 from datetime import datetime, timedelta, timezone
 from dateutil.parser import parse as datetimeParse  # type: ignore
 from typing import *
-from random import random, randint
+from random import random, randint, choice
 
 from discord.ext import commands, tasks  # type: ignore
 
@@ -717,10 +717,60 @@ class Schedule(commands.Cog):
         wallets[str(interaction.user.id)] = senderEntry
         wallets[str(member.id)] = targetEntry
 
+        # Commend responses
+        actionPhrases = [
+            "has been commended!",
+            "just got commendedd!",
+            "was commended!",
+            "earned a commendation!",
+            "got commended!",
+            "picked up a commendation!",
+            "just cot a commendation!",
+            "received a commendation!",
+            "was just commended!",
+            "'s getting some love!",
+            "'s been given a commendation!",
+            "'s commendation is now here!",
+            "was given a commendation!",
+            "was marked for a commendation!",
+            "logged positive performance!",
+            "has received the hawk tuah!",
+            "got a pat on the back!",
+        ]
+        commentaryPhrases = [
+            "Sssnek thinks you did great too.",
+            "Nice work.",
+            "Clean job on that one.",
+            "Solid stuff.",
+            "Snek gives a lil nod.",
+            "Keep doing your thing.",
+            "That tracks.",
+            "Well deserved.",
+            "Snek quietly approves.",
+            "Good momentum.",
+            "That’s a win in my book.",
+            "Smooth move.",
+            "You love to see it.",
+            "That’s some good work right there.",
+            "Snek’s kinda proud ngl.",
+            "Strong showing.",
+            "Solid all around.",
+            "Ssssolid effort.",
+            "Definitely earned it.",
+            "Keep that energy going.",
+            "You must have L shaped really well.",
+            "I'm sure they have plenty of war stories to tell.",
+            "I wish you were my battle buddy.",
+            "<@378697936827056139> would be proud.",
+            "Snek approves.",
+            "Thats how it's done!",
+            "Is this peak performance?"
+        ]
+
         # Output to user
         embed = discord.Embed(
-            title=f"{member.display_name} has been commended!",
-            description=f"{interaction.user.mention} has commended {member.mention}.",
+            title=f"{member.display_name} has been commended by {interaction.user.display_name}!",
+            description = f"{member.mention} {choice(actionPhrases)} {choice(commentaryPhrases)}",
             color=discord.Color.green()
         )
         if reason:

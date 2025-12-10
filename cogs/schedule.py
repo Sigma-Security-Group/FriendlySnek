@@ -770,7 +770,7 @@ class Schedule(commands.Cog):
         # Output to user
         embed = discord.Embed(
             title=f"{member.display_name} has been commended by {interaction.user.display_name}!",
-            description = f"{member.mention} {choice(actionPhrases)} {choice(commentaryPhrases)}",
+            description=f"{member.mention} {choice(actionPhrases)} {choice(commentaryPhrases)}",
             color=discord.Color.green()
         )
         if reason:

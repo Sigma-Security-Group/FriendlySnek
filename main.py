@@ -218,6 +218,9 @@ async def analyzeChannel(client, message: discord.Message, channelID: int, attac
     if attachmentContentType == "video" and re.search(r"https?:\/\/((www)?(clips)?\.)?(youtu(be)?|twitch|streamable|medal)\.(com|be|tv).+", message.content):
         return
 
+    if attachmentContentType == "image" and re.search(r"https?:\/\/((www)?(cdn)?\.)?(imgur|postimg|imageshack|flickr|photobucket|tinypic|gyazo|prntscr)\.(com|cc|net|org)\/.+", message.content):
+        return
+
     try:
         await message.delete()
     except Exception as e:

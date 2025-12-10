@@ -944,7 +944,11 @@ class Staff(commands.Cog):
 
         # Store zeusId in view for later use and initialize required fields
         view.zeusId = zeus.id
-        view.requiredFieldsFilled = {"opName": None, "wentWell": None, "couldImprove": None, "recommend": None
+        view.requiredFieldsFilled = {
+            "opName": None,
+            "wentWell": None,
+            "couldImprove": None,
+            "recommend": None
         }
         view.CFG = viewCFG
         await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
@@ -1051,7 +1055,6 @@ class StaffButton(discord.ui.Button):
             return
 
         # ZiT Feedback buttons
-
         if customId.startswith("staff_button_zitfeedback_"):
             view: discord.ui.View = self.view  # type: ignore
             zeusId = view.zeusId  # type: ignore
@@ -1110,10 +1113,10 @@ class StaffButton(discord.ui.Button):
                     return
                 except Exception:
                     await interaction.response.edit_message(embed=embed, view=view)
-                    pass
 
             fieldId = customId.split("_")[3]
             cfg = next((c for c in view.CFG.values() if c.get("id") == fieldId), {})  # searhces view.CFG for matching fieldId
+            default = None
             if customId == "staff_button_zitfeedback_opname":
                 default = embed.fields[0].value if embed.fields[0].value != "" else None
             elif customId == "staff_button_zitfeedback_wentwell":
@@ -1131,7 +1134,7 @@ class StaffButton(discord.ui.Button):
                 style = discord.TextStyle.short if (cfg.get("id") == "opname") else discord.TextStyle.paragraph,
                 required = (cfg.get("id") != "additionalcomments"),
                 max_length = 1024
-                ))
+            ))
             modal.embed = interaction.message.embeds[0]  # store embed in modal for later use
             await interaction.response.send_modal(modal)
             return

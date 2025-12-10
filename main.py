@@ -109,7 +109,7 @@ async def on_message(message: discord.Message) -> None:
     if message.author.id == DISBOARD: # Auto delete Disboard bump messages, replace with a thank you message
         embed = message.embeds[0] if message.embeds else None
         if embed and embed.description and "Bump done" in embed.description:
-            log.info(f"Auto-deleting Disboard message in #{message.channel} from {message.author.id} [{message.author.display_name}]")
+            log.debug(f"Auto-deleting Disboard message in #{message.channel} from {message.author.id} [{message.author.display_name}]")
             await message.channel.send(content = f":snake:Thank you for the /bump! :snake:\nThe trout population thanks you.{TROUT}")
             await message.delete()
             return

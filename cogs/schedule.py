@@ -803,6 +803,44 @@ class Schedule(commands.Cog):
         await interaction.followup.send(msgContent, ephemeral=True)
         await channel.send(f"🎉 {member.mention} 🎉", embed=embed)
 
+    @commands.command(name="snekleaderboard")
+    async def snekLeaderboard(self, ctx: commands.Context) -> None:
+        """Displays the SnekCoin leaderboard.
+
+        Parameters:
+        ctx (commands.Context): The command context.
+
+        Returns:
+        None.
+        """
+        if not isinstance(ctx.guild, discord.Guild):
+            log.exception("Schedule snekleaderboard: ctx.guild not discord.Guild")
+            return
+
+        try:
+            with open(WALLETS_FILE) as f:
+                wallets = json.load(f)
+        except Exception:
+            wallets = {}
+
+        embed = discord.Embed(title="🏆 SnekCoin Leaderboard 🏆", color=discord.Color.gold(), description = "")
+        desLimit = DISCORD_LIMITS["message_embed"]["embed_description"]
+        wallets = dict(sorted(wallets.items(), key=lambda item: item[1].get("money", 0), reverse=True))
+
+        try:
+            i = 1
+            for userId in wallets:
+                member = ctx.guild.get_member(int(userId))
+                if member is None:
+                    continue
+                if len(embed.description + f"{i}. {member.mention}:🪙 `{wallets[userId].get('money', 0)}` SnekCoins\n") > desLimit:
+                    await ctx.send(embed=embed)
+                    embed.description = ""
+                embed.description += f"{i}. {member.mention}:🪙 `{wallets[userId].get('money', 0)}` SnekCoins\n"
+                i += 1
+        except:
+            log.exception("Schedule snekleaderboard: Failed to generate leaderboard fields.")
+        await ctx.send(embed=embed)
 
 # ===== </Commend> =====
 

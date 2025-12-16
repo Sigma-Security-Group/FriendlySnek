@@ -12,6 +12,21 @@ if secret.DEBUG:
 MISSIONS_UPLOADED_FILE = "data/missionsUploaded.log"
 UTC = pytz.utc
 
+SERVERS = [
+    {
+        "Name": "SSG - Operations Server",
+        "Directory": "148.251.151.145_2302/mpmissions",
+        "Host": "148.251.151.145",
+        "Port": 8822
+    },
+    {
+        "Name": "SSG - Event Server",
+        "Directory": "148.251.192.96_2322/mpmissions",
+        "Host": "148.251.192.96",
+        "Port": 8822
+    }
+]
+
 log = logging.getLogger("FriendlySnek")
 
 def convertBytes(size: int):
@@ -37,7 +52,7 @@ class MissionUploader(commands.Cog):
         missionfile="Missionfile to upload. Naming: 'YYYY_MM_DD_Operation_Name_V1.Map.pbo'",
         server="Which server to upload to?"
     )
-    @discord.app_commands.choices(server = [discord.app_commands.Choice(name=srv["name"], value=host) for host, srv in secret.SFTP.items()])
+    @discord.app_commands.choices(server = [discord.app_commands.Choice(name=srv["Name"], value=srv["Host"]) for srv in SERVERS])
     @discord.app_commands.checks.has_any_role(*CMD_LIMIT_UPLOADMISSION)
     async def uploadMission(self, interaction: discord.Interaction, missionfile: discord.Attachment, server: discord.app_commands.Choice[str]) -> None:
         """Upload a mission PBO file to the server."""
@@ -54,24 +69,28 @@ class MissionUploader(commands.Cog):
             await interaction.response.send_message(embed=discord.Embed(title="❌ Invalid filesize", description="Max allowed filesize is 25 MB!", color=discord.Color.red()), ephemeral=True, delete_after=30.0)
             return
 
+        serverDict = [srv for srv in SERVERS if srv["Host"] == server.value][0]
+        if serverDict["Host"] not in secret.SFTP:
+            await interaction.response.send_message(embed=discord.Embed(title="❌ Invalid server", description="The selected server is not available. Please contact a snek lord!", color=discord.Color.red()), ephemeral=True, delete_after=30.0)
+            log.error(f"MissionUploader uploadMission: Server {serverDict['Host']} not in secret.SFTP")
+            return
+
         await interaction.response.send_message(embed=discord.Embed(title="Uploading mission file...", description="Standby, this can take a minute...", color=discord.Color.green()))
 
         sftp = None
-        timeout = 10 # seconds
         try:
-            transport = paramiko.Transport((server.value, secret.SFTP[server.value]["port"]))
-            transport.sock.settimeout(timeout)
+            transport = paramiko.Transport((serverDict["Host"], serverDict["Port"]))
             transport.connect(
-                username=secret.SFTP[server.value]["username"],
-                password=secret.SFTP[server.value]["password"]
+                username=secret.SFTP[serverDict["Host"]]["username"],
+                password=secret.SFTP[serverDict["Host"]]["password"]
             )
             sftp = paramiko.SFTPClient.from_transport(transport)
             if sftp is None:
                 raise Exception("missionUploader uploadMission: sftp is None after connection")
 
             # Change remote directory if defined
-            if secret.SFTP[server.value]["directory"]:
-                sftp.chdir(secret.SFTP[server.value]["directory"])
+            if "Directory" in serverDict and serverDict["Directory"]:
+                sftp.chdir(serverDict["Directory"])
 
             missionFilesOnServer = [attr.filename for attr in sftp.listdir_attr()]
             if missionfile.filename in missionFilesOnServer:
@@ -94,11 +113,11 @@ class MissionUploader(commands.Cog):
                 except Exception:
                     log.exception(f"{interaction.user.id} [{interaction.user.display_name}] Failed to put mission file on server")
 
-        except Exception as e:
+        except Exception:
             log.exception(f"{interaction.user.id} [{interaction.user.display_name}] Failed to upload mission file")
             await interaction.edit_original_response(embed=discord.Embed(
                 title="❌ Connection error",
-                description=f"There was an error connecting to the server. Please try again later!\n```\n{e}\n```",
+                description="There was an error connecting to the server. Please try again later!",
                 color=discord.Color.red()
             ))
             return
@@ -120,7 +139,7 @@ class MissionUploader(commands.Cog):
         # Log the upload
         with open(MISSIONS_UPLOADED_FILE, "a") as f:
             f.write(f"\nFilename: {missionfile.filename}\n"
-                f"Server: {secret.SFTP[server.value]['name']}\n"
+                f"Server: {serverDict['Name']}\n"
                 f"UTC Time: {datetime.now(timezone.utc).strftime(TIME_FORMAT)}\n"
                 f"Member: {interaction.user.display_name} ({interaction.user})\n"
                 f"Member ID: {interaction.user.id}\n"
@@ -130,7 +149,7 @@ class MissionUploader(commands.Cog):
             embed = discord.Embed(title="Uploaded mission file" + (" (Debug)" if secret.DEBUG else ""), color=discord.Color.blue())
             embed.add_field(name="Filename", value=f"`{missionfile.filename}`")
             embed.add_field(name="Size", value=f"`{convertBytes(missionfile.size)}`")
-            embed.add_field(name="Server", value=f"`{secret.SFTP[server.value]['name']}`")
+            embed.add_field(name="Server", value=f"`{serverDict['Name']}`")
             embed.add_field(name="Time", value=discord.utils.format_dt(datetime.now(timezone.utc), style="F"))
             embed.add_field(name="Member", value=interaction.user.mention)
             embed.set_footer(text=f"Member ID: {interaction.user.id}")

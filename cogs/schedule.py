@@ -3386,6 +3386,11 @@ class ScheduleModal(discord.ui.Modal):
             timeZone = pytz.timezone(memberTimeZones[str(interaction.user.id)])
             startTime = timeZone.localize(startTime).astimezone(UTC)
 
+            # Check if new time and old time is the same
+            if startTime.strftime(TIME_FORMAT) == startTimeOld:
+                await interaction.response.send_message(interaction.user.mention, embed=discord.Embed(title="❌ No changes made", description="The new time is the same as the old time.", color=discord.Color.red()), ephemeral=True, delete_after=10.0)
+                return
+
             endTime = startTime + delta
             event["time"] = startTime.strftime(TIME_FORMAT)
             event["endTime"] = endTime.strftime(TIME_FORMAT)

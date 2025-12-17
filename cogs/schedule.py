@@ -310,7 +310,7 @@ class Schedule(commands.Cog):
 
 
     @staticmethod
-    async def tasknoShowsPing(guild: discord.Guild, channelCommand: discord.TextChannel, channelDeployed: discord.TextChannel) -> None:
+    async def tasknoShowsPing(guild: discord.Guild, channelCommand: discord.TextChannel, channelDeployed: discord.TextChannel, channelEventDeployed: discord.VoiceChannel) -> None:
         """Handling no-show members by pinging.
 
         Parameters:
@@ -339,7 +339,7 @@ class Schedule(commands.Cog):
             if datetime.now(timezone.utc) > startTime + timedelta(minutes=NO_SHOW_PING_THRESHOLD_IN_MINUTES):
                 event["checkedAcceptedReminders"] = True
                 membersAccepted = [member for memberId in event["accepted"] + event["standby"] if (member := guild.get_member(memberId)) is not None]
-                membersInVC = channelCommand.members + channelDeployed.members
+                membersInVC = channelCommand.members + channelDeployed.members + channelEventDeployed.members
                 membersUnscheduled += ([member for member in membersAccepted if member not in membersInVC] + [member for member in membersInVC if member not in membersAccepted and member.id != event["authorId"]])
 
         with open(EVENTS_FILE, "w") as f:
@@ -524,8 +524,12 @@ class Schedule(commands.Cog):
         if not isinstance(channelDeployed, discord.VoiceChannel):
             log.exception("Schedule tenMinTask: channelDeployed not discord.VoiceChannel")
             return
+        channelEventDeployed = guild.get_channel(EVENT_DEPLOYED)
+        if not isinstance(channelEventDeployed, discord.VoiceChannel):
+            log.exception("Schedule tenMinTask: channelEventDeployed not discord.VoiceChannel")
+            return
 
-        await Schedule.tasknoShowsPing(guild, channelCommand, channelDeployed)
+        await Schedule.tasknoShowsPing(guild, channelCommand, channelDeployed, channelEventDeployed)
 
         # === Log no-show players. ===
         await Schedule.tasknoShowsLogging(guild, channelCommand, channelDeployed)

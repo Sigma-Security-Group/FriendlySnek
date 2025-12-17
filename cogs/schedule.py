@@ -938,7 +938,7 @@ class Schedule(commands.Cog):
         # Reservable Roles
         if event["reservableRoles"] is not None:
             embed.add_field(name="\u200B", value="\u200B", inline=False)
-            resRolesTaken = len([1 for memberId in event["reservableRoles"].keys() if memberId is not None])
+            resRolesTaken = len([1 for memberId in event["reservableRoles"].values() if memberId is not None])
             resRolesDescription = []
             for roleName, memberId in event["reservableRoles"].items():
                 if memberId is None:

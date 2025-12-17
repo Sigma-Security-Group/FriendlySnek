@@ -931,23 +931,45 @@ class Schedule(commands.Cog):
         """
         embed = discord.Embed(title=event["title"], description=event["description"], color=EVENT_TYPE_COLORS[event.get("type", "Operation")])
 
+        # Reservable Roles
         if event["reservableRoles"] is not None:
             embed.add_field(name="\u200B", value="\u200B", inline=False)
-            embed.add_field(name=f"Reservable Roles ({len([role for role, memberId in event['reservableRoles'].items() if memberId is not None])}/{len(event['reservableRoles'])}) 👤", value="\n".join(f"{roleName} - {('*' + member.display_name + '*' if (member := guild.get_member(memberId)) is not None else '**VACANT**') if memberId is not None else '**VACANT**'}" for roleName, memberId in event["reservableRoles"].items()), inline=False)
+            resRolesTaken = len([1 for memberId in event["reservableRoles"].keys() if memberId is not None])
+            resRolesDescription = []
+            for roleName, memberId in event["reservableRoles"].items():
+                if memberId is None:
+                    resRolesDescription.append(f"{roleName} - **VACANT**")
+                    continue
 
+                member = guild.get_member(memberId)
+                if member is None:
+                    # Remove invalid members
+                    event["reservableRoles"][roleName] = None
+                else:
+                    resRolesDescription.append(f"{roleName} - *{member.display_name}*")
+
+            embed.add_field(
+                name=f"Reservable Roles ({resRolesTaken}/{len(event['reservableRoles'])}) 👤",
+                value="\n".join(resRolesDescription), inline=False
+            )
+
+        # Duration and Time
         durationHours = int(event["duration"].split("h")[0].strip()) if "h" in event["duration"] else 0
         embed.add_field(name="\u200B", value="\u200B", inline=False)
         embed.add_field(name="Time", value=f"{discord.utils.format_dt(UTC.localize(datetime.strptime(event['time'], TIME_FORMAT)), style='F')} - {discord.utils.format_dt(UTC.localize(datetime.strptime(event['endTime'], TIME_FORMAT)), style='t' if durationHours < 24 else 'F')}", inline=(durationHours < 24))
         embed.add_field(name="Duration", value=event["duration"], inline=True)
 
+        # Map
         if event["map"] is not None:
             embed.add_field(name="Map", value=event["map"], inline=False)
 
+        # External URL
         if event["externalURL"] is not None:
             embed.add_field(name="\u200B", value="\u200B", inline=False)
             embed.add_field(name="External URL", value=event["externalURL"], inline=False)
         embed.add_field(name="\u200B", value="\u200B", inline=False)
 
+        # RSVP Lists
         isAcceptAndReserve = event["reservableRoles"] and len(event["reservableRoles"]) == event["maxPlayers"]
         if not isAcceptAndReserve and len(event["standby"]) > 0 and (event["maxPlayers"] is None or (isinstance(event["maxPlayers"], int) and len(event["accepted"]) < event["maxPlayers"])):
             if event["maxPlayers"] is None:

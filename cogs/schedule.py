@@ -352,7 +352,7 @@ class Schedule(commands.Cog):
 
 
     @staticmethod
-    async def tasknoShowsLogging(guild: discord.Guild, channelCommand: discord.TextChannel, channelDeployed: discord.TextChannel) -> None:
+    async def tasknoShowsLogging(guild: discord.Guild, channelCommand: discord.TextChannel, channelDeployed: discord.TextChannel, channelEventDeployed: discord.VoiceChannel) -> None:
         """Handling no-show members by logging.
 
         Parameters:
@@ -381,7 +381,7 @@ class Schedule(commands.Cog):
                 event["checkedNoShowLogging"] = True
 
                 membersAccepted = [member for memberId in event["accepted"] if (member := guild.get_member(memberId)) is not None]
-                membersInVC = channelCommand.members + channelDeployed.members
+                membersInVC = channelCommand.members + channelDeployed.members + channelEventDeployed.members
                 membersAcceptedNotInSchedule = [member for member in membersAccepted if member not in membersInVC]
                 noShowEvents.append({
                     "members": membersAcceptedNotInSchedule,
@@ -532,7 +532,7 @@ class Schedule(commands.Cog):
         await Schedule.tasknoShowsPing(guild, channelCommand, channelDeployed, channelEventDeployed)
 
         # === Log no-show players. ===
-        await Schedule.tasknoShowsLogging(guild, channelCommand, channelDeployed)
+        await Schedule.tasknoShowsLogging(guild, channelCommand, channelDeployed, channelEventDeployed)
 
 
 # ===== </Tasks> =====

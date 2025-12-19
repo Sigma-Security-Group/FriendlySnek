@@ -2116,7 +2116,13 @@ class ScheduleButton(discord.ui.Button):
                         title="Create event", customId=f"modal_create_{buttonLabel}", userId=interaction.user.id, eventMsg=interaction.message, view=self.view
                     ).add_item(
                         discord.ui.TextInput(
-                            label=buttonLabel.replace("_", " ").capitalize(), style=style, placeholder=placeholder, default=default, required=required, min_length=minLength, max_length=maxLength
+                            label=buttonLabel.replace("_", " ").capitalize(),
+                            style=style,
+                            placeholder=placeholder[:DISCORD_LIMITS["interactions"]["text_input_placeholder"]] if placeholder else placeholder,
+                            default=default[:DISCORD_LIMITS["interactions"]["text_input_value"]] if default else default,
+                            required=required,
+                            min_length=max(minLength, 0) if minLength else minLength,
+                            max_length=min(maxLength, DISCORD_LIMITS["interactions"]["text_input_value"]) if maxLength else maxLength
                         )
                     )
 
@@ -2155,12 +2161,12 @@ class ScheduleButton(discord.ui.Button):
                     case "title":
                         placeholder = "Operation Honda Civic" if previewEmbedDict["title"] == SCHEDULE_EVENT_PREVIEW_EMBED["title"] else previewEmbedDict["title"]
                         default = None if previewEmbedDict["title"] == SCHEDULE_EVENT_PREVIEW_EMBED["title"] else previewEmbedDict["title"]
-                        await interaction.response.send_modal(generateModal(discord.TextStyle.short, placeholder, default, True, 1, 256))
+                        await interaction.response.send_modal(generateModal(discord.TextStyle.short, placeholder, default, True, 1, DISCORD_LIMITS["message_embed"]["embed_title"]))
 
                     case "description":
-                        placeholder = "Wazzup beijing" if previewEmbedDict["description"] == SCHEDULE_EVENT_PREVIEW_EMBED["description"] else previewEmbedDict["description"][:DISCORD_LIMITS["interactions"]["text_input_placeholder"]]
+                        placeholder = "Our mission is..." if previewEmbedDict["description"] == SCHEDULE_EVENT_PREVIEW_EMBED["description"] else previewEmbedDict["description"]
                         default = None if previewEmbedDict["description"] == SCHEDULE_EVENT_PREVIEW_EMBED["description"] else previewEmbedDict["description"]
-                        await interaction.response.send_modal(generateModal(discord.TextStyle.long, placeholder, default, True, 1, 4000))
+                        await interaction.response.send_modal(generateModal(discord.TextStyle.long, placeholder, default, True, 1, DISCORD_LIMITS["interactions"]["text_input_value"]))
 
                     case "duration":
                         placeholder = "2h30m" if previewEmbedDict["duration"] is None else previewEmbedDict["duration"]
@@ -2194,16 +2200,16 @@ class ScheduleButton(discord.ui.Button):
                         ))
 
                     case "external_url":
-                        placeholder = "https://www.gnu.org" if previewEmbedDict["externalURL"] is None else previewEmbedDict["externalURL"][:DISCORD_LIMITS["interactions"]["text_input_placeholder"]]
+                        placeholder = "[OPORD](https://www.gnu.org)" if previewEmbedDict["externalURL"] is None else previewEmbedDict["externalURL"]
                         default = "" if previewEmbedDict["externalURL"] is None else previewEmbedDict["externalURL"]
-                        await interaction.response.send_modal(generateModal(discord.TextStyle.short, placeholder, default, False, None, 1024))
+                        await interaction.response.send_modal(generateModal(discord.TextStyle.short, placeholder, default, False, None, DISCORD_LIMITS["message_embed"]["embed_field_value"]))
 
                     case "reservable_roles":
-                        placeholder = "Actual\n2IC\nA-10C Pilot"
+                        placeholder = "Co-Zeus\nActual\nJTAC\nF-35A Pilot"
                         default = "Co-Zeus\nActual\n2IC\nCMD Medic\nH1 Rifleman 1\nH1 Rifleman 2\nH1 Rifleman 3\nH2 TL\nH2 2IC\nH2 Medic\nH2 Rifleman 1\nH2 Rifleman 2\nH2 Rifleman 3"
                         if previewEmbedDict["reservableRoles"] is not None:
                             resRolesOriginal = "\n".join(previewEmbedDict["reservableRoles"])
-                            placeholder = resRolesOriginal[:DISCORD_LIMITS["interactions"]["text_input_placeholder"]]
+                            placeholder = resRolesOriginal
                             default = resRolesOriginal[:512]  # Program limit, avoid overriding embed field value limit
 
                         await interaction.response.send_modal(generateModal(discord.TextStyle.long, placeholder, default, False, 1, 512))
@@ -2920,7 +2926,12 @@ class ScheduleSelect(discord.ui.Select):
                 # Editing Title
                 case "Title":
                     modal = ScheduleModal("Title", "modal_title", interaction.user.id, self.eventMsg)
-                    modal.add_item(discord.ui.TextInput(label="Title", default=event["title"], placeholder="Operation Honda Civic", min_length=1, max_length=256))
+                    modal.add_item(discord.ui.TextInput(
+                        label="Title",
+                        placeholder="Operation Honda Civic",
+                        default=event["title"],
+                        max_length=DISCORD_LIMITS["message_embed"]["embed_title"]
+                    ))
                     await interaction.response.send_modal(modal)
 
                 # Editing Linking
@@ -2935,19 +2946,38 @@ class ScheduleSelect(discord.ui.Select):
                 # Editing Description
                 case "Description":
                     modal = ScheduleModal("Description", "modal_description", interaction.user.id, self.eventMsg)
-                    modal.add_item(discord.ui.TextInput(style=discord.TextStyle.long, label="Description", default=event["description"], placeholder="Bomb oogaboogas", min_length=1, max_length=4000))
+                    modal.add_item(discord.ui.TextInput(
+                        label="Description",
+                        style=discord.TextStyle.long,
+                        placeholder="Our mission is...",
+                        default=event["description"]
+                    ))
                     await interaction.response.send_modal(modal)
 
                 # Editing URL
                 case "External URL":
                     modal = ScheduleModal("External URL", "modal_externalURL", interaction.user.id, self.eventMsg)
-                    modal.add_item(discord.ui.TextInput(style=discord.TextStyle.long, label="URL", default=event["externalURL"], placeholder="OPORD: https://www.gnu.org/", max_length=1024, required=False))
+                    modal.add_item(discord.ui.TextInput(
+                        label="URL",
+                        style=discord.TextStyle.long,
+                        placeholder="[OPORD](https://www.gnu.org)",
+                        default=event["externalURL"],
+                        required=False,
+                        max_length=DISCORD_LIMITS["message_embed"]["embed_field_value"]
+                    ))
                     await interaction.response.send_modal(modal)
 
                 # Editing Reservable Roles
                 case "Reservable Roles":
                     modal = ScheduleModal("Reservable Roles", "modal_reservableRoles", interaction.user.id, self.eventMsg)
-                    modal.add_item(discord.ui.TextInput(style=discord.TextStyle.long, label="Reservable Roles", default=(None if event["reservableRoles"] is None else "\n".join(event["reservableRoles"].keys())), placeholder="Co-Zeus\nActual\nJTAC\nF-35A Pilot", max_length=512, required=False))
+                    modal.add_item(discord.ui.TextInput(
+                        label="Reservable Roles",
+                        style=discord.TextStyle.long,
+                        placeholder=("Co-Zeus\nActual\nJTAC\nF-35A Pilot" if event["reservableRoles"] is None else "\n".join(event["reservableRoles"].keys())[:DISCORD_LIMITS["interactions"]["text_input_placeholder"]]),
+                        default=(None if event["reservableRoles"] is None else "\n".join(event["reservableRoles"].keys())),
+                        required=False,
+                        max_length=512
+                    ))
                     await interaction.response.send_modal(modal)
 
                 # Editing Map
@@ -2964,13 +2994,23 @@ class ScheduleSelect(discord.ui.Select):
                 # Editing Attendence
                 case "Max Players":
                     modal = ScheduleModal("Attendees", "modal_maxPlayers", interaction.user.id, self.eventMsg)
-                    modal.add_item(discord.ui.TextInput(label="Attendees", default=event["maxPlayers"], placeholder="Number / None / Anonymous / Hidden", min_length=1, max_length=9))
+                    modal.add_item(discord.ui.TextInput(
+                        label="Attendees",
+                        placeholder="Number / None / Anonymous / Hidden",
+                        default=event["maxPlayers"],
+                        max_length=9  # len("Anonymous")
+                    ))
                     await interaction.response.send_modal(modal)
 
                 # Editing Duration
                 case "Duration":
                     modal = ScheduleModal("Duration", "modal_duration", interaction.user.id, self.eventMsg)
-                    modal.add_item(discord.ui.TextInput(label="Duration", default=event["duration"], placeholder="2h30m", min_length=1, max_length=16))
+                    modal.add_item(discord.ui.TextInput(
+                        label="Duration",
+                        placeholder="2h30m",
+                        default=event["duration"],
+                        max_length=16  # Arbitrary
+                    ))
                     await interaction.response.send_modal(modal)
 
                 # Editing Time
@@ -2985,7 +3025,12 @@ class ScheduleSelect(discord.ui.Select):
                     # Send modal
                     timeZone = pytz.timezone(memberTimeZones[str(interaction.user.id)])
                     modal = ScheduleModal("Time", "modal_time", interaction.user.id, self.eventMsg)
-                    modal.add_item(discord.ui.TextInput(label="Time", default=datetimeParse(event["time"]).replace(tzinfo=UTC).astimezone(timeZone).strftime(TIME_FORMAT), placeholder="2069-04-20 04:20 PM", min_length=1, max_length=32))
+                    modal.add_item(discord.ui.TextInput(
+                        label="Time",
+                        placeholder="2069-04-20 04:20 PM",
+                        default=datetimeParse(event["time"]).replace(tzinfo=UTC).astimezone(timeZone).strftime(TIME_FORMAT),
+                        max_length=32  # Arbitrary
+                    ))
                     await interaction.response.send_modal(modal)
 
                 # Editing Files

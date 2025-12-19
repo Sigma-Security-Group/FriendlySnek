@@ -248,6 +248,7 @@ DISCORD_LIMITS = {
         "select_menu_option": 25,
         "select_option_description": 100,
         "modal_items": 5,
+        "text_input_value": 4000,
         "text_input_placeholder": 100,
         "autocomplete_choices": 25,
     }

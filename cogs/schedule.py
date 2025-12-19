@@ -3402,6 +3402,10 @@ class ScheduleModal(discord.ui.Modal):
                 followupMsg["embed"].set_footer(text="You may still continue with the provided slots - but not recommended.")
 
         elif customId == "modal_duration":
+            if not re.match(r"^\s*((([1-9]\d*)?\d\s*h(\s*([0-5])?\d\s*m?)?)|(([0-5])?\d\s*m))\s*$", value):
+                await interaction.response.send_message(interaction.user.mention, embed=EMBED_INVALID, ephemeral=True, delete_after=10.0)
+                return
+
             durationDetails = Schedule.getDetailsFromDuration(value)
             if not durationDetails:
                 await interaction.response.send_message(interaction.user.mention, embed=EMBED_INVALID, ephemeral=True, delete_after=10.0)

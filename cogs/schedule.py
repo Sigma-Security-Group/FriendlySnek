@@ -1430,7 +1430,7 @@ class Schedule(commands.Cog):
             "Time",
             "Files"
         )
-        log.info(f"{interaction.user.id} [{interaction.user.display_name}] Is editing the event '{event['title']}'")
+        log.debug(f"{interaction.user.id} [{interaction.user.display_name}] Is editing the event '{event['title']}'")
         options = []
         for editOption in editOptions:
             options.append(discord.SelectOption(label=editOption))
@@ -3046,7 +3046,7 @@ class ScheduleSelect(discord.ui.Select):
                     embed = discord.Embed(title="Attaching files", description="You may attach up to 10 files to your event.\nUpload them first using the command `/fileupload`.", color=discord.Color.gold())
                     await interaction.response.send_message(interaction.user.mention, embed=embed, view=view, ephemeral=True, delete_after=300.0)
 
-            log.info(f"{interaction.user.id} [{interaction.user.display_name}] Edited the event '{event['title'] if 'title' in event else event['templateName']}'")
+            log.debug(f"{interaction.user.id} [{interaction.user.display_name}] Edited the event '{event['title'] if 'title' in event else event['templateName']}'")
 
         # All select menu options in edit_select
         elif customId.startswith("edit_select_"):

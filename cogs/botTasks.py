@@ -153,11 +153,12 @@ class BotTasks(commands.Cog):
 
 
     @staticmethod
-    async def fetchWebsiteText(url: str) -> str:
+    async def fetchWebsiteText(url: str) -> str | None:
         async with aiohttp.ClientSession() as session:
             async with session.get(url) as response:
                 if response.status != 200:
-                    log.warning(f"BotTasks fetchWebsiteText: response.status is not 200 '{url}'")
+                    log.warning(f"BotTasks fetchWebsiteText: response.status is not 200 ({response.status}) '{url}'")
+                    return
                 return await response.text()
 
     async def checkModUpdates(self) -> None:
@@ -176,9 +177,18 @@ class BotTasks(commands.Cog):
         jcaModUpdateFound = False
 
         date = ""
+        invalidFetches = 0
         for modID in genericData["modpackIds"]:
+            if invalidFetches >= 5:
+                log.warning("BotTasks checkModUpdates: invalidFetches limit reached, breaking loop")
+                break
+
             # Fetch mod & parse HTML
-            soup = BS(await BotTasks.fetchWebsiteText(CHANGELOG_URL.format(modID)), "html.parser")
+            website = await BotTasks.fetchWebsiteText(CHANGELOG_URL.format(modID))
+            if website is None:
+                invalidFetches += 1
+                continue
+            soup = BS(website, "html.parser")
 
             # Mod Title
             name = soup.find("div", class_="workshopItemTitle")

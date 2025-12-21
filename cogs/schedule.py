@@ -824,20 +824,21 @@ class Schedule(commands.Cog):
             wallets = {}
 
         embed = discord.Embed(title="🏆 SnekCoin Leaderboard 🏆", color=discord.Color.gold(), description = "")
-        desLimit = DISCORD_LIMITS["message_embed"]["embed_description"]
         wallets = dict(sorted(wallets.items(), key=lambda item: item[1].get("money", 0), reverse=True))
 
+        pageNum = 1
         try:
-            i = 1
-            for userId in wallets:
+            for i, userId in enumerate(wallets, start=1):
                 member = ctx.guild.get_member(int(userId))
                 if member is None:
                     continue
-                if len(embed.description + f"{i}. {member.mention}:🪙 `{wallets[userId].get('money', 0)}` SnekCoins\n") > desLimit:
+                descriptionEntry = f"{i}. {member.mention}:🪙 `{wallets[userId].get('money', 0)}` SnekCoins\n"
+                if len(embed.description + descriptionEntry) > DISCORD_LIMITS["message_embed"]["embed_description"]:
+                    embed.set_footer(text=f"Page {pageNum}")
                     await ctx.send(embed=embed)
                     embed.description = ""
-                embed.description += f"{i}. {member.mention}:🪙 `{wallets[userId].get('money', 0)}` SnekCoins\n"
-                i += 1
+                    pageNum += 1
+                embed.description += descriptionEntry
         except:
             log.exception("Schedule snekleaderboard: Failed to generate leaderboard fields.")
         await ctx.send(embed=embed)
@@ -890,10 +891,10 @@ class Schedule(commands.Cog):
 
         targetEntry = wallets.get(str(member.id), {"timesCommended": 0, "sentCommendations": 0, "money": 0, "moneySpent": 0})
         if addRemove in responses["add"]:
-            targetEntry["money"] = int(targetEntry.get("money", 0)) + amount
+            targetEntry["money"] = targetEntry.get("money", 0) + amount
             operationText = "added to"
         else:
-            targetEntry["money"] = int(targetEntry.get("money", 0)) - amount
+            targetEntry["money"] = targetEntry.get("money", 0) - amount
             operationText = "removed from"
 
         wallets[str(member.id)] = targetEntry
@@ -3555,5 +3556,4 @@ async def setup(bot: commands.Bot) -> None:
     Schedule.aar.error(Utils.onSlashError)
     Schedule.commend.error(Utils.onSlashError)
     Schedule.scheduleOperation.error(Utils.onSlashError)
-    Schedule.changeSnekCoins.error(Utils.onSlashError)
     await bot.add_cog(Schedule(bot))

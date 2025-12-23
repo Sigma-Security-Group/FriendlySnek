@@ -361,6 +361,9 @@ class SnekcoinButton(discord.ui.Button):
             )
         if customId == "gambleSlots":
             money = (await Snekcoin.getWallet(interaction.user.id))['money']
+            if money < 50:
+                await interaction.response.send_message("❌ You need at least 50 SnekCoins to play Slots!", ephemeral=True)
+                return
             if money is None:
                 await interaction.followup.send("❌ Failed to retrieve your wallet data.", ephemeral=True)
                 return
@@ -409,9 +412,13 @@ class SnekcoinModal(discord.ui.Modal):
             except ValueError:
                 await interaction.response.send_message("❌ Invalid amount! Please enter a positive integer.", ephemeral=True)
                 return
-            if int(amount) <= 0:
-                await interaction.response.send_message("❌ Amount must be a positive integer!", ephemeral=True)
+            if int(amount) <= 1:
+                await interaction.response.send_message("❌ Amount must be above 1!", ephemeral=True)
                 return
+            if (amount > (await Snekcoin.getWallet(interaction.user.id))['money']):
+                await interaction.response.send_message("❌ You do not have enough SnekCoins to gamble that amount!", ephemeral=True)
+                return
+
             winner, payout = await Snekcoin.gambleCoinFlip(self.userId, amount)
             if winner:
                 resultText = f"It was Heads!\n{interaction.user.mention} gambled and won ``{payout}`` SnekCoins on a coin flip! 🎉\nCurrent Balance: ``{(await Snekcoin.getWallet(interaction.user.id))['money']}``"
@@ -424,9 +431,13 @@ class SnekcoinModal(discord.ui.Modal):
             except ValueError:
                 await interaction.response.send_message("❌ Invalid amount! Please enter a positive integer.", ephemeral=True)
                 return
-            if int(amount) <= 0:
-                await interaction.response.send_message("❌ Amount must be a positive integer!", ephemeral=True)
+            if int(amount) <= 1:
+                await interaction.response.send_message("❌ Amount must be above 1!", ephemeral=True)
                 return
+            if (amount > (await Snekcoin.getWallet(interaction.user.id))['money']):
+                await interaction.response.send_message("❌ You do not have enough SnekCoins to gamble that amount!", ephemeral=True)
+                return
+
             winner, userRoll, botRoll, winnings = await Snekcoin.gambleDiceRoll(self.userId, amount)
             if winner:
                 resultText = f"{interaction.user.mention} rolled a ``{userRoll}`` against the bot's ``{botRoll}`` and won ``{winnings}`` SnekCoins 🎉\nCurrent Balance: ``{(await Snekcoin.getWallet(interaction.user.id))['money']}``"

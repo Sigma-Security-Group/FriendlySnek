@@ -197,9 +197,6 @@ class Snekcoin(commands.Cog):
         """
         await interaction.response.defer(ephemeral=True, thinking=True)
         log.debug(f"Snekcoin gamble: {interaction.user.id} [{interaction.user.display_name}] is opening the gambling menu.")
-        if interaction.channel.id != GENERAL:
-            await interaction.followup.send("❌ You can only use this command in the #general channel!", ephemeral=True)
-            return
 
         embed = discord.Embed(title="🎲 SnekCoin Gambling 🎲", color=discord.Color.green(), description="Choose a game to play:")
         embed.add_field(name="🪙 Coin Flip 🪙", value="Flip a coin, win on heads!\nPayout: ``1.5x``", inline=False)

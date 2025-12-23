@@ -108,6 +108,7 @@ OPERATION_ANNOUNCEMENTS = 944288292625584188
 COMMENDATIONS = 1109263109526396938
 COMMAND = 341763940046340098  # Voice
 DEPLOYED = 355512941816053770  # Voice
+EVENT_DEPLOYED = 1265703906432782409  # Voice
 
 
 ####################
@@ -247,6 +248,7 @@ DISCORD_LIMITS = {
         "select_menu_option": 25,
         "select_option_description": 100,
         "modal_items": 5,
+        "text_input_value": 4000,
         "text_input_placeholder": 100,
         "autocomplete_choices": 25,
     }

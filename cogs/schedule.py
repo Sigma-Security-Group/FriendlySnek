@@ -310,7 +310,7 @@ class Schedule(commands.Cog):
 
 
     @staticmethod
-    async def tasknoShowsPing(guild: discord.Guild, channelCommand: discord.TextChannel, channelDeployed: discord.TextChannel) -> None:
+    async def tasknoShowsPing(guild: discord.Guild, channelCommand: discord.TextChannel, channelDeployed: discord.TextChannel, channelEventDeployed: discord.VoiceChannel) -> None:
         """Handling no-show members by pinging.
 
         Parameters:
@@ -339,7 +339,7 @@ class Schedule(commands.Cog):
             if datetime.now(timezone.utc) > startTime + timedelta(minutes=NO_SHOW_PING_THRESHOLD_IN_MINUTES):
                 event["checkedAcceptedReminders"] = True
                 membersAccepted = [member for memberId in event["accepted"] + event["standby"] if (member := guild.get_member(memberId)) is not None]
-                membersInVC = channelCommand.members + channelDeployed.members
+                membersInVC = channelCommand.members + channelDeployed.members + channelEventDeployed.members
                 membersUnscheduled += ([member for member in membersAccepted if member not in membersInVC] + [member for member in membersInVC if member not in membersAccepted and member.id != event["authorId"]])
 
         with open(EVENTS_FILE, "w") as f:
@@ -352,7 +352,7 @@ class Schedule(commands.Cog):
 
 
     @staticmethod
-    async def tasknoShowsLogging(guild: discord.Guild, channelCommand: discord.TextChannel, channelDeployed: discord.TextChannel) -> None:
+    async def tasknoShowsLogging(guild: discord.Guild, channelCommand: discord.TextChannel, channelDeployed: discord.TextChannel, channelEventDeployed: discord.VoiceChannel) -> None:
         """Handling no-show members by logging.
 
         Parameters:
@@ -381,7 +381,7 @@ class Schedule(commands.Cog):
                 event["checkedNoShowLogging"] = True
 
                 membersAccepted = [member for memberId in event["accepted"] if (member := guild.get_member(memberId)) is not None]
-                membersInVC = channelCommand.members + channelDeployed.members
+                membersInVC = channelCommand.members + channelDeployed.members + channelEventDeployed.members
                 membersAcceptedNotInSchedule = [member for member in membersAccepted if member not in membersInVC]
                 noShowEvents.append({
                     "members": membersAcceptedNotInSchedule,
@@ -524,11 +524,15 @@ class Schedule(commands.Cog):
         if not isinstance(channelDeployed, discord.VoiceChannel):
             log.exception("Schedule tenMinTask: channelDeployed not discord.VoiceChannel")
             return
+        channelEventDeployed = guild.get_channel(EVENT_DEPLOYED)
+        if not isinstance(channelEventDeployed, discord.VoiceChannel):
+            log.exception("Schedule tenMinTask: channelEventDeployed not discord.VoiceChannel")
+            return
 
-        await Schedule.tasknoShowsPing(guild, channelCommand, channelDeployed)
+        await Schedule.tasknoShowsPing(guild, channelCommand, channelDeployed, channelEventDeployed)
 
         # === Log no-show players. ===
-        await Schedule.tasknoShowsLogging(guild, channelCommand, channelDeployed)
+        await Schedule.tasknoShowsLogging(guild, channelCommand, channelDeployed, channelEventDeployed)
 
 
 # ===== </Tasks> =====
@@ -930,23 +934,45 @@ class Schedule(commands.Cog):
         """
         embed = discord.Embed(title=event["title"], description=event["description"], color=EVENT_TYPE_COLORS[event.get("type", "Operation")])
 
+        # Reservable Roles
         if event["reservableRoles"] is not None:
             embed.add_field(name="\u200B", value="\u200B", inline=False)
-            embed.add_field(name=f"Reservable Roles ({len([role for role, memberId in event['reservableRoles'].items() if memberId is not None])}/{len(event['reservableRoles'])}) 👤", value="\n".join(f"{roleName} - {('*' + member.display_name + '*' if (member := guild.get_member(memberId)) is not None else '**VACANT**') if memberId is not None else '**VACANT**'}" for roleName, memberId in event["reservableRoles"].items()), inline=False)
+            resRolesTaken = len([1 for memberId in event["reservableRoles"].values() if memberId is not None])
+            resRolesDescription = []
+            for roleName, memberId in event["reservableRoles"].items():
+                if memberId is None:
+                    resRolesDescription.append(f"{roleName} - **VACANT**")
+                    continue
 
+                member = guild.get_member(memberId)
+                if member is None:
+                    # Remove invalid members
+                    event["reservableRoles"][roleName] = None
+                else:
+                    resRolesDescription.append(f"{roleName} - *{member.display_name}*")
+
+            embed.add_field(
+                name=f"Reservable Roles ({resRolesTaken}/{len(event['reservableRoles'])}) 👤",
+                value="\n".join(resRolesDescription), inline=False
+            )
+
+        # Duration and Time
         durationHours = int(event["duration"].split("h")[0].strip()) if "h" in event["duration"] else 0
         embed.add_field(name="\u200B", value="\u200B", inline=False)
         embed.add_field(name="Time", value=f"{discord.utils.format_dt(UTC.localize(datetime.strptime(event['time'], TIME_FORMAT)), style='F')} - {discord.utils.format_dt(UTC.localize(datetime.strptime(event['endTime'], TIME_FORMAT)), style='t' if durationHours < 24 else 'F')}", inline=(durationHours < 24))
         embed.add_field(name="Duration", value=event["duration"], inline=True)
 
+        # Map
         if event["map"] is not None:
             embed.add_field(name="Map", value=event["map"], inline=False)
 
+        # External URL
         if event["externalURL"] is not None:
             embed.add_field(name="\u200B", value="\u200B", inline=False)
             embed.add_field(name="External URL", value=event["externalURL"], inline=False)
         embed.add_field(name="\u200B", value="\u200B", inline=False)
 
+        # RSVP Lists
         isAcceptAndReserve = event["reservableRoles"] and len(event["reservableRoles"]) == event["maxPlayers"]
         if not isAcceptAndReserve and len(event["standby"]) > 0 and (event["maxPlayers"] is None or (isinstance(event["maxPlayers"], int) and len(event["accepted"]) < event["maxPlayers"])):
             if event["maxPlayers"] is None:
@@ -1403,7 +1429,7 @@ class Schedule(commands.Cog):
             "Time",
             "Files"
         )
-        log.info(f"{interaction.user.id} [{interaction.user.display_name}] Is editing the event '{event['title']}'")
+        log.debug(f"{interaction.user.id} [{interaction.user.display_name}] Is editing the event '{event['title']}'")
         options = []
         for editOption in editOptions:
             options.append(discord.SelectOption(label=editOption))
@@ -2089,7 +2115,13 @@ class ScheduleButton(discord.ui.Button):
                         title="Create event", customId=f"modal_create_{buttonLabel}", userId=interaction.user.id, eventMsg=interaction.message, view=self.view
                     ).add_item(
                         discord.ui.TextInput(
-                            label=buttonLabel.replace("_", " ").capitalize(), style=style, placeholder=placeholder, default=default, required=required, min_length=minLength, max_length=maxLength
+                            label=buttonLabel.replace("_", " ").capitalize(),
+                            style=style,
+                            placeholder=placeholder[:DISCORD_LIMITS["interactions"]["text_input_placeholder"]] if placeholder else placeholder,
+                            default=default[:DISCORD_LIMITS["interactions"]["text_input_value"]] if default else default,
+                            required=required,
+                            min_length=max(minLength, 0) if minLength else minLength,
+                            max_length=min(maxLength, DISCORD_LIMITS["interactions"]["text_input_value"]) if maxLength else maxLength
                         )
                     )
 
@@ -2128,12 +2160,12 @@ class ScheduleButton(discord.ui.Button):
                     case "title":
                         placeholder = "Operation Honda Civic" if previewEmbedDict["title"] == SCHEDULE_EVENT_PREVIEW_EMBED["title"] else previewEmbedDict["title"]
                         default = None if previewEmbedDict["title"] == SCHEDULE_EVENT_PREVIEW_EMBED["title"] else previewEmbedDict["title"]
-                        await interaction.response.send_modal(generateModal(discord.TextStyle.short, placeholder, default, True, 1, 256))
+                        await interaction.response.send_modal(generateModal(discord.TextStyle.short, placeholder, default, True, 1, DISCORD_LIMITS["message_embed"]["embed_title"]))
 
                     case "description":
-                        placeholder = "Wazzup beijing" if previewEmbedDict["description"] == SCHEDULE_EVENT_PREVIEW_EMBED["description"] else previewEmbedDict["description"][:DISCORD_LIMITS["interactions"]["text_input_placeholder"]]
+                        placeholder = "Our mission is..." if previewEmbedDict["description"] == SCHEDULE_EVENT_PREVIEW_EMBED["description"] else previewEmbedDict["description"]
                         default = None if previewEmbedDict["description"] == SCHEDULE_EVENT_PREVIEW_EMBED["description"] else previewEmbedDict["description"]
-                        await interaction.response.send_modal(generateModal(discord.TextStyle.long, placeholder, default, True, 1, 4000))
+                        await interaction.response.send_modal(generateModal(discord.TextStyle.long, placeholder, default, True, 1, DISCORD_LIMITS["interactions"]["text_input_value"]))
 
                     case "duration":
                         placeholder = "2h30m" if previewEmbedDict["duration"] is None else previewEmbedDict["duration"]
@@ -2167,16 +2199,16 @@ class ScheduleButton(discord.ui.Button):
                         ))
 
                     case "external_url":
-                        placeholder = "https://www.gnu.org" if previewEmbedDict["externalURL"] is None else previewEmbedDict["externalURL"][:DISCORD_LIMITS["interactions"]["text_input_placeholder"]]
+                        placeholder = "[OPORD](https://www.gnu.org)" if previewEmbedDict["externalURL"] is None else previewEmbedDict["externalURL"]
                         default = "" if previewEmbedDict["externalURL"] is None else previewEmbedDict["externalURL"]
-                        await interaction.response.send_modal(generateModal(discord.TextStyle.short, placeholder, default, False, None, 1024))
+                        await interaction.response.send_modal(generateModal(discord.TextStyle.short, placeholder, default, False, None, DISCORD_LIMITS["message_embed"]["embed_field_value"]))
 
                     case "reservable_roles":
-                        placeholder = "Actual\n2IC\nA-10C Pilot"
+                        placeholder = "Co-Zeus\nActual\nJTAC\nF-35A Pilot"
                         default = "Co-Zeus\nActual\n2IC\nCMD Medic\nH1 Rifleman 1\nH1 Rifleman 2\nH1 Rifleman 3\nH2 TL\nH2 2IC\nH2 Medic\nH2 Rifleman 1\nH2 Rifleman 2\nH2 Rifleman 3"
                         if previewEmbedDict["reservableRoles"] is not None:
                             resRolesOriginal = "\n".join(previewEmbedDict["reservableRoles"])
-                            placeholder = resRolesOriginal[:DISCORD_LIMITS["interactions"]["text_input_placeholder"]]
+                            placeholder = resRolesOriginal
                             default = resRolesOriginal[:512]  # Program limit, avoid overriding embed field value limit
 
                         await interaction.response.send_modal(generateModal(discord.TextStyle.long, placeholder, default, False, 1, 512))
@@ -2893,7 +2925,12 @@ class ScheduleSelect(discord.ui.Select):
                 # Editing Title
                 case "Title":
                     modal = ScheduleModal("Title", "modal_title", interaction.user.id, self.eventMsg)
-                    modal.add_item(discord.ui.TextInput(label="Title", default=event["title"], placeholder="Operation Honda Civic", min_length=1, max_length=256))
+                    modal.add_item(discord.ui.TextInput(
+                        label="Title",
+                        placeholder="Operation Honda Civic",
+                        default=event["title"],
+                        max_length=DISCORD_LIMITS["message_embed"]["embed_title"]
+                    ))
                     await interaction.response.send_modal(modal)
 
                 # Editing Linking
@@ -2908,19 +2945,38 @@ class ScheduleSelect(discord.ui.Select):
                 # Editing Description
                 case "Description":
                     modal = ScheduleModal("Description", "modal_description", interaction.user.id, self.eventMsg)
-                    modal.add_item(discord.ui.TextInput(style=discord.TextStyle.long, label="Description", default=event["description"], placeholder="Bomb oogaboogas", min_length=1, max_length=4000))
+                    modal.add_item(discord.ui.TextInput(
+                        label="Description",
+                        style=discord.TextStyle.long,
+                        placeholder="Our mission is...",
+                        default=event["description"]
+                    ))
                     await interaction.response.send_modal(modal)
 
                 # Editing URL
                 case "External URL":
                     modal = ScheduleModal("External URL", "modal_externalURL", interaction.user.id, self.eventMsg)
-                    modal.add_item(discord.ui.TextInput(style=discord.TextStyle.long, label="URL", default=event["externalURL"], placeholder="OPORD: https://www.gnu.org/", max_length=1024, required=False))
+                    modal.add_item(discord.ui.TextInput(
+                        label="URL",
+                        style=discord.TextStyle.long,
+                        placeholder="[OPORD](https://www.gnu.org)",
+                        default=event["externalURL"],
+                        required=False,
+                        max_length=DISCORD_LIMITS["message_embed"]["embed_field_value"]
+                    ))
                     await interaction.response.send_modal(modal)
 
                 # Editing Reservable Roles
                 case "Reservable Roles":
                     modal = ScheduleModal("Reservable Roles", "modal_reservableRoles", interaction.user.id, self.eventMsg)
-                    modal.add_item(discord.ui.TextInput(style=discord.TextStyle.long, label="Reservable Roles", default=(None if event["reservableRoles"] is None else "\n".join(event["reservableRoles"].keys())), placeholder="Co-Zeus\nActual\nJTAC\nF-35A Pilot", max_length=512, required=False))
+                    modal.add_item(discord.ui.TextInput(
+                        label="Reservable Roles",
+                        style=discord.TextStyle.long,
+                        placeholder=("Co-Zeus\nActual\nJTAC\nF-35A Pilot" if event["reservableRoles"] is None else "\n".join(event["reservableRoles"].keys())[:DISCORD_LIMITS["interactions"]["text_input_placeholder"]]),
+                        default=(None if event["reservableRoles"] is None else "\n".join(event["reservableRoles"].keys())),
+                        required=False,
+                        max_length=512
+                    ))
                     await interaction.response.send_modal(modal)
 
                 # Editing Map
@@ -2937,13 +2993,23 @@ class ScheduleSelect(discord.ui.Select):
                 # Editing Attendence
                 case "Max Players":
                     modal = ScheduleModal("Attendees", "modal_maxPlayers", interaction.user.id, self.eventMsg)
-                    modal.add_item(discord.ui.TextInput(label="Attendees", default=event["maxPlayers"], placeholder="Number / None / Anonymous / Hidden", min_length=1, max_length=9))
+                    modal.add_item(discord.ui.TextInput(
+                        label="Attendees",
+                        placeholder="Number / None / Anonymous / Hidden",
+                        default=event["maxPlayers"],
+                        max_length=9  # len("Anonymous")
+                    ))
                     await interaction.response.send_modal(modal)
 
                 # Editing Duration
                 case "Duration":
                     modal = ScheduleModal("Duration", "modal_duration", interaction.user.id, self.eventMsg)
-                    modal.add_item(discord.ui.TextInput(label="Duration", default=event["duration"], placeholder="2h30m", min_length=1, max_length=16))
+                    modal.add_item(discord.ui.TextInput(
+                        label="Duration",
+                        placeholder="2h30m",
+                        default=event["duration"],
+                        max_length=16  # Arbitrary
+                    ))
                     await interaction.response.send_modal(modal)
 
                 # Editing Time
@@ -2958,7 +3024,12 @@ class ScheduleSelect(discord.ui.Select):
                     # Send modal
                     timeZone = pytz.timezone(memberTimeZones[str(interaction.user.id)])
                     modal = ScheduleModal("Time", "modal_time", interaction.user.id, self.eventMsg)
-                    modal.add_item(discord.ui.TextInput(label="Time", default=datetimeParse(event["time"]).replace(tzinfo=UTC).astimezone(timeZone).strftime(TIME_FORMAT), placeholder="2069-04-20 04:20 PM", min_length=1, max_length=32))
+                    modal.add_item(discord.ui.TextInput(
+                        label="Time",
+                        placeholder="2069-04-20 04:20 PM",
+                        default=datetimeParse(event["time"]).replace(tzinfo=UTC).astimezone(timeZone).strftime(TIME_FORMAT),
+                        max_length=32  # Arbitrary
+                    ))
                     await interaction.response.send_modal(modal)
 
                 # Editing Files
@@ -2974,7 +3045,7 @@ class ScheduleSelect(discord.ui.Select):
                     embed = discord.Embed(title="Attaching files", description="You may attach up to 10 files to your event.\nUpload them first using the command `/fileupload`.", color=discord.Color.gold())
                     await interaction.response.send_message(interaction.user.mention, embed=embed, view=view, ephemeral=True, delete_after=300.0)
 
-            log.info(f"{interaction.user.id} [{interaction.user.display_name}] Edited the event '{event['title'] if 'title' in event else event['templateName']}'")
+            log.debug(f"{interaction.user.id} [{interaction.user.display_name}] Edited the event '{event['title'] if 'title' in event else event['templateName']}'")
 
         # All select menu options in edit_select
         elif customId.startswith("edit_select_"):
@@ -3330,6 +3401,10 @@ class ScheduleModal(discord.ui.Modal):
                 followupMsg["embed"].set_footer(text="You may still continue with the provided slots - but not recommended.")
 
         elif customId == "modal_duration":
+            if not re.match(r"^\s*((([1-9]\d*)?\d\s*h(\s*([0-5])?\d\s*m?)?)|(([0-5])?\d\s*m))\s*$", value):
+                await interaction.response.send_message(interaction.user.mention, embed=EMBED_INVALID, ephemeral=True, delete_after=10.0)
+                return
+
             durationDetails = Schedule.getDetailsFromDuration(value)
             if not durationDetails:
                 await interaction.response.send_message(interaction.user.mention, embed=EMBED_INVALID, ephemeral=True, delete_after=10.0)
@@ -3362,6 +3437,11 @@ class ScheduleModal(discord.ui.Modal):
                 memberTimeZones = json.load(f)
             timeZone = pytz.timezone(memberTimeZones[str(interaction.user.id)])
             startTime = timeZone.localize(startTime).astimezone(UTC)
+
+            # Check if new time and old time is the same
+            if startTime.strftime(TIME_FORMAT) == startTimeOld:
+                await interaction.response.send_message(interaction.user.mention, embed=discord.Embed(title="❌ No changes made", description="The new time is the same as the old time.", color=discord.Color.red()), ephemeral=True, delete_after=10.0)
+                return
 
             endTime = startTime + delta
             event["time"] = startTime.strftime(TIME_FORMAT)

@@ -1,0 +1,4 @@
+change order, return early
+    analyzechannel first then check if still available for response
+
+thread copy to context

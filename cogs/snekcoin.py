@@ -244,6 +244,8 @@ class Snekcoin(commands.Cog):
                 member = ctx.guild.get_member(int(userId))
                 if member is None:
                     continue
+                if wallets[userId].get("money", 0) == 0:
+                    continue
                 if len(embed.description + f"{i}. {member.mention}:🪙 `{wallets[userId].get('money', 0)}` SnekCoins\n") > desLimit:
                     await ctx.send(embed=embed)
                     embed.description = ""

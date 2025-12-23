@@ -201,7 +201,7 @@ class Snekcoin(commands.Cog):
         embed = discord.Embed(title="🎲 SnekCoin Gambling 🎲", color=discord.Color.green(), description="Choose a game to play:")
         embed.add_field(name="🪙 Coin Flip 🪙", value="Flip a coin, win on heads!\nPayout: ``1.5x``", inline=False)
         embed.add_field(name="🎲 Dice Roll 🎲", value="Roll a dice against the bot, largest roll wins!\nPayout: ``1.9x``", inline=False)
-        embed.add_field(name="🎰 Slots 🎰", value="Spin the slots, match 3 symbols to win big!\nPayout:\n🍒,🍋,🔔, ⭐ = ``2.8x``\n💎 = ``7x``\n7️⃣ = ``25x``", inline=False)
+        embed.add_field(name="🎰 Slots 🎰", value="50 coin bet, match 3 symbols to win big!\nPayout:\n🍒,🍋,🔔, ⭐ = ``2.8x``\n💎 = ``7x``\n7️⃣ = ``25x``", inline=False)
         view = discord.ui.View(timeout=60)
         view.add_item(SnekcoinButton(None, label="🪙 Coin Flip 🪙", style=discord.ButtonStyle.success, custom_id="gambleCoinFlip", row=0))
         view.add_item(SnekcoinButton(None, label="🎲 Dice Roll 🎲", style=discord.ButtonStyle.success, custom_id="gambleDiceRoll", row=0))
@@ -403,6 +403,9 @@ class SnekcoinModal(discord.ui.Modal):
         customId = interaction.data["custom_id"].rsplit("_", 1)[0]
 
         if customId == "gambleCoinFlipModal":
+            if not isinstance(self.amount.value, int):
+                await interaction.response.send_message("❌ Invalid amount! Please enter a positive integer.", ephemeral=True)
+                return
             winner, payout = await Snekcoin.gambleCoinFlip(self.userId, int(self.amount.value.strip()))
             if winner:
                 resultText = f"It was Heads!\n{interaction.user.mention} gambled and won {payout} SnekCoins on a coin flip! 🎉\nCurrent Balance: {(await Snekcoin.getWallet(interaction.user.id))['money']}"
@@ -410,6 +413,9 @@ class SnekcoinModal(discord.ui.Modal):
                 resultText = f"It was Tails!\n{interaction.user.mention} gambled away and lost {self.amount} SnekCoins! 😢\nCurrent Balance: {(await Snekcoin.getWallet(interaction.user.id))['money']}"
 
         if customId == "gambleDiceRollModal":
+            if not isinstance(self.amount.value, int):
+                await interaction.response.send_message("❌ Invalid amount! Please enter a positive integer.", ephemeral=True)
+                return
             winner, userRoll, botRoll, winnings = await Snekcoin.gambleDiceRoll(self.userId, int(self.amount.value.strip()))
             if winner:
                 resultText = f"{interaction.user.mention} rolled a {userRoll} against the bot's {botRoll} and won {winnings} SnekCoins 🎉\nCurrent Balance: {(await Snekcoin.getWallet(interaction.user.id))['money']}"

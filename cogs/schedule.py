@@ -803,108 +803,6 @@ class Schedule(commands.Cog):
         await interaction.followup.send(msgContent, ephemeral=True)
         await channel.send(f"🎉 {member.mention} 🎉", embed=embed)
 
-    @commands.command(name="snekleaderboard")
-    async def snekLeaderboard(self, ctx: commands.Context) -> None:
-        """Displays the SnekCoin leaderboard.
-
-        Parameters:
-        ctx (commands.Context): The command context.
-
-        Returns:
-        None.
-        """
-        if not isinstance(ctx.guild, discord.Guild):
-            log.exception("Schedule snekleaderboard: ctx.guild not discord.Guild")
-            return
-
-        try:
-            with open(WALLETS_FILE) as f:
-                wallets = json.load(f)
-        except Exception:
-            wallets = {}
-
-        embed = discord.Embed(title="🏆 SnekCoin Leaderboard 🏆", color=discord.Color.gold(), description = "")
-        desLimit = DISCORD_LIMITS["message_embed"]["embed_description"]
-        wallets = dict(sorted(wallets.items(), key=lambda item: item[1].get("money", 0), reverse=True))
-
-        try:
-            i = 1
-            for userId in wallets:
-                member = ctx.guild.get_member(int(userId))
-                if member is None:
-                    continue
-                if len(embed.description + f"{i}. {member.mention}:🪙 `{wallets[userId].get('money', 0)}` SnekCoins\n") > desLimit:
-                    await ctx.send(embed=embed)
-                    embed.description = ""
-                embed.description += f"{i}. {member.mention}:🪙 `{wallets[userId].get('money', 0)}` SnekCoins\n"
-                i += 1
-        except:
-            log.exception("Schedule snekleaderboard: Failed to generate leaderboard fields.")
-        await ctx.send(embed=embed)
-
-
-    @commands.command(name="changesnekcoins")
-    @commands.has_any_role(*CMD_LIMIT_STAFF)
-    async def changeSnekCoins(self, ctx: commands.Context, member: discord.Member, addRemove: str, amount: int) -> None:
-        """Changes the amount of SnekCoins in a member's wallet.
-
-        Parameters:
-        ctx (commands.Context): The command context.
-        member (discord.Member): Target member.
-        addRemove (str): "add" to add SnekCoins, "remove" to remove SnekCoins.
-        amount (int): Amount of SnekCoins to add or remove.
-
-        Returns:
-        None.
-        """
-        if not isinstance(ctx.guild, discord.Guild):
-            log.exception("Schedule changeSnekCoins: ctx.guild not discord.Guild")
-            return
-        log.info(f"{ctx.author.id} [{ctx.author.display_name}] is changing SnekCoins for {member.id} [{member.display_name}]: {addRemove} {amount}")
-
-        responses = {
-            "add": {
-                "add", "give", "grant", "award", "credit"
-            },
-            "remove": {
-                "remove", "subtract", "deduct", "take", "revoke", "penalize", "debit"
-            }
-        }
-        addRemove = addRemove.lower()
-        if addRemove not in responses["add"] and addRemove not in responses["remove"]:
-            await ctx.send("❌ Invalid operation! Use `add` or `remove`.")
-            return
-        if amount <= 0:
-            await ctx.send("❌ Amount must be a positive integer!")
-            return
-
-        try:
-            with open(WALLETS_FILE) as f:
-                wallets = json.load(f)
-        except FileNotFoundError:
-            wallets = {}
-        except Exception:
-            await ctx.send("❌ Failed to load wallets file.")
-            log.exception("Schedule changeSnekCoins: Failed to load wallets file.")
-            return
-
-        targetEntry = wallets.get(str(member.id), {"timesCommended": 0, "sentCommendations": 0, "money": 0, "moneySpent": 0})
-        if addRemove in responses["add"]:
-            targetEntry["money"] = int(targetEntry.get("money", 0)) + amount
-            operationText = "added to"
-        else:
-            targetEntry["money"] = int(targetEntry.get("money", 0)) - amount
-            operationText = "removed from"
-
-        wallets[str(member.id)] = targetEntry
-        try:
-            with open(WALLETS_FILE, "w") as f:
-                json.dump(wallets, f, indent=4)
-        except Exception:
-            log.warning("Schedule changeSnekCoins: Failed to save wallets file.")
-
-        await ctx.send(f"✅ `{amount}` SnekCoins have been {operationText} {member.display_name}'s wallet.")
-
 # ===== </Commend> =====
 
 
@@ -3555,5 +3453,4 @@ async def setup(bot: commands.Bot) -> None:
     Schedule.aar.error(Utils.onSlashError)
     Schedule.commend.error(Utils.onSlashError)
     Schedule.scheduleOperation.error(Utils.onSlashError)
-    Schedule.changeSnekCoins.error(Utils.onSlashError)
     await bot.add_cog(Schedule(bot))

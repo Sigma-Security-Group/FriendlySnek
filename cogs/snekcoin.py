@@ -360,7 +360,6 @@ class SnekcoinButton(discord.ui.Button):
                 )
             )
         if customId == "gambleSlots":
-            await interaction.response.defer(ephemeral=False, thinking=True)
             money = (await Snekcoin.getWallet(interaction.user.id))['money']
             if money is None:
                 await interaction.followup.send("❌ Failed to retrieve your wallet data.", ephemeral=True)
@@ -373,8 +372,8 @@ class SnekcoinButton(discord.ui.Button):
                 resultText = f"{interaction.user.mention} spun the slots:\n{' | '.join(reels)}\n🎉 You won {int(winnings)} SnekCoins! 🎉\nCurrent Balance: {(await Snekcoin.getWallet(interaction.user.id))['money']}"
             else:
                 resultText = f"{interaction.user.mention} spun the slots:\n{' | '.join(reels)}\n😢 You lost 50 SnekCoins! 😢\nCurrent Balance: {(await Snekcoin.getWallet(interaction.user.id))['money']}"
+            await interaction.response.send_message("Returning to gambling menu...", ephemeral=True, embed=interaction.message.embeds[0], view=self.view, delete_after=15)
             await interaction.followup.send(resultText, ephemeral=False)
-            await interaction.followup.send("Returning to gambling menu...", ephemeral=True, embed=interaction.message.embeds[0], view=self.view)
 
 
 class SnekcoinModal(discord.ui.Modal):
@@ -405,29 +404,39 @@ class SnekcoinModal(discord.ui.Modal):
         customId = interaction.data["custom_id"].rsplit("_", 1)[0]
 
         if customId == "gambleCoinFlipModal":
-            if not isinstance(self.amount.value, int):
+            try:
+                amount = int(self.amount.value.strip())
+            except ValueError:
                 await interaction.response.send_message("❌ Invalid amount! Please enter a positive integer.", ephemeral=True)
                 return
-            winner, payout = await Snekcoin.gambleCoinFlip(self.userId, int(self.amount.value.strip()))
+            if int(amount) <= 0:
+                await interaction.response.send_message("❌ Amount must be a positive integer!", ephemeral=True)
+                return
+            winner, payout = await Snekcoin.gambleCoinFlip(self.userId, amount)
             if winner:
-                resultText = f"It was Heads!\n{interaction.user.mention} gambled and won {payout} SnekCoins on a coin flip! 🎉\nCurrent Balance: {(await Snekcoin.getWallet(interaction.user.id))['money']}"
+                resultText = f"It was Heads!\n{interaction.user.mention} gambled and won ``{payout}`` SnekCoins on a coin flip! 🎉\nCurrent Balance: ``{(await Snekcoin.getWallet(interaction.user.id))['money']}``"
             else:
-                resultText = f"It was Tails!\n{interaction.user.mention} gambled away and lost {self.amount} SnekCoins! 😢\nCurrent Balance: {(await Snekcoin.getWallet(interaction.user.id))['money']}"
+                resultText = f"It was Tails!\n{interaction.user.mention} gambled away and lost ``{amount}`` SnekCoins! 😢\nCurrent Balance: ``{(await Snekcoin.getWallet(interaction.user.id))['money']}``"
 
         if customId == "gambleDiceRollModal":
-            if not isinstance(self.amount.value, int):
+            try:
+                amount = int(self.amount.value.strip())
+            except ValueError:
                 await interaction.response.send_message("❌ Invalid amount! Please enter a positive integer.", ephemeral=True)
                 return
-            winner, userRoll, botRoll, winnings = await Snekcoin.gambleDiceRoll(self.userId, int(self.amount.value.strip()))
+            if int(amount) <= 0:
+                await interaction.response.send_message("❌ Amount must be a positive integer!", ephemeral=True)
+                return
+            winner, userRoll, botRoll, winnings = await Snekcoin.gambleDiceRoll(self.userId, amount)
             if winner:
-                resultText = f"{interaction.user.mention} rolled a {userRoll} against the bot's {botRoll} and won {winnings} SnekCoins 🎉\nCurrent Balance: {(await Snekcoin.getWallet(interaction.user.id))['money']}"
+                resultText = f"{interaction.user.mention} rolled a ``{userRoll}`` against the bot's ``{botRoll}`` and won ``{winnings}`` SnekCoins 🎉\nCurrent Balance: ``{(await Snekcoin.getWallet(interaction.user.id))['money']}``"
             elif winner is None:
-                resultText = f"{interaction.user.mention} rolled a {userRoll} against the bot's {botRoll}. It's a tie! No SnekCoins were won or lost.\nCurrent Balance: {(await Snekcoin.getWallet(interaction.user.id))['money']}"
+                resultText = f"{interaction.user.mention} rolled a ``{userRoll}`` against the bot's ``{botRoll}``. It's a tie! No SnekCoins were won or lost.\nCurrent Balance: ``{(await Snekcoin.getWallet(interaction.user.id))['money']}``"
             else:
-                resultText = f"{interaction.user.mention} rolled a {userRoll} against the bot's {botRoll} and lost {self.amount} SnekCoins! 😢\nCurrent Balance: {(await Snekcoin.getWallet(interaction.user.id))['money']}"
+                resultText = f"{interaction.user.mention} rolled a ``{userRoll}`` against the bot's ``{botRoll}`` and lost ``{amount}`` SnekCoins! 😢\nCurrent Balance: ``{(await Snekcoin.getWallet(interaction.user.id))['money']}``"
+        await interaction.response.send_message("Returning to gambling menu...", ephemeral=True, embed=interaction.message.embeds[0], view=self.view, delete_after=15)
+        await interaction.followup.send(resultText, ephemeral=False)
 
-        await interaction.response.send_message(resultText, ephemeral=False)
-        await interaction.followup.send("Returning to gambling menu...", ephemeral=True, embed=interaction.message.embeds[0], view=self.view)
 
 
 async def setup(bot: commands.Bot) -> None:

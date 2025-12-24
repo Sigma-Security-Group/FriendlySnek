@@ -506,4 +506,5 @@ class SnekcoinModal(discord.ui.Modal):
 
 async def setup(bot: commands.Bot) -> None:
     Snekcoin.gamble.error(Utils.onSlashError)
+    Snekcoin.checkWallet.error(Utils.onSlashError)
     await bot.add_cog(Snekcoin(bot))

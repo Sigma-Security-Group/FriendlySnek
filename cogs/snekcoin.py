@@ -407,11 +407,16 @@ class SnekcoinButton(discord.ui.Button):
 
             winner, reels, winnings = await Snekcoin.gambleSlots(interaction.user.id, 50)
             if winner:
-                embed.description = f"{interaction.user.mention} spun the slots:\n{' | '.join(reels)}\n🎉 You won {int(winnings)} SnekCoins! 🎉\nCurrent Balance: {(await Snekcoin.getWallet(interaction.user.id))['money']}"
+                embed.description = f"{interaction.user.mention} spun the slots:"
+                embed.add_field(name=f"{' | '.join(reels)}", value="", inline=False)
+                embed.add_field(name="", value=f"\n🎉 Congratulations! You won ``{round(winnings)}`` SnekCoins! 🎉\nCurrent Balance: ``{(await Snekcoin.getWallet(interaction.user.id))['money']}``", inline=False)
                 embed.color = discord.Color.green()
             else:
-                embed.description = f"{interaction.user.mention} spun the slots:\n{' | '.join(reels)}\n😢 You lost 50 SnekCoins! 😢\nCurrent Balance: {(await Snekcoin.getWallet(interaction.user.id))['money']}"
+                embed.description = f"{interaction.user.mention} spun the slots:"
+                embed.add_field(name=f"{' | '.join(reels)}", value="", inline=False)
+                embed.add_field(name="", value=f"\n😢 You lost ``50`` SnekCoins! 😢\nCurrent Balance: ``{(await Snekcoin.getWallet(interaction.user.id))['money']}``", inline=False)
                 embed.color = discord.Color.red()
+                embed.set_footer(text="You might want to call the gambler's anonymous helpline.")
             await interaction.response.send_message("Returning to gambling menu...", ephemeral=True, embed=interaction.message.embeds[0], view=self.view, delete_after=15)
             await interaction.followup.send(embed=embed, ephemeral=False)
 

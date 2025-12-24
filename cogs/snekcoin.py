@@ -206,9 +206,9 @@ class Snekcoin(commands.Cog):
         log.debug(f"Snekcoin gamble: {interaction.user.id} [{interaction.user.display_name}] is opening the gambling menu.")
 
         embed = discord.Embed(title="🎲 SnekCoin Gambling 🎲", color=discord.Color.green(), description="Choose a game to play:")
-        embed.add_field(name="🪙 Coin Flip 🪙", value="Flip a coin, win on heads!\nPayout: ``1.5x``", inline=False)
-        embed.add_field(name="🎲 Dice Roll 🎲", value="Roll a dice against the bot, largest roll wins!\nPayout: ``1.9x``", inline=False)
-        embed.add_field(name="🎰 Slots 🎰", value="50 coin bet, match 3 symbols to win big!\nPayout:\n🍒,🍋,🔔, ⭐ = ``2.8x``\n💎 = ``7x``\n7️⃣ = ``25x``", inline=False)
+        embed.add_field(name="🪙 Coin Flip 🪙", value="Flip a coin, win on heads!\nPayout: `1.5x`", inline=False)
+        embed.add_field(name="🎲 Dice Roll 🎲", value="Roll a dice against the bot, largest roll wins!\nPayout: `1.9x`", inline=False)
+        embed.add_field(name="🎰 Slots 🎰", value="50 coin bet, match 3 symbols to win big!\nPayout:\n🍒,🍋,🔔, ⭐ = `2.8x`\n💎 = `7x`\n7️⃣ = `25x`", inline=False)
         view = discord.ui.View(timeout=60)
         view.add_item(SnekcoinButton(None, label="🪙 Coin Flip 🪙", style=discord.ButtonStyle.success, custom_id="gambleCoinFlip", row=0))
         view.add_item(SnekcoinButton(None, label="🎲 Dice Roll 🎲", style=discord.ButtonStyle.success, custom_id="gambleDiceRoll", row=0))
@@ -409,12 +409,12 @@ class SnekcoinButton(discord.ui.Button):
             if winner:
                 embed.description = f"{interaction.user.mention} spun the slots:"
                 embed.add_field(name=f"{' | '.join(reels)}", value="", inline=False)
-                embed.add_field(name="", value=f"\n🎉 Congratulations! You won ``{round(winnings)}`` SnekCoins! 🎉\nCurrent Balance: ``{(await Snekcoin.getWallet(interaction.user.id))['money']}``", inline=False)
+                embed.add_field(name="", value=f"\n🎉 Congratulations! You won `{round(winnings)}` SnekCoins! 🎉\nCurrent Balance: `{(await Snekcoin.getWallet(interaction.user.id))['money']}`", inline=False)
                 embed.color = discord.Color.green()
             else:
                 embed.description = f"{interaction.user.mention} spun the slots:"
                 embed.add_field(name=f"{' | '.join(reels)}", value="", inline=False)
-                embed.add_field(name="", value=f"\n😢 You lost ``50`` SnekCoins! 😢\nCurrent Balance: ``{(await Snekcoin.getWallet(interaction.user.id))['money']}``", inline=False)
+                embed.add_field(name="", value=f"\n😢 You lost `50` SnekCoins! 😢\nCurrent Balance: `{(await Snekcoin.getWallet(interaction.user.id))['money']}`", inline=False)
                 embed.color = discord.Color.red()
                 embed.set_footer(text="You might want to call the gambler's anonymous helpline.")
             await interaction.response.send_message("Returning to gambling menu...", ephemeral=True, embed=interaction.message.embeds[0], view=self.view, delete_after=15)
@@ -464,10 +464,10 @@ class SnekcoinModal(discord.ui.Modal):
 
             winner, payout = await Snekcoin.gambleCoinFlip(self.userId, amount)
             if winner:
-                embed.description = f"It was Heads!\n{interaction.user.mention} gambled and won ``{payout}`` SnekCoins on a coin flip! 🎉\nCurrent Balance: ``{(await Snekcoin.getWallet(interaction.user.id))['money']}``"
+                embed.description = f"It was Heads!\n{interaction.user.mention} gambled and won `{payout}` SnekCoins on a coin flip! 🎉\nCurrent Balance: `{(await Snekcoin.getWallet(interaction.user.id))['money']}`"
                 embed.color = discord.Color.green()
             else:
-                embed.description = f"It was Tails!\n{interaction.user.mention} gambled away and lost ``{amount}`` SnekCoins! 😢\nCurrent Balance: ``{(await Snekcoin.getWallet(interaction.user.id))['money']}``"
+                embed.description = f"It was Tails!\n{interaction.user.mention} gambled away and lost `{amount}` SnekCoins! 😢\nCurrent Balance: `{(await Snekcoin.getWallet(interaction.user.id))['money']}`"
                 embed.color = discord.Color.red()
 
         if customId == "gambleDiceRollModal":
@@ -486,13 +486,13 @@ class SnekcoinModal(discord.ui.Modal):
 
             winner, userRoll, botRoll, winnings = await Snekcoin.gambleDiceRoll(self.userId, amount)
             if winner:
-                embed.description = f"{interaction.user.mention} rolled a ``{userRoll}`` against the bot's ``{botRoll}`` and won ``{winnings}`` SnekCoins 🎉\nCurrent Balance: ``{(await Snekcoin.getWallet(interaction.user.id))['money']}``"
+                embed.description = f"{interaction.user.mention} rolled a `{userRoll}` against the bot's `{botRoll}` and won `{winnings}` SnekCoins 🎉\nCurrent Balance: `{(await Snekcoin.getWallet(interaction.user.id))['money']}`"
                 embed.color = discord.Color.green()
             elif winner is None:
-                embed.description = f"{interaction.user.mention} rolled a ``{userRoll}`` against the bot's ``{botRoll}``. It's a tie! No SnekCoins were won or lost.\nCurrent Balance: ``{(await Snekcoin.getWallet(interaction.user.id))['money']}``"
+                embed.description = f"{interaction.user.mention} rolled a `{userRoll}` against the bot's `{botRoll}`. It's a tie! No SnekCoins were won or lost.\nCurrent Balance: `{(await Snekcoin.getWallet(interaction.user.id))['money']}`"
                 embed.color = discord.Color.yellow()
             else:
-                embed.description = f"{interaction.user.mention} rolled a ``{userRoll}`` against the bot's ``{botRoll}`` and lost ``{amount}`` SnekCoins! 😢\nCurrent Balance: ``{(await Snekcoin.getWallet(interaction.user.id))['money']}``"
+                embed.description = f"{interaction.user.mention} rolled a `{userRoll}` against the bot's `{botRoll}` and lost `{amount}` SnekCoins! 😢\nCurrent Balance: `{(await Snekcoin.getWallet(interaction.user.id))['money']}`"
                 embed.color = discord.Color.red()
 
         await interaction.response.send_message("Returning to gambling menu...", ephemeral=True, embed=interaction.message.embeds[0], view=self.view, delete_after=15)

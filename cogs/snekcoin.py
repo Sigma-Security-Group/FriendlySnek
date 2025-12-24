@@ -34,6 +34,7 @@ class Snekcoin(commands.Cog):
             log.exception("Snekcoin on_ready: guild is None")
             return
 
+
     @staticmethod
     async def getWallet(userId: int) -> Optional[Dict[str, int]]:
         """Get the wallet of a user.
@@ -54,8 +55,9 @@ class Snekcoin(commands.Cog):
             return None
 
         userIdStr = str(userId)
-        userWallet = wallets.get(userIdStr, {"money": 0})
+        userWallet = wallets.get(userIdStr, {"timesCommended": 0, "sentCommendations": 0, "money": 0, "moneySpent": 0})
         return userWallet
+
 
     @staticmethod
     async def updateWallet(userId: int, amount: int) -> None:
@@ -80,6 +82,8 @@ class Snekcoin(commands.Cog):
         userIdStr = str(userId)
         userWallet = wallets.get(userIdStr, {"timesCommended": 0, "sentCommendations": 0, "money": 0, "moneySpent": 0})
         userWallet["money"] += amount
+        if amount < 0:
+            userWallet["moneySpent"] -= amount
         wallets[userIdStr] = userWallet
 
         try:
@@ -317,6 +321,32 @@ class Snekcoin(commands.Cog):
 
         await ctx.send(f"✅ `{amount}` SnekCoins have been {operationText} {member.display_name}'s wallet.")
 
+
+    @discord.app_commands.command(name="checkwallet")
+    @discord.app_commands.guilds(GUILD)
+    @discord.app_commands.describe(user="User to check the wallet of (defaults to yourself).")
+    @discord.app_commands.checks.has_any_role(MEMBER)
+    async def checkWallet(self, interaction: discord.Interaction, user: discord.User | None = None) -> None:
+        """Check your SnekCoin wallet.
+
+        Parameters:
+        interaction (discord.Interaction): The Discord interaction.
+
+        Returns:
+        None.
+        """
+        await interaction.response.defer(ephemeral=True, thinking=True)
+        log.debug(f"Snekcoin checkWallet: {interaction.user.id} [{interaction.user.display_name}] is checking their wallet.")
+
+        walletData = await Snekcoin.getWallet(user.id if user else interaction.user.id)
+        if walletData is None:
+            await interaction.followup.send("❌ Failed to retrieve your wallet data.", ephemeral=True)
+            return
+
+        embed = discord.Embed(title="💰 SnekCoin Wallet 💰", color=discord.Color.green())
+        embed.add_field(name="Current Balance", value=f"🪙 `{walletData['money']}` SnekCoins", inline=False)
+        embed.add_field(name="Total SnekCoins Spent", value=f"🪙 `{walletData['moneySpent']}` SnekCoins", inline=False)
+        await interaction.followup.send(embed=embed, ephemeral=True)
 
 
 class SnekcoinButton(discord.ui.Button):

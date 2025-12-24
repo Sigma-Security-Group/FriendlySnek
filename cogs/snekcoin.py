@@ -154,16 +154,26 @@ class Snekcoin(commands.Cog):
 
         Parameters:
         userId (int): The user ID.
-        walletData (dict): The user's wallet data.
+        gambleAmount (int): The amount to gamble.
 
         Returns:
         bool: True if the user wins, False otherwise.
-        dict: The updated wallet data.
-        payout = varies based on symbols
+        List[str]: The reels that were spun.
+        int: The winnings amount.
         """
         log.debug(f"Snekcoin gambleSlots: User {userId} is gambling a slots game.")
-        symbols = ["🍒", "🍋", "🔔", "⭐", "💎", "7️⃣"]
-        weights = [0.6, 0.15, 0.08, 0.06, 0.1, 0.01]  # Adjusted weights for each symbol
+        symbolData = {
+            "🍒": {"weight": 0.6, "payout": 3.2},
+            "🍋": {"weight": 0.15, "payout": 3.2},
+            "🔔": {"weight": 0.08, "payout": 3.2},
+            "⭐": {"weight": 0.06, "payout": 3.2},
+            "💎": {"weight": 0.1, "payout": 7},
+            "7️⃣": {"weight": 0.01, "payout": 25},
+        }
+
+        symbols = list(symbolData.keys())
+        weights = [symbolData[symbol]["weight"] for symbol in symbols]
+
         reel1 = choice(choices(symbols, weights=weights, k=1))
         reel2 = choice(choices(symbols, weights=weights, k=1))
         reel3 = choice(choices(symbols, weights=weights, k=1))
@@ -171,12 +181,7 @@ class Snekcoin(commands.Cog):
 
         # Determine winnings
         if reel1 == reel2 == reel3:
-            if reel1 == "7️⃣":
-                payoutMultiplier = 25
-            elif reel1 == "💎":
-                payoutMultiplier = 7
-            else:
-                payoutMultiplier = 3.2
+            payoutMultiplier = symbolData[reel1]["payout"]
             winnings = gambleAmount * payoutMultiplier
             await Snekcoin.updateWallet(userId, round(winnings))
             return True, reels, winnings

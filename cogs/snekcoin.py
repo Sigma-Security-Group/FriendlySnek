@@ -109,6 +109,7 @@ class Snekcoin(commands.Cog):
             await Snekcoin.updateWallet(userId, int(payout))
         if not results:
             await Snekcoin.updateWallet(userId, -gambleAmount)
+            await Snekcoin.updateWallet(FRIENDLY_SNEK, gambleAmount)
         return results, payout
 
 
@@ -140,6 +141,7 @@ class Snekcoin(commands.Cog):
             return results, userRoll, botRoll, winnings
         if not results:
             await Snekcoin.updateWallet(userId, -gambleAmount)
+            await Snekcoin.updateWallet(FRIENDLY_SNEK, gambleAmount)
         return results, userRoll, botRoll, winnings
 
     @staticmethod
@@ -176,6 +178,7 @@ class Snekcoin(commands.Cog):
             return True, reels, winnings
         else:
             await Snekcoin.updateWallet(userId, -gambleAmount)
+            await Snekcoin.updateWallet(FRIENDLY_SNEK, gambleAmount)
             return False, reels, 0
 
 

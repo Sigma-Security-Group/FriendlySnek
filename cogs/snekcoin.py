@@ -360,6 +360,7 @@ class SnekcoinButton(discord.ui.Button):
                 )
             )
         if customId == "gambleSlots":
+            embed = discord.Embed(title="🎰 Slots 🎰")
             money = (await Snekcoin.getWallet(interaction.user.id))['money']
             if money < 50:
                 await interaction.response.send_message("❌ You need at least 50 SnekCoins to play Slots!", ephemeral=True)
@@ -370,13 +371,16 @@ class SnekcoinButton(discord.ui.Button):
             if money < 50:
                 await interaction.followup.send("❌ You need at least 50 SnekCoins to play Slots!", ephemeral=True)
                 return
+
             winner, reels, winnings = await Snekcoin.gambleSlots(interaction.user.id, 50)
             if winner:
-                resultText = f"{interaction.user.mention} spun the slots:\n{' | '.join(reels)}\n🎉 You won {int(winnings)} SnekCoins! 🎉\nCurrent Balance: {(await Snekcoin.getWallet(interaction.user.id))['money']}"
+                embed.description = f"{interaction.user.mention} spun the slots:\n{' | '.join(reels)}\n🎉 You won {int(winnings)} SnekCoins! 🎉\nCurrent Balance: {(await Snekcoin.getWallet(interaction.user.id))['money']}"
+                embed.color = discord.Color.green()
             else:
-                resultText = f"{interaction.user.mention} spun the slots:\n{' | '.join(reels)}\n😢 You lost 50 SnekCoins! 😢\nCurrent Balance: {(await Snekcoin.getWallet(interaction.user.id))['money']}"
+                embed.description = f"{interaction.user.mention} spun the slots:\n{' | '.join(reels)}\n😢 You lost 50 SnekCoins! 😢\nCurrent Balance: {(await Snekcoin.getWallet(interaction.user.id))['money']}"
+                embed.color = discord.Color.red()
             await interaction.response.send_message("Returning to gambling menu...", ephemeral=True, embed=interaction.message.embeds[0], view=self.view, delete_after=15)
-            await interaction.followup.send(resultText, ephemeral=False)
+            await interaction.followup.send(embed=embed, ephemeral=False)
 
 
 class SnekcoinModal(discord.ui.Modal):
@@ -407,6 +411,7 @@ class SnekcoinModal(discord.ui.Modal):
         customId = interaction.data["custom_id"].rsplit("_", 1)[0]
 
         if customId == "gambleCoinFlipModal":
+            embed = discord.Embed(title="🪙 Coin Flip 🪙")
             try:
                 amount = int(self.amount.value.strip())
             except ValueError:
@@ -421,11 +426,14 @@ class SnekcoinModal(discord.ui.Modal):
 
             winner, payout = await Snekcoin.gambleCoinFlip(self.userId, amount)
             if winner:
-                resultText = f"It was Heads!\n{interaction.user.mention} gambled and won ``{payout}`` SnekCoins on a coin flip! 🎉\nCurrent Balance: ``{(await Snekcoin.getWallet(interaction.user.id))['money']}``"
+                embed.description = f"It was Heads!\n{interaction.user.mention} gambled and won ``{payout}`` SnekCoins on a coin flip! 🎉\nCurrent Balance: ``{(await Snekcoin.getWallet(interaction.user.id))['money']}``"
+                embed.color = discord.Color.green()
             else:
-                resultText = f"It was Tails!\n{interaction.user.mention} gambled away and lost ``{amount}`` SnekCoins! 😢\nCurrent Balance: ``{(await Snekcoin.getWallet(interaction.user.id))['money']}``"
+                embed.description = f"It was Tails!\n{interaction.user.mention} gambled away and lost ``{amount}`` SnekCoins! 😢\nCurrent Balance: ``{(await Snekcoin.getWallet(interaction.user.id))['money']}``"
+                embed.color = discord.Color.red()
 
         if customId == "gambleDiceRollModal":
+            embed = discord.Embed(title="🎲 Dice Roll 🎲")
             try:
                 amount = int(self.amount.value.strip())
             except ValueError:
@@ -440,14 +448,17 @@ class SnekcoinModal(discord.ui.Modal):
 
             winner, userRoll, botRoll, winnings = await Snekcoin.gambleDiceRoll(self.userId, amount)
             if winner:
-                resultText = f"{interaction.user.mention} rolled a ``{userRoll}`` against the bot's ``{botRoll}`` and won ``{winnings}`` SnekCoins 🎉\nCurrent Balance: ``{(await Snekcoin.getWallet(interaction.user.id))['money']}``"
+                embed.description = f"{interaction.user.mention} rolled a ``{userRoll}`` against the bot's ``{botRoll}`` and won ``{winnings}`` SnekCoins 🎉\nCurrent Balance: ``{(await Snekcoin.getWallet(interaction.user.id))['money']}``"
+                embed.color = discord.Color.green()
             elif winner is None:
-                resultText = f"{interaction.user.mention} rolled a ``{userRoll}`` against the bot's ``{botRoll}``. It's a tie! No SnekCoins were won or lost.\nCurrent Balance: ``{(await Snekcoin.getWallet(interaction.user.id))['money']}``"
+                embed.description = f"{interaction.user.mention} rolled a ``{userRoll}`` against the bot's ``{botRoll}``. It's a tie! No SnekCoins were won or lost.\nCurrent Balance: ``{(await Snekcoin.getWallet(interaction.user.id))['money']}``"
+                embed.color = discord.Color.yellow()
             else:
-                resultText = f"{interaction.user.mention} rolled a ``{userRoll}`` against the bot's ``{botRoll}`` and lost ``{amount}`` SnekCoins! 😢\nCurrent Balance: ``{(await Snekcoin.getWallet(interaction.user.id))['money']}``"
-        await interaction.response.send_message("Returning to gambling menu...", ephemeral=True, embed=interaction.message.embeds[0], view=self.view, delete_after=15)
-        await interaction.followup.send(resultText, ephemeral=False)
+                embed.description = f"{interaction.user.mention} rolled a ``{userRoll}`` against the bot's ``{botRoll}`` and lost ``{amount}`` SnekCoins! 😢\nCurrent Balance: ``{(await Snekcoin.getWallet(interaction.user.id))['money']}``"
+                embed.color = discord.Color.red()
 
+        await interaction.response.send_message("Returning to gambling menu...", ephemeral=True, embed=interaction.message.embeds[0], view=self.view, delete_after=15)
+        await interaction.followup.send(embed=embed, ephemeral=False)
 
 
 async def setup(bot: commands.Bot) -> None:

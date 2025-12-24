@@ -163,7 +163,7 @@ class Snekcoin(commands.Cog):
         """
         log.debug(f"Snekcoin gambleSlots: User {userId} is gambling a slots game.")
         symbols = ["🍒", "🍋", "🔔", "⭐", "💎", "7️⃣"]
-        weights = [0.6, 0.2, 0.10, 0.06, 0.03, 0.01]  # Adjusted weights for each symbol
+        weights = [0.6, 0.15, 0.08, 0.06, 0.1, 0.01]  # Adjusted weights for each symbol
         reel1 = choice(choices(symbols, weights=weights, k=1))
         reel2 = choice(choices(symbols, weights=weights, k=1))
         reel3 = choice(choices(symbols, weights=weights, k=1))
@@ -176,7 +176,7 @@ class Snekcoin(commands.Cog):
             elif reel1 == "💎":
                 payoutMultiplier = 7
             else:
-                payoutMultiplier = 2.8
+                payoutMultiplier = 3.2
             winnings = gambleAmount * payoutMultiplier
             await Snekcoin.updateWallet(userId, round(winnings))
             return True, reels, winnings

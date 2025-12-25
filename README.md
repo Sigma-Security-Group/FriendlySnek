@@ -28,8 +28,11 @@ SPREADSHEET_ACTIVE = False
 
 SFTP = {
     "0.0.0.0": {
-        "username": "",
-        "password": ""
+        "name": "My Server",
+        "port": 8822,
+        "directory": "0.0.0.0_2302/mpmissions",
+        "username": "ftp_user",
+        "password": "ftp_password",
     },
 }
 

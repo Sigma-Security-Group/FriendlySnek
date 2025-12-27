@@ -1,7 +1,5 @@
 import json, discord, logging
 
-#from datetime import datetime, timedelta, timezone
-#from dateutil.parser import parse as datetimeParse  # type: ignore
 from typing import Dict, Tuple, List
 from random import random, randint, choice, choices
 
@@ -110,7 +108,7 @@ class Snekcoin(commands.Cog):
         payout = round(0.5 * gambleAmount)
         if results:
             await Snekcoin.updateWallet(userId, payout)
-            await Snekcoin.updateWallet(FRIENDLY_SNEK, gambleAmount)
+            await Snekcoin.updateWallet(FRIENDLY_SNEK, -payout)
 
         if not results:
             await Snekcoin.updateWallet(userId, -gambleAmount)
@@ -145,6 +143,7 @@ class Snekcoin(commands.Cog):
         results = None if userRoll == botRoll else userRoll > botRoll
         if results:
             await Snekcoin.updateWallet(userId, winnings)
+            await Snekcoin.updateWallet(FRIENDLY_SNEK, -winnings)
             return results, userRoll, botRoll, winnings
 
         if results is None:
@@ -192,6 +191,7 @@ class Snekcoin(commands.Cog):
             payoutMultiplier = symbolData[reel1]["payout"]
             winnings = gambleAmount * payoutMultiplier
             await Snekcoin.updateWallet(userId, round(winnings))
+            await Snekcoin.updateWallet(FRIENDLY_SNEK, -round(winnings))
             return True, reels, winnings
         else:
             await Snekcoin.updateWallet(userId, -gambleAmount)

@@ -1,10 +1,6 @@
 import os, re, asyncio, discord, json, datetime, logging, random
 import pytz # type: ignore
 
-import platform  # Set appropriate event loop policy to avoid runtime errors on windows
-if platform.system() == "Windows":
-    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
-
 from discord.ext import commands  # type: ignore
 
 import logger

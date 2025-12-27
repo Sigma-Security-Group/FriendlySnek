@@ -807,7 +807,6 @@ class Schedule(commands.Cog):
         await interaction.followup.send(msgContent, ephemeral=True)
         await channel.send(f"🎉 {member.mention} 🎉", embed=embed)
 
-
 # ===== </Commend> =====
 
 

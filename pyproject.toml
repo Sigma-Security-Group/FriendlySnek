@@ -1,0 +1,16 @@
+[project]
+name = "FriendlySnek"
+version = "0.1.0"
+description = "Discord bot for Sigma Security Group; Event scheduling made easy."
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "asyncpraw>=7.8.1",
+    "beautifulsoup4>=4.14.3",
+    "discord>=2.3.2",
+    "gspread>=6.2.1",
+    "paramiko>=4.0.0",
+    "python-dateutil>=2.9.0.post0",
+    "pytz>=2025.2",
+    "unidecode>=1.4.0",
+]

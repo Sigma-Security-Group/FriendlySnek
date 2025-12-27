@@ -4,29 +4,30 @@ A Discord bot made for *Sigma Security Group* that implements custom commands an
 
 ## Prerequisites
 
-* Python 3.10+.
+* [Discord Application](https://discord.com/developers/applications) with Bot and all intents enabled
 
-* [Discord Application](https://discord.com/developers/applications) with Bot and all intents enabled.
+* [Python 3.12+](https://www.python.org/)
 
-* Installed dependencies: `python -m pip install -r requirements.txt`.
+* Installed dependencies:
+    * (Recommended) [UV](https://docs.astral.sh/uv/getting-started/installation/): `uv sync`
+    * [Pip](https://pip.pypa.io/en/stable/installation/): `python -m pip install -r requirements.txt`
 
 ## Getting Started
 
-The bot needs the file `secret.py` in the project's root folder in order to run. You can either create it yourself, or run the bot without it for it to create the file automatically with a good template. \
-The file needs to declare the following variables:
+The bot needs the file `secret.py` in the project's root folder in order to run. Create the file according to the following codeblock:
 
 ```py
-TOKEN = ""
-TOKEN_DEV = ""
+TOKEN = ""  # Token used if DEBUG is False
+TOKEN_DEV = ""  # Token used if DEBUG is True
 DEBUG = True
 
-MOD_UPDATE_ACTIVE = False
-SME_REMINDER_ACTIVE = False
-SME_BIG_BROTHER = False
-WORKSHOP_INTEREST_WIPE = False
-SPREADSHEET_ACTIVE = False
+MOD_UPDATE_ACTIVE = False  # Toggle checking mod updates from Steam
+SME_REMINDER_ACTIVE = False  # Toggle SME reminders every month
+SME_BIG_BROTHER = False  # Toggle summarizing SME activity every 6 months
+WORKSHOP_INTEREST_WIPE = False  # Toggle wiping workshop interest list every new year
+SPREADSHEET_ACTIVE = False  # Toggle modification to recruitment Google spreadsheet
 
-SFTP = {
+SFTP = {  # SFTP credentials to server(s)
     "0.0.0.0": {
         "name": "My Server",
         "port": 8822,
@@ -36,14 +37,14 @@ SFTP = {
     },
 }
 
-REDDIT_ACTIVE = False
-REDDIT = {
+REDDIT_ACTIVE = False  # Toggle Reddit recruitment posts
+REDDIT = {  # Reddit account credentials
     "client_id": "",
     "client_secret": "",
     "password": ""
 }
 
-DISCORD_LOGGING = {
+DISCORD_LOGGING = {  # Log levels based on type of event
     "upload_mission_file": True,
     "upload_file": True,
     "voice_dynamic_create": True,
@@ -59,8 +60,10 @@ DISCORD_LOGGING = {
 }
 ```
 
-You can easily toggle the bot's debug mode by changing the DEBUG variable in `secret.py`. On debug mode, the bot will use the debug server (`debug.py` constants).
+* You can easily toggle the bot's debug mode by changing the DEBUG variable in `secret.py`. On debug mode, the bot will use the debug server (`debug.py` constants).
 
-All constants in `constants/debug.py` are for Adrian's personal Bot Testing Range (BTR). If you want the bot to work on another server you must replace all the IDs in said file.
+* All constants in `constants/debug.py` are for Adrian's personal Bot Testing Range (BTR). If you want the bot to work on another server you must replace all the IDs in said file.
 
-Run the bot by executing: `python main.py`.
+* To start the bot run:
+    * UV: `uv run main.py`
+    * Pip: `<python> main.py`

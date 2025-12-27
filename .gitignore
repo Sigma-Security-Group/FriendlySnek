@@ -13,3 +13,4 @@ venv/
 .mypy_cache/
 anvilController.json
 .VSCodeCounter
+.python-version

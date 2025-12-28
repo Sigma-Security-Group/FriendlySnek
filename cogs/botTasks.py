@@ -1,6 +1,8 @@
-import secret, os, random, json, re, aiohttp, discord, logging
+from collections.abc import AsyncIterator
+import secret, os, random, json, re, aiohttp, discord, logging, time
 import asyncpraw, pytz  # type: ignore
 
+from typing import Tuple
 from datetime import datetime, timezone, timedelta
 from dateutil.parser import parse as datetimeParse  # type: ignore
 from bs4 import BeautifulSoup as BS  # type: ignore
@@ -151,18 +153,48 @@ class BotTasks(commands.Cog):
 
 
 
-
     @staticmethod
-    async def fetchWebsiteText(url: str) -> str | None:
+    async def fetchWebsiteText(modIds: list[int]) -> AsyncIterator[Tuple[int, str]]:
+        MAX_INVALID_FETCHES = 3
+        invalidFetches = 0
+        iterMods = [(modID, CHANGELOG_URL.format(modID)) for modID in modIds]
+        random.shuffle(iterMods)  # Shuffle mod list to reduce chance of rate limiting / bot detection
+
         async with aiohttp.ClientSession() as session:
-            async with session.get(url) as response:
-                if response.status != 200:
-                    log.warning(f"BotTasks fetchWebsiteText: response.status is not 200 ({response.status}) '{url}'")
-                    return
-                return await response.text()
+            for i, mod in enumerate(iterMods):
+                modID, url = mod
+                if invalidFetches >= MAX_INVALID_FETCHES:
+                    log.warning("BotTasks checkModUpdates: invalidFetches limit reached, breaking loop")
+                    break
+
+                # Longer cooldown every 10 fetches
+                # Steam returns HTTP 429 on the 40th request
+                if i % 10 == 0 and i != 0:
+                    # Sleep 15 seconds
+                    for _ in range(15):  # Use for loop to reduce blocking time
+                        time.sleep(1)
+
+                # Each fetch cooldown
+                for _ in range(3):  # Use for loop to reduce blocking time
+                    time.sleep(1)
+
+                # Randomized additional cooldown
+                time.sleep(1.5 + random.random() * 2)  # Cooldown, sleep between 1.5 and 3.5 seconds
+                # log.debug(f"BotTasks fetchWebsiteText: fetching url ({i+1}/{len(iterMods)}) '{url}'")
+
+                async with session.get(url) as response:
+                    if response.status != 200:
+                        invalidFetches += 1
+                        log.warning(f"BotTasks fetchWebsiteText: response.status is not 200 ({response.status}) '{url}' ({i+1}/{len(iterMods)})")
+                        for _ in range(round(30 + random.random() * 30)):  # Rate limit, sleep between 30 and 60 seconds
+                            time.sleep(1)
+                        continue
+                    yield (modID, await response.text())
+
 
     async def checkModUpdates(self) -> None:
         """Checks mod updates, pings hampters if detected."""
+        CHECK_MOD_UPDATE_INTERVAL = 8.0  # hours
 
         output = []
         with open(GENERIC_DATA_FILE) as f:
@@ -177,17 +209,8 @@ class BotTasks(commands.Cog):
         jcaModUpdateFound = False
 
         date = ""
-        invalidFetches = 0
-        for modID in genericData["modpackIds"]:
-            if invalidFetches >= 5:
-                log.warning("BotTasks checkModUpdates: invalidFetches limit reached, breaking loop")
-                break
-
+        async for modID, website in BotTasks.fetchWebsiteText(genericData["modpackIds"]):
             # Fetch mod & parse HTML
-            website = await BotTasks.fetchWebsiteText(CHANGELOG_URL.format(modID))
-            if website is None:
-                invalidFetches += 1
-                continue
             soup = BS(website, "html.parser")
 
             # Mod Title
@@ -274,7 +297,7 @@ class BotTasks(commands.Cog):
 
 
         # Update next execution time
-        nextTime = (datetime.now(timezone.utc) + timedelta(hours=6.0))
+        nextTime = (datetime.now(timezone.utc) + timedelta(hours=CHECK_MOD_UPDATE_INTERVAL))
         nextTime = nextTime.replace(microsecond=0)
         nextTime = datetime.timestamp(nextTime)
 

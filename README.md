@@ -28,12 +28,12 @@ WORKSHOP_INTEREST_WIPE = False  # Toggle wiping workshop interest list every new
 SPREADSHEET_ACTIVE = False  # Toggle modification to recruitment Google spreadsheet
 
 SFTP = {  # SFTP credentials to server(s)
-    "0.0.0.0": {
-        "name": "My Server",
-        "port": 8822,
-        "directory": "0.0.0.0_2302/mpmissions",
-        "username": "ftp_user",
-        "password": "ftp_password",
+    "My Server": {
+        "ip": "<server_ip>",
+        "port": <ftp_port>,
+        "directory": "<server_ip>_<connection_port>/mpmissions",
+        "username": "<ftp_user>",
+        "password": "<<ftp_password>",
     },
 }
 

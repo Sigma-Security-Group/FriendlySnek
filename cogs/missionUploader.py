@@ -37,7 +37,7 @@ class MissionUploader(commands.Cog):
         missionfile="Missionfile to upload. Naming: 'YYYY_MM_DD_Operation_Name_V1.Map.pbo'",
         server="Which server to upload to?"
     )
-    @discord.app_commands.choices(server = [discord.app_commands.Choice(name=srv["name"], value=host) for host, srv in secret.SFTP.items()])
+    @discord.app_commands.choices(server = [discord.app_commands.Choice(name=name, value=name) for name in secret.SFTP.keys()])
     @discord.app_commands.checks.has_any_role(*CMD_LIMIT_UPLOADMISSION)
     async def uploadMission(self, interaction: discord.Interaction, missionfile: discord.Attachment, server: discord.app_commands.Choice[str]) -> None:
         """Upload a mission PBO file to the server."""
@@ -59,7 +59,7 @@ class MissionUploader(commands.Cog):
         sftp = None
         timeout = 10 # seconds
         try:
-            transport = paramiko.Transport((server.value, secret.SFTP[server.value]["port"]))
+            transport = paramiko.Transport((secret.SFTP[server.value]["ip"], secret.SFTP[server.value]["port"]))
             transport.sock.settimeout(timeout)
             transport.connect(
                 username=secret.SFTP[server.value]["username"],
@@ -120,7 +120,7 @@ class MissionUploader(commands.Cog):
         # Log the upload
         with open(MISSIONS_UPLOADED_FILE, "a") as f:
             f.write(f"\nFilename: {missionfile.filename}\n"
-                f"Server: {secret.SFTP[server.value]['name']}\n"
+                f"Server: {server.value}\n"
                 f"UTC Time: {datetime.now(timezone.utc).strftime(TIME_FORMAT)}\n"
                 f"Member: {interaction.user.display_name} ({interaction.user})\n"
                 f"Member ID: {interaction.user.id}\n"
@@ -130,7 +130,7 @@ class MissionUploader(commands.Cog):
             embed = discord.Embed(title="Uploaded mission file" + (" (Debug)" if secret.DEBUG else ""), color=discord.Color.blue())
             embed.add_field(name="Filename", value=f"`{missionfile.filename}`")
             embed.add_field(name="Size", value=f"`{convertBytes(missionfile.size)}`")
-            embed.add_field(name="Server", value=f"`{secret.SFTP[server.value]['name']}`")
+            embed.add_field(name="Server", value=f"`{server.value}`")
             embed.add_field(name="Time", value=discord.utils.format_dt(datetime.now(timezone.utc), style="F"))
             embed.add_field(name="Member", value=interaction.user.mention)
             embed.set_footer(text=f"Member ID: {interaction.user.id}")

@@ -1,5 +1,5 @@
 from collections.abc import AsyncIterator
-import secret, os, random, json, re, aiohttp, discord, logging, time
+import secret, os, random, json, re, aiohttp, discord, logging, asyncio
 import asyncpraw, pytz  # type: ignore
 
 from typing import Tuple
@@ -16,7 +16,7 @@ if secret.DEBUG:
     from constants.debug import *
 
 log = logging.getLogger("FriendlySnek")
-
+lock = asyncio.Lock()
 
 def chunkList(lst: list, n: int):
     """Yield successive n-sized chunks from lst."""
@@ -160,6 +160,8 @@ class BotTasks(commands.Cog):
         iterMods = [(modID, CHANGELOG_URL.format(modID)) for modID in modIds]
         random.shuffle(iterMods)  # Shuffle mod list to reduce chance of rate limiting / bot detection
 
+        funCooldownValue = lambda start, stop: start + random.random() * (stop - start) # Cooldown between start and stop seconds
+
         async with aiohttp.ClientSession() as session:
             for i, mod in enumerate(iterMods):
                 modID, url = mod
@@ -167,27 +169,22 @@ class BotTasks(commands.Cog):
                     log.warning("BotTasks checkModUpdates: invalidFetches limit reached, breaking loop")
                     break
 
-                # Longer cooldown every 10 fetches
+                # Longer cooldown every 9 fetches
                 # Steam returns HTTP 429 on the 40th request
-                if i % 10 == 0 and i != 0:
-                    # Sleep 15 seconds
-                    for _ in range(15):  # Use for loop to reduce blocking time
-                        time.sleep(1)
+                if i % 9 == 0 and i != 0:
+                    async with lock:
+                        await asyncio.sleep(funCooldownValue(15, 34))
 
                 # Each fetch cooldown
-                for _ in range(3):  # Use for loop to reduce blocking time
-                    time.sleep(1)
-
-                # Randomized additional cooldown
-                time.sleep(1.5 + random.random() * 2)  # Cooldown, sleep between 1.5 and 3.5 seconds
-                # log.debug(f"BotTasks fetchWebsiteText: fetching url ({i+1}/{len(iterMods)}) '{url}'")
+                async with lock:
+                    await asyncio.sleep(funCooldownValue(5.1, 10.9)) # Arbitrary Cooldown, sleep between 5.1 and 10.9 seconds
 
                 async with session.get(url) as response:
                     if response.status != 200:
                         invalidFetches += 1
                         log.warning(f"BotTasks fetchWebsiteText: response.status is not 200 ({response.status}) '{url}' ({i+1}/{len(iterMods)})")
-                        for _ in range(round(30 + random.random() * 30)):  # Rate limit, sleep between 30 and 60 seconds
-                            time.sleep(1)
+                        async with lock:
+                            await asyncio.sleep(funCooldownValue(30, 60))  # Rate limit, sleep for longer
                         continue
                     yield (modID, await response.text())
 

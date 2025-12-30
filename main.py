@@ -369,7 +369,13 @@ async def reload(ctx: commands.Context) -> None:
     log.info(f"{ctx.author.id} [{ctx.author.display_name}] Reloading bot cogs")
     for cog in COGS:
         await client.reload_extension(f"cogs.{cog}")
-    await client.tree.sync(guild=GUILD)
+
+    try:
+        log.debug(f"Syncing guild: {await client.tree.sync(guild=GUILD)}")
+        log.debug(f"Syncing global: {await client.tree.sync()}")
+    except Exception as e:
+        log.exception(f"Error syncing commands: {e}")
+
     await ctx.send("Cogs reloaded!")
 
 

@@ -1,10 +1,6 @@
 import os, re, asyncio, discord, json, datetime, logging, random
 import pytz # type: ignore
 
-import platform  # Set appropriate event loop policy to avoid runtime errors on windows
-if platform.system() == "Windows":
-    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
-
 from discord.ext import commands  # type: ignore
 
 import logger
@@ -376,7 +372,13 @@ async def reload(ctx: commands.Context) -> None:
     log.info(f"{ctx.author.id} [{ctx.author.display_name}] Reloading bot cogs")
     for cog in COGS:
         await client.reload_extension(f"cogs.{cog}")
-    await client.tree.sync(guild=GUILD)
+
+    try:
+        log.debug(f"Syncing guild: {await client.tree.sync(guild=GUILD)}")
+        log.debug(f"Syncing global: {await client.tree.sync()}")
+    except Exception as e:
+        log.exception(f"Error syncing commands: {e}")
+
     await ctx.send("Cogs reloaded!")
 
 

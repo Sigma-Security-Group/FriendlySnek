@@ -464,14 +464,15 @@ Join Us:
 
         with open(WORKSHOP_INTEREST_FILE) as f:
             wsIntFile: dict = json.load(f)
-        workshopsInTimeFrame = []
+        wsHostDone = []
+        wsHostFailed = []
         for wsName, wsDetails in WORKSHOP_INTEREST_LIST.items():
             wsScheduled = False
             # Check for scheduled events
             for event in events:
                 if "workshopInterest" in event and event["workshopInterest"] == wsName:
                     wsScheduled = True
-                    workshopsInTimeFrame.append(wsName)
+                    wsHostDone.append(wsName)
                     break
 
             if wsScheduled:
@@ -490,7 +491,7 @@ Join Us:
                         pingEmbed.description = f"Last `{wsName}` event you had (`{event['title']}`) was at {discord.utils.format_dt(eventScheduled, style='F')} ({discord.utils.format_dt(eventScheduled, style='R')}).\nPlease host at least every 2 months to give everyone a chance to cert!" + pingEmbed.description
                         await smeCorner.send(self.getPingString(wsDetails["role"]), embed=pingEmbed)
                     else:
-                        workshopsInTimeFrame.append(wsName)
+                        wsHostDone.append(wsName)
                     break
 
             else:  # No workshop found
@@ -498,11 +499,14 @@ Join Us:
                 await smeCorner.send(self.getPingString(wsDetails["role"]), embed=pingEmbed)
 
 
-            log.debug(f"Bottasks smeReminder: SME reminder failed '{wsName}'")
+            wsHostFailed.append(wsName)
 
-        if len(workshopsInTimeFrame) > 0:
-            log.debug(f"Bottasks smeReminder: SME reminder succeeded '{workshopsInTimeFrame}'")
-            await smeCorner.send(":clap: Good job for keeping up the hosting " + ", ".join([f"`{wsName}`" for wsName in workshopsInTimeFrame]) + "! :clap:")
+        if len(wsHostFailed) > 0:
+            log.debug(f"Bottasks smeReminder: SME reminder failed to host: {', '.join(wsHostFailed)}")
+
+        if len(wsHostDone) > 0:
+            log.debug(f"Bottasks smeReminder: SME reminder succeeded in hosting: {', '.join(wsHostDone)}")
+            await smeCorner.send(":clap: Good job for keeping up the hosting " + ", ".join([f"`{wsName}`" for wsName in wsHostDone]) + "! :clap:")
 
 
         # Update next execution time

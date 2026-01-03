@@ -162,6 +162,8 @@ class BotTasks(commands.Cog):
 
         funCooldownValue = lambda start, stop: start + random.random() * (stop - start) # Cooldown between start and stop seconds
 
+        cookies = {"steamCountry": "FR%7C4219667261a70fcd1f30065fd4923490"}
+
         async with aiohttp.ClientSession() as session:
             for i, mod in enumerate(iterMods):
                 modID, url = mod
@@ -179,7 +181,7 @@ class BotTasks(commands.Cog):
                 async with lock:
                     await asyncio.sleep(funCooldownValue(5.1, 10.9)) # Arbitrary Cooldown, sleep between 5.1 and 10.9 seconds
 
-                async with session.get(url) as response:
+                async with session.get(url, cookies=cookies) as response:
                     if response.status != 200:
                         invalidFetches += 1
                         log.warning(f"BotTasks fetchWebsiteText: response.status is not 200 ({response.status}) '{url}' ({i+1}/{len(iterMods)})")
@@ -187,6 +189,38 @@ class BotTasks(commands.Cog):
                             await asyncio.sleep(funCooldownValue(30, 60))  # Rate limit, sleep for longer
                         continue
                     yield (modID, await response.text())
+
+
+    @staticmethod
+    def parseModUpdateDate(modupdateTime: str) -> datetime:
+        """Parse mod update time from string to datetime.
+
+        Parameters:
+        modupdateTime (str): The mod update time string, either one of these formats:
+        'Update: 1 Jan @ 06:00am'
+        'Update: 1 Jan, 2026 @ 06:00pm'
+
+        Returns:
+        datetime: The parsed datetime.
+
+        Raises:
+        ValueError: If the date format is unrecognized.
+        """
+        formats = [
+            ("Update: %d %b, %Y @ %I:%M%p", True),   # with year
+            ("Update: %d %b @ %I:%M%p", False),      # without year
+        ]
+
+        for fmt, has_year in formats:
+            try:
+                dt = datetime.strptime(modupdateTime, fmt)
+                if not has_year:
+                    dt = dt.replace(year=datetime.now().year)
+                return dt
+            except ValueError:
+                pass
+
+        raise ValueError(f"Unrecognized date format: {modupdateTime}")
 
 
     async def checkModUpdates(self) -> None:
@@ -205,7 +239,7 @@ class BotTasks(commands.Cog):
 
         jcaModUpdateFound = False
 
-        date = ""
+        modUpdateDate = ""
         async for modID, website in BotTasks.fetchWebsiteText(genericData["modpackIds"]):
             # Fetch mod & parse HTML
             soup = BS(website, "html.parser")
@@ -230,26 +264,29 @@ class BotTasks(commands.Cog):
 
                 # Find update time
                 elif stripTxt.startswith("Update: "):
-                    date = stripTxt
+                    modUpdateDate = stripTxt
                     break  # dw bout shit after this
 
-
             # Parse time to datetime
-            dateTimeParse = datetimeParse(date[len("Update: "):].replace("@ ", ""))
+            try:
+                modDateParsed = BotTasks.parseModUpdateDate(modUpdateDate)
+            except Exception as e:
+                log.exception(f"BotTasks checkModUpdates: Error parsing mod update date: {e}")
+                continue
 
             # Convert it into UTC (shitty arbitrary code)
-            utcTime = pytz.UTC.localize(dateTimeParse + timedelta(hours=7))  # Change this if output time is wrong: will cause double ping
+            modDateUTC = pytz.UTC.localize(modDateParsed + timedelta(hours=7))  # Change this if output time is wrong: will cause double ping
 
             # Current time
             now = datetime.now(timezone.utc)
 
             # Check if update is new
-            if utcTime > (now - timedelta(hours=7, minutes=59.0)):  # Relative time checking
-                log.debug(f"BotTasks checkModUpdates: Arma mod update '{name}' - '{utcTime}'")
+            if modDateUTC < now + timedelta(minutes=5.0) and modDateUTC > now - timedelta(hours=7, minutes=59.0):  # Relative time checking
+                log.debug(f"BotTasks checkModUpdates: Arma mod update '{name}' - '{modDateUTC}'")
                 output.append({
                     "modID": modID,
                     "name": name,
-                    "datetime": utcTime
+                    "datetime": modDateUTC
                 })
 
                 # JCA counter
@@ -427,14 +464,15 @@ Join Us:
 
         with open(WORKSHOP_INTEREST_FILE) as f:
             wsIntFile: dict = json.load(f)
-        workshopsInTimeFrame = []
+        wsHostDone = []
+        wsHostFailed = []
         for wsName, wsDetails in WORKSHOP_INTEREST_LIST.items():
             wsScheduled = False
             # Check for scheduled events
             for event in events:
                 if "workshopInterest" in event and event["workshopInterest"] == wsName:
                     wsScheduled = True
-                    workshopsInTimeFrame.append(wsName)
+                    wsHostDone.append(wsName)
                     break
 
             if wsScheduled:
@@ -453,7 +491,7 @@ Join Us:
                         pingEmbed.description = f"Last `{wsName}` event you had (`{event['title']}`) was at {discord.utils.format_dt(eventScheduled, style='F')} ({discord.utils.format_dt(eventScheduled, style='R')}).\nPlease host at least every 2 months to give everyone a chance to cert!" + pingEmbed.description
                         await smeCorner.send(self.getPingString(wsDetails["role"]), embed=pingEmbed)
                     else:
-                        workshopsInTimeFrame.append(wsName)
+                        wsHostDone.append(wsName)
                     break
 
             else:  # No workshop found
@@ -461,11 +499,14 @@ Join Us:
                 await smeCorner.send(self.getPingString(wsDetails["role"]), embed=pingEmbed)
 
 
-            log.debug(f"Bottasks smeReminder: SME reminder failed '{wsName}'")
+            wsHostFailed.append(wsName)
 
-        if len(workshopsInTimeFrame) > 0:
-            log.debug(f"Bottasks smeReminder: SME reminder succeeded '{workshopsInTimeFrame}'")
-            await smeCorner.send(":clap: Good job for keeping up the hosting " + ", ".join([f"`{wsName}`" for wsName in workshopsInTimeFrame]) + "! :clap:")
+        if len(wsHostFailed) > 0:
+            log.debug(f"Bottasks smeReminder: SME reminder failed to host: {', '.join(wsHostFailed)}")
+
+        if len(wsHostDone) > 0:
+            log.debug(f"Bottasks smeReminder: SME reminder succeeded in hosting: {', '.join(wsHostDone)}")
+            await smeCorner.send(":clap: Good job for keeping up the hosting " + ", ".join([f"`{wsName}`" for wsName in wsHostDone]) + "! :clap:")
 
 
         # Update next execution time

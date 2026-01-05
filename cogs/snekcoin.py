@@ -232,18 +232,19 @@ class Snekcoin(commands.Cog):
 
 # ===== </Gamble> =====
 
-    @commands.command(name="snekleaderboard")
-    async def snekLeaderboard(self, ctx: commands.Context) -> None:
-        """Displays the SnekCoin leaderboard.
+    @discord.app_commands.command(name="snekleaderboard")
+    @discord.app_commands.guilds(GUILD)
+    @discord.app_commands.checks.has_any_role(MEMBER)
+    async def snekLeaderboard(self, interaction: discord.Interaction) -> None:
+        """Displays the SnekCoin leaderboard with pages.
 
         Parameters:
-        ctx (commands.Context): The command context.
-
+        interaction (discord.Interaction): The Discord interaction.
         Returns:
         None.
         """
-        if not isinstance(ctx.guild, discord.Guild):
-            log.exception("Snekcoin snekleaderboard: ctx.guild not discord.Guild")
+        if not isinstance(interaction.guild, discord.Guild):
+            log.exception("Snekcoin snekleaderboard: interaction.guild not discord.Guild")
             return
 
         try:
@@ -252,23 +253,41 @@ class Snekcoin(commands.Cog):
         except Exception:
             wallets = {}
 
-        embed = discord.Embed(title="🏆 SnekCoin Leaderboard 🏆", color=discord.Color.gold(), description = "")
+        # Sort wallets by money in descending order
         wallets = dict(sorted(wallets.items(), key=lambda item: item[1].get("money", 0), reverse=True))
 
-        try:
-            for i, userId in enumerate(wallets.keys(), start=1):
-                member = ctx.guild.get_member(int(userId))
-                if member is None:
-                    continue
-                if wallets[userId].get("money", 0) == 0:
-                    continue
-                if len(embed.description + f"{i}. {member.mention}:🪙 `{wallets[userId].get('money', 0)}` SnekCoins\n") > DISCORD_LIMITS["message_embed"]["embed_description"]:
-                    await ctx.send(embed=embed)
-                    embed.description = ""
-                embed.description += f"{i}. {member.mention}:🪙 `{wallets[userId].get('money', 0)}` SnekCoins\n"
-        except:
-            log.exception("Snekcoin snekleaderboard: Failed to generate leaderboard fields.")
-        await ctx.send(embed=embed)
+        # Build leaderboard pages as embeds
+        embeds = []
+        view = discord.ui.View(timeout=60)
+        embed = discord.Embed(title="🏆 SnekCoin Leaderboard 🏆", color=discord.Color.gold())
+        embed.description = ""
+        count, pages = 1, 1
+
+        for user in wallets:
+            member = interaction.guild.get_member(int(user))
+            if member is None:
+                continue
+            if wallets[user].get("money", 0) == 0:
+                continue
+            if len(embed.description) + len(f"{count}. **{member.mention}** - 🪙 `{wallets[user].get('money', 0)}` SnekCoins\n") > DISCORD_LIMITS["message_embed"]["embed_description"]:
+                embeds.append(embed)
+                embed = discord.Embed(title="🏆 SnekCoin Leaderboard 🏆", color=discord.Color.gold())
+                embed.description = ""
+                pages += 1
+            embed.description += f"{count}. **{member.mention}** - 🪙 `{wallets[user].get('money', 0)}` SnekCoins\n"
+            count += 1
+        if embed.description:
+            embeds.append(embed)
+        for embed in embeds:
+            embed.set_footer(text=f"Page {embeds.index(embed)+1} of {len(embeds)}")
+
+        if len(embeds) > 1:
+            view.add_item(SnekcoinButton(None, label="Previous", style=discord.ButtonStyle.primary, custom_id="leaderboardPrevious", row=0))
+            view.add_item(SnekcoinButton(None, label="Next", style=discord.ButtonStyle.primary, custom_id="leaderboardNext", row=0))
+            SnekcoinButton.leaderboardEmbeds = embeds
+            SnekcoinButton.leaderboardCurrentPage = 0
+        await interaction.response.send_message(embed=embeds[0], view=view, ephemeral=True, delete_after=60.0)
+
 
     @commands.command(name="changesnekcoins")
     @commands.has_any_role(*CMD_LIMIT_STAFF)
@@ -433,6 +452,25 @@ class SnekcoinButton(discord.ui.Button):
             await interaction.response.send_message("Returning to gambling menu...", ephemeral=True, embed=interaction.message.embeds[0], view=self.view, delete_after=15.0)
             await interaction.followup.send(embed=embed, ephemeral=False)
 
+        if customId == "leaderboardPrevious":
+            if not SnekcoinButton.leaderboardEmbeds:
+                log.exception("SnekcoinButton callback: No embeds found for leaderboardPrevious")
+                return
+            if SnekcoinButton.leaderboardCurrentPage == 0:
+                SnekcoinButton.leaderboardCurrentPage = len(SnekcoinButton.leaderboardEmbeds) - 1
+            else:
+                SnekcoinButton.leaderboardCurrentPage -= 1
+            await interaction.response.edit_message(embed=SnekcoinButton.leaderboardEmbeds[SnekcoinButton.leaderboardCurrentPage])
+        if customId == "leaderboardNext":
+            if not SnekcoinButton.leaderboardEmbeds:
+                log.exception("SnekcoinButton callback: No embeds found for leaderboardNext")
+                return
+            if SnekcoinButton.leaderboardCurrentPage == len(SnekcoinButton.leaderboardEmbeds) - 1:
+                SnekcoinButton.leaderboardCurrentPage = 0
+            else:
+                SnekcoinButton.leaderboardCurrentPage += 1
+            await interaction.response.edit_message(embed=SnekcoinButton.leaderboardEmbeds[SnekcoinButton.leaderboardCurrentPage])
+
 
 class SnekcoinModal(discord.ui.Modal):
     """Handling all snekcoin modals."""
@@ -537,4 +575,5 @@ class SnekcoinModal(discord.ui.Modal):
 async def setup(bot: commands.Bot) -> None:
     Snekcoin.gamble.error(Utils.onSlashError)
     Snekcoin.checkWallet.error(Utils.onSlashError)
+    Snekcoin.snekLeaderboard.error(Utils.onSlashError)
     await bot.add_cog(Snekcoin(bot))

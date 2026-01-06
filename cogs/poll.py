@@ -25,10 +25,11 @@ class Poll(commands.Cog):
     @discord.app_commands.command(name="poll")
     @discord.app_commands.guilds(GUILD)
     @discord.app_commands.describe(
-        multivote = "If you're able to vote for multiple options.",
-        title = "Title",
+        multivote = "If you're able to vote for multiple options",
+        anonymous = "If the poll is anonymous",
+        title = "Poll title",
         option1 = "Option 1",
-        description = "Description",
+        description = "Poll description",
         option2 = "Option 2",
         option3 = "Option 3",
         option4 = "Option 4",
@@ -39,13 +40,34 @@ class Poll(commands.Cog):
         option9 = "Option 9",
         option10 = "Option 10"
     )
-    @discord.app_commands.choices(multivote = [discord.app_commands.Choice(name="Multiple votes", value="Yes"), discord.app_commands.Choice(name="One vote", value="No")])
-    async def poll(self, interaction: discord.Interaction, multivote: discord.app_commands.Choice[str], title: str, option1: str, description: str = "", option2: str = "", option3: str = "", option4: str = "", option5: str = "", option6: str = "", option7: str = "", option8: str = "", option9: str = "", option10: str = "") -> None:
+    @discord.app_commands.choices(
+        multivote = [discord.app_commands.Choice(name="Multiple votes", value="Yes"), discord.app_commands.Choice(name="One vote", value="No")],
+        anonymous = [discord.app_commands.Choice(name="Anonymous", value="Yes"), discord.app_commands.Choice(name="Not anonymous", value="No")]
+    )
+    async def poll(
+        self,
+        interaction: discord.Interaction,
+        multivote: discord.app_commands.Choice[str],
+        anonymous: discord.app_commands.Choice[str],
+        title: str,
+        option1: str,
+        description: str = "",
+        option2: str = "",
+        option3: str = "",
+        option4: str = "",
+        option5: str = "",
+        option6: str = "",
+        option7: str = "",
+        option8: str = "",
+        option9: str = "",
+        option10: str = ""
+    ) -> None:
         """Create a poll with up to 10 options.
 
         Parameters:
         interaction (discord.Interaction): The Discord interaction.
         multivote (discord.app_commands.Choice[str]): If a user is able to cast their votes on multiple options.
+        anonymous (discord.app_commands.Choice[str]): If the poll is anonymous.
         title (str): Poll title.
         option1 (str): Poll option 1.
         description (str): Poll description.
@@ -65,7 +87,8 @@ class Poll(commands.Cog):
         log.info(f"{interaction.user.id} [{interaction.user.display_name}] Created a poll!")
         group = {
             "Creator": interaction.user.display_name,
-            "Multivote": True if multivote.value == "Yes" else False
+            "Multivote": True if multivote.value == "Yes" else False,
+            "Anonymous": anonymous.value
         }
         embed = discord.Embed(title=title, description=f"{description}\n\n", color=discord.Color.gold())
         embed.set_footer(text=f"Poll by {interaction.user.display_name}")
@@ -110,6 +133,9 @@ class PollButton(discord.ui.Button):
 
     async def callback(self, interaction: discord.Interaction):
         if interaction.data["custom_id"] == "results":
+            if self.group.get("Anonymous", False) == "Yes" and interaction.user.display_name != self.group["Creator"]:
+                await interaction.response.send_message("This poll is anonymous; results are not available.", ephemeral=True)
+                return
             embed = discord.Embed(title="Poll results", color=discord.Color.green())
             for key, value in self.group.items():
                 if key.startswith("poll_vote_"):

@@ -1717,11 +1717,6 @@ class ScheduleButton(discord.ui.Button):
             if customId in rsvpOptions:
                 event = eventList[0]
 
-                # Decline if author
-                if event["authorId"] == interaction.user.id:
-                    await interaction.response.send_message(interaction.user.mention, embed=embedDeclineRsvpSelf, ephemeral=True, delete_after=30.0)
-                    return
-
                 if await Schedule.blockVerifiedRoleRSVP(interaction, event):
                     return
 

@@ -14,8 +14,9 @@ if secret.DEBUG:
 log = logging.getLogger("FriendlySnek")
 
 
-
-class Snekcoin(commands.Cog):
+@discord.app_commands.guilds(GUILD)
+@discord.app_commands.checks.has_any_role(MEMBER)
+class Snekcoin(commands.GroupCog, name = "snekcoin"):
     """SnekCoin Cog."""
     def __init__(self, bot: commands.Bot) -> None:
         super().__init__()
@@ -202,8 +203,6 @@ class Snekcoin(commands.Cog):
 # ===== </Gamble> =====
 
     @discord.app_commands.command(name="gamble")
-    @discord.app_commands.guilds(GUILD)
-    @discord.app_commands.checks.has_any_role(MEMBER)
     async def gamble(self, interaction: discord.Interaction) -> None:
         """Gamble your SnekCoins away!
 
@@ -233,8 +232,6 @@ class Snekcoin(commands.Cog):
 # ===== </Gamble> =====
 
     @discord.app_commands.command(name="snekleaderboard")
-    @discord.app_commands.guilds(GUILD)
-    @discord.app_commands.checks.has_any_role(MEMBER)
     async def snekLeaderboard(self, interaction: discord.Interaction) -> None:
         """Displays the SnekCoin leaderboard with pages.
 
@@ -353,9 +350,7 @@ class Snekcoin(commands.Cog):
 
 
     @discord.app_commands.command(name="checkwallet")
-    @discord.app_commands.guilds(GUILD)
     @discord.app_commands.describe(user="User to check the wallet of (defaults to yourself).")
-    @discord.app_commands.checks.has_any_role(MEMBER)
     async def checkWallet(self, interaction: discord.Interaction, user: discord.User | None = None) -> None:
         """Check your SnekCoin wallet.
 

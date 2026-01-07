@@ -175,6 +175,9 @@ async def on_message(message: discord.Message) -> None:
                     "Are you trying to give me a citation? You're not <@312927139764764672>",
                     "Wait one, still processing <@356926241065926658>'s AAR comment.",
                     "Did you know my name is Harry?",
+                    "Did you know my brother's name was Jaap?",
+                    "Did you know my sisters name was Big Mama?",
+                    "<@315411756782714881> is my dad. Don't make me tell him you pinged me for nothing.",
                     f"{TROUT}"
         ]
         try:

@@ -432,6 +432,8 @@ class SnekcoinButton(discord.ui.Button):
                 return
 
             winner, reels, winnings = await Snekcoin.gambleSlots(interaction.user.id, 50)
+            userWallet = await Snekcoin.getWallet(interaction.user.id)
+
             if winner:
                 embed.description = f"{interaction.user.mention} spun the slots:"
                 embed.add_field(name=f"{' | '.join(reels)}", value="", inline=False)

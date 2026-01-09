@@ -2,6 +2,7 @@ import os, re, asyncio, discord, json, datetime, logging, random
 import pytz # type: ignore
 
 from discord.ext import commands  # type: ignore
+from random import randint
 
 import logger
 log = logging.getLogger("FriendlySnek")
@@ -17,6 +18,8 @@ import secret
 from constants import *
 if secret.DEBUG:
     from constants.debug import *
+
+from cogs.snekcoin import Snekcoin
 
 # Set up directories
 def setupDirectory(dirName: str) -> None:
@@ -106,7 +109,9 @@ async def on_message(message: discord.Message) -> None:
         embed = message.embeds[0] if message.embeds else None
         if embed and embed.description and "Bump done" in embed.description and message.interaction_metadata:
             log.debug(f"[{message.interaction_metadata.user.display_name}] ran /bump; deleting message by [{message.author.display_name}] in #{message.channel}")
-            await message.channel.send(content = f"The trout population thanks you {message.interaction_metadata.user.mention} for doing `/bump` {TROUT} 🤝 🐍")
+            award = randint(10, 100)
+            await Snekcoin.updateWallet(message.interaction_metadata.user.id, award)
+            await message.channel.send(content = f"The trout population thanks you {message.interaction_metadata.user.mention} for doing `/bump` {TROUT} 🤝 🐍\nYou have been awarded 🪙`{award}` snekcoins!")
             await message.delete()
             return
 

@@ -110,6 +110,9 @@ class BotTasks(commands.Cog):
             try:
                 await member.add_roles(roleSuspiciousAccount, reason="Suspicious Account")
                 susText = guild.get_channel(SUS_TEXT)
+                if susText is None:
+                    log.exception("Bottasks on_member_join: susText is None")
+                    return
                 await susText.send(f"{member.mention}, your account is marked as suspicious due to being newly created. Please follow the instructions in the pinned message to resolve this.")
                 return
             except Exception:

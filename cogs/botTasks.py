@@ -109,6 +109,8 @@ class BotTasks(commands.Cog):
 
             try:
                 await member.add_roles(roleSuspiciousAccount, reason="Suspicious Account")
+                susText = guild.get_channel(SUS_TEXT)
+                await susText.send(f"{member.mention}, your account is marked as suspicious due to being newly created. Please follow the instructions in the pinned message to resolve this.")
                 return
             except Exception:
                 log.warning(f"BotTasks on_member_join: failed to add suspicious role to member '{member.id}' ({member.display_name})")

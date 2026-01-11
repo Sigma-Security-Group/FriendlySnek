@@ -222,9 +222,9 @@ class Snekcoin(commands.GroupCog, name = "snekcoin"):
         embed.add_field(name="🎰 Slots 🎰", value="50 coin bet, match 3 symbols to win big!\nPayout:\n🍒,🍋,🔔, ⭐ = `2.8x`\n💎 = `7x`\n7️⃣ = `25x`", inline=False)
 
         view = discord.ui.View(timeout=60)
-        view.add_item(SnekcoinButton(None, label="🪙 Coin Flip 🪙", style=discord.ButtonStyle.success, custom_id="gambleCoinFlip", row=0))
-        view.add_item(SnekcoinButton(None, label="🎲 Dice Roll 🎲", style=discord.ButtonStyle.success, custom_id="gambleDiceRoll", row=0))
-        view.add_item(SnekcoinButton(None, label="🎰 Slots 🎰", style=discord.ButtonStyle.success, custom_id="gambleSlots", row=1))
+        view.add_item(SnekcoinButton(None, emoji="🪙", label="Coin Flip", style=discord.ButtonStyle.success, custom_id="gambleCoinFlip", row=0))
+        view.add_item(SnekcoinButton(None, emoji="🎲", label="Dice Roll", style=discord.ButtonStyle.success, custom_id="gambleDiceRoll", row=0))
+        view.add_item(SnekcoinButton(None, emoji="🎰", label="Slots", style=discord.ButtonStyle.success, custom_id="gambleSlots", row=1))
 
         await interaction.response.send_message(embed=embed, view=view, ephemeral=True, delete_after=30.0)
 
@@ -365,7 +365,7 @@ class Snekcoin(commands.GroupCog, name = "snekcoin"):
 
         walletData = await Snekcoin.getWallet(user.id if user else interaction.user.id)
         if walletData is None:
-            await interaction.response.send_message("❌ Failed to retrieve your wallet data.", ephemeral=True, delete_after=15.0)
+            await interaction.response.send_message(embed=discord.Embed(color=discord.Color.red(), title="❌ Failed", description="Could not retrieve your wallet data."), ephemeral=True, delete_after=15.0)
             return
 
         embed = discord.Embed(title="💰 SnekCoin Wallet 💰", color=discord.Color.green())
@@ -420,31 +420,33 @@ class SnekcoinButton(discord.ui.Button):
         if customId == "gambleSlots":
             embed = discord.Embed(title="🎰 Slots 🎰")
             userWallet = await Snekcoin.getWallet(interaction.user.id)
-            if userWallet is None:
-                await interaction.response.send_message("❌ Failed to retrieve your wallet data.", ephemeral=True)
+            if userWallet is None or userWallet["money"] is None:
+                await interaction.response.send_message(embed=discord.Embed(color=discord.Color.red(), title="❌ Failed", description="Could not retrieve your wallet data."), ephemeral=True, delete_after=15.0)
                 return
 
-            if userWallet["money"] is None:
-                await interaction.response.send_message("❌ Failed to retrieve your wallet data.", ephemeral=True)
-                return
             if userWallet["money"] < 50:
-                await interaction.response.send_message("❌ You need at least 50 SnekCoins to play Slots!", ephemeral=True)
+                await interaction.response.send_message(embed=discord.Embed(color=discord.Color.red(), title="❌ Insufficient funds", description=f"You need at least 50 SnekCoins to play Slots!\nWallet balance: `{userWallet['money']}` SnekCoins"), ephemeral=True, delete_after=15.0)
                 return
 
             winner, reels, winnings = await Snekcoin.gambleSlots(interaction.user.id, 50)
             userWallet = await Snekcoin.getWallet(interaction.user.id)
+            if userWallet is None:
+                await interaction.response.send_message(embed=discord.Embed(color=discord.Color.red(), title="❌ Failed", description="Could not retrieve your wallet data."), ephemeral=True, delete_after=15.0)
+                return
 
             if winner:
-                embed.description = f"{interaction.user.mention} spun the slots:"
-                embed.add_field(name=f"{' | '.join(reels)}", value="", inline=False)
-                embed.add_field(name="", value=f"\n🎉 Congratulations! You won `{round(winnings)}` SnekCoins! 🎉\nCurrent Balance: `{userWallet['money']}`", inline=False)
                 embed.color = discord.Color.green()
+                embed.set_author(name=interaction.user.display_name, icon_url=interaction.user.display_avatar)
+                embed.add_field(name="Result", value=f"{' | '.join(reels)}", inline=False)
+                embed.add_field(name="🪙 You won!", value=f"**{round(winnings)}** SnekCoins", inline=False)
+                embed.add_field(name="💰 Balance", value=f"**{userWallet['money']}** SnekCoins")
             else:
-                embed.description = f"{interaction.user.mention} spun the slots:"
-                embed.add_field(name=f"{' | '.join(reels)}", value="", inline=False)
-                embed.add_field(name="", value=f"\n😢 You lost `50` SnekCoins! 😢\nCurrent Balance: `{userWallet['money']}`", inline=False)
                 embed.color = discord.Color.red()
-                embed.set_footer(text="You might want to call the gambler's anonymous helpline.")
+                embed.set_author(name=interaction.user.display_name, icon_url=interaction.user.display_avatar)
+                embed.add_field(name="Result", value=f"{' | '.join(reels)}", inline=False)
+                embed.add_field(name="You lost", value=f"**50** SnekCoins", inline=False)
+                embed.add_field(name="💰 Balance", value=f"**{userWallet['money']}** SnekCoins")
+                embed.add_field(name="\u200B", value="-# [Gamblers anonymous helpline](https://gamblersanonymous.org/)", inline=False)
 
             await interaction.response.send_message("Returning to gambling menu...", ephemeral=True, embed=interaction.message.embeds[0], view=self.view, delete_after=15.0)
             await interaction.followup.send(embed=embed, ephemeral=False)
@@ -501,69 +503,86 @@ class SnekcoinModal(discord.ui.Modal):
         if customId == "gambleCoinFlipModal":
             userWallet = await Snekcoin.getWallet(interaction.user.id)
             if userWallet is None:
-                await interaction.response.send_message("❌ Failed to retrieve your wallet data.", ephemeral=True, delete_after=15.0)
+                await interaction.response.send_message(embed=discord.Embed(color=discord.Color.red(), title="❌ Failed", description="Could not retrieve your wallet data."), ephemeral=True, delete_after=15.0)
                 return
 
             embed = discord.Embed(title="🪙 Coin Flip 🪙")
             try:
                 amount = int(self.amount.value.strip())
             except ValueError:
-                await interaction.response.send_message("❌ Invalid amount! Please enter a positive integer.", ephemeral=True, delete_after=15.0)
+                await interaction.response.send_message(embed=discord.Embed(color=discord.Color.red(), title="❌ Invalid amount", description="Please enter a positive integer."), ephemeral=True, delete_after=15.0)
                 return
             if int(amount) <= 1:
-                await interaction.response.send_message("❌ Amount must be above 1!", ephemeral=True, delete_after=15.0)
+                await interaction.response.send_message(embed=discord.Embed(color=discord.Color.red(), title="❌ Invalid amount", description="Amount must be above 1!"), ephemeral=True, delete_after=15.0)
                 return
-            if (amount > userWallet['money']):
-                await interaction.response.send_message("❌ You do not have enough SnekCoins to gamble that amount!", ephemeral=True, delete_after=15.0)
+            if (amount > userWallet["money"]):
+                await interaction.response.send_message(embed=discord.Embed(color=discord.Color.red(), title="❌ Insufficient funds", description=f"You do not have enough SnekCoins to gamble that amount!\nWallet balance: `{userWallet['money']}` SnekCoins"), ephemeral=True, delete_after=15.0)
                 return
 
             winner, payout = await Snekcoin.gambleCoinFlip(self.userId, amount)
             userWallet = await Snekcoin.getWallet(interaction.user.id)
             if userWallet is None:
-                await interaction.response.send_message("❌ Failed to retrieve your wallet data.", ephemeral=True, delete_after=15.0)
+                await interaction.response.send_message(embed=discord.Embed(color=discord.Color.red(), title="❌ Failed", description="Could not retrieve your wallet data."), ephemeral=True, delete_after=15.0)
                 return
 
             if winner:
-                embed.description = f"It was Heads!\n{interaction.user.mention} gambled and won `{payout}` SnekCoins on a coin flip! 🎉\nCurrent Balance: `{userWallet['money']}`"
                 embed.color = discord.Color.green()
+                embed.set_author(name=interaction.user.display_name, icon_url=interaction.user.display_avatar)
+                embed.add_field(name="Result", value="Heads")
+                embed.add_field(name="🪙 You won!", value=f"**{payout}** SnekCoins", inline=False)
+                embed.add_field(name="💰 Balance", value=f"**{userWallet['money']}** SnekCoins")
             else:
-                embed.description = f"It was Tails!\n{interaction.user.mention} gambled away and lost `{amount}` SnekCoins! 😢\nCurrent Balance: `{userWallet['money']}`"
                 embed.color = discord.Color.red()
+                embed.set_author(name=interaction.user.display_name, icon_url=interaction.user.display_avatar)
+                embed.add_field(name="Result", value="Tails")
+                embed.add_field(name="You lost", value=f"**{amount}** SnekCoins", inline=False)
+                embed.add_field(name="💰 Balance", value=f"**{userWallet['money']}** SnekCoins")
 
         if customId == "gambleDiceRollModal":
             userWallet = await Snekcoin.getWallet(interaction.user.id)
             if userWallet is None:
-                await interaction.response.send_message("❌ Failed to retrieve your wallet data.", ephemeral=True, delete_after=15.0)
+                await interaction.response.send_message(embed=discord.Embed(color=discord.Color.red(), title="❌ Failed", description="Could not retrieve your wallet data."), ephemeral=True, delete_after=15.0)
                 return
 
             embed = discord.Embed(title="🎲 Dice Roll 🎲")
             try:
                 amount = int(self.amount.value.strip())
             except ValueError:
-                await interaction.response.send_message("❌ Invalid amount! Please enter a positive integer.", ephemeral=True, delete_after=15.0)
+                await interaction.response.send_message(embed=discord.Embed(color=discord.Color.red(), title="❌ Invalid amount", description="Please enter a positive integer."), ephemeral=True, delete_after=15.0)
                 return
             if int(amount) <= 1:
-                await interaction.response.send_message("❌ Amount must be above 1!", ephemeral=True, delete_after=15.0)
+                await interaction.response.send_message(embed=discord.Embed(color=discord.Color.red(), title="❌ Invalid amount", description="Amount must be above 1!"), ephemeral=True, delete_after=15.0)
                 return
-            if (amount > userWallet['money']):
-                await interaction.response.send_message("❌ You do not have enough SnekCoins to gamble that amount!", ephemeral=True, delete_after=15.0)
+            if (amount > userWallet["money"]):
+                await interaction.response.send_message(embed=discord.Embed(color=discord.Color.red(), title="❌ Insufficient funds", description=f"You do not have enough SnekCoins to gamble that amount!\nWallet balance: `{userWallet['money']}` SnekCoins"), ephemeral=True, delete_after=15.0)
                 return
 
             winner, userRoll, botRoll, winnings = await Snekcoin.gambleDiceRoll(self.userId, amount)
             userWallet = await Snekcoin.getWallet(interaction.user.id)
             if userWallet is None:
-                await interaction.response.send_message("❌ Failed to retrieve your wallet data.", ephemeral=True, delete_after=15.0)
+                await interaction.response.send_message(embed=discord.Embed(color=discord.Color.red(), title="❌ Failed", description="Could not retrieve your wallet data."), ephemeral=True, delete_after=15.0)
                 return
 
             if winner:
-                embed.description = f"{interaction.user.mention} rolled a `{userRoll}` against the bot's `{botRoll}` and won `{winnings}` SnekCoins 🎉\nCurrent Balance: `{userWallet['money']}`"
                 embed.color = discord.Color.green()
+                embed.set_author(name=interaction.user.display_name, icon_url=interaction.user.display_avatar)
+                embed.add_field(name="Result", value=f"You rolled: **{userRoll}**\nSnek rolled: **{botRoll}**")
+                embed.add_field(name="🪙 You won!", value=f"**{winnings}** SnekCoins", inline=False)
+                embed.add_field(name="💰 Balance", value=f"**{userWallet['money']}** SnekCoins")
+
             elif winner is None:
-                embed.description = f"{interaction.user.mention} rolled a `{userRoll}` against the bot's `{botRoll}`. It's a tie! No SnekCoins were won or lost.\nCurrent Balance: `{userWallet['money']}`"
-                embed.color = discord.Color.yellow()
+                embed.color = discord.Color.gold()
+                embed.set_author(name=interaction.user.display_name, icon_url=interaction.user.display_avatar)
+                embed.add_field(name="Result", value=f"You rolled: **{userRoll}**\nSnek rolled: **{botRoll}**")
+                embed.add_field(name="It's a tie!", value=f"No SnekCoins were won or lost", inline=False)
+                embed.add_field(name="💰 Balance", value=f"**{userWallet['money']}** SnekCoins")
+
             else:
-                embed.description = f"{interaction.user.mention} rolled a `{userRoll}` against the bot's `{botRoll}` and lost `{amount}` SnekCoins! 😢\nCurrent Balance: `{userWallet['money']}`"
                 embed.color = discord.Color.red()
+                embed.set_author(name=interaction.user.display_name, icon_url=interaction.user.display_avatar)
+                embed.add_field(name="Result", value=f"You rolled: **{userRoll}**\nSnek rolled: **{botRoll}**")
+                embed.add_field(name="You lost", value=f"**{amount}** SnekCoins", inline=False)
+                embed.add_field(name="💰 Balance", value=f"**{userWallet['money']}** SnekCoins")
 
         await interaction.response.send_message("Returning to gambling menu...", ephemeral=True, embed=interaction.message.embeds[0], view=self.view, delete_after=15.0)
         await interaction.followup.send(embed=embed, ephemeral=False)

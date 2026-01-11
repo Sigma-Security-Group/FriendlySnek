@@ -729,7 +729,7 @@ class Schedule(commands.Cog):
             "earned a commendation!",
             "got commended!",
             "picked up a commendation!",
-            "just cot a commendation!",
+            "just got a commendation!",
             "received a commendation!",
             "was just commended!",
             "'s getting some love!",

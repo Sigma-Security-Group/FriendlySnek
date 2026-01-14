@@ -216,7 +216,13 @@ class Snekcoin(commands.GroupCog, name = "snekcoin"):
         embed.add_field(name="🪙 Coin Flip 🪙", value="Flip a coin, win on heads!\nPayout: `1.5x`", inline=False)
         embed.add_field(name="🎲 Dice Roll 🎲", value="Roll a dice against the bot, largest roll wins!\nPayout: `1.9x`", inline=False)
         embed.add_field(name="🎰 Slots 🎰", value="50 coin bet, match 3 symbols to win big!\nPayout:\n🍒,🍋,🔔, ⭐ = `2.8x`\n💎 = `7x`\n7️⃣ = `25x`\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━", inline=False)
-        embed.add_field(name="Current Balance", value=f"🪙 `{(await Snekcoin.getWallet(interaction.user.id))['money']}` SnekCoins", inline=False)
+
+        wallet = await Snekcoin.getWallet(interaction.user.id)
+        if wallet is None:
+            await interaction.response.send_message("Failed to retrieve wallet information.", ephemeral=True)
+            return
+
+        embed.add_field(name="Current Balance", value=f"🪙 `{wallet['money']}` SnekCoins", inline=False)
 
         view = discord.ui.View(timeout=60)
         view.add_item(SnekcoinButton(None, emoji="🪙", label="Coin Flip", style=discord.ButtonStyle.success, custom_id="gambleCoinFlip", row=0))
@@ -471,7 +477,7 @@ class Snekcoin(commands.GroupCog, name = "snekcoin"):
         await ctx.send(f"✅ `{amount}` SnekCoins have been {operationText} {member.display_name}'s wallet.")
 
         auditLogs = self.bot.get_channel(AUDIT_LOGS)
-        if auditLogs is None or not isinstance(auditLogs, discord.TextChannel):
+        if not isinstance(auditLogs, discord.TextChannel):
             log.exception("Snekcoin changeSnekCoins: auditLogs channel is None or not discord.TextChannel")
             return
         embed = discord.Embed(

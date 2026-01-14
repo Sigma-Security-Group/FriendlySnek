@@ -406,9 +406,12 @@ class Snekcoin(commands.GroupCog, name = "snekcoin"):
             skippedText = "\n".join([f"- {tl}: {reason}" for tl, reason in skippedTls.items()])
             await interaction.response.send_message(f"✅ Payday has been processed successfully.\nThank you for hosting!\n\n⚠️ Some Team Leaders were not paid:\n{skippedText}", ephemeral=True, delete_after=30.0)
 
+        tlMentions = (f"- Team Leaders:\n" + "\n".join([f"  - {tl}: 🪙 `{amount}` SnekCoins" for tl, amount in paidTLs.items()]) if paidTLs else "")
+
         embed = discord.Embed(
             title="💰 Payday Executed 💰",
-            description=f"{interaction.user.mention} has executed payday.\n\n**Payments:**\n- Zeus: {interaction.user.mention} - 🪙 `{zeusPay}` SnekCoins\n- Actual: {actual.mention} - 🪙 `{actualPay}` SnekCoins\n" + (f"- Team Leaders:\n" + "\n".join([f"  - {tl}: 🪙 `{amount}` SnekCoins" for tl, amount in paidTLs.items()]) if paidTLs else ""),
+            description=f"{interaction.user.mention} has executed payday.\n\n**Payments:**\n" \
+            f"- Zeus: {interaction.user.mention} - 🪙 `{zeusPay}` SnekCoins\n- Actual: {actual.mention} - 🪙 `{actualPay}` SnekCoins\n{tlMentions}",
             color=discord.Color.blue()
         )
         await auditLogs.send(embed=embed)

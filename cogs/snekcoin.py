@@ -258,8 +258,8 @@ class Snekcoin(commands.GroupCog, name = "snekcoin"):
 
 # ===== </Gamble> =====
 
-    @discord.app_commands.command(name="snekleaderboard")
-    async def snekLeaderboard(self, interaction: discord.Interaction) -> None:
+    @discord.app_commands.command(name="leaderboard")
+    async def leaderboard(self, interaction: discord.Interaction) -> None:
         """Displays the SnekCoin leaderboard with pages.
 
         Parameters:
@@ -268,7 +268,7 @@ class Snekcoin(commands.GroupCog, name = "snekcoin"):
         None.
         """
         if not isinstance(interaction.guild, discord.Guild):
-            log.exception("Snekcoin snekleaderboard: interaction.guild not discord.Guild")
+            log.exception("Snekcoin leaderboard: interaction.guild not discord.Guild")
             return
 
         try:
@@ -777,6 +777,6 @@ class SnekcoinModal(discord.ui.Modal):
 async def setup(bot: commands.Bot) -> None:
     Snekcoin.gamble.error(Utils.onSlashError)
     Snekcoin.checkWallet.error(Utils.onSlashError)
-    Snekcoin.snekLeaderboard.error(Utils.onSlashError)
+    Snekcoin.leaderboard.error(Utils.onSlashError)
     Snekcoin.payday.error(Utils.onSlashError)
     await bot.add_cog(Snekcoin(bot))

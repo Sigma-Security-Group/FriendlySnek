@@ -343,7 +343,7 @@ class Snekcoin(commands.GroupCog, name = "snekcoin"):
             await interaction.response.send_message("❌ You as a Zeus cannot be Actual!", ephemeral=True, delete_after=15.0)
             return
         if actual.bot:
-            await interaction.response.send_message("❌ Actual cannot be the bot!", ephemeral=True, delete_after=15.0)
+            await interaction.response.send_message("❌ Actual cannot a bot!", ephemeral=True, delete_after=15.0)
             return
 
         await Snekcoin.updateWallet(interaction.user.id, zeusPay)

@@ -724,7 +724,7 @@ class Schedule(commands.Cog):
         # Commend responses
         actionPhrases = [
             "has been commended!",
-            "just got commendedd!",
+            "just got commended!",
             "was commended!",
             "earned a commendation!",
             "got commended!",
@@ -765,7 +765,7 @@ class Schedule(commands.Cog):
             "You must have L shaped really well.",
             "I'm sure they have plenty of war stories to tell.",
             "I wish you were my battle buddy.",
-            "<@378697936827056139> would be proud.",
+            "<@&483984125531783180> would be proud.",
             "Snek approves.",
             "Thats how it's done!",
             "Is this peak performance?"

@@ -866,7 +866,7 @@ class Staff(commands.Cog):
                 color=discord.Color.orange(),
             )
             auditEmbed.set_footer(text=f"User ID: {user.id}")
-            auditEmbed.set_image(url=user.display_avatar.url)
+            auditEmbed.set_thumbnail(url=user.display_avatar.url)
             auditEmbed.timestamp = datetime.now()
             await auditLogs.send(embed=auditEmbed)
 

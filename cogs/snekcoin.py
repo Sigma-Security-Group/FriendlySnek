@@ -340,7 +340,7 @@ class Snekcoin(commands.GroupCog, name = "snekcoin"):
         zeusPay,actualPay = randint(100, 200), randint(100, 200)
 
         if actual.id == interaction.user.id:
-            await interaction.response.send_message("❌ Zeus and Actual cannot be the same person!", ephemeral=True, delete_after=15.0)
+            await interaction.response.send_message("❌ You as a Zeus cannot be Actual!", ephemeral=True, delete_after=15.0)
             return
         if actual.bot:
             await interaction.response.send_message("❌ Actual cannot be the bot!", ephemeral=True, delete_after=15.0)

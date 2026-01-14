@@ -348,6 +348,17 @@ class Snekcoin(commands.GroupCog, name = "snekcoin"):
 
         await ctx.send(f"✅ `{amount}` SnekCoins have been {operationText} {member.display_name}'s wallet.")
 
+        auditLogs = self.bot.get_channel(AUDIT_LOGS)
+        if auditLogs is None or not isinstance(auditLogs, discord.TextChannel):
+            log.exception("Snekcoin changeSnekCoins: auditLogs channel is None or not discord.TextChannel")
+            return
+        embed = discord.Embed(
+            title="🪙 SnekCoin Wallet Change 🪙",
+            description=f"{ctx.author.mention} has {operationText} `{amount}` SnekCoins {'to' if operationText == 'added to' else 'from'} {member.mention}'s wallet.",
+            color=discord.Color.blue()
+        )
+        await auditLogs.send(embed=embed)
+
 
     @discord.app_commands.command(name="checkwallet")
     @discord.app_commands.describe(user="User to check the wallet of (defaults to yourself).")

@@ -286,6 +286,103 @@ class Snekcoin(commands.GroupCog, name = "snekcoin"):
         await interaction.response.send_message(embed=embeds[0], view=view, ephemeral=True, delete_after=60.0)
 
 
+    @discord.app_commands.command(name="payday")
+    @discord.app_commands.describe(actual="Who was the Actual?",
+                                   tl1="Team leader to get paid. (Optional)",
+                                   tl2="Team leader to get paid. (Optional)",
+                                   tl3="Team leader to get paid. (Optional)",
+                                   tl4="Team leader to get paid. (Optional)",
+                                   tl5="Team leader to get paid. (Optional)",
+                                   )
+    @discord.app_commands.checks.has_any_role(*CMD_LIMIT_ZEUS)
+    async def payday(self, interaction: discord.Interaction, actual: discord.Member, tl1: discord.Member | None = None, tl2: discord.Member | None = None, tl3: discord.Member | None = None, tl4: discord.Member | None = None, tl5: discord.Member | None = None) -> None:
+        """Pays SnekCoins to Zeus who runs the command, Actual, and TLs after an operation.
+
+        Parameters:
+        interaction (discord.Interaction): The Discord interaction.
+        actual (discord.Member): The Actual to pay.
+        tl1 (discord.Member | None): Team leader to pay.
+        tl2 (discord.Member | None): Team leader to pay.
+        tl3 (discord.Member | None): Team leader to pay.
+        tl4 (discord.Member | None): Team leader to pay.
+        tl5 (discord.Member | None): Team leader to pay.
+
+        Returns:
+        None.
+        """
+        log.debug(f"Snekcoin payday: {interaction.user.id} [{interaction.user.display_name}] is processing payday.")
+        auditLogs = self.bot.get_channel(AUDIT_LOGS)
+        if auditLogs is None or not isinstance(auditLogs, discord.TextChannel):
+            log.exception("Snekcoin payday: auditLogs channel is None or not discord.TextChannel")
+            return
+
+        zeusPay,actualPay = randint(100, 200), randint(100, 200)
+
+        if actual.id == interaction.user.id:
+            await interaction.response.send_message("❌ Zeus and Actual cannot be the same person!", ephemeral=True, delete_after=15.0)
+            return
+        if actual.bot:
+            await interaction.response.send_message("❌ Actual cannot be the bot!", ephemeral=True, delete_after=15.0)
+            return
+
+        await Snekcoin.updateWallet(interaction.user.id, zeusPay)
+        await Snekcoin.updateWallet(actual.id, actualPay)
+        paidTLs = {}
+        skippedTls = {}
+
+        # Pay TLs
+        for tl in [tl1, tl2, tl3, tl4, tl5]:
+            if tl is not None:
+                if tl.bot:
+                    log.warning(f"Snekcoin payday: TL {tl.id} [{tl.display_name}] is the bot, skipping payment.")
+                    skippedTls[tl.display_name] = "TL is a bot"
+                    continue
+                if tl.id == actual.id:
+                    log.warning(f"Snekcoin payday: TL {tl.id} [{tl.display_name}] is the Actual, skipping payment.")
+                    skippedTls[tl.display_name] = "TL is the Actual"
+                    continue
+                if tl.id == interaction.user.id:
+                    log.warning(f"Snekcoin payday: TL {tl.id} [{tl.display_name}] is the Zeus, skipping payment.")
+                    skippedTls[tl.display_name] = "TL is the Zeus"
+                    continue
+                if tl.get_role(MEMBER) is None:
+                    log.warning(f"Snekcoin payday: TL {tl.id} [{tl.display_name}] does not have MEMBER role, skipping payment.")
+                    skippedTls[tl.display_name] = "TL does not have MEMBER role"
+                    continue
+                if tl.mention in paidTLs:
+                    log.warning(f"Snekcoin payday: TL {tl.id} [{tl.display_name}] has already been paid, skipping payment.")
+                    skippedTls[tl.display_name] = "TL has already been paid"
+                    continue
+                tlPay = randint(50, 100)
+                await Snekcoin.updateWallet(tl.id, tlPay)
+                paidTLs[tl.mention] = tlPay
+
+        # Build and send payday summary embed
+        embed = discord.Embed(title="💰 Payday Processed 💰", color=discord.Color.gold())
+        embed.add_field(name="", value=f"* Zeus {interaction.user.mention} hosted the Operation and was paid 🪙 `{zeusPay}` SnekCoins.", inline=False)
+        embed.add_field(name="", value=f"* Actual {actual.mention} was paid 🪙 `{actualPay}` SnekCoins.", inline=False)
+        if paidTLs:
+            tlPaymentText = "\n".join([f"{tl}: 🪙 `{amount}` SnekCoins" for tl, amount in paidTLs.items()])
+            embed.add_field(name="Team Leaders Paid", value=tlPaymentText, inline=False)
+        embed.set_footer(text="Thank you for hosting the operation!")
+
+        commendationsChannel = self.bot.get_channel(COMMENDATIONS)
+
+        await commendationsChannel.send(embed=embed)
+        if not skippedTls:
+            await interaction.response.send_message("✅ Payday has been processed successfully.\nThank you for hosting!", ephemeral=True, delete_after=15.0)
+        else:
+            skippedText = "\n".join([f"- {tl}: {reason}" for tl, reason in skippedTls.items()])
+            await interaction.response.send_message(f"✅ Payday has been processed successfully.\nThank you for hosting!\n\n⚠️ Some Team Leaders were not paid:\n{skippedText}", ephemeral=True, delete_after=30.0)
+
+        embed = discord.Embed(
+            title="💰 Payday Executed 💰",
+            description=f"{interaction.user.mention} has executed payday.\n\n**Payments:**\n- Zeus: {interaction.user.mention} - 🪙 `{zeusPay}` SnekCoins\n- Actual: {actual.mention} - 🪙 `{actualPay}` SnekCoins\n" + (f"- Team Leaders:\n" + "\n".join([f"  - {tl}: 🪙 `{amount}` SnekCoins" for tl, amount in paidTLs.items()]) if paidTLs else ""),
+            color=discord.Color.blue()
+        )
+        await auditLogs.send(embed=embed)
+
+
     @commands.command(name="changesnekcoins")
     @commands.has_any_role(*CMD_LIMIT_STAFF)
     async def changeSnekCoins(self, ctx: commands.Context, member: discord.Member, addRemove: str, amount: int) -> None:
@@ -643,4 +740,5 @@ async def setup(bot: commands.Bot) -> None:
     Snekcoin.gamble.error(Utils.onSlashError)
     Snekcoin.checkWallet.error(Utils.onSlashError)
     Snekcoin.snekLeaderboard.error(Utils.onSlashError)
+    Snekcoin.payday.error(Utils.onSlashError)
     await bot.add_cog(Snekcoin(bot))

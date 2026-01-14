@@ -765,6 +765,114 @@ class Staff(commands.Cog):
         await interaction.followup.send(embed=embed, ephemeral=True)
 
 
+    # Kick Command
+    @discord.app_commands.command(name="kick")
+    @discord.app_commands.describe(user="Target user to be kicked (by mention, ID, or username).", reason="Reason for kicking the user.")
+    @discord.app_commands.guilds(GUILD)
+    @discord.app_commands.checks.has_any_role(*CMD_LIMIT_STAFF)
+    async def kick(self, interaction: discord.Interaction, user: discord.User, reason: str | None = None) -> None:
+        """Kick a user from the Discord server."""
+        await interaction.response.defer(ephemeral=True, thinking=True)
+        log.info(f"{interaction.user.id} [{interaction.user.display_name}] Attempting to kick {user.id} [{user.display_name}] from the server")
+
+        guild = self.bot.get_guild(GUILD_ID)
+        if guild is None:
+            log.exception("Staff kick: guild is None")
+            return
+
+        # Prevent kicking yourself or the bot
+        if user.id == interaction.user.id:
+            embed = discord.Embed(title="❌ Kick failed", description="You cannot kick yourself!", color=discord.Color.red())
+            embed.timestamp = datetime.now()
+            await interaction.followup.send(embed=embed, ephemeral=True)
+            return
+
+        if self.bot.user and user.id == self.bot.user.id:
+            embed = discord.Embed(title="❌ Kick failed", description="You cannot kick me!", color=discord.Color.red())
+            embed.timestamp = datetime.now()
+            await interaction.followup.send(embed=embed, ephemeral=True)
+            return
+
+        # Check if user is a member of the guild
+        try:
+            member = await guild.fetch_member(user.id)
+        except discord.NotFound:
+            embed = discord.Embed(title="❌ Kick failed", description=f"{user.mention} is not a member of this server!", color=discord.Color.red())
+            embed.timestamp = datetime.now()
+            await interaction.followup.send(embed=embed, ephemeral=True)
+            return
+        except Exception as e:
+            log.exception(f"Staff kick: Failed to fetch member {user.id} [{user.display_name}] - {e}")
+            embed = discord.Embed(title="❌ Kick failed", description="An error occurred while checking member status!", color=discord.Color.red())
+            await interaction.followup.send(embed=embed, ephemeral=True)
+            return
+
+        # Check Permissions.kick_members
+        if self.bot.user is None:
+            log.exception("Staff kick: bot user is None")
+            return
+        botMember = guild.get_member(self.bot.user.id)
+        if botMember is None or not botMember.guild_permissions.kick_members:
+            log.exception(f"{interaction.user.id} [{interaction.user.display_name}] Failed to kick {user.id} [{user.display_name}] - insufficient permissions")
+            embed = discord.Embed(
+                title="❌ Kick failed",
+                description="Failed to kick user! Insufficient permissions.",
+                color=discord.Color.red()
+            )
+            await interaction.followup.send(embed=embed, ephemeral=True)
+            return
+
+        # Set default reason
+        if reason is None:
+            reason = "No reason provided."
+
+        # DM kicked user
+        dm = f"You have been kicked from {guild.name} for the following reason:\n> {reason}"
+        try:
+            await user.send(dm)
+        except Exception as e:
+            log.warning(f"Failed to send kick DM to {user.id} [{user.display_name}] - {e}")
+
+        # Kick user
+        try:
+            await guild.kick(user, reason=f"Kicked by {interaction.user} via /kick command.\nReason: {reason}")
+        except Exception:
+            # Failed to kick
+            log.warning(f"{interaction.user.id} [{interaction.user.display_name}] Failed to kick {user.id} [{user.display_name}]")
+            embed = discord.Embed(
+                title="❌ Kick failed",
+                description=f"Failed to kick {user.mention}!",
+                color=discord.Color.red()
+            )
+            await interaction.followup.send(embed=embed, ephemeral=True)
+            return
+
+        # Successfully kicked
+        log.info(f"{interaction.user.id} [{interaction.user.display_name}] Kicked {user.id} [{user.display_name}] from the server")
+        embed = discord.Embed(
+            title="✅ User kicked",
+            description=f"{user.mention} has been kicked from the server!",
+            color=discord.Color.green()
+        )
+        embed.set_footer(text=f"User ID: {user.id}")
+        embed.timestamp = datetime.now()
+
+        # Log in audit log
+        auditLogs = guild.get_channel(AUDIT_LOGS)
+        if isinstance(auditLogs, discord.TextChannel):
+            auditEmbed = discord.Embed(
+                title="User Kicked",
+                description=f"**User:** {user.mention} (`{user}`)\n**Moderator:** {interaction.user.mention} (`{interaction.user}`)\n**Reason:** {reason}",
+                color=discord.Color.orange(),
+            )
+            auditEmbed.set_footer(text=f"User ID: {user.id}")
+            auditEmbed.set_image(url=user.display_avatar.url)
+            auditEmbed.timestamp = datetime.now()
+            await auditLogs.send(embed=auditEmbed)
+
+        await interaction.followup.send(embed=embed, ephemeral=True)
+
+
     # Recruitment Team command
     @discord.app_commands.command(name="recruitment-interview")
     @discord.app_commands.describe(member = "Target prospect member.")
@@ -1215,4 +1323,5 @@ async def setup(bot: commands.Bot) -> None:
     Staff.zitfeedback.error(Utils.onSlashError)
     Staff.ban.error(Utils.onSlashError)
     Staff.unban.error(Utils.onSlashError)
+    Staff.kick.error(Utils.onSlashError)
     await bot.add_cog(Staff(bot))

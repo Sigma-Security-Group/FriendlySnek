@@ -780,9 +780,9 @@ class Schedule(commands.Cog):
         if reason:
             embed.add_field(name="Reason:", value=reason, inline=False)
             if random() < 0.50:
-                bonusAmount = randint(100, 500)
+                bonusAmount = randint(100, 150)
         elif random() < 0.25:
-            bonusAmount = randint(50, 100)
+            bonusAmount = randint(25, 75)
         if bonusAmount > 0:
             embed.add_field(name="Bonus:", value=f"Received `{bonusAmount}` SnekCoins! 🪙", inline=False)
             targetEntry["money"] = int(targetEntry.get("money", 0)) + bonusAmount

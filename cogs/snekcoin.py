@@ -333,7 +333,7 @@ class Snekcoin(commands.GroupCog, name = "snekcoin"):
         """
         log.debug(f"Snekcoin payday: {interaction.user.id} [{interaction.user.display_name}] is processing payday.")
         auditLogs = self.bot.get_channel(AUDIT_LOGS)
-        if auditLogs is None or not isinstance(auditLogs, discord.TextChannel):
+        if auditLogs is not isinstance(auditLogs, discord.TextChannel):
             log.exception("Snekcoin payday: auditLogs channel is None or not discord.TextChannel")
             return
 

@@ -724,7 +724,7 @@ class Schedule(commands.Cog):
         # Commend responses
         actionPhrases = [
             "has been commended!",
-            "just got commendedd!",
+            "just got commended!",
             "was commended!",
             "earned a commendation!",
             "got commended!",
@@ -765,7 +765,7 @@ class Schedule(commands.Cog):
             "You must have L shaped really well.",
             "I'm sure they have plenty of war stories to tell.",
             "I wish you were my battle buddy.",
-            "<@378697936827056139> would be proud.",
+            "<@&483984125531783180> would be proud.",
             "Snek approves.",
             "Thats how it's done!",
             "Is this peak performance?"
@@ -780,9 +780,9 @@ class Schedule(commands.Cog):
         if reason:
             embed.add_field(name="Reason:", value=reason, inline=False)
             if random() < 0.50:
-                bonusAmount = randint(100, 500)
+                bonusAmount = randint(100, 150)
         elif random() < 0.25:
-            bonusAmount = randint(50, 100)
+            bonusAmount = randint(25, 75)
         if bonusAmount > 0:
             embed.add_field(name="Bonus:", value=f"Received `{bonusAmount}` SnekCoins! 🪙", inline=False)
             targetEntry["money"] = int(targetEntry.get("money", 0)) + bonusAmount

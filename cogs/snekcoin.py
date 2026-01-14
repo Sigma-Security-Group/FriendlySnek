@@ -360,6 +360,46 @@ class Snekcoin(commands.GroupCog, name = "snekcoin"):
         await auditLogs.send(embed=embed)
 
 
+    @commands.command(name="tradesnekcoins")
+    @commands.has_any_role(*CMD_LIMIT_STAFF)
+    async def tradeSnekCoins(self, ctx: commands.Context, fromMember: discord.Member, toMember: discord.Member, amount: int) -> None:
+        """Trades SnekCoins from one member to another.
+
+        Parameters:
+        ctx (commands.Context): The command context.
+        fromMember (discord.Member): Member to take SnekCoins from.
+        toMember (discord.Member): Member to give SnekCoins to.
+        amount (int): Amount of SnekCoins to trade.
+
+        Returns:
+        None.
+        """
+        if not isinstance(ctx.guild, discord.Guild):
+            log.exception("Snekcoin tradeSnekCoins: ctx.guild not discord.Guild")
+            return
+        log.info(f"{ctx.author.id} [{ctx.author.display_name}] is trading SnekCoins from {fromMember.id} [{fromMember.display_name}] to {toMember.id} [{toMember.display_name}]: {amount}")
+
+        if amount <= 0:
+            await ctx.send("❌ Amount must be a positive integer!")
+            return
+
+        await Snekcoin.updateWallet(fromMember.id, -amount)
+        await Snekcoin.updateWallet(toMember.id, amount)
+
+        await ctx.send(f"✅ `{amount}` SnekCoins have been traded from {fromMember.display_name} to {toMember.display_name}.")
+
+        auditLogs = self.bot.get_channel(AUDIT_LOGS)
+        if auditLogs is None or not isinstance(auditLogs, discord.TextChannel):
+            log.exception("Snekcoin tradeSnekCoins: auditLogs channel is None or not discord.TextChannel")
+            return
+        embed = discord.Embed(
+            title="🪙 SnekCoin Trade 🪙",
+            description=f"{ctx.author.mention} has traded `{amount}` SnekCoins from {fromMember.mention} to {toMember.mention}.",
+            color=discord.Color.blue()
+        )
+        await auditLogs.send(embed=embed)
+
+
     @discord.app_commands.command(name="checkwallet")
     @discord.app_commands.describe(user="User to check the wallet of (defaults to yourself).")
     async def checkWallet(self, interaction: discord.Interaction, user: discord.User | None = None) -> None:

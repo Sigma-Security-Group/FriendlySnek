@@ -116,7 +116,10 @@ async def on_message(message: discord.Message) -> None:
             return
 
     # Snek replies
-    if [True for mention in message.mentions if mention.id in FRIENDLY_SNEKS]:
+    if not client.user:
+        return
+
+    if [True for mention in message.mentions if mention.id == client.user.id]:
         replies = ["snek", "snake", "ssssnek", "ssssnake", "snek!", "snake!", "ssssnek!", "ssssnake!",
                     "snek?", "snake?", "ssssnek?", "ssssnake?", "snek.", "snake.",
                     "ssssnek.", "ssssnake", "snek...", "snake...", "ssssnek...", "ssssnake...",
@@ -131,9 +134,9 @@ async def on_message(message: discord.Message) -> None:
                     "Sometimes I pretend to update just to take a break.",
                     "I'm not a bot, I'm a snek",
                     "Society if naval workshop:\nhttps://tenor.com/view/utopia-gif-21647156",
-                    "Newcomer workshop:\nhttps://tenor.com/view/grenade-fail-squad-soldier-fire-in-the-hole-gif-17200361",
-                    "Mechanized workshop:\nhttps://tenor.com/view/russians-car-bouncing-bounce-crash-funny-gif-27619998",
-                    "FW SME landing:\nhttps://tenor.com/view/f35-f-35-f-35-crash-f-35-lighting-ii-fighter-jet-gif-2384217527281824748",
+                    "Newcomer workshop:\nhttps://tenor.com/view/je-casse-la-porte-gif-19272351",
+                    "Mechanized workshop:\nhttps://tenor.com/view/tank-tank-jumping-bt7-zeke-gif-21777189",
+                    "FW SME:\nhttps://tenor.com/view/f18-hoggit-floggit-dcs-cope-gif-25256391",
                     "I'm just the messenger, bro.",
                     "You think I wanted this?",
                     "Speak to management. Oh wait, that's still me.",
@@ -183,12 +186,28 @@ async def on_message(message: discord.Message) -> None:
                     "Did you know my brother's name was Jaap?",
                     "Did you know my sisters name was Big Mama?",
                     "<@315411756782714881> is my dad. Don't make me tell him you pinged me for nothing.",
-                    f"{TROUT}"
+                    f"{TROUT}",
+                    "Have you checked out the SnekCoin Casino? 🪙",
+                    "Have you seen my fat and juicy SnekCoin wallet? 🤑"
         ]
+
+        reactions = [
+            "😭",
+            "💀",
+            "🐍",
+            TROUT
+        ]
+
         try:
-            await message.reply(random.choice(replies))
-        except Exception:
-            pass
+            # 5% chance to react
+            if random.random() < 0.05:
+                await message.add_reaction(random.choice(reactions))
+
+            # 95% chance to reply
+            else:
+                await message.reply(random.choice(replies))
+        except Exception as e:
+            log.warning(f"on_message: {e}")
 
     # Execute commands
     if message.content.startswith(COMMAND_PREFIX):

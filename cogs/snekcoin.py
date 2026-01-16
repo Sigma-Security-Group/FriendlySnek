@@ -606,7 +606,7 @@ class SnekcoinButton(discord.ui.Button):
                 award = randint(10, 100)
                 await interaction.message.delete()
                 await Snekcoin.updateWallet(interaction.user.id, "money", award)
-                await interaction.response.send_message(embed=discord.Embed(color=discord.Color.green(), title="✅ Bonus Awarded", description=f"You have been awarded **{award}** SnekCoins from <@{originalUserId}>'s bump bonus!\nThis does not count towards your daily bump bonus limit."))
+                await interaction.response.send_message(embed=discord.Embed(color=discord.Color.green(), title="✅ Bonus Awarded", description=f"You have been awarded 🪙 `{award}` SnekCoins from <@{originalUserId}>'s bump bonus!\nThis does not count towards your daily bump bonus limit."))
                 return
 
             await interaction.response.send_message(embed=discord.Embed(color=discord.Color.red(), title="❌ Bump Bonus Unavailable", description="You have already received the maximum of 3 bump bonuses today."), ephemeral=True, delete_after=15.0)

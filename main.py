@@ -19,7 +19,7 @@ from constants import *
 if secret.DEBUG:
     from constants.debug import *
 
-from cogs.snekcoin import Snekcoin
+from cogs.snekcoin import Snekcoin, SnekcoinButton
 
 # Set up directories
 def setupDirectory(dirName: str) -> None:
@@ -109,11 +109,40 @@ async def on_message(message: discord.Message) -> None:
         embed = message.embeds[0] if message.embeds else None
         if embed and embed.description and "Bump done" in embed.description and message.interaction_metadata:
             log.debug(f"[{message.interaction_metadata.user.display_name}] ran /bump; deleting message by [{message.author.display_name}] in #{message.channel}")
-            award = randint(10, 100)
-            await Snekcoin.updateWallet(message.interaction_metadata.user.id, award)
-            await message.channel.send(content = f"The trout population thanks you {message.interaction_metadata.user.mention} for doing `/bump` {TROUT} 🤝 🐍\nYou have been awarded 🪙`{award}` snekcoins!")
-            await message.delete()
-            return
+
+            maxCommends = 3
+
+            userWallet = await Snekcoin.getWallet(message.interaction_metadata.user.id)
+            if userWallet is None:
+                log.exception("on_message: userWallet is None")
+                return
+            if userWallet.get("timesBumped") is None:
+                await Snekcoin.updateWallet(message.interaction_metadata.user.id, "timesBumped", 0)
+                userWallet = await Snekcoin.getWallet(message.interaction_metadata.user.id)
+
+            awardable = True if userWallet.get("timesBumped") < maxCommends else False
+
+            if awardable:
+                award = randint(10, 100)
+                await Snekcoin.updateWallet(message.interaction_metadata.user.id, "money", award)
+                await message.channel.send(content = f"The trout population thanks you {message.interaction_metadata.user.mention} for doing `/bump` {TROUT} 🤝 🐍\nYou have been awarded 🪙`{award}` snekcoins!")
+                await message.delete()
+                return
+
+            elif not awardable:
+                view = discord.ui.View()
+                view.add_item(SnekcoinButton(None, emoji="🪙", label="Claim Bump Bonus", style=discord.ButtonStyle.success, custom_id=f"snekcoinBumpBonus_{message.interaction_metadata.user.id}", row=0))
+
+                embed =discord.Embed(
+                    title="Snekcoin Bump Bonus",
+                    description="You have already received the maximum snekcoin reward for today by using `/bump` three times.\n\nThe award for this bump can be claimed by anyone by clicking the button below.",
+                    color=discord.Color.green()
+                )
+
+                await message.channel.send(content = f"The trout population thanks you {message.interaction_metadata.user.mention} for doing `/bump` {TROUT} 🤝 🐍")
+                await message.channel.send(content=None, embed=embed, view=view)
+                await message.delete()
+                return
 
     # Snek replies
     if [True for mention in message.mentions if mention.id in FRIENDLY_SNEKS]:

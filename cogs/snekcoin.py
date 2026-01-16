@@ -591,6 +591,27 @@ class SnekcoinButton(discord.ui.Button):
 
         customId = interaction.data["custom_id"]
 
+        if customId.startswith("snekcoinBumpBonus"):
+            originalUserId = int(customId.split("_")[1])
+            if originalUserId is None:
+                log.exception("SnekcoinButton callback: originalUserId is None")
+                return
+
+            userWallet = await Snekcoin.getWallet(interaction.user.id)
+            if userWallet is None:
+                await interaction.response.send_message(embed=discord.Embed(color=discord.Color.red(), title="❌ Failed", description="Could not retrieve your wallet data."), ephemeral=True, delete_after=15.0)
+                return
+
+            if userWallet["timesBumped"] > 3:
+                award = randint(10, 100)
+                await interaction.message.delete()
+                await Snekcoin.updateWallet(interaction.user.id, "money", award)
+                await interaction.response.send_message(embed=discord.Embed(color=discord.Color.green(), title="✅ Bonus Awarded", description=f"You have been awarded **{award}** SnekCoins from <@{originalUserId}>'s bump bonus!\nThis does not count towards your daily bump bonus limit."))
+                return
+
+            await interaction.response.send_message(embed=discord.Embed(color=discord.Color.red(), title="❌ Bump Bonus Unavailable", description="You have already received the maximum of 3 bump bonuses today."), ephemeral=True, delete_after=15.0)
+            return
+
         if customId == "gambleCoinFlip":
             view = self.view
             await interaction.response.send_modal(

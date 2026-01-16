@@ -229,7 +229,7 @@ class BotTasks(commands.Cog):
 
 
     async def checkModUpdates(self) -> None:
-        """Checks mod updates, pings hampters if detected."""
+        """Checks mod updates, pings hampters if  detected."""
         CHECK_MOD_UPDATE_INTERVAL = 8.0  # hours
 
         output = []
@@ -721,6 +721,46 @@ Join Us:
                 await self.checkModUpdates()
             except Exception as e:
                 log.exception(f"Bottasks oneHourTasks: checkModUpdates")
+
+        # clear timesBumped in all wallets
+        if "clearBumpTimes" not in msgDateLog or (datetime.fromtimestamp(msgDateLog["clearBumpTimes"], tz=pytz.utc) < datetime.now(timezone.utc)):
+            CLEAR_BUMP_TIMES_INTERVAL = 24.0 # hours
+
+            # Calculate next execution time (next day at midnight UTC)
+            nextTime = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(hours=CLEAR_BUMP_TIMES_INTERVAL)
+
+            try:
+                # Reset all wallet bump counts
+                with open(WALLETS_FILE, "r", encoding="utf-8") as f:
+                    wallets = json.load(f)
+
+                for walletData in wallets.values():
+                    walletData["timesBumped"] = 0
+
+                with open(WALLETS_FILE, "w", encoding="utf-8") as f:
+                    json.dump(wallets, f, indent=4)
+
+                # Update next execution time
+                msgDateLog["clearBumpTimes"] = datetime.timestamp(nextTime)
+                with open(REPEATED_MSG_DATE_LOG_FILE, "w") as f:
+                    json.dump(msgDateLog, f, indent=4)
+
+                log.info("Bottasks oneHourTasks: cleared timesBumped in all wallets")
+            except Exception as e:
+                log.exception("Bottasks oneHourTasks: clear timesBumped in all wallets")
+
+
+            try:
+                casinoChannel = guild.get_channel(CASINO)
+                embed = discord.Embed(
+                    title="Bump Bonuses Reset!",
+                    description="All bumps have been reset. Everyone is now eligible for their `3` daily bump bonuses again!\n\nAs a reminder, you can bump the server using the `/bump` command to earn SnekCoins!",
+                    color=discord.Color.green()
+                )
+                await casinoChannel.send(embed=embed)
+            except Exception as e:
+                log.exception("Bottasks oneHourTasks: casinoChannel wallet bump reset message")
+
 
 
     @tasks.loop(minutes=5)

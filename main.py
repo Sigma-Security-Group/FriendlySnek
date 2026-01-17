@@ -127,20 +127,19 @@ async def on_message(message: discord.Message) -> None:
                 await message.delete()
                 return
 
-            elif not awardable:
-                view = discord.ui.View()
-                view.add_item(SnekcoinButton(None, emoji="🪙", label="Claim Bump Bonus", style=discord.ButtonStyle.success, custom_id=f"snekcoin_button_bumpBonus_{message.interaction_metadata.user.id}", row=0))
+            view = discord.ui.View()
+            view.add_item(SnekcoinButton(None, emoji="🪙", label="Claim Bump Bonus", style=discord.ButtonStyle.success, custom_id=f"snekcoinBumpBonus_{message.interaction_metadata.user.id}", row=0))
 
-                embed =discord.Embed(
-                    title="Snekcoin Bump Bonus",
-                    description="You have already received the maximum snekcoin reward for today by using `/bump` three times.\n\nThe award for this bump can be claimed by the first person to click the button below!",
-                    color=discord.Color.green()
-                )
+            embed =discord.Embed(
+                title="Snekcoin Bump Bonus",
+                description="You have already received the maximum snekcoin reward for today by using `/bump` three times.\n\nThe award for this bump can be claimed by the first person to click the button below!",
+                color=discord.Color.green()
+            )
 
-                await message.channel.send(content = f"The trout population thanks you {message.interaction_metadata.user.mention} for doing `/bump` {TROUT} 🤝 🐍")
-                await message.channel.send(content=None, embed=embed, view=view)
-                await message.delete()
-                return
+            await message.channel.send(content = f"The trout population thanks you {message.interaction_metadata.user.mention} for doing `/bump` {TROUT} 🤝 🐍")
+            await message.channel.send(content=None, embed=embed, view=view)
+            await message.delete()
+            return
 
     # Snek replies
     if not client.user:

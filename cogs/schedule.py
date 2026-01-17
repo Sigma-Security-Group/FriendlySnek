@@ -1467,7 +1467,7 @@ class Schedule(commands.Cog):
     @staticmethod
     async def scheduleEventInteraction(interaction: discord.Interaction, preselectedType: str) -> None:
         """Create an event to add to the schedule."""
-        log.info(f"{interaction.user.id} [{interaction.user.display_name}] Is creating an {preselectedType.lower()}")
+        log.debug(f"{interaction.user.id} [{interaction.user.display_name}] Is creating an {preselectedType.lower()}")
 
         previewDict = {
             "authorId": interaction.user.id,

@@ -104,7 +104,6 @@ class Snekcoin(commands.GroupCog, name = "snekcoin"):
         bool: True if the user wins, False otherwise.
         int: The payout amount.
         """
-        log.debug(f"Snekcoin gambleCoinFlip: User {userId} is gambling a coin flip.")
         results = random() < 0.62 # ~7% house edge with 1.5x payout
         payout = round(0.5 * gambleAmount)
         if results:
@@ -133,7 +132,6 @@ class Snekcoin(commands.GroupCog, name = "snekcoin"):
         int: The bot's roll.
         int: The winnings amount.
         """
-        log.debug(f"Snekcoin gambleDiceRoll: User {userId} is gambling a dice roll.")
         casinoEdge = True if random() < 0.0358 else False # ~7% casino edge with 1.9x payout
         userRoll = randint(1, 6)
         botRoll = randint(1, 6)
@@ -169,7 +167,6 @@ class Snekcoin(commands.GroupCog, name = "snekcoin"):
         List[str]: The reels that were spun.
         int: The winnings amount.
         """
-        log.debug(f"Snekcoin gambleSlots: User {userId} is gambling a slots game.")
         symbolData = {
             "🍒": {"weight": 0.6, "payout": 3.2},
             "🍋": {"weight": 0.15, "payout": 3.2},
@@ -210,8 +207,6 @@ class Snekcoin(commands.GroupCog, name = "snekcoin"):
         discord.Embed: The gambling menu embed.
         discord.ui.View: The gambling menu view.
         """
-        log.debug(f"Building Snekcoin gambleMenu for user {interaction.user.id}.")
-
         embed = discord.Embed(title="🎲 SnekCoin Gambling 🎲", color=discord.Color.green(), description="Choose a game to play:")
         embed.add_field(name="🪙 Coin Flip 🪙", value="Flip a coin, win on heads!\nPayout: `1.5x`", inline=False)
         embed.add_field(name="🎲 Dice Roll 🎲", value="Roll a dice against the bot, largest roll wins!\nPayout: `1.9x`", inline=False)
@@ -246,8 +241,6 @@ class Snekcoin(commands.GroupCog, name = "snekcoin"):
         Returns:
         None.
         """
-        log.debug(f"Snekcoin gamble: {interaction.user.id} [{interaction.user.display_name}] ran the gamble command.")
-
         embed, view = await Snekcoin.gambleMenu(interaction)
         if embed is None or view is None:
             await interaction.response.send_message(embed=discord.Embed(color=discord.Color.red(), title="❌ Failed", description="Could not build gambling menu."), ephemeral=True, delete_after=15.0)

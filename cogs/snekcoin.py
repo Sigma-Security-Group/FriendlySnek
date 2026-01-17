@@ -590,8 +590,8 @@ class SnekcoinButton(discord.ui.Button):
 
         if customId.startswith("snekcoin_button_bumpBonus_"):
             originalUserId = int(customId.split("_")[3])
-            if originalUserId is None:
-                log.exception("SnekcoinButton callback: originalUserId is None")
+            if interaction.guild.get_member(originalUserId) is None:
+                await interaction.response.send_message(embed=discord.Embed(color=discord.Color.red(), title="❌ Failed", description="The original bumper is no longer in the server."), ephemeral=True, delete_after=15.0)
                 return
 
             userWallet = await Snekcoin.getWallet(interaction.user.id)

@@ -60,7 +60,7 @@ class Snekcoin(commands.GroupCog, name = "snekcoin"):
     @staticmethod
     async def updateWallet(
         userId: int,
-        walletType: Literal["timesCommended", "sentCommendations", "money", "moneySpent", "timesBumped"],
+        walletType: Literal["timesCommended", "sentCommendations", "money", "moneySpent", "timesBumped"], # type: ignore
         amount: int
     ) -> None:
         """Update the wallet type of a user.

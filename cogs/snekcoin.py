@@ -234,9 +234,9 @@ class Snekcoin(commands.GroupCog, name = "snekcoin"):
         embed.add_field(name="Current Balance", value=f"🪙 `{wallet['money']}` SnekCoins", inline=False)
 
         view = discord.ui.View(timeout=60)
-        view.add_item(SnekcoinButton(None, emoji="🪙", label="Coin Flip", style=discord.ButtonStyle.success, custom_id="gambleCoinFlip", row=0))
-        view.add_item(SnekcoinButton(None, emoji="🎲", label="Dice Roll", style=discord.ButtonStyle.success, custom_id="gambleDiceRoll", row=0))
-        view.add_item(SnekcoinButton(None, emoji="🎰", label="Slots", style=discord.ButtonStyle.success, custom_id="gambleSlots", row=1))
+        view.add_item(SnekcoinButton(None, emoji="🪙", label="Coin Flip", style=discord.ButtonStyle.success, custom_id="snekcoin_button_coinFlip", row=0))
+        view.add_item(SnekcoinButton(None, emoji="🎲", label="Dice Roll", style=discord.ButtonStyle.success, custom_id="snekcoin_button_diceRoll", row=0))
+        view.add_item(SnekcoinButton(None, emoji="🎰", label="Slots", style=discord.ButtonStyle.success, custom_id="snekcoin_button_slots", row=1))
 
         return embed, view
 
@@ -313,8 +313,8 @@ class Snekcoin(commands.GroupCog, name = "snekcoin"):
             embed.set_footer(text=f"Page {embeds.index(embed)+1} of {len(embeds)}")
 
         if len(embeds) > 1:
-            view.add_item(SnekcoinButton(None, label="Previous", style=discord.ButtonStyle.primary, custom_id="leaderboardPrevious", row=0))
-            view.add_item(SnekcoinButton(None, label="Next", style=discord.ButtonStyle.primary, custom_id="leaderboardNext", row=0))
+            view.add_item(SnekcoinButton(None, label="Previous", style=discord.ButtonStyle.primary, custom_id="snekcoin_button_snekcoin_button_leaderboardPrevious", row=0))
+            view.add_item(SnekcoinButton(None, label="Next", style=discord.ButtonStyle.primary, custom_id="snekcoin_button_leaderboardNext", row=0))
             SnekcoinButton.leaderboardEmbeds = embeds
             SnekcoinButton.leaderboardCurrentPage = 0
         await interaction.response.send_message(embed=embeds[0], view=view, ephemeral=True, delete_after=60.0)
@@ -584,8 +584,8 @@ class SnekcoinButton(discord.ui.Button):
 
         customId = interaction.data["custom_id"]
 
-        if customId.startswith("snekcoinBumpBonus"):
-            originalUserId = int(customId.split("_")[1])
+        if customId.startswith("snekcoin_button_bumpBonus_"):
+            originalUserId = int(customId.split("_")[3])
             if originalUserId is None:
                 log.exception("SnekcoinButton callback: originalUserId is None")
                 return
@@ -605,7 +605,7 @@ class SnekcoinButton(discord.ui.Button):
             await interaction.response.send_message(embed=discord.Embed(color=discord.Color.red(), title="❌ Bump Bonus Unavailable", description="You have already received the maximum of 3 bump bonuses today."), ephemeral=True, delete_after=15.0)
             return
 
-        if customId == "gambleCoinFlip":
+        if customId == "snekcoin_button_coinFlip":
             view = self.view
             await interaction.response.send_modal(
                 SnekcoinModal(
@@ -616,7 +616,7 @@ class SnekcoinButton(discord.ui.Button):
                     view=view,
                 )
             )
-        if customId == "gambleDiceRoll":
+        if customId == "snekcoin_button_diceRoll":
             view = self.view
             await interaction.response.send_modal(
                 SnekcoinModal(
@@ -627,7 +627,7 @@ class SnekcoinButton(discord.ui.Button):
                     view=view,
                 )
             )
-        if customId == "gambleSlots":
+        if customId == "snekcoin_button_slots":
             embed = discord.Embed(title="🎰 Slots 🎰")
             userWallet = await Snekcoin.getWallet(interaction.user.id)
             if userWallet is None or userWallet["money"] is None:
@@ -663,7 +663,7 @@ class SnekcoinButton(discord.ui.Button):
             await interaction.response.send_message("Returning to gambling menu...", ephemeral=True, embed=menuEmbed, view=menuView, delete_after=30.0)
             await interaction.followup.send(embed=embed, ephemeral=False)
 
-        if customId == "leaderboardPrevious":
+        if customId == "snekcoin_button_leaderboardPrevious":
             if not SnekcoinButton.leaderboardEmbeds:
                 log.exception("SnekcoinButton callback: No embeds found for leaderboardPrevious")
                 return
@@ -672,7 +672,7 @@ class SnekcoinButton(discord.ui.Button):
             else:
                 SnekcoinButton.leaderboardCurrentPage -= 1
             await interaction.response.edit_message(embed=SnekcoinButton.leaderboardEmbeds[SnekcoinButton.leaderboardCurrentPage])
-        if customId == "leaderboardNext":
+        if customId == "snekcoin_button_leaderboardNext":
             if not SnekcoinButton.leaderboardEmbeds:
                 log.exception("SnekcoinButton callback: No embeds found for leaderboardNext")
                 return

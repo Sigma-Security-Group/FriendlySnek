@@ -10,6 +10,8 @@ from secret import DEBUG
 from constants import *
 if DEBUG:
     from constants.debug import *
+from cogs.snekcoin import Snekcoin
+from random import randint
 
 log = logging.getLogger("FriendlySnek")
 
@@ -1096,7 +1098,12 @@ class StaffButton(discord.ui.Button):
                 log.exception(f"StaffButton callback: member not discord.Member, id '{memberId}'")
                 return
 
+            verifyBonus = randint(20, 50)
+
+            await Snekcoin.updateWallet(interaction.user.id, "money", verifyBonus)
+
             embed = discord.Embed(title="✅ Member verified", description=f"{member.mention} verified!", color=discord.Color.green())
+            embed.add_field(name="Snekcoin Reward", value=f"You have been awarded 🪙 `{verifyBonus}` for interviewing a new member!\nKeep up the good work!", inline=False)
             embed.set_footer(text=f"Verified member id: {member.id}")
             embed.timestamp = datetime.now()
             await interaction.response.send_message(embed=embed, ephemeral=True)
@@ -1135,7 +1142,11 @@ class StaffButton(discord.ui.Button):
                 log.exception(f"StaffButton callback: member not discord.Member, id '{memberId}'")
                 return
 
+            verifyBonus = randint(20, 50)
+            await Snekcoin.updateWallet(interaction.user.id, "money", verifyBonus)
+
             embed = discord.Embed(title="❌ Prospect denied", description=f"{member.mention} denied", color=discord.Color.red())
+            embed.add_field(name="Snekcoin Reward", value=f"You have been awarded 🪙 `{verifyBonus}` for interviewing a new member!\nKeep up the good work!", inline=False)
             embed.set_footer(text=f"Member id: {member.id}")
             embed.timestamp = datetime.now()
             await interaction.response.send_message(embed=embed, ephemeral=True)

@@ -119,7 +119,7 @@ async def on_message(message: discord.Message) -> None:
                 userWallet = await Snekcoin.getWallet(message.interaction_metadata.user.id)
 
             awardable = userWallet.get("timesBumped") < MAX_BUMPS
-
+            await Snekcoin.updateWallet(message.interaction_metadata.user.id, "timesBumped", 1)
             if awardable:
                 award = randint(10, 100)
                 await Snekcoin.updateWallet(message.interaction_metadata.user.id, "money", award)

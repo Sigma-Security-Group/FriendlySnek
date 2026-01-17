@@ -229,7 +229,7 @@ class BotTasks(commands.Cog):
 
 
     async def checkModUpdates(self) -> None:
-        """Checks mod updates, pings hampters if  detected."""
+        """Checks mod updates, pings hampters if detected."""
         CHECK_MOD_UPDATE_INTERVAL = 8.0  # hours
 
         output = []

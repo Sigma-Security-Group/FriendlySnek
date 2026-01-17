@@ -110,8 +110,6 @@ async def on_message(message: discord.Message) -> None:
         if embed and embed.description and "Bump done" in embed.description and message.interaction_metadata:
             log.debug(f"[{message.interaction_metadata.user.display_name}] ran /bump; deleting message by [{message.author.display_name}] in #{message.channel}")
 
-            maxCommends = 3
-
             userWallet = await Snekcoin.getWallet(message.interaction_metadata.user.id)
             if userWallet is None:
                 log.exception("on_message: userWallet is None")
@@ -120,7 +118,7 @@ async def on_message(message: discord.Message) -> None:
                 await Snekcoin.updateWallet(message.interaction_metadata.user.id, "timesBumped", 0)
                 userWallet = await Snekcoin.getWallet(message.interaction_metadata.user.id)
 
-            awardable = True if userWallet.get("timesBumped") < maxCommends else False
+            awardable = userWallet.get("timesBumped") < MAX_BUMPS
 
             if awardable:
                 award = randint(10, 100)

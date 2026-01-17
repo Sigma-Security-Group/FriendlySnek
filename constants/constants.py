@@ -221,6 +221,13 @@ CMD_LIMIT_CLEANWSINTEREST = (UNIT_STAFF, SNEK_LORD, SME_RW_PILOT, SME_FW_PILOT, 
 
 
 ####################
+# SPECIAL VALUES
+####################
+
+MAX_BUMPS = 3
+
+
+####################
 # DISCORD LIMITATIONS
 ####################
 

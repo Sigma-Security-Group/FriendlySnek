@@ -1582,67 +1582,6 @@ class Schedule(commands.Cog):
 # ===== </Fileupload> =====
 
 
-# ===== <Timestamp> =====
-
-    @discord.app_commands.command(name="timestamp")
-    @discord.app_commands.guilds(GUILD)
-    @discord.app_commands.describe(time = "Your local time, e.g. 9:00 PM", message = "Add a message before the timestamp", timezone = "Convert the time from a different time zone other than your personal, e.g. EST & Europe/London", informative = "Displays all formats, raw text, etc.")
-    @discord.app_commands.choices(informative = [discord.app_commands.Choice(name="Yes plz", value="Yes")])
-    async def timestamp(self, interaction: discord.Interaction, time: str, message: str = "", timezone: str = "", informative: discord.app_commands.Choice[str] | None = None) -> None:
-        """Convert your local time to a dynamic Discord timestamp.
-
-        Parameters:
-        interaction (discord.Interaction): The Discord interaction.
-        time (str): Inputted time to be converted.
-        message (str): Optionally adding a message before the timestamp.
-        timezone (str): Optional custom time zone, which is separate from the user set preferred time zone.
-        informative (discord.app_commands.Choice[str]): If the user want's the informative embed - displaying all timestamps with desc, etc.
-
-        Returns:
-        None.
-        """
-        # Get the inputted time
-        try:
-            timeParsed = datetimeParse(time)
-        except ValueError:
-            await interaction.response.send_message(embed=discord.Embed(title="❌ Invalid time", description="Provide a valid time!", color=discord.Color.red()), ephemeral=True, delete_after=30.0)
-            return
-
-        await interaction.response.defer()
-
-        if not timezone:  # User's time zone
-            # Get user time zone
-            with open(MEMBER_TIME_ZONES_FILE) as f:
-                memberTimeZones = json.load(f)
-
-            if str(interaction.user.id) not in memberTimeZones:
-                await interaction.edit_original_response(embed=discord.Embed(title="❌ Apply timezone", description="You must provide a time zone. Execute the command `/changetimezone`", color=discord.Color.red()))
-                return
-
-            timeZone = pytz.timezone(memberTimeZones[str(interaction.user.id)])
-
-        else:  # Custom time zone
-            try:
-                timeZone = pytz.timezone(timezone)
-            except pytz.exceptions.UnknownTimeZoneError:
-                await interaction.edit_original_response(embed=discord.Embed(title="❌ Invalid time zone", description="Provide a valid time zone!", color=discord.Color.red()))
-                return
-
-        # Output timestamp
-        timeParsed = timeZone.localize(timeParsed.replace(tzinfo=None))
-        await interaction.edit_original_response(content = f"{message} {discord.utils.format_dt(timeParsed, 'F')}")
-        if informative is not None:
-            embed = discord.Embed(color=discord.Color.green())
-            embed.set_footer(text=f"Local time: {timeParsed.strftime(TIME_FORMAT)}\nTime zone: {memberTimeZones[str(interaction.user.id)] if not timezone else timeZone}")
-            timestamps = [discord.utils.format_dt(timeParsed, style=timestampStyle[0]) for timestampStyle in TIMESTAMP_STYLES.items()]
-            embed.add_field(name="Timestamp", value="\n".join(timestamps), inline=True)
-            embed.add_field(name="Copy this", value="\n".join([f"`{stamp}`" for stamp in timestamps]), inline=True)
-            embed.add_field(name="Description", value="\n".join([f"`{timestampStyle[1]}`" for timestampStyle in TIMESTAMP_STYLES.items()]), inline=True)
-            await interaction.user.send(embed=embed)
-
-# ===== </Timestamp> =====
-
-
 # ===== <Change Time Zone> =====
 
     @discord.app_commands.command(name="changetimezone")

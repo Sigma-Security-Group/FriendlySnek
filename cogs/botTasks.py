@@ -537,6 +537,7 @@ Join Us:
 
         # Calculate next execution time (next day at midnight UTC)
         nextTime = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(hours=CLEAR_BUMP_TIMES_INTERVAL)
+        sendBumpResetMessage = False
 
         try:
             # Reset all wallet bump counts
@@ -544,6 +545,8 @@ Join Us:
                 wallets = json.load(f)
 
             for walletData in wallets.values():
+                if not sendBumpResetMessage and walletData["timesBumped"] > 0:
+                    sendBumpResetMessage = True
                 walletData["timesBumped"] = 0
 
             with open(WALLETS_FILE, "w", encoding="utf-8") as f:
@@ -558,12 +561,15 @@ Join Us:
         except Exception as e:
             log.exception("Bottasks oneHourTasks: clear timesBumped in all wallets")
 
+        if not sendBumpResetMessage:
+            return
 
+         # Send bump reset message
         try:
             casinoChannel = guild.get_channel(CASINO)
             embed = discord.Embed(
                 title="Bump Bonuses Reset!",
-                description="All bumps have been reset. Everyone is now eligible for their `3` daily bump bonuses again!\n\nAs a reminder, you can bump the server using the `/bump` command to earn SnekCoins!",
+                description=f"All bumps have been reset. Everyone is now eligible for their `{MAX_BUMPS}` daily bump bonuses again!\n\nAs a reminder, you can bump the server using the `/bump` command to earn SnekCoins!",
                 color=discord.Color.green()
             )
             await casinoChannel.send(embed=embed)
@@ -767,12 +773,10 @@ Join Us:
 
         # clear timesBumped in all wallets
         if secret.CLEAR_BUMP_ACTIVE and ("clearBumpTimes" not in msgDateLog or (datetime.fromtimestamp(msgDateLog["clearBumpTimes"], tz=pytz.utc) < datetime.now(timezone.utc))):
-
             try:
                 await BotTasks.clearBumps(guild)
             except Exception as e:
                 log.exception(f"Bottasks oneHourTasks: clear wallet bumps")
-
 
 
     @tasks.loop(minutes=5)

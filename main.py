@@ -130,7 +130,7 @@ async def on_message(message: discord.Message) -> None:
             view = discord.ui.View()
             view.add_item(SnekcoinButton(None, emoji="🪙", label="Claim Bump Bonus", style=discord.ButtonStyle.success, custom_id=f"snekcoin_button_bumpBonus_{message.interaction_metadata.user.id}"))
 
-            embed =discord.Embed(
+            embed = discord.Embed(
                 title="Snekcoin Bump Bonus",
                 description=f"You have already received the maximum snekcoin reward for today by using `/bump` `{MAX_BUMPS}` times.\n\nThe award for this bump can be claimed by the first person to click the button below!",
                 color=discord.Color.green()

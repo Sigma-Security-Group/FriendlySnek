@@ -1,6 +1,6 @@
 import json, discord, logging
 
-from typing import Dict, Tuple, List
+from typing import Dict, Tuple, List, Literal
 from random import random, randint, choice, choices
 
 from discord.ext import commands  # type: ignore
@@ -60,7 +60,7 @@ class Snekcoin(commands.GroupCog, name = "snekcoin"):
     @staticmethod
     async def updateWallet(
         userId: int,
-        walletType: Literal["timesCommended", "sentCommendations", "money", "moneySpent", "timesBumped"], # type: ignore
+        walletType: Literal["timesCommended", "sentCommendations", "money", "moneySpent", "timesBumped"],
         amount: int
     ) -> None:
         """Update the wallet type of a user.

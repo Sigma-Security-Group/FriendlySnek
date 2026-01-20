@@ -128,7 +128,7 @@ async def on_message(message: discord.Message) -> None:
                 return
 
             view = discord.ui.View()
-            view.add_item(SnekcoinButton(None, emoji="🪙", label="Claim Bump Bonus", style=discord.ButtonStyle.success, custom_id=f"snekcoin_button_bumpBonus_{message.interaction_metadata.user.id}", row=0))
+            view.add_item(SnekcoinButton(None, emoji="🪙", label="Claim Bump Bonus", style=discord.ButtonStyle.success, custom_id=f"snekcoin_button_bumpBonus_{message.interaction_metadata.user.id}"))
 
             embed =discord.Embed(
                 title="Snekcoin Bump Bonus",

@@ -238,8 +238,8 @@ class Snekcoin(commands.GroupCog, name = "snekcoin"):
         embed.add_field(name="Current Balance", value=f"🪙 `{wallet['money']}` SnekCoins", inline=False)
 
         view = discord.ui.View(timeout=60)
-        view.add_item(SnekcoinButton(None, emoji="🪙", label="Coin Flip", style=discord.ButtonStyle.success, custom_id=f"snekcoin_button_coinFlip_{interaction.user.id}", row=0))
-        view.add_item(SnekcoinButton(None, emoji="🎲", label="Dice Roll", style=discord.ButtonStyle.success, custom_id=f"snekcoin_button_diceRoll_{interaction.user.id}", row=0))
+        view.add_item(SnekcoinButton(None, emoji="🪙", label="Coin Flip", style=discord.ButtonStyle.success, custom_id=f"snekcoin_button_coinFlip_{interaction.user.id}"))
+        view.add_item(SnekcoinButton(None, emoji="🎲", label="Dice Roll", style=discord.ButtonStyle.success, custom_id=f"snekcoin_button_diceRoll_{interaction.user.id}"))
         view.add_item(SnekcoinButton(None, emoji="🎰", label="Slots", style=discord.ButtonStyle.success, custom_id=f"snekcoin_button_slots_{interaction.user.id}", row=1))
 
         return embed, view
@@ -317,8 +317,8 @@ class Snekcoin(commands.GroupCog, name = "snekcoin"):
             embed.set_footer(text=f"Page {embeds.index(embed)+1} of {len(embeds)}")
 
         if len(embeds) > 1:
-            view.add_item(SnekcoinButton(None, label="Previous", style=discord.ButtonStyle.primary, custom_id=f"snekcoin_button_leaderboardPrevious_{interaction.user.id}", row=0))
-            view.add_item(SnekcoinButton(None, label="Next", style=discord.ButtonStyle.primary, custom_id=f"snekcoin_button_leaderboardNext_{interaction.user.id}", row=0))
+            view.add_item(SnekcoinButton(None, label="Previous", style=discord.ButtonStyle.primary, custom_id=f"snekcoin_button_leaderboardPrevious_{interaction.user.id}"))
+            view.add_item(SnekcoinButton(None, label="Next", style=discord.ButtonStyle.primary, custom_id=f"snekcoin_button_leaderboardNext_{interaction.user.id}"))
             SnekcoinButton.leaderboardEmbeds = embeds
             SnekcoinButton.leaderboardCurrentPage = 0
         await interaction.response.send_message(embed=embeds[0], view=view, ephemeral=True, delete_after=60.0)

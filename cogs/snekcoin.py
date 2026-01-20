@@ -615,7 +615,7 @@ class SnekcoinButton(discord.ui.Button):
             await interaction.response.send_modal(
                 SnekcoinModal(
                     title="🪙 Coin Flip 🪙",
-                    customId=f"snekcoin_modal_gambleCoinFlip_{interaction.user.id}",
+                    customId=f"snekcoin_modal_gambleCoinFlip",
                     userId=interaction.user.id,
                     eventMsg=interaction.message,
                     view=view,
@@ -626,7 +626,7 @@ class SnekcoinButton(discord.ui.Button):
             await interaction.response.send_modal(
                 SnekcoinModal(
                     title="🎲 Dice Roll 🎲",
-                    customId=f"snekcoin_modal_gambleDiceRoll_{interaction.user.id}",
+                    customId=f"snekcoin_modal_gambleDiceRoll",
                     userId=interaction.user.id,
                     eventMsg=interaction.message,
                     view=view,

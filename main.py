@@ -132,7 +132,7 @@ async def on_message(message: discord.Message) -> None:
 
             embed =discord.Embed(
                 title="Snekcoin Bump Bonus",
-                description="You have already received the maximum snekcoin reward for today by using `/bump` three times.\n\nThe award for this bump can be claimed by the first person to click the button below!",
+                description=f"You have already received the maximum snekcoin reward for today by using `/bump` `{MAX_BUMPS}` times.\n\nThe award for this bump can be claimed by the first person to click the button below!",
                 color=discord.Color.green()
             )
 

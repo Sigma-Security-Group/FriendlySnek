@@ -238,9 +238,9 @@ class Snekcoin(commands.GroupCog, name = "snekcoin"):
         embed.add_field(name="Current Balance", value=f"🪙 `{wallet['money']}` SnekCoins", inline=False)
 
         view = discord.ui.View(timeout=60)
-        view.add_item(SnekcoinButton(None, emoji="🪙", label="Coin Flip", style=discord.ButtonStyle.success, custom_id="snekcoin_button_coinFlip", row=0))
-        view.add_item(SnekcoinButton(None, emoji="🎲", label="Dice Roll", style=discord.ButtonStyle.success, custom_id="snekcoin_button_diceRoll", row=0))
-        view.add_item(SnekcoinButton(None, emoji="🎰", label="Slots", style=discord.ButtonStyle.success, custom_id="snekcoin_button_slots", row=1))
+        view.add_item(SnekcoinButton(None, emoji="🪙", label="Coin Flip", style=discord.ButtonStyle.success, custom_id=f"snekcoin_button_coinFlip_{interaction.user.id}", row=0))
+        view.add_item(SnekcoinButton(None, emoji="🎲", label="Dice Roll", style=discord.ButtonStyle.success, custom_id=f"snekcoin_button_diceRoll_{interaction.user.id}", row=0))
+        view.add_item(SnekcoinButton(None, emoji="🎰", label="Slots", style=discord.ButtonStyle.success, custom_id=f"snekcoin_button_slots_{interaction.user.id}", row=1))
 
         return embed, view
 
@@ -317,8 +317,8 @@ class Snekcoin(commands.GroupCog, name = "snekcoin"):
             embed.set_footer(text=f"Page {embeds.index(embed)+1} of {len(embeds)}")
 
         if len(embeds) > 1:
-            view.add_item(SnekcoinButton(None, label="Previous", style=discord.ButtonStyle.primary, custom_id="snekcoin_button_snekcoin_button_leaderboardPrevious", row=0))
-            view.add_item(SnekcoinButton(None, label="Next", style=discord.ButtonStyle.primary, custom_id="snekcoin_button_leaderboardNext", row=0))
+            view.add_item(SnekcoinButton(None, label="Previous", style=discord.ButtonStyle.primary, custom_id=f"snekcoin_button_leaderboardPrevious_{interaction.user.id}", row=0))
+            view.add_item(SnekcoinButton(None, label="Next", style=discord.ButtonStyle.primary, custom_id=f"snekcoin_button_leaderboardNext_{interaction.user.id}", row=0))
             SnekcoinButton.leaderboardEmbeds = embeds
             SnekcoinButton.leaderboardCurrentPage = 0
         await interaction.response.send_message(embed=embeds[0], view=view, ephemeral=True, delete_after=60.0)
@@ -590,7 +590,8 @@ class SnekcoinButton(discord.ui.Button):
 
         if customId.startswith("snekcoin_button_bumpBonus_"):
             originalUserId = int(customId.split("_")[3])
-            if interaction.guild.get_member(originalUserId) is None:
+            originalMember = interaction.guild.get_member(originalUserId)
+            if originalMember is None:
                 await interaction.response.send_message(embed=discord.Embed(color=discord.Color.red(), title="❌ Failed", description="The original bumper is no longer in the server."), ephemeral=True, delete_after=15.0)
                 return
 
@@ -599,39 +600,39 @@ class SnekcoinButton(discord.ui.Button):
                 await interaction.response.send_message(embed=discord.Embed(color=discord.Color.red(), title="❌ Failed", description="Could not retrieve your wallet data."), ephemeral=True, delete_after=15.0)
                 return
 
-            if userWallet["timesBumped"] > 3:
-                award = randint(10, 100)
-                await interaction.message.delete()
-                await Snekcoin.updateWallet(interaction.user.id, "money", award)
-                await interaction.response.send_message(embed=discord.Embed(color=discord.Color.green(), title="✅ Bonus Awarded", description=f"You have been awarded 🪙 `{award}` SnekCoins from <@{originalUserId}>'s bump bonus!\nThis does not count towards your daily bump bonus limit."))
+            if userWallet["timesBumped"] >= MAX_BUMPS:
+                await interaction.response.send_message(embed=discord.Embed(color=discord.Color.red(), title="❌ Bump Bonus Unavailable", description=f"You have already received the maximum of {MAX_BUMPS} bump bonuses today."), ephemeral=True, delete_after=15.0)
                 return
 
-            await interaction.response.send_message(embed=discord.Embed(color=discord.Color.red(), title="❌ Bump Bonus Unavailable", description="You have already received the maximum of 3 bump bonuses today."), ephemeral=True, delete_after=15.0)
+            award = randint(10, 100)
+            await interaction.message.delete()
+            await Snekcoin.updateWallet(interaction.user.id, "money", award)
+            await interaction.response.send_message(embed=discord.Embed(color=discord.Color.green(), title="✅ Bonus Awarded", description=f"You have been awarded 🪙 `{award}` SnekCoins from {originalMember.mention}'s bump bonus!\nThis does not count towards your daily bump bonus limit."))
             return
 
-        if customId == "snekcoin_button_coinFlip":
+        if customId.startswith("snekcoin_button_coinFlip"):
             view = self.view
             await interaction.response.send_modal(
                 SnekcoinModal(
                     title="🪙 Coin Flip 🪙",
-                    customId="gambleCoinFlipModal",
+                    customId=f"snekcoin_modal_gambleCoinFlip_{interaction.user.id}",
                     userId=interaction.user.id,
                     eventMsg=interaction.message,
                     view=view,
                 )
             )
-        if customId == "snekcoin_button_diceRoll":
+        if customId.startswith("snekcoin_button_diceRoll"):
             view = self.view
             await interaction.response.send_modal(
                 SnekcoinModal(
                     title="🎲 Dice Roll 🎲",
-                    customId="gambleDiceRollModal",
+                    customId=f"snekcoin_modal_gambleDiceRoll_{interaction.user.id}",
                     userId=interaction.user.id,
                     eventMsg=interaction.message,
                     view=view,
                 )
             )
-        if customId == "snekcoin_button_slots":
+        if customId.startswith("snekcoin_button_slots"):
             embed = discord.Embed(title="🎰 Slots 🎰")
             userWallet = await Snekcoin.getWallet(interaction.user.id)
             if userWallet is None or userWallet["money"] is None:
@@ -667,7 +668,7 @@ class SnekcoinButton(discord.ui.Button):
             await interaction.response.send_message("Returning to gambling menu...", ephemeral=True, embed=menuEmbed, view=menuView, delete_after=30.0)
             await interaction.followup.send(embed=embed, ephemeral=False)
 
-        if customId == "snekcoin_button_leaderboardPrevious":
+        if customId.startswith("snekcoin_button_leaderboardPrevious"):
             if not SnekcoinButton.leaderboardEmbeds:
                 log.exception("SnekcoinButton callback: No embeds found for leaderboardPrevious")
                 return
@@ -676,7 +677,7 @@ class SnekcoinButton(discord.ui.Button):
             else:
                 SnekcoinButton.leaderboardCurrentPage -= 1
             await interaction.response.edit_message(embed=SnekcoinButton.leaderboardEmbeds[SnekcoinButton.leaderboardCurrentPage])
-        if customId == "snekcoin_button_leaderboardNext":
+        if customId.startswith("snekcoin_button_leaderboardNext"):
             if not SnekcoinButton.leaderboardEmbeds:
                 log.exception("SnekcoinButton callback: No embeds found for leaderboardNext")
                 return
@@ -712,11 +713,11 @@ class SnekcoinModal(discord.ui.Modal):
             log.exception("SnekcoinModal on_submit: interaction.guild not discord.Guild")
             return
 
-        customId = interaction.data["custom_id"].rsplit("_", 1)[0]
+        customId = interaction.data["custom_id"]
 
 
 
-        if customId == "gambleCoinFlipModal":
+        if customId.startswith("snekcoin_modal_gambleCoinFlip"):
             userWallet = await Snekcoin.getWallet(interaction.user.id)
             if userWallet is None:
                 await interaction.response.send_message(embed=discord.Embed(color=discord.Color.red(), title="❌ Failed", description="Could not retrieve your wallet data."), ephemeral=True, delete_after=15.0)
@@ -754,7 +755,7 @@ class SnekcoinModal(discord.ui.Modal):
                 embed.add_field(name="You lost", value=f"**{amount}** SnekCoins", inline=False)
                 embed.add_field(name="💰 Balance", value=f"**{userWallet['money']}** SnekCoins")
 
-        if customId == "gambleDiceRollModal":
+        if customId.startswith("snekcoin_modal_gambleDiceRoll"):
             userWallet = await Snekcoin.getWallet(interaction.user.id)
             if userWallet is None:
                 await interaction.response.send_message(embed=discord.Embed(color=discord.Color.red(), title="❌ Failed", description="Could not retrieve your wallet data."), ephemeral=True, delete_after=15.0)

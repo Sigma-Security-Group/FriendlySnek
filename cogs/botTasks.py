@@ -545,7 +545,7 @@ Join Us:
                 wallets = json.load(f)
 
             for walletData in wallets.values():
-                if not sendBumpResetMessage and walletData["timesBumped"] > 0:
+                if not sendBumpResetMessage and walletData.get("timesBumped", 0) > 0:
                     sendBumpResetMessage = True
                 walletData["timesBumped"] = 0
 
@@ -558,8 +558,8 @@ Join Us:
                 json.dump(msgDateLog, f, indent=4)
 
             log.debug("Bottasks oneHourTasks: cleared timesBumped in all wallets")
-        except Exception:
-            log.warning("Bottasks oneHourTasks: failed to clear timesBumped in wallets")
+        except Exception as e:
+            log.warning(f"Bottasks oneHourTasks: failed to clear timesBumped in wallets: {e}")
 
         if not sendBumpResetMessage:
             return

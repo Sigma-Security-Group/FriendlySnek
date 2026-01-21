@@ -527,6 +527,59 @@ Join Us:
 
         log.info("Bottasks smeReminder: SME reminder sent & updated time")
 
+    @staticmethod
+    async def clearBumps(guild: discord.Guild) -> None:
+        """ Clears daily /bump limit for users."""
+        CLEAR_BUMP_TIMES_INTERVAL = 24.0 # hours
+
+        with open(REPEATED_MSG_DATE_LOG_FILE) as f:
+            msgDateLog = json.load(f)
+
+        # Calculate next execution time (next day at midnight UTC)
+        nextTime = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(hours=CLEAR_BUMP_TIMES_INTERVAL)
+        sendBumpResetMessage = False
+
+        try:
+            # Reset all wallet bump counts
+            with open(WALLETS_FILE, "r", encoding="utf-8") as f:
+                wallets = json.load(f)
+
+            for walletData in wallets.values():
+                if not sendBumpResetMessage and walletData["timesBumped"] > 0:
+                    sendBumpResetMessage = True
+                walletData["timesBumped"] = 0
+
+            with open(WALLETS_FILE, "w", encoding="utf-8") as f:
+                json.dump(wallets, f, indent=4)
+
+            # Update next execution time
+            msgDateLog["clearBumpTimes"] = datetime.timestamp(nextTime)
+            with open(REPEATED_MSG_DATE_LOG_FILE, "w") as f:
+                json.dump(msgDateLog, f, indent=4)
+
+            log.debug("Bottasks oneHourTasks: cleared timesBumped in all wallets")
+        except Exception:
+            log.warning("Bottasks oneHourTasks: failed to clear timesBumped in wallets")
+
+        if not sendBumpResetMessage:
+            return
+
+        casinoChannel = guild.get_channel(CASINO)
+        if not isinstance(casinoChannel, discord.TextChannel):
+            log.exception("Bottasks oneHourTasks: casinoChannel not discord.TextChannel")
+            return
+
+        # Send bump reset message
+        try:
+            embed = discord.Embed(
+                title="Bump Bonuses Reset!",
+                description=f"All bumps have been reset. Everyone is now eligible for their `{MAX_BUMPS}` daily bump bonuses again!\n\nAs a reminder, you can bump the server using the `/bump` command to earn SnekCoins!",
+                color=discord.Color.green()
+            )
+            await casinoChannel.send(embed=embed)
+        except Exception:
+            log.warning("Bottasks oneHourTasks: failed to send bump reset message")
+
 
     @staticmethod
     async def smeBigBrother(guild: discord.Guild, manuallyExecuted: bool) -> None:
@@ -678,7 +731,7 @@ Join Us:
         if secret.REDDIT_ACTIVE:
             try:
                 await self.redditRecruitmentPosts()
-            except Exception as e:
+            except Exception:
                 log.exception(f"Bottasks oneHourTasks: Reddit recruitment posts")
 
         # smeReminder
@@ -688,7 +741,7 @@ Join Us:
         if secret.SME_REMINDER_ACTIVE and ("smeReminder" not in msgDateLog or (datetime.fromtimestamp(msgDateLog["smeReminder"], tz=pytz.utc) < datetime.now(timezone.utc))):
             try:
                 await self.smeReminder()
-            except Exception as e:
+            except Exception:
                 log.exception(f"Bottasks oneHourTasks: SME reminder")
 
         guild = self.bot.get_guild(GUILD_ID)
@@ -700,7 +753,7 @@ Join Us:
         if secret.SME_BIG_BROTHER and ("smeBigBrother" not in msgDateLog or (datetime.fromtimestamp(msgDateLog["smeBigBrother"], tz=pytz.utc) < datetime.now(timezone.utc))):
             try:
                 await BotTasks.smeBigBrother(guild, False)
-            except Exception as e:
+            except Exception:
                 log.exception(f"Bottasks oneHourTasks: SME big brother")
 
         # workshopInterestWipe
@@ -712,15 +765,22 @@ Join Us:
         elif secret.WORKSHOP_INTEREST_WIPE and (datetime.fromtimestamp(msgDateLog["workshopInterestWipe"], tz=pytz.utc) < datetime.now(timezone.utc)):
             try:
                 await BotTasks.workshopInterestWipe(guild)
-            except Exception as e:
+            except Exception:
                 log.exception(f"Bottasks oneHourTasks: workshopInterestWipe")
 
         # checkModUpdates
         if secret.MOD_UPDATE_ACTIVE and ("modUpdates" not in msgDateLog or (datetime.fromtimestamp(msgDateLog["modUpdates"], tz=pytz.utc) < datetime.now(timezone.utc))):
             try:
                 await self.checkModUpdates()
-            except Exception as e:
+            except Exception:
                 log.exception(f"Bottasks oneHourTasks: checkModUpdates")
+
+        # clear timesBumped in all wallets
+        if secret.CLEAR_BUMP_ACTIVE and ("clearBumpTimes" not in msgDateLog or (datetime.fromtimestamp(msgDateLog["clearBumpTimes"], tz=pytz.utc) < datetime.now(timezone.utc))):
+            try:
+                await BotTasks.clearBumps(guild)
+            except Exception:
+                log.exception(f"Bottasks oneHourTasks: clear wallet bumps")
 
 
     @tasks.loop(minutes=5)

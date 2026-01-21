@@ -1099,7 +1099,6 @@ class StaffButton(discord.ui.Button):
                 return
 
             verifyBonus = randint(20, 50)
-
             await Snekcoin.updateWallet(interaction.user.id, "money", verifyBonus)
 
             embed = discord.Embed(title="✅ Member verified", description=f"{member.mention} verified!", color=discord.Color.green())

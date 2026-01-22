@@ -926,6 +926,70 @@ class Staff(commands.Cog):
         embed.set_footer(text=f"Prospect member id: {member.id}")
         await interaction.followup.send(embed=embed, view=view, ephemeral=True)
 
+    @discord.app_commands.command(name="recruitment-newcomers")
+    @discord.app_commands.describe(member="Target verified member.", rename="New name for the member.")
+    @discord.app_commands.guilds(GUILD)
+    @discord.app_commands.checks.has_any_role(*CMD_LIMIT_INTERVIEW)
+    async def newcomers(self, interaction: discord.Interaction, member: discord.Member, rename: str | None = None) -> None:
+        """Helps HR onboard a verified member as a newcomer. Grants candidate roles and optionally rename them."""
+
+        await interaction.response.defer(ephemeral=True, thinking=True)
+
+        channelRecruitmentAndHR = interaction.guild.get_channel(RECRUITMENT_AND_HR)
+        roleCandidate = interaction.guild.get_role(CANDIDATE)
+        roleVerified = interaction.guild.get_role(VERIFIED)
+        auditLogs = interaction.guild.get_channel(AUDIT_LOGS)
+
+        try:
+            if roleCandidate is None:
+                raise Exception("roleCandidate is None")
+            if roleVerified is None:
+                raise Exception("roleVerified is None")
+            if not isinstance(channelRecruitmentAndHR, discord.TextChannel):
+                raise Exception("channelRecruitmentAndHR not discord.TextChannel")
+            if not isinstance(auditLogs, discord.TextChannel):
+                raise Exception("auditLogs not discord.TextChannel")
+
+            auditEmbed = discord.Embed(
+                title="Newcomer Onboarded",
+                description=f"{member.mention} `({member.name})`\n\n**Onboarded by:** {interaction.user.mention} (`{interaction.user}`)\n**Recruitment Bonus:** 🪙 `{bonus}` SnekCoins",
+                color=discord.Color.green(),
+            )
+            # Rename member
+            if rename:
+                oldName = member.display_name
+                reason = f"Renamed by {interaction.user} via recruitment newcomers command."
+                log.info(f"{interaction.user.id} [{interaction.user.display_name}] Renamed {member.id} [{oldName}] to [{rename}] during newcomers process")
+                await member.edit(nick=rename, reason=reason)
+                auditEmbed.add_field(name="Renamed", value=f"`{oldName}` ➔ `{rename}`", inline=False)
+            await member.add_roles(roleCandidate, reason=f"Added by {interaction.user} via recruitment newcomers command.")
+            await member.remove_roles(roleVerified, reason=f"Removed by {interaction.user} via recruitment newcomers command.")
+
+            bonus = randint(100, 150)
+            await Snekcoin.updateWallet(interaction.user.id, 'money', bonus)
+
+            # Log in audit log
+            auditEmbed.set_footer(text=f"User ID: {member.id}")
+            auditEmbed.set_thumbnail(url=member.display_avatar.url)
+            auditEmbed.timestamp = datetime.now()
+            await auditLogs.send(embed=auditEmbed)
+
+            # Confirmation message
+            embed = discord.Embed(
+                title="✅ Newcomer onboarded",
+                description=f"{member.mention} has completed their newcommer workshop!",
+                color=discord.Color.green()
+            )
+            embed.add_field(name="💰 Bonus Payout 💰", value=f"{interaction.user.mention} has been awarded a recruitment bonus of 🪙 `{bonus}` SnekCoins for running the newcomers workshop.")
+            embed.set_footer(text=f"User ID: {member.id}")
+            embed.timestamp = datetime.now()
+            await channelRecruitmentAndHR.send(embed=embed)
+            await interaction.followup.send(f"Successfully onboarded {member.mention} as a newcomer.\nYou have been awarded a recruitment bonus of 🪙 `{bonus}` SnekCoins.", ephemeral=True)
+
+        except Exception as e:
+            await interaction.followup.send(f"❌ Failed to onboard newcomer: {e}\nPlease contact Unit Staff.", ephemeral=True)
+            log.exception(f"Staff newcomers: {e}")
+
     # Hampter command
     @commands.command(name="gibcmdline")
     @commands.has_any_role(*CMD_LIMIT_DATACENTER)
@@ -1330,6 +1394,7 @@ class StaffModal(discord.ui.Modal):
 
 async def setup(bot: commands.Bot) -> None:
     Staff.interview.error(Utils.onSlashError)
+    Staff.newcomers.error(Utils.onSlashError)
     Staff.updatemodpack.error(Utils.onSlashError)
     Staff.zitfeedback.error(Utils.onSlashError)
     Staff.ban.error(Utils.onSlashError)

@@ -135,6 +135,7 @@ async def on_message(message: discord.Message) -> None:
                 description=f"You have already received the maximum snekcoin reward for today by using `/bump` `{MAX_BUMPS}` times.\n\nThe award for this bump can be claimed by the first person to click the button below!",
                 color=discord.Color.green()
             )
+            embed.set_author(name=message.interaction_metadata.user.display_name, icon_url=message.interaction_metadata.user.display_avatar)
 
             await message.channel.send(content = f"The trout population thanks you {message.interaction_metadata.user.mention} for doing `/bump` {TROUT} 🤝 🐍")
             await message.channel.send(content=None, embed=embed, view=view)

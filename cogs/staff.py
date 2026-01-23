@@ -1026,6 +1026,7 @@ class Staff(commands.Cog):
         for role in guild.roles:
             log.debug(f"ROLE: {role.name} - {hex(role.color.value)}")
 
+
 @discord.app_commands.guilds(GUILD)
 class Recruitment(commands.GroupCog, name="recruitment"):
     """Recruitment related commands."""
@@ -1047,20 +1048,26 @@ class Recruitment(commands.GroupCog, name="recruitment"):
             log.exception("Staff interview: channelRecruitmentAndHR not discord.TextChannel")
             return
 
+        if not isinstance(interaction.user, discord.Member):
+            log.exception("Staff interview: interaction.user not discord.Member")
+            return
+
+        isAuthorStaff = [True for role in interaction.user.roles if role.id == UNIT_STAFF]
         async for message in channelRecruitmentAndHR.history(limit=1000):
-            if message.embeds and message.embeds[0].title == "❌ Prospect denied" and message.embeds[0].footer.text and message.embeds[0].footer.text.startswith(f"Prospect ID: {member.id}"):
-                isAuthorStaff = [True for role in member.roles if role.id == UNIT_STAFF]
+            if message.embeds and message.embeds[0].title == "❌ Prospect denied" and message.embeds[0].footer.text and message.embeds[0].footer.text == f"Prospect ID: {member.id}":
                 if isAuthorStaff:
                     embed = discord.Embed(title="⚠️ Prospect denied", description=f"Prospect ({member.mention}) has been denied before. Since you're Unit Staff, you may still continue and override the decision!", color=discord.Color.yellow())
                     embed.set_footer(text=f"Prospect ID: {member.id}")
                     await interaction.followup.send(embed=embed, ephemeral=True)
-                else:
-                    embed = discord.Embed(title="❌ Prospect denied", description=f"Prospect ({member.mention}) has already been denied. Only Unit Staff may interview denied prospects!", color=discord.Color.red())
-                    embed.set_footer(text=f"Prospect ID: {member.id}")
-                    await interaction.followup.send(embed=embed, ephemeral=True)
-                    return
+                    break
 
+                # Not staff, cannot interview denied prospect
+                embed = discord.Embed(title="❌ Prospect denied", description=f"Prospect ({member.mention}) has already been denied. Only Unit Staff may interview denied prospects!", color=discord.Color.red())
+                embed.set_footer(text=f"Prospect ID: {member.id}")
+                await interaction.followup.send(embed=embed, ephemeral=True)
+                return
 
+        # Is staff or not denied before, continue with interview
         view = discord.ui.View(timeout=None)
         view.add_item(StaffButton(style=discord.ButtonStyle.green, label="Verify", custom_id=f"staff_button_interview_verify_{member.id}"))
         view.add_item(StaffButton(style=discord.ButtonStyle.red, label="Deny", custom_id=f"staff_button_interview_deny_{member.id}"))
@@ -1082,6 +1089,7 @@ class Recruitment(commands.GroupCog, name="recruitment"):
         embed = discord.Embed(title="Interview Structure", description=interviewQuestions, color=discord.Color.gold())
         embed.set_footer(text=f"Prospect member id: {member.id}")
         await interaction.followup.send(embed=embed, view=view, ephemeral=True)
+
 
     @discord.app_commands.command(name="newcomers")
     @discord.app_commands.describe(member="Target verified member.", rename="New name for the member.")

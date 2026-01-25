@@ -1165,6 +1165,7 @@ class Recruitment(commands.GroupCog, name="recruitment"):
         embed.add_field(name="💰 Bonus Payout 💰", value=f"{interaction.user.mention} has been awarded a recruitment bonus of 🪙 `{bonus}` SnekCoins for running the newcomers workshop.")
         embed.set_footer(text=f"User ID: {member.id}")
         embed.timestamp = datetime.now()
+        log.info(f"{interaction.user.id} [{interaction.user.display_name}] Onboarded {member.id} [{member.display_name}] as newcomer")
         await channelRecruitmentAndHR.send(embed=embed)
         await interaction.followup.send(f"Successfully onboarded {member.mention} as a newcomer.\nYou have been awarded a recruitment bonus of 🪙 `{bonus}` SnekCoins.", ephemeral=True)
 

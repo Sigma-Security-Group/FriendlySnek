@@ -875,56 +875,6 @@ class Staff(commands.Cog):
         await interaction.followup.send(embed=embed, ephemeral=True)
 
 
-    # Recruitment Team command
-    @discord.app_commands.command(name="recruitment-interview")
-    @discord.app_commands.describe(member = "Target prospect member.")
-    @discord.app_commands.guilds(GUILD)
-    @discord.app_commands.checks.has_any_role(*CMD_LIMIT_INTERVIEW)
-    async def interview(self, interaction: discord.Interaction, member: discord.Member) -> None:
-        """Helps HR interview a prospect member and decide to verify or deny."""
-
-        await interaction.response.defer(ephemeral=True, thinking=True)  # Ensure message history doesnt expire interaction deadline
-
-        channelRecruitmentAndHR = interaction.guild.get_channel(RECRUITMENT_AND_HR)
-        if not isinstance(channelRecruitmentAndHR, discord.TextChannel):
-            log.exception("Staff interview: channelRecruitmentAndHR not discord.TextChannel")
-            return
-
-        async for message in channelRecruitmentAndHR.history(limit=1000):
-            if message.embeds and message.embeds[0].title == "❌ Prospect denied" and message.embeds[0].footer.text and message.embeds[0].footer.text.startswith(f"Prospect ID: {member.id}"):
-                isAuthorStaff = [True for role in member.roles if role.id == UNIT_STAFF]
-                if isAuthorStaff:
-                    embed = discord.Embed(title="⚠️ Prospect denied", description=f"Prospect ({member.mention}) has been denied before. Since you're Unit Staff, you may still continue and override the decision!", color=discord.Color.yellow())
-                    embed.set_footer(text=f"Prospect ID: {member.id}")
-                    await interaction.followup.send(embed=embed, ephemeral=True)
-                else:
-                    embed = discord.Embed(title="❌ Prospect denied", description=f"Prospect ({member.mention}) has already been denied. Only Unit Staff may interview denied prospects!", color=discord.Color.red())
-                    embed.set_footer(text=f"Prospect ID: {member.id}")
-                    await interaction.followup.send(embed=embed, ephemeral=True)
-                    return
-
-
-        view = discord.ui.View(timeout=None)
-        view.add_item(StaffButton(style=discord.ButtonStyle.green, label="Verify", custom_id=f"staff_button_interview_verify_{member.id}"))
-        view.add_item(StaffButton(style=discord.ButtonStyle.red, label="Deny", custom_id=f"staff_button_interview_deny_{member.id}"))
-
-        interviewQuestions = f"""- Be enthusiastic about sigma and the interview, your energy will set the stage for how our unit operates, if it sounds like you dont care or are disinterested it will affect the quality of the unit in the eyes of the interviewee.
-- Be informative to the point and honest, don't sugar-coat things, be straight forward.
-
-1. What year were you born in? (min. ~{datetime.now(timezone.utc).year - 17})
-2. Do you have any previous experience with Arma 3 or any milsim game?
- a. Have you been in any other units? What kind of units were they?
-3. Have you used Arma 3 mods before?
- b. Please ensure they know how to use the HTML download, and have mods downloaded before newcomer
-4. Have you used Teamspeak before?
- c. Help install teamspeak client, and have connected/bookmarked SSG teamspeak server
-5. How did you find out about us?
-6. Is there a specific role or playstyle you are looking to do with us?
-7. Any questions?"""
-
-        embed = discord.Embed(title="Interview Structure", description=interviewQuestions, color=discord.Color.gold())
-        embed.set_footer(text=f"Prospect member id: {member.id}")
-        await interaction.followup.send(embed=embed, view=view, ephemeral=True)
 
     # Hampter command
     @commands.command(name="gibcmdline")
@@ -1075,6 +1025,154 @@ class Staff(commands.Cog):
             return
         for role in guild.roles:
             log.debug(f"ROLE: {role.name} - {hex(role.color.value)}")
+
+
+@discord.app_commands.guilds(GUILD)
+class Recruitment(commands.GroupCog, name="recruitment"):
+    """Recruitment related commands."""
+    def __init__(self, bot: commands.Bot) -> None:
+        super().__init__()
+        self.bot = bot
+
+    @discord.app_commands.command(name="interview")
+    @discord.app_commands.describe(member = "Target prospect member.")
+    @discord.app_commands.guilds(GUILD)
+    @discord.app_commands.checks.has_any_role(*CMD_LIMIT_INTERVIEW)
+    async def interview(self, interaction: discord.Interaction, member: discord.Member) -> None:
+        """Helps HR interview a prospect member and decide to verify or deny."""
+
+        await interaction.response.defer(ephemeral=True, thinking=True)  # Ensure message history doesnt expire interaction deadline
+
+        channelRecruitmentAndHR = interaction.guild.get_channel(RECRUITMENT_AND_HR)
+        if not isinstance(channelRecruitmentAndHR, discord.TextChannel):
+            log.exception("Staff interview: channelRecruitmentAndHR not discord.TextChannel")
+            return
+
+        if not isinstance(interaction.user, discord.Member):
+            log.exception("Staff interview: interaction.user not discord.Member")
+            return
+
+        isAuthorStaff = [True for role in interaction.user.roles if role.id == UNIT_STAFF]
+        async for message in channelRecruitmentAndHR.history(limit=1000):
+            if message.embeds and message.embeds[0].title == "❌ Prospect denied" and message.embeds[0].footer.text and message.embeds[0].footer.text == f"Prospect ID: {member.id}":
+                if isAuthorStaff:
+                    embed = discord.Embed(title="⚠️ Prospect denied", description=f"Prospect ({member.mention}) has been denied before. Since you're Unit Staff, you may still continue and override the decision!", color=discord.Color.yellow())
+                    embed.set_footer(text=f"Prospect ID: {member.id}")
+                    await interaction.followup.send(embed=embed, ephemeral=True)
+                    break
+
+                # Not staff, cannot interview denied prospect
+                embed = discord.Embed(title="❌ Prospect denied", description=f"Prospect ({member.mention}) has already been denied. Only Unit Staff may interview denied prospects!", color=discord.Color.red())
+                embed.set_footer(text=f"Prospect ID: {member.id}")
+                await interaction.followup.send(embed=embed, ephemeral=True)
+                return
+
+        # Is staff or not denied before, continue with interview
+        view = discord.ui.View(timeout=None)
+        view.add_item(StaffButton(style=discord.ButtonStyle.green, label="Verify", custom_id=f"staff_button_interview_verify_{member.id}"))
+        view.add_item(StaffButton(style=discord.ButtonStyle.red, label="Deny", custom_id=f"staff_button_interview_deny_{member.id}"))
+
+        interviewQuestions = f"""- Be enthusiastic about sigma and the interview, your energy will set the stage for how our unit operates, if it sounds like you dont care or are disinterested it will affect the quality of the unit in the eyes of the interviewee.
+- Be informative to the point and honest, don't sugar-coat things, be straight forward.
+
+1. What year were you born in? (min. ~{datetime.now(timezone.utc).year - 17})
+2. Do you have any previous experience with Arma 3 or any milsim game?
+ a. Have you been in any other units? What kind of units were they?
+3. Have you used Arma 3 mods before?
+ b. Please ensure they know how to use the HTML download, and have mods downloaded before newcomer
+4. Have you used Teamspeak before?
+ c. Help install teamspeak client, and have connected/bookmarked SSG teamspeak server
+5. How did you find out about us?
+6. Is there a specific role or playstyle you are looking to do with us?
+7. Any questions?"""
+
+        embed = discord.Embed(title="Interview Structure", description=interviewQuestions, color=discord.Color.gold())
+        embed.set_footer(text=f"Prospect member id: {member.id}")
+        await interaction.followup.send(embed=embed, view=view, ephemeral=True)
+
+
+    @discord.app_commands.command(name="newcomers")
+    @discord.app_commands.describe(member="Target verified member.", rename="New name for the member.")
+    @discord.app_commands.guilds(GUILD)
+    @discord.app_commands.checks.has_any_role(*CMD_LIMIT_INTERVIEW)
+    async def newcomers(self, interaction: discord.Interaction, member: discord.Member, rename: str | None = None) -> None:
+        """Helps HR onboard a verified member as a newcomer. Grants candidate roles and optionally rename them."""
+
+        await interaction.response.defer(ephemeral=True, thinking=True)
+
+        if not isinstance(interaction.guild, discord.Guild):
+            await interaction.followup.send(f"❌ Failed to onboard newcomer: Guild not found.\nPlease contact Unit Staff.", ephemeral=True)
+            log.exception("Staff newcomers: interaction.guild not discord.Guild")
+            return
+
+        channelRecruitmentAndHR = interaction.guild.get_channel(RECRUITMENT_AND_HR)
+        roleCandidate = interaction.guild.get_role(CANDIDATE)
+        roleVerified = interaction.guild.get_role(VERIFIED)
+        auditLogs = interaction.guild.get_channel(AUDIT_LOGS)
+
+        try:
+            if roleCandidate is None:
+                raise Exception("roleCandidate is None")
+            if roleVerified is None:
+                raise Exception("roleVerified is None")
+            if not isinstance(channelRecruitmentAndHR, discord.TextChannel):
+                raise Exception("channelRecruitmentAndHR not discord.TextChannel")
+            if not isinstance(auditLogs, discord.TextChannel):
+                raise Exception("auditLogs not discord.TextChannel")
+        except Exception as e:
+            await interaction.followup.send(f"❌ Failed to onboard newcomer: {e}\nPlease contact Unit Staff.", ephemeral=True)
+            log.exception(f"Staff newcomers: {e}")
+            return
+
+        memberHasRoles = len([True for role in member.roles if role.id == MEMBER or role.id == VERIFIED]) == 2
+        if not memberHasRoles:
+            unitStaff = interaction.guild.get_role(UNIT_STAFF)
+            if not isinstance(unitStaff, discord.Role):
+                log.exception("Staff newcomers: unitStaff not discord.Role")
+                await interaction.followup.send("❌ Failed to onboard newcomer: Unit Staff role not found.\nPlease contact a server administrator.", ephemeral=True)
+                return
+            embed = discord.Embed(title="❌ Onboarding failed", description=f"{member.mention} is not a verified member!\n\nPlease contact {unitStaff.mention} to resolve this issue.", color=discord.Color.red())
+            embed.set_footer(text=f"User ID: {member.id}")
+            embed.timestamp = datetime.now()
+            await interaction.followup.send(embed=embed, ephemeral=True)
+            return
+
+        bonus = randint(100, 150)
+        auditEmbed = discord.Embed(
+            title="Newcomer Onboarded",
+            description=f"{member.mention} `({member.name})`\n\n**Onboarded by:** {interaction.user.mention} (`{interaction.user}`)\n**Recruitment Bonus:** 🪙 `{bonus}` SnekCoins",
+            color=discord.Color.green(),
+        )
+        # Rename member
+        if rename:
+            oldName = member.display_name
+            reason = f"Renamed by {interaction.user} via recruitment newcomers command."
+            log.info(f"{interaction.user.id} [{interaction.user.display_name}] Renamed {member.id} [{oldName}] to [{rename}] during newcomers process")
+            await member.edit(nick=rename, reason=reason)
+            auditEmbed.add_field(name="Renamed", value=f"`{oldName}` ➔ `{rename}`", inline=False)
+        await member.add_roles(roleCandidate, reason=f"Added by {interaction.user} via recruitment newcomers command.")
+        await member.remove_roles(roleVerified, reason=f"Removed by {interaction.user} via recruitment newcomers command.")
+
+        await Snekcoin.updateWallet(interaction.user.id, "money", bonus)
+
+        # Log in audit log
+        auditEmbed.set_footer(text=f"User ID: {member.id}")
+        auditEmbed.set_thumbnail(url=member.display_avatar.url)
+        auditEmbed.timestamp = datetime.now()
+        await auditLogs.send(embed=auditEmbed)
+
+        # Confirmation message
+        embed = discord.Embed(
+            title="✅ Newcomer onboarded",
+            description=f"{member.mention} has completed their newcomer workshop!",
+            color=discord.Color.green()
+        )
+        embed.add_field(name="💰 Bonus Payout 💰", value=f"{interaction.user.mention} has been awarded a recruitment bonus of 🪙 `{bonus}` SnekCoins for running the newcomers workshop.")
+        embed.set_footer(text=f"User ID: {member.id}")
+        embed.timestamp = datetime.now()
+        log.info(f"{interaction.user.id} [{interaction.user.display_name}] Onboarded {member.id} [{member.display_name}] as newcomer")
+        await channelRecruitmentAndHR.send(embed=embed)
+        await interaction.followup.send(f"Successfully onboarded {member.mention} as a newcomer.\nYou have been awarded a recruitment bonus of 🪙 `{bonus}` SnekCoins.", ephemeral=True)
 
 
 class StaffButton(discord.ui.Button):
@@ -1328,10 +1426,12 @@ class StaffModal(discord.ui.Modal):
 
 
 async def setup(bot: commands.Bot) -> None:
-    Staff.interview.error(Utils.onSlashError)
+    Recruitment.interview.error(Utils.onSlashError)
+    Recruitment.newcomers.error(Utils.onSlashError)
     Staff.updatemodpack.error(Utils.onSlashError)
     Staff.zitfeedback.error(Utils.onSlashError)
     Staff.ban.error(Utils.onSlashError)
     Staff.unban.error(Utils.onSlashError)
     Staff.kick.error(Utils.onSlashError)
     await bot.add_cog(Staff(bot))
+    await bot.add_cog(Recruitment(bot))

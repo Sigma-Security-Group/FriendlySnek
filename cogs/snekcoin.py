@@ -259,12 +259,14 @@ class Snekcoin(commands.GroupCog, name = "snekcoin"):
         Returns:
         None.
         """
+        await interaction.response.defer(ephemeral=True, thinking=True)
+
         embed, view = await Snekcoin.gambleMenu(interaction)
         if embed is None or view is None:
             await interaction.response.send_message(embed=discord.Embed(color=discord.Color.red(), title="❌ Failed", description="Could not build gambling menu."), ephemeral=True, delete_after=15.0)
             return
 
-        await interaction.response.send_message(embed=embed, view=view, ephemeral=True, delete_after=30.0)
+        await interaction.followup.send(embed=embed, view=view, ephemeral=True)
 
 
 # ===== </Gamble> =====
@@ -721,7 +723,7 @@ class SnekcoinModal(discord.ui.Modal):
 
         customId = interaction.data["custom_id"]
 
-
+        await interaction.response.defer(ephemeral=True, thinking=True)
 
         if customId.startswith("snekcoin_modal_gambleCoinFlip"):
             userWallet = await Snekcoin.getWallet(interaction.user.id)
@@ -809,7 +811,7 @@ class SnekcoinModal(discord.ui.Modal):
 
         menuEmbed, menuView = await Snekcoin.gambleMenu(interaction)
 
-        await interaction.response.send_message("Returning to gambling menu...", ephemeral=True, embed=menuEmbed, view=menuView, delete_after=30)
+        await interaction.followup.send("Returning to gambling menu...", ephemeral=True, embed=menuEmbed, view=menuView)
         await interaction.followup.send(embed=embed, ephemeral=False)
 
 

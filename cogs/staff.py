@@ -1100,6 +1100,11 @@ class Recruitment(commands.GroupCog, name="recruitment"):
 
         await interaction.response.defer(ephemeral=True, thinking=True)
 
+        if not isinstance(interaction.guild, discord.Guild):
+            await interaction.followup.send(f"❌ Failed to onboard newcomer: Guild not found.\nPlease contact Unit Staff.", ephemeral=True)
+            log.exception("Staff newcomers: interaction.guild not discord.Guild")
+            return
+
         channelRecruitmentAndHR = interaction.guild.get_channel(RECRUITMENT_AND_HR)
         roleCandidate = interaction.guild.get_role(CANDIDATE)
         roleVerified = interaction.guild.get_role(VERIFIED)
@@ -1119,8 +1124,8 @@ class Recruitment(commands.GroupCog, name="recruitment"):
             log.exception(f"Staff newcomers: {e}")
             return
 
-        isVerified = any((role.id == VERIFIED for role in member.roles) and (role.id == MEMBER for role in member.roles))
-        if not isVerified:
+        memberHasRoles = len([True for role in member.roles if role.id == MEMBER or role.id == VERIFIED]) == 2
+        if not memberHasRoles:
             unitStaff = interaction.guild.get_role(UNIT_STAFF)
             if not isinstance(unitStaff, discord.Role):
                 log.exception("Staff newcomers: unitStaff not discord.Role")

@@ -1119,6 +1119,19 @@ class Recruitment(commands.GroupCog, name="recruitment"):
             log.exception(f"Staff newcomers: {e}")
             return
 
+        isVerified = any((role.id == VERIFIED for role in member.roles) and (role.id == MEMBER for role in member.roles))
+        if not isVerified:
+            unitStaff = interaction.guild.get_role(UNIT_STAFF)
+            if not isinstance(unitStaff, discord.Role):
+                log.exception("Staff newcomers: unitStaff not discord.Role")
+                await interaction.followup.send("❌ Failed to onboard newcomer: Unit Staff role not found.\nPlease contact a server administrator.", ephemeral=True)
+                return
+            embed = discord.Embed(title="❌ Onboarding failed", description=f"{member.mention} is not a verified member!\n\nPlease contact {unitStaff.mention} to resolve this issue.", color=discord.Color.red())
+            embed.set_footer(text=f"User ID: {member.id}")
+            embed.timestamp = datetime.now()
+            await interaction.followup.send(embed=embed, ephemeral=True)
+            return
+
         bonus = randint(100, 150)
         auditEmbed = discord.Embed(
             title="Newcomer Onboarded",

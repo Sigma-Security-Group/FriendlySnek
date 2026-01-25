@@ -1153,7 +1153,7 @@ class Recruitment(commands.GroupCog, name="recruitment"):
         await member.add_roles(roleCandidate, reason=f"Added by {interaction.user} via recruitment newcomers command.")
         await member.remove_roles(roleVerified, reason=f"Removed by {interaction.user} via recruitment newcomers command.")
 
-        await Snekcoin.updateWallet(interaction.user.id, 'money', bonus)
+        await Snekcoin.updateWallet(interaction.user.id, "money", bonus)
 
         # Log in audit log
         auditEmbed.set_footer(text=f"User ID: {member.id}")

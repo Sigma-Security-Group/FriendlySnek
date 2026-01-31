@@ -72,7 +72,7 @@ class BotTasks(commands.Cog):
         # Add to spreadsheet
         Spreadsheet.memberJoin(member)
 
-        #if Member account was created less than 30 days ago, alert unit staff and assign only suspicious account role
+        #if Member account was created less than 45 days ago, alert unit staff and assign only suspicious account role
         if (datetime.now(timezone.utc) - member.created_at) < timedelta(days=45):
             channelStaffChat = guild.get_channel(STAFF_CHAT)
             if not isinstance(channelStaffChat, discord.TextChannel):
@@ -96,11 +96,13 @@ class BotTasks(commands.Cog):
             embed.set_thumbnail(url=member.display_avatar)
             await channelStaffChat.send(f"{roleUnitStaff.mention}", embed=embed)
 
+            rolesToRemove = [role for role in member.roles if not role.is_default()]
             try:
-                await member.remove_roles(member.roles, reason="Suspicious Account")
+                if rolesToRemove:
+                    await member.remove_roles(*rolesToRemove, reason="Suspicious Account")
             except Exception:
-                if (str(member.roles[0]) != "@everyone"):
-                    log.warning(f"BotTasks on_member_join: failed to remove {member.roles} roles from suspicious member '{member.id}' ({member.display_name})")
+                if any(not role.is_default() for role in member.roles):
+                    log.warning(f"BotTasks on_member_join: failed to remove roles from suspicious member '{member.id}' ({member.display_name})")
 
             roleSuspiciousAccount = guild.get_role(SUSPICIOUS_ACCOUNT)
             if roleSuspiciousAccount is None:

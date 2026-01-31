@@ -325,6 +325,14 @@ class Snekcoin(commands.GroupCog, name = "snekcoin"):
         for embed in embeds:
             embed.set_footer(text=f"Page {embeds.index(embed)+1} of {len(embeds)}")
 
+        if not embeds:
+            await interaction.response.send_message(
+                embed=discord.Embed(color=discord.Color.red(), title="🏆 SnekCoin Leaderboard 🏆", description="No leaderboard entries yet."),
+                ephemeral=True,
+                delete_after=30.0
+            )
+            return
+
         if len(embeds) > 1:
             view.add_item(SnekcoinButton(None, label="Previous", style=discord.ButtonStyle.primary, custom_id=f"snekcoin_button_leaderboardPrevious_{interaction.user.id}"))
             view.add_item(SnekcoinButton(None, label="Next", style=discord.ButtonStyle.primary, custom_id=f"snekcoin_button_leaderboardNext_{interaction.user.id}"))

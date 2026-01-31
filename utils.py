@@ -25,9 +25,10 @@ class Utils:
             for missingRole in error.missing_roles:
                 if isinstance(missingRole, int):
                     fetchedRole = guild.get_role(missingRole)
-                    if fetchedRole is None:
-                        continue
-                missingRolesList.append(fetchedRole.mention)
+                    missingRolesList.append(f"`{missingRole}`" if fetchedRole is None else fetchedRole.mention)
+
+                else:
+                    missingRolesList.append(str(missingRole))
 
             embed = discord.Embed(title="❌ Missing permissions", description=f"You do not have the permissions to execute this command!\nThe permitted roles are: {', '.join(missingRolesList)}.", color=discord.Color.red())
             await interaction.response.send_message(embed=embed, ephemeral=True, delete_after=30.0)

@@ -178,20 +178,20 @@ class Spreadsheet(commands.Cog):
             else:
                 log.debug(f"Spreadsheet createOrUpdateUserRow: Updated row for user id '{userId}' at row number '{rowNum}'")
 
-            worksheet.update([[
-                displayName,
-                dateJoined,
-                dateLastReply,
-                userId,
-                lastPromotion,
-                status,
-                position,
-                operationsAttended,
-                seen,
-                teamId,
-                teamName,
-                teamDate
-            ]], f"B{rowNum}")
+        worksheet.update([[
+            displayName,
+            dateJoined,
+            dateLastReply,
+            userId,
+            lastPromotion,
+            status,
+            position,
+            operationsAttended,
+            seen,
+            teamId,
+            teamName,
+            teamDate
+        ]], f"B{rowNum}")
 
     @tasks.loop(hours=6)
     async def kickTaggedMembers(self) -> None:

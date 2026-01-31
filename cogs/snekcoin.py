@@ -796,26 +796,26 @@ class SnekcoinModal(discord.ui.Modal):
         if customId.startswith("snekcoin_modal_gambleCoinFlip"):
             userWallet = await Snekcoin.getWallet(interaction.user.id)
             if userWallet is None:
-                await interaction.response.send_message(embed=discord.Embed(color=discord.Color.red(), title="❌ Failed", description="Could not retrieve your wallet data."), ephemeral=True, delete_after=15.0)
+                await interaction.followup.send(embed=discord.Embed(color=discord.Color.red(), title="❌ Failed", description="Could not retrieve your wallet data."), ephemeral=True)
                 return
 
             embed = discord.Embed(title="🪙 Coin Flip 🪙")
             try:
                 amount = int(self.amount.value.strip())
             except ValueError:
-                await interaction.response.send_message(embed=discord.Embed(color=discord.Color.red(), title="❌ Invalid amount", description="Please enter a positive integer."), ephemeral=True, delete_after=15.0)
+                await interaction.followup.send(embed=discord.Embed(color=discord.Color.red(), title="❌ Invalid amount", description="Please enter a positive integer."), ephemeral=True)
                 return
             if int(amount) <= 1:
-                await interaction.response.send_message(embed=discord.Embed(color=discord.Color.red(), title="❌ Invalid amount", description="Amount must be above 1!"), ephemeral=True, delete_after=15.0)
+                await interaction.followup.send(embed=discord.Embed(color=discord.Color.red(), title="❌ Invalid amount", description="Amount must be above 1!"), ephemeral=True)
                 return
             if (amount > userWallet["money"]):
-                await interaction.response.send_message(embed=discord.Embed(color=discord.Color.red(), title="❌ Insufficient funds", description=f"You do not have enough SnekCoins to gamble that amount!\nWallet balance: `{userWallet['money']}` SnekCoins"), ephemeral=True, delete_after=15.0)
+                await interaction.followup.send(embed=discord.Embed(color=discord.Color.red(), title="❌ Insufficient funds", description=f"You do not have enough SnekCoins to gamble that amount!\nWallet balance: `{userWallet['money']}` SnekCoins"), ephemeral=True)
                 return
 
             winner, payout = await Snekcoin.gambleCoinFlip(self.userId, amount)
             userWallet = await Snekcoin.getWallet(interaction.user.id)
             if userWallet is None:
-                await interaction.response.send_message(embed=discord.Embed(color=discord.Color.red(), title="❌ Failed", description="Could not retrieve your wallet data."), ephemeral=True, delete_after=15.0)
+                await interaction.followup.send(embed=discord.Embed(color=discord.Color.red(), title="❌ Failed", description="Could not retrieve your wallet data."), ephemeral=True)
                 return
 
             if winner:
@@ -834,26 +834,26 @@ class SnekcoinModal(discord.ui.Modal):
         if customId.startswith("snekcoin_modal_gambleDiceRoll"):
             userWallet = await Snekcoin.getWallet(interaction.user.id)
             if userWallet is None:
-                await interaction.response.send_message(embed=discord.Embed(color=discord.Color.red(), title="❌ Failed", description="Could not retrieve your wallet data."), ephemeral=True, delete_after=15.0)
+                await interaction.followup.send(embed=discord.Embed(color=discord.Color.red(), title="❌ Failed", description="Could not retrieve your wallet data."), ephemeral=True)
                 return
 
             embed = discord.Embed(title="🎲 Dice Roll 🎲")
             try:
                 amount = int(self.amount.value.strip())
             except ValueError:
-                await interaction.response.send_message(embed=discord.Embed(color=discord.Color.red(), title="❌ Invalid amount", description="Please enter a positive integer."), ephemeral=True, delete_after=15.0)
+                await interaction.followup.send(embed=discord.Embed(color=discord.Color.red(), title="❌ Invalid amount", description="Please enter a positive integer."), ephemeral=True)
                 return
             if int(amount) <= 1:
-                await interaction.response.send_message(embed=discord.Embed(color=discord.Color.red(), title="❌ Invalid amount", description="Amount must be above 1!"), ephemeral=True, delete_after=15.0)
+                await interaction.followup.send(embed=discord.Embed(color=discord.Color.red(), title="❌ Invalid amount", description="Amount must be above 1!"), ephemeral=True)
                 return
             if (amount > userWallet["money"]):
-                await interaction.response.send_message(embed=discord.Embed(color=discord.Color.red(), title="❌ Insufficient funds", description=f"You do not have enough SnekCoins to gamble that amount!\nWallet balance: `{userWallet['money']}` SnekCoins"), ephemeral=True, delete_after=15.0)
+                await interaction.followup.send(embed=discord.Embed(color=discord.Color.red(), title="❌ Insufficient funds", description=f"You do not have enough SnekCoins to gamble that amount!\nWallet balance: `{userWallet['money']}` SnekCoins"), ephemeral=True)
                 return
 
             winner, userRoll, botRoll, winnings = await Snekcoin.gambleDiceRoll(self.userId, amount)
             userWallet = await Snekcoin.getWallet(interaction.user.id)
             if userWallet is None:
-                await interaction.response.send_message(embed=discord.Embed(color=discord.Color.red(), title="❌ Failed", description="Could not retrieve your wallet data."), ephemeral=True, delete_after=15.0)
+                await interaction.followup.send(embed=discord.Embed(color=discord.Color.red(), title="❌ Failed", description="Could not retrieve your wallet data."), ephemeral=True)
                 return
 
             if winner:
@@ -879,7 +879,7 @@ class SnekcoinModal(discord.ui.Modal):
 
         menu = await Snekcoin.gambleMenu(interaction)
         if menu is None:
-            await interaction.response.send_message(embed=discord.Embed(color=discord.Color.red(), title="❌ Failed", description="Could not build gambling menu."), ephemeral=True, delete_after=15.0)
+            await interaction.followup.send(embed=discord.Embed(color=discord.Color.red(), title="❌ Failed", description="Could not build gambling menu."), ephemeral=True)
             return
 
         menuEmbed, menuView = menu

@@ -544,6 +544,50 @@ class Snekcoin(commands.GroupCog, name = "snekcoin"):
         await auditLogs.send(embed=embed)
 
 
+    @discord.app_commands.command(name="gift")
+    @discord.app_commands.describe(user="User to gift SnekCoins to.", amount="Amount of SnekCoins to gift.")
+    async def gift(self, interaction: discord.Interaction, user: discord.Member, amount: int) -> None:
+        """Gift SnekCoins to another user.
+
+        Parameters:
+        interaction (discord.Interaction): The Discord interaction.
+        user (discord.Member): The user to receive the gift.
+        amount (int): Amount of SnekCoins to gift.
+
+        Returns:
+        None.
+        """
+        if not isinstance(interaction.user, discord.Member):
+            log.exception("Snekcoin gift: interaction.user not discord.Member")
+            return
+
+        if user.id == interaction.user.id:
+            await interaction.response.send_message(embed=discord.Embed(color=discord.Color.red(), title="❌ Invalid recipient", description="You cannot gift SnekCoins to yourself."), ephemeral=True, delete_after=15.0)
+            return
+        if amount <= 0:
+            await interaction.response.send_message(embed=discord.Embed(color=discord.Color.red(), title="❌ Invalid amount", description="Amount must be a positive integer."), ephemeral=True, delete_after=15.0)
+            return
+
+        senderWallet = await Snekcoin.getWallet(interaction.user.id)
+        if senderWallet is None:
+            await interaction.response.send_message(embed=discord.Embed(color=discord.Color.red(), title="❌ Failed", description="Could not retrieve your wallet data."), ephemeral=True, delete_after=15.0)
+            return
+        if senderWallet["money"] < amount:
+            await interaction.response.send_message(embed=discord.Embed(color=discord.Color.red(), title="❌ Insufficient funds", description=f"You do not have enough SnekCoins to gift that amount!\nWallet balance: `{senderWallet['money']}` SnekCoins"), ephemeral=True, delete_after=15.0)
+            return
+
+        await Snekcoin.updateWallet(interaction.user.id, "money", -amount)
+        await Snekcoin.updateWallet(user.id, "money", amount)
+
+        embed = discord.Embed(
+            color=discord.Color.gold(),
+            title="SnekCoin Gift 🎁",
+            description=f"You gave **{amount}** SnekCoins to {user.mention}"
+        )
+        embed.set_author(name=interaction.user.display_name, icon_url=interaction.user.display_avatar)
+        await interaction.response.send_message(embed=embed)
+
+
     @discord.app_commands.command(name="checkwallet")
     @discord.app_commands.describe(user="User to check the wallet of (defaults to yourself).")
     async def checkWallet(self, interaction: discord.Interaction, user: discord.User | None = None) -> None:
@@ -817,6 +861,7 @@ class SnekcoinModal(discord.ui.Modal):
 
 async def setup(bot: commands.Bot) -> None:
     Snekcoin.gamble.error(Utils.onSlashError)
+    Snekcoin.gift.error(Utils.onSlashError)
     Snekcoin.checkWallet.error(Utils.onSlashError)
     Snekcoin.leaderboard.error(Utils.onSlashError)
     Snekcoin.payday.error(Utils.onSlashError)

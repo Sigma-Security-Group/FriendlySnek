@@ -241,8 +241,8 @@ class WorkshopInterest(commands.Cog):
             return
 
         channelWSINT = self.bot.get_channel(WORKSHOP_INTEREST)
-        if not isinstance(ctx.guild, discord.Guild):
-            log.exception("WSINT cleanSpecificWorkshopInterestList: ctx.guild not discord.Guild")
+        if not isinstance(channelWSINT, discord.TextChannel):
+            log.exception("WSINT cleanSpecificWorkshopInterestList: channelWSINT not discord.TextChannel")
             return
 
 

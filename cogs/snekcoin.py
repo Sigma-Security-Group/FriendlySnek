@@ -232,7 +232,11 @@ class Snekcoin(commands.GroupCog, name = "snekcoin"):
 
         wallet = await Snekcoin.getWallet(interaction.user.id)
         if wallet is None:
-            await interaction.response.send_message("Failed to retrieve wallet information.", ephemeral=True)
+            await interaction.response.send_message(
+                embed=discord.Embed(color=discord.Color.red(), title="❌ Failed", description="Could not retrieve wallet information."),
+                ephemeral=True,
+                delete_after=15.0
+            )
             return
 
         embed.add_field(name="Current Balance", value=f"🪙 `{wallet['money']}` SnekCoins", inline=False)
@@ -359,10 +363,10 @@ class Snekcoin(commands.GroupCog, name = "snekcoin"):
         zeusPay,actualPay = randint(100, 200), randint(100, 200)
 
         if actual.id == interaction.user.id:
-            await interaction.response.send_message("❌ You as a Zeus cannot be Actual!", ephemeral=True, delete_after=15.0)
+            await interaction.response.send_message(embed=discord.Embed(color=discord.Color.red(), title="❌ Invalid selection", description="You as a Zeus cannot be Actual!"), ephemeral=True, delete_after=15.0)
             return
         if actual.bot:
-            await interaction.response.send_message("❌ Actual cannot be a bot!", ephemeral=True, delete_after=15.0)
+            await interaction.response.send_message(embed=discord.Embed(color=discord.Color.red(), title="❌ Invalid selection", description="Actual cannot be a bot!"), ephemeral=True, delete_after=15.0)
             return
 
         await Snekcoin.updateWallet(interaction.user.id, "money", zeusPay)
@@ -414,10 +418,18 @@ class Snekcoin(commands.GroupCog, name = "snekcoin"):
 
         await commendationsChannel.send(embed=embed)
         if not skippedTls:
-            await interaction.response.send_message("✅ Payday has been processed successfully.\nThank you for hosting!", ephemeral=True, delete_after=15.0)
+            await interaction.response.send_message(
+                embed=discord.Embed(color=discord.Color.green(), title="✅ Payday Processed", description="Payday has been processed successfully.\nThank you for hosting!"),
+                ephemeral=True,
+                delete_after=15.0
+            )
         else:
             skippedText = "\n".join([f"- {tl}: {reason}" for tl, reason in skippedTls.items()])
-            await interaction.response.send_message(f"✅ Payday has been processed successfully.\nThank you for hosting!\n\n⚠️ Some Team Leaders were not paid:\n{skippedText}", ephemeral=True, delete_after=30.0)
+            await interaction.response.send_message(
+                embed=discord.Embed(color=discord.Color.gold(), title="✅ Payday Processed", description=f"Payday has been processed successfully.\nThank you for hosting!\n\n⚠️ Some Team Leaders were not paid:\n{skippedText}"),
+                ephemeral=True,
+                delete_after=30.0
+            )
 
         tlMentions = (f"- Team Leaders:\n" + "\n".join([f"  - {tl}: 🪙 `{amount}` SnekCoins" for tl, amount in paidTLs.items()]) if paidTLs else "")
 
@@ -459,10 +471,10 @@ class Snekcoin(commands.GroupCog, name = "snekcoin"):
         }
         addRemove = addRemove.lower()
         if addRemove not in responses["add"] and addRemove not in responses["remove"]:
-            await ctx.send("❌ Invalid operation! Use `add` or `remove`.")
+            await ctx.send(embed=discord.Embed(color=discord.Color.red(), title="❌ Invalid operation", description="Use `add` or `remove`."))
             return
         if amount <= 0:
-            await ctx.send("❌ Amount must be a positive integer!")
+            await ctx.send(embed=discord.Embed(color=discord.Color.red(), title="❌ Invalid amount", description="Amount must be a positive integer."))
             return
 
         try:
@@ -471,7 +483,7 @@ class Snekcoin(commands.GroupCog, name = "snekcoin"):
         except FileNotFoundError:
             wallets = {}
         except Exception:
-            await ctx.send("❌ Failed to load wallets file.")
+            await ctx.send(embed=discord.Embed(color=discord.Color.red(), title="❌ Failed", description="Failed to load wallets file."))
             log.exception("Snekcoin changeSnekCoins: Failed to load wallets file.")
             return
 
@@ -490,7 +502,7 @@ class Snekcoin(commands.GroupCog, name = "snekcoin"):
         except Exception:
             log.warning("Snekcoin changeSnekCoins: Failed to save wallets file.")
 
-        await ctx.send(f"✅ `{amount}` SnekCoins have been {operationText} {member.display_name}'s wallet.")
+        await ctx.send(embed=discord.Embed(color=discord.Color.green(), title="✅ Wallet updated", description=f"`{amount}` SnekCoins have been {operationText} {member.display_name}'s wallet."))
 
         auditLogs = self.bot.get_channel(AUDIT_LOGS)
         if not isinstance(auditLogs, discord.TextChannel):
@@ -524,13 +536,13 @@ class Snekcoin(commands.GroupCog, name = "snekcoin"):
         log.info(f"{ctx.author.id} [{ctx.author.display_name}] is trading SnekCoins from {fromMember.id} [{fromMember.display_name}] to {toMember.id} [{toMember.display_name}]: {amount}")
 
         if amount <= 0:
-            await ctx.send("❌ Amount must be a positive integer!")
+            await ctx.send(embed=discord.Embed(color=discord.Color.red(), title="❌ Invalid amount", description="Amount must be a positive integer."))
             return
 
         await Snekcoin.updateWallet(fromMember.id, "money", -amount)
         await Snekcoin.updateWallet(toMember.id, "money", amount)
 
-        await ctx.send(f"✅ `{amount}` SnekCoins have been traded from {fromMember.display_name} to {toMember.display_name}.")
+        await ctx.send(embed=discord.Embed(color=discord.Color.green(), title="✅ Trade complete", description=f"`{amount}` SnekCoins have been traded from {fromMember.display_name} to {toMember.display_name}."))
 
         auditLogs = self.bot.get_channel(AUDIT_LOGS)
         if auditLogs is None or not isinstance(auditLogs, discord.TextChannel):
@@ -717,7 +729,12 @@ class SnekcoinButton(discord.ui.Button):
 
             menuEmbed, menuView = await Snekcoin.gambleMenu(interaction)
 
-            await interaction.response.send_message("Returning to gambling menu...", ephemeral=True, embed=menuEmbed, view=menuView, delete_after=30.0)
+            await interaction.response.send_message(
+                embed=discord.Embed(color=discord.Color.blurple(), title="🎲 Returning to gambling menu"),
+                ephemeral=True,
+                delete_after=30.0
+            )
+            await interaction.followup.send(embed=menuEmbed, view=menuView, ephemeral=True)
             await interaction.followup.send(embed=embed, ephemeral=False)
 
         if customId.startswith("snekcoin_button_leaderboardPrevious"):
@@ -855,7 +872,8 @@ class SnekcoinModal(discord.ui.Modal):
 
         menuEmbed, menuView = await Snekcoin.gambleMenu(interaction)
 
-        await interaction.followup.send("Returning to gambling menu...", ephemeral=True, embed=menuEmbed, view=menuView)
+        await interaction.followup.send(embed=discord.Embed(color=discord.Color.blurple(), title="🎲 Returning to gambling menu"), ephemeral=True)
+        await interaction.followup.send(embed=menuEmbed, view=menuView, ephemeral=True)
         await interaction.followup.send(embed=embed, ephemeral=False)
 
 

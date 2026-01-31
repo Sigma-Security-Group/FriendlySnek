@@ -1032,8 +1032,9 @@ class Reminders(commands.GroupCog, name="reminder"):
         embed=discord.Embed(description=embedDescription, color=discord.Color.green())
         embed.set_author(name=interaction.user, icon_url=interaction.user.display_avatar)
 
-        messageInteraction = await interaction.response.send_message(embed=embed)
-        reminders[datetime.timestamp(reminderTime)]["messageID"] = messageInteraction.message_id
+        await interaction.response.send_message(embed=embed)
+        messageInteraction = await interaction.original_response()
+        reminders[datetime.timestamp(reminderTime)]["messageID"] = messageInteraction.id
         with open(REMINDERS_FILE, "w", encoding="utf-8") as f:
             json.dump(reminders, f, indent=4)
 

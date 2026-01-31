@@ -87,20 +87,22 @@ class Snekcoin(commands.GroupCog, name = "snekcoin"):
             return
 
         userIdStr = str(userId)
-        userWallet = wallets.get(userIdStr, {"timesCommended": 0, "sentCommendations": 0, "money": 0, "moneySpent": 0, "timesBumped": 0})
+        defaultWallet = {"timesCommended": 0, "sentCommendations": 0, "money": 0, "moneySpent": 0, "timesBumped": 0}
+        userWallet = wallets.get(userIdStr, defaultWallet)
         if not isinstance(userWallet, dict):
-            userWallet = {"timesCommended": 0, "sentCommendations": 0, "money": 0, "moneySpent": 0, "timesBumped": 0}
+            userWallet = defaultWallet.copy()
 
         if walletType == "money":
             userWallet["money"] += amount
             if amount < 0:
                 userWallet["moneySpent"] -= amount
-            wallets[userIdStr] = userWallet
 
         if walletType in {"timesCommended", "sentCommendations", "timesBumped"}:
             if userWallet.get(walletType) is None:
                 userWallet[walletType] = 0
             userWallet[walletType] += amount
+
+        wallets[userIdStr] = userWallet
 
         try:
             with open(WALLETS_FILE, "w") as f:

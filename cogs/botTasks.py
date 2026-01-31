@@ -4,7 +4,7 @@ import asyncpraw, pytz  # type: ignore
 
 from typing import Tuple
 from datetime import datetime, timezone, timedelta
-from dateutil.parser import parse as datetimeParse  # type: ignore
+from dateutil.relativedelta import relativedelta  # type: ignore
 from bs4 import BeautifulSoup as BS  # type: ignore
 from .workshopInterest import WORKSHOP_INTEREST_LIST, WorkshopInterest  # type: ignore
 from .spreadsheet import Spreadsheet
@@ -925,14 +925,10 @@ class Reminders(commands.GroupCog, name="reminder"):
         datetime: The future date.
         """
         futureDate = now = datetime.now()
-        if datetimeDict["years"] is not None:
-            yearsToAdd = datetimeDict["years"]
-            try:
-                futureDate = datetime(now.year + yearsToAdd, now.month, now.day)
-            except ValueError:
-                futureDate = datetime(now.year + yearsToAdd, now.month + 1, 1)
-
-            futureDate = futureDate.replace(hour=now.hour, minute=now.minute, second=now.second, microsecond=now.microsecond)
+        yearsToAdd = datetimeDict.get("years") or 0
+        monthsToAdd = datetimeDict.get("months") or 0
+        if yearsToAdd or monthsToAdd:
+            futureDate = futureDate + relativedelta(years=yearsToAdd, months=monthsToAdd)
 
         formatTime = lambda t: 0.0 if t is None else t
         futureDate += timedelta(

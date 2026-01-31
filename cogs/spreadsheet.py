@@ -72,13 +72,13 @@ class Spreadsheet(commands.Cog):
         self.bot = bot
 
     @staticmethod
-    def getWorksheet() -> gspread.worksheet.Worksheet:
+    def getWorksheet() -> gspread.worksheet.Worksheet | None:
         try:
             credentials = Credentials.from_service_account_file("spreadsheet_account_creds.json", scopes=SCOPES)
             gc = gspread.authorize(credentials)
             sh = gc.open_by_key("17siSuyOUn0S1U1l1bf1gJGx9b7Tgrb1rzVquK_7qHmc")
         except Exception as e:
-            log.exception(f"Spreadsheet getWorksheet: failed to authenticate or open spreadsheet: {e}")
+            log.warning(f"Spreadsheet getWorksheet: failed to authenticate or open spreadsheet: {e}")
             return
 
         worksheets = sh.worksheets()
@@ -104,6 +104,8 @@ class Spreadsheet(commands.Cog):
         if not secret.SPREADSHEET_ACTIVE:
             return
         worksheet = Spreadsheet.getWorksheet()
+        if not worksheet:
+            return
 
         Spreadsheet.createOrUpdateUserRow(
             worksheet,
@@ -201,6 +203,8 @@ class Spreadsheet(commands.Cog):
             return
 
         worksheet = Spreadsheet.getWorksheet()
+        if not worksheet:
+            return
 
         columnUserIds = worksheet.col_values(Spreadsheet.WORKSHEET_COLUMNS["userId"])[Spreadsheet.ROW_STARTING_INDEX - 1:]
         columnPositions = worksheet.col_values(Spreadsheet.WORKSHEET_COLUMNS["position"])[Spreadsheet.ROW_STARTING_INDEX - 1:]

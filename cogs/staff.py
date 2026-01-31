@@ -258,7 +258,7 @@ class Staff(commands.Cog):
             embed.timestamp = datetime.now()
             await ctx.send(embed=embed)
         else:
-            embed = discord.Embed(title="✅ Last activity", description=f"Activity found: {discord.utils.format_dt(lastMessage.created_at.timestamp(), style='F')}!\nMember: {targetMember.mention}", color=discord.Color.green())
+            embed = discord.Embed(title="✅ Last activity", description=f"Activity found: {discord.utils.format_dt(lastMessage.created_at, style='F')}!\nMember: {targetMember.mention}", color=discord.Color.green())
             embed.timestamp = datetime.now()
             await ctx.send(embed=embed)
 

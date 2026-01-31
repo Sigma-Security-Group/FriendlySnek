@@ -215,7 +215,7 @@ class Snekcoin(commands.GroupCog, name = "snekcoin"):
             return False, reels, 0
 
     @staticmethod
-    async def gambleMenu(interaction: discord.Interaction) -> Tuple[discord.Embed, discord.ui.View]:
+    async def gambleMenu(interaction: discord.Interaction) -> Tuple[discord.Embed, discord.ui.View] | None:
         """Build the gambling menu.
 
         Parameters:
@@ -265,11 +265,12 @@ class Snekcoin(commands.GroupCog, name = "snekcoin"):
         """
         await interaction.response.defer(ephemeral=True, thinking=True)
 
-        embed, view = await Snekcoin.gambleMenu(interaction)
-        if embed is None or view is None:
+        menu = await Snekcoin.gambleMenu(interaction)
+        if menu is None:
             await interaction.response.send_message(embed=discord.Embed(color=discord.Color.red(), title="❌ Failed", description="Could not build gambling menu."), ephemeral=True, delete_after=15.0)
             return
 
+        embed, view = menu
         await interaction.followup.send(embed=embed, view=view, ephemeral=True)
 
 
@@ -727,13 +728,17 @@ class SnekcoinButton(discord.ui.Button):
                 embed.add_field(name="💰 Balance", value=f"**{userWallet['money']}** SnekCoins")
                 embed.add_field(name="\u200B", value="-# [Gamblers anonymous helpline](https://gamblersanonymous.org/)", inline=False)
 
-            menuEmbed, menuView = await Snekcoin.gambleMenu(interaction)
+            menu = await Snekcoin.gambleMenu(interaction)
+            if menu is None:
+                await interaction.response.send_message(embed=discord.Embed(color=discord.Color.red(), title="❌ Failed", description="Could not build gambling menu."), ephemeral=True, delete_after=15.0)
+                return
 
             await interaction.response.send_message(
                 embed=discord.Embed(color=discord.Color.blurple(), title="🎲 Returning to gambling menu"),
                 ephemeral=True,
                 delete_after=30.0
             )
+            menuEmbed, menuView = menu
             await interaction.followup.send(embed=menuEmbed, view=menuView, ephemeral=True)
             await interaction.followup.send(embed=embed, ephemeral=False)
 
@@ -870,8 +875,12 @@ class SnekcoinModal(discord.ui.Modal):
                 embed.add_field(name="You lost", value=f"**{amount}** SnekCoins", inline=False)
                 embed.add_field(name="💰 Balance", value=f"**{userWallet['money']}** SnekCoins")
 
-        menuEmbed, menuView = await Snekcoin.gambleMenu(interaction)
+        menu = await Snekcoin.gambleMenu(interaction)
+        if menu is None:
+            await interaction.response.send_message(embed=discord.Embed(color=discord.Color.red(), title="❌ Failed", description="Could not build gambling menu."), ephemeral=True, delete_after=15.0)
+            return
 
+        menuEmbed, menuView = menu
         await interaction.followup.send(embed=discord.Embed(color=discord.Color.blurple(), title="🎲 Returning to gambling menu"), ephemeral=True)
         await interaction.followup.send(embed=menuEmbed, view=menuView, ephemeral=True)
         await interaction.followup.send(embed=embed, ephemeral=False)

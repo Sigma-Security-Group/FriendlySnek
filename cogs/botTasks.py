@@ -56,18 +56,17 @@ class BotTasks(commands.Cog):
             return
 
         # Log in Audit Logs
-        if not secret.DISCORD_LOGGING.get("user_join", False):
-            return
-        channelAuditLogs = member.guild.get_channel(AUDIT_LOGS)
-        if not isinstance(channelAuditLogs, discord.TextChannel):
-            log.exception("BotTasks on_member_join: channelAuditLogs not discord.TextChannel")
-            return
-        memberJoined = discord.utils.format_dt(member.created_at, style="F") if member.created_at else "Unknown"
-        embed = discord.Embed(description=f"{member.mention} {member.name}\n**Account Created**\n{memberJoined}", color=discord.Color.green(), timestamp=datetime.now(timezone.utc))
-        embed.set_author(name="Member Joined", icon_url=member.display_avatar)
-        embed.set_footer(text=f"Member ID: {member.id}")
-        embed.set_thumbnail(url=member.display_avatar)
-        await channelAuditLogs.send(embed=embed)
+        if secret.DISCORD_LOGGING.get("user_join", False):
+            channelAuditLogs = member.guild.get_channel(AUDIT_LOGS)
+            if not isinstance(channelAuditLogs, discord.TextChannel):
+                log.exception("BotTasks on_member_join: channelAuditLogs not discord.TextChannel")
+            else:
+                memberJoined = discord.utils.format_dt(member.created_at, style="F") if member.created_at else "Unknown"
+                embed = discord.Embed(description=f"{member.mention} {member.name}\n**Account Created**\n{memberJoined}", color=discord.Color.green(), timestamp=datetime.now(timezone.utc))
+                embed.set_author(name="Member Joined", icon_url=member.display_avatar)
+                embed.set_footer(text=f"Member ID: {member.id}")
+                embed.set_thumbnail(url=member.display_avatar)
+                await channelAuditLogs.send(embed=embed)
 
         # Add to spreadsheet
         Spreadsheet.memberJoin(member)

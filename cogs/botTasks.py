@@ -246,8 +246,8 @@ class BotTasks(commands.Cog):
 
         jcaModUpdateFound = False
 
-        modUpdateDate = ""
         async for modID, website in BotTasks.fetchWebsiteText(genericData["modpackIds"]):
+            modUpdateDate = ""
             # Fetch mod & parse HTML
             soup = BS(website, "html.parser")
 

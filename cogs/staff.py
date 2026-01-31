@@ -37,18 +37,51 @@ class Staff(commands.Cog):
         discord.Member | None: Returns a discord.Member if found, otherwise None.
         """
         member = None
+        searchTerm = searchTerm.strip()
+        searchTermLower = searchTerm.lower()
+        searchTermId = searchTerm.replace("<", "").replace("@", "").replace("!", "").replace(">", "")
         for member_ in guild.members:
-            if searchTerm.replace("<", "").replace("@", "").replace("!", "").replace(">", "").isdigit() and int(searchTerm.replace("<", "").replace("@", "").replace("!", "").replace(">", "")) == member_.id:
-                """ Mentions, IDs """
+            # Mentions, IDs
+            if searchTermId.isdigit() and int(searchTermId) == member_.id:
                 member = member_
                 break
-            elif (searchTerm == member_.display_name.lower()) or (isinstance(member_.global_name, str) and searchTerm == member_.global_name.lower()) or (searchTerm == member_.name.lower()) or (searchTerm == member_.mention.lower()) or (searchTerm == member_.name.lower() + "#" + member_.discriminator) or (searchTerm == member_.mention.lower().replace("<@", "<@!")) or (searchTerm == member_.mention.lower().replace("<@!", "<@")) or (searchTerm.isdigit() and int(searchTerm) == member_.discriminator):
-                """ Display names, name, raw name """
+
+            # Display name, global name, username, raw mention forms, and discriminator checks
+            elif (
+                # Match server-specific display name (nickname)
+                searchTermLower == member_.display_name.lower()
+                # Match Discord global display name (if it exists)
+                or (isinstance(member_.global_name, str)
+                    and searchTermLower == member_.global_name.lower())
+                # Match account username
+                or searchTermLower == member_.name.lower()
+                # Match direct mention string (<@id>)
+                or searchTermLower == member_.mention.lower()
+                # Match legacy username#discriminator format
+                or searchTermLower == member_.name.lower() + "#" + member_.discriminator
+                # Handle mention variant with/without "!" (<@id> vs <@!id>)
+                or searchTermLower == member_.mention.lower().replace("<@", "<@!")
+                or searchTermLower == member_.mention.lower().replace("<@!", "<@")
+            ):
                 member = member_
                 break
-            elif (searchTerm in member_.display_name.lower()) or (searchTerm in member_.name.lower()) or (searchTerm in member_.mention.lower()) or (searchTerm in member_.mention.lower().replace("<@", "<@!")) or (searchTerm in member_.mention.lower().replace("<@!", "<@")):
-                """ Parts of name """
+
+
+            # Parts of name
+            elif (
+                # Partial match inside server nickname (display name)
+                searchTermLower in member_.display_name.lower()
+                # Partial match inside account username
+                or searchTermLower in member_.name.lower()
+                # Partial match inside mention string (<@id>)
+                or searchTermLower in member_.mention.lower()
+                # Handle mention variant with "!" (<@!id>)
+                or searchTermLower in member_.mention.lower().replace("<@", "<@!")
+                # Handle mention variant without "!" (<@id>)
+                or searchTermLower in member_.mention.lower().replace("<@!", "<@")
+            ):
                 member = member_
+
         return member
 
     @commands.command(name="getmember")

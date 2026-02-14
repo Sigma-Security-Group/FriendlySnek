@@ -454,7 +454,7 @@ class Snekcoin(commands.GroupCog, name = "snekcoin"):
 
 
     @commands.command(name="changesnekcoins")
-    @commands.has_any_role(*CMD_LIMIT_STAFF)
+    @commands.has_any_role(SNEK_LORD)
     async def changeSnekCoins(self, ctx: commands.Context, member: discord.Member, addRemove: str, amount: int) -> None:
         """Changes the amount of SnekCoins in a member's wallet.
 
@@ -528,7 +528,7 @@ class Snekcoin(commands.GroupCog, name = "snekcoin"):
 
 
     @commands.command(name="tradesnekcoins")
-    @commands.has_any_role(*CMD_LIMIT_STAFF)
+    @commands.has_any_role(SNEK_LORD)
     async def tradeSnekCoins(self, ctx: commands.Context, fromMember: discord.Member, toMember: discord.Member, amount: int) -> None:
         """Trades SnekCoins from one member to another.
 

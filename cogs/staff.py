@@ -1,4 +1,5 @@
 import re, json, os, discord, logging
+from html import unescape
 
 from datetime import datetime, timezone
 from discord.ext import commands  # type: ignore
@@ -927,9 +928,15 @@ class Staff(commands.Cog):
 
         mods = re.findall(r'(?<=<td data-type="DisplayName">).+(?=<\/td>)', html)
 
-        alphanumerics = re.compile(r"[\W_]+", re.UNICODE)
-        cmdline = ";".join(sorted(["@" + re.sub(alphanumerics, "", mod) for mod in mods], key=str.casefold))  # Casefold = caseinsensitive
-        cmdline = wrap(unidecode(cmdline), DISCORD_LIMITS["message_embed"]["message_chars"]-10)
+        # Normalize each mod to ASCII first (e.g. "Šumava" -> "Sumava"), then keep only ASCII letters/digits.
+        ascii_alphanumerics = re.compile(r"[^A-Za-z0-9]+")
+        normalizedMods = []
+        for mod in mods:
+            normalized = unidecode(unescape(mod))
+            normalizedMods.append("@" + re.sub(ascii_alphanumerics, "", normalized))
+
+        cmdline = ";".join(sorted(normalizedMods, key=str.casefold))  # Casefold = case-insensitive
+        cmdline = wrap(cmdline, DISCORD_LIMITS["message_embed"]["message_chars"]-10)
 
         for index, chunk in enumerate(cmdline):
             if index == 0:

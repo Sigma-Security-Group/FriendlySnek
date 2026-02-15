@@ -16,9 +16,3 @@ TIME_TEN_MIN = 600
 
 ## No-show archive threshold
 NOSHOW_ARCHIVE_THRESHOLD_IN_DAYS = 90
-
-###################
-# Poll.py
-####################
-
-POLL_PERCENT_REGEX = r"\(\d+\.?\d*%\)\s*"

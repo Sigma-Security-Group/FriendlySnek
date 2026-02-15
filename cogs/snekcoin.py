@@ -217,6 +217,15 @@ class Snekcoin(commands.GroupCog, name = "snekcoin"):
             return False, reels, 0
 
     @staticmethod
+    def addGambleSummary(embed: discord.Embed, bet: int, netChange: int, balance: int) -> None:
+        """Attach standardized gamble summary fields to an embed."""
+        resultLabel = "Win" if netChange > 0 else "Loss" if netChange < 0 else "Win/Loss"
+        resultValue = f"**+{netChange}** SnekCoins" if netChange > 0 else f"**{netChange}** SnekCoins"
+        embed.add_field(name="Bet", value=f"**{bet}** SnekCoins")
+        embed.add_field(name=resultLabel, value=resultValue)
+        embed.add_field(name="💰 Balance", value=f"**{balance}** SnekCoins", inline=False)
+
+    @staticmethod
     async def gambleMenu(interaction: discord.Interaction) -> Tuple[discord.Embed, discord.ui.View] | None:
         """Build the gambling menu.
 
@@ -728,14 +737,12 @@ class SnekcoinButton(discord.ui.Button):
                 embed.color = discord.Color.green()
                 embed.set_author(name=interaction.user.display_name, icon_url=interaction.user.display_avatar)
                 embed.add_field(name="Result", value=f"{' | '.join(reels)}", inline=False)
-                embed.add_field(name="🪙 You won!", value=f"**{round(winnings)}** SnekCoins", inline=False)
-                embed.add_field(name="💰 Balance", value=f"**{userWallet['money']}** SnekCoins")
+                Snekcoin.addGambleSummary(embed, bet=50, netChange=round(winnings), balance=userWallet["money"])
             else:
                 embed.color = discord.Color.red()
                 embed.set_author(name=interaction.user.display_name, icon_url=interaction.user.display_avatar)
                 embed.add_field(name="Result", value=f"{' | '.join(reels)}", inline=False)
-                embed.add_field(name="You lost", value=f"**50** SnekCoins", inline=False)
-                embed.add_field(name="💰 Balance", value=f"**{userWallet['money']}** SnekCoins")
+                Snekcoin.addGambleSummary(embed, bet=50, netChange=-50, balance=userWallet["money"])
                 embed.add_field(name="\u200B", value="-# [Gamblers anonymous helpline](https://gamblersanonymous.org/)", inline=False)
 
             menu = await Snekcoin.gambleMenu(interaction)
@@ -830,14 +837,12 @@ class SnekcoinModal(discord.ui.Modal):
                 embed.color = discord.Color.green()
                 embed.set_author(name=interaction.user.display_name, icon_url=interaction.user.display_avatar)
                 embed.add_field(name="Result", value="Heads")
-                embed.add_field(name="🪙 You won!", value=f"**{payout}** SnekCoins", inline=False)
-                embed.add_field(name="💰 Balance", value=f"**{userWallet['money']}** SnekCoins")
+                Snekcoin.addGambleSummary(embed, bet=amount, netChange=payout, balance=userWallet["money"])
             else:
                 embed.color = discord.Color.red()
                 embed.set_author(name=interaction.user.display_name, icon_url=interaction.user.display_avatar)
                 embed.add_field(name="Result", value="Tails")
-                embed.add_field(name="You lost", value=f"**{amount}** SnekCoins", inline=False)
-                embed.add_field(name="💰 Balance", value=f"**{userWallet['money']}** SnekCoins")
+                Snekcoin.addGambleSummary(embed, bet=amount, netChange=-amount, balance=userWallet["money"])
 
         if customId.startswith("snekcoin_modal_gambleDiceRoll"):
             userWallet = await Snekcoin.getWallet(interaction.user.id)
@@ -864,26 +869,26 @@ class SnekcoinModal(discord.ui.Modal):
                 await interaction.followup.send(embed=discord.Embed(color=discord.Color.red(), title="❌ Failed", description="Could not retrieve your wallet data."), ephemeral=True)
                 return
 
+            # Win
             if winner:
                 embed.color = discord.Color.green()
                 embed.set_author(name=interaction.user.display_name, icon_url=interaction.user.display_avatar)
                 embed.add_field(name="Result", value=f"You rolled: **{userRoll}**\nSnek rolled: **{botRoll}**")
-                embed.add_field(name="🪙 You won!", value=f"**{winnings}** SnekCoins", inline=False)
-                embed.add_field(name="💰 Balance", value=f"**{userWallet['money']}** SnekCoins")
+                Snekcoin.addGambleSummary(embed, bet=amount, netChange=winnings, balance=userWallet["money"])
 
+            # Tie
             elif winner is None:
                 embed.color = discord.Color.gold()
                 embed.set_author(name=interaction.user.display_name, icon_url=interaction.user.display_avatar)
                 embed.add_field(name="Result", value=f"You rolled: **{userRoll}**\nSnek rolled: **{botRoll}**")
-                embed.add_field(name="It's a tie!", value=f"No SnekCoins were won or lost", inline=False)
-                embed.add_field(name="💰 Balance", value=f"**{userWallet['money']}** SnekCoins")
+                Snekcoin.addGambleSummary(embed, bet=amount, netChange=0, balance=userWallet["money"])
 
+            # Loss
             else:
                 embed.color = discord.Color.red()
                 embed.set_author(name=interaction.user.display_name, icon_url=interaction.user.display_avatar)
                 embed.add_field(name="Result", value=f"You rolled: **{userRoll}**\nSnek rolled: **{botRoll}**")
-                embed.add_field(name="You lost", value=f"**{amount}** SnekCoins", inline=False)
-                embed.add_field(name="💰 Balance", value=f"**{userWallet['money']}** SnekCoins")
+                Snekcoin.addGambleSummary(embed, bet=amount, netChange=-amount, balance=userWallet["money"])
 
         menu = await Snekcoin.gambleMenu(interaction)
         if menu is None:

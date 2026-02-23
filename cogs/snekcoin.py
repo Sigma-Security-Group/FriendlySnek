@@ -239,7 +239,7 @@ class Snekcoin(commands.GroupCog, name = "snekcoin"):
         embed = discord.Embed(title="🎲 SnekCoin Gambling 🎲", color=discord.Color.green(), description="Choose a game to play:")
         embed.add_field(name="🪙 Coin Flip 🪙", value="Flip a coin, win on heads!\nPayout: `1.5x`", inline=False)
         embed.add_field(name="🎲 Dice Roll 🎲", value="Roll a dice against the bot, largest roll wins!\nPayout: `1.9x`", inline=False)
-        embed.add_field(name="🎰 Slots 🎰", value="50 coin bet, match 3 symbols to win big!\nPayout:\n🍒,🍋,🔔, ⭐ = `2.8x`\n💎 = `7x`\n7️⃣ = `25x`\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━", inline=False)
+        embed.add_field(name="🎰 Slots 🎰", value="50 coin bet, match 3 symbols to win big!\nPayout:\n🍒,🍋,🔔, ⭐ = `3.2x`\n💎 = `7x`\n7️⃣ = `25x`\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━", inline=False)
 
         wallet = await Snekcoin.getWallet(interaction.user.id)
         if wallet is None:

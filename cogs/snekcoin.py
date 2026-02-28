@@ -632,8 +632,6 @@ class Snekcoin(commands.GroupCog, name = "snekcoin"):
         Returns:
         None.
         """
-        log.debug(f"Snekcoin checkWallet: {interaction.user.id} [{interaction.user.display_name}] is checking their wallet.")
-
         walletData = await Snekcoin.getWallet(user.id if user else interaction.user.id)
         if walletData is None:
             await interaction.response.send_message(embed=discord.Embed(color=discord.Color.red(), title="❌ Failed", description="Could not retrieve your wallet data."), ephemeral=True, delete_after=15.0)

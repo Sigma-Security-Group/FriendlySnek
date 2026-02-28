@@ -1176,9 +1176,6 @@ class Recruitment(commands.GroupCog, name="recruitment"):
 
 class StaffButton(discord.ui.Button):
     """Handling all staff buttons."""
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
     async def callback(self, interaction: discord.Interaction):
         customId = interaction.data["custom_id"]
 

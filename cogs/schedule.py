@@ -176,12 +176,26 @@ class Schedule(commands.Cog):
         log.debug(LOG_COG_READY.format("Schedule"))
         self.bot.cogsReady["schedule"] = True
 
-        guild = self.bot.get_guild(GUILD_ID)
-        if guild is None:
-            log.exception("Schedule on_ready: guild is None")
-            return
+        # Backfill missing event keys/ids in storage for persistent buttons.
+        try:
+            with open(EVENTS_FILE) as f:
+                events = json.load(f)
 
-        await Schedule.updateSchedule(guild)
+            changed = False
+            for event in events:
+                keysBefore = set(event.keys())
+                eventIdBefore = event.get("eventId")
+                Schedule.applyMissingEventKeys(event, keySet="event")
+                eventIdAfter = Schedule.ensureEventId(event, events)
+                if keysBefore != set(event.keys()) or eventIdBefore != eventIdAfter:
+                    changed = True
+
+            if changed:
+                with open(EVENTS_FILE, "w") as f:
+                    json.dump(events, f, indent=4)
+        except Exception as e:
+            log.exception(f"Schedule on_ready: failed to backfill events data: {e}")
+
         if not self.tenMinTask.is_running():
             self.tenMinTask.start()
 
@@ -833,6 +847,303 @@ class Schedule(commands.Cog):
                 if event["reservableRoles"][reservableRole] == userId:
                     event["reservableRoles"][reservableRole] = None
 
+    @staticmethod
+    def generateEventId(existingIds: Set[str] | None = None) -> str:
+        """Generates a deterministic unique event id."""
+        existingIds = existingIds or set()
+        maxNumericId = 0
+        for existingId in existingIds:
+            if existingId.isdigit():
+                maxNumericId = max(maxNumericId, int(existingId))
+
+        nextId = maxNumericId + 1
+        candidate = str(nextId)
+        while candidate in existingIds:
+            nextId += 1
+            candidate = str(nextId)
+        return candidate
+
+    @staticmethod
+    def ensureEventId(event: Dict, events: List[Dict] | None = None) -> str:
+        """Ensures an event has a unique numeric id and returns it."""
+        existingIds: Set[str] = set()
+        if events is not None:
+            for other in events:
+                if other is event:
+                    continue
+                otherId = other.get("eventId")
+                if isinstance(otherId, str) and otherId.isdigit():
+                    existingIds.add(otherId)
+
+        eventId = event.get("eventId")
+        if not isinstance(eventId, str) or not eventId.isdigit() or eventId in existingIds:
+            eventId = Schedule.generateEventId(existingIds)
+            event["eventId"] = eventId
+        return eventId
+
+    @staticmethod
+    def parsePersistentScheduleCustomId(customId: str) -> tuple[str, str] | None:
+        """Parses persistent event action custom_id values."""
+        match = re.match(r"^schedule_(?P<event_id>\d+)_(?P<action>accept|accept_reserve|decline|tentative|reserve|edit|config)$", customId)
+        if not match:
+            return None
+        return match.group("event_id"), match.group("action")
+
+    @staticmethod
+    def getEventByEventId(events: List[Dict], eventId: str) -> Dict | None:
+        """Fetches an event by persistent event id."""
+        for event in events:
+            if str(event.get("eventId")) == str(eventId):
+                return event
+        return None
+
+    @staticmethod
+    async def _sendPersistentEventMissing(interaction: discord.Interaction, eventId: str) -> None:
+        """Replies with a user-facing message for missing/expired events."""
+        embed = discord.Embed(
+            title="Event unavailable",
+            description=f"This event no longer exists or has expired. (`{eventId}`)",
+            color=discord.Color.red()
+        )
+        if interaction.response.is_done():
+            await interaction.followup.send(embed=embed, ephemeral=True, delete_after=15.0)
+        else:
+            await interaction.response.send_message(embed=embed, ephemeral=True, delete_after=15.0)
+
+    @staticmethod
+    async def handlePersistentEventAction(interaction: discord.Interaction, customId: str) -> None:
+        """Routes persistent schedule event action buttons."""
+        parsed = Schedule.parsePersistentScheduleCustomId(customId)
+        if parsed is None:
+            log.exception(f"Schedule handlePersistentEventAction: invalid custom_id '{customId}'")
+            return
+        eventId, action = parsed
+
+        if not isinstance(interaction.user, discord.Member):
+            log.exception("Schedule handlePersistentEventAction: interaction.user not discord.Member")
+            return
+        if interaction.guild is None:
+            log.exception("Schedule handlePersistentEventAction: interaction.guild is None")
+            return
+        if interaction.message is None:
+            log.exception("Schedule handlePersistentEventAction: interaction.message is None")
+            return
+
+        with open(EVENTS_FILE) as f:
+            events = json.load(f)
+
+        event = Schedule.getEventByEventId(events, eventId)
+        if event is None:
+            await Schedule._sendPersistentEventMissing(interaction, eventId)
+            return
+
+        match action:
+            case "accept":
+                await Schedule._handlePersistentRSVPAction(interaction, events, event, "accepted")
+            case "decline":
+                await Schedule._handlePersistentRSVPAction(interaction, events, event, "declined")
+            case "tentative":
+                await Schedule._handlePersistentRSVPAction(interaction, events, event, "tentative")
+            case "reserve" | "accept_reserve":
+                await Schedule._handlePersistentReserveAction(interaction, events, event)
+            case "config":
+                await Schedule._handlePersistentConfigAction(interaction, event)
+            case "edit":
+                await Schedule._handlePersistentEditAction(interaction, event)
+            case _:
+                log.exception(f"Schedule handlePersistentEventAction: unsupported action '{action}'")
+
+    @staticmethod
+    async def _handlePersistentRSVPAction(interaction: discord.Interaction, events: List[Dict], event: Dict, rsvpAction: Literal["accepted", "declined", "tentative"]) -> None:
+        if await Schedule.blockVerifiedRoleRSVP(interaction, event):
+            return
+
+        isAcceptAndReserve = event["reservableRoles"] and len(event["reservableRoles"]) == event["maxPlayers"]
+
+        # Promote from standby if leaving accepted and there are standby members
+        if interaction.user.id in event["accepted"] and not isAcceptAndReserve and len(event["standby"]) > 0:
+            standbyMemberId = event["standby"].pop(0)
+            event["accepted"].append(standbyMemberId)
+
+            standbyMember = interaction.guild.get_member(standbyMemberId)
+            if standbyMember is None:
+                log.warning(f"Schedule _handlePersistentRSVPAction: Failed to fetch promoted member '{standbyMemberId}'")
+            else:
+                embed = discord.Embed(
+                    title=f"✅ Accepted to {event['type'].lower()}",
+                    description=f"You have been promoted from standby to accepted in `{event['title']}`\nTime: {discord.utils.format_dt(UTC.localize(datetime.strptime(event['time'], TIME_FORMAT)), style='F')}\nDuration: {event['duration']}",
+                    color=discord.Color.green()
+                )
+                try:
+                    await standbyMember.send(embed=embed)
+                except Exception:
+                    log.warning(f"Schedule _handlePersistentRSVPAction: Failed to DM {standbyMemberId} [{standbyMember.display_name}] about acceptance")
+
+        # Toggle RSVP
+        rsvpOptions = ("accepted", "declined", "tentative", "standby")
+        if interaction.user.id in event[rsvpAction]:
+            event[rsvpAction].remove(interaction.user.id)
+        elif rsvpAction == "accepted" and interaction.user.id in event["standby"]:
+            event["standby"].remove(interaction.user.id)
+        else:
+            for option in rsvpOptions:
+                if interaction.user.id in event[option]:
+                    event[option].remove(interaction.user.id)
+
+            if rsvpAction == "accepted" and isinstance(event["maxPlayers"], int) and len(event["accepted"]) >= event["maxPlayers"]:
+                event["standby"].append(interaction.user.id)
+            else:
+                event[rsvpAction].append(interaction.user.id)
+
+        hadReservedARole = False
+        if event["reservableRoles"] is not None:
+            for btnRoleName in event["reservableRoles"]:
+                if event["reservableRoles"][btnRoleName] == interaction.user.id:
+                    event["reservableRoles"][btnRoleName] = None
+                    hadReservedARole = True
+
+        # Notify standby members
+        if isAcceptAndReserve and hadReservedARole and len(event["standby"]) > 0:
+            vacantRoles = "\n".join([f"`{role}`" for role, reservedUser in event["reservableRoles"].items() if not reservedUser])
+            embed = discord.Embed(
+                title="Role(s) vacant",
+                description=f"The following role(s) are now vacant for event `{event['title']}`:\n{vacantRoles}",
+                color=discord.Color.green()
+            )
+
+            for standbyMemberId in event["standby"]:
+                standbyMember = interaction.guild.get_member(standbyMemberId)
+                if standbyMember is None:
+                    log.warning(f"Schedule _handlePersistentRSVPAction: Failed to get member with id '{standbyMemberId}'")
+                    continue
+                try:
+                    await standbyMember.send(embed=embed)
+                except Exception:
+                    log.warning(f"Schedule _handlePersistentRSVPAction: Failed to DM {standbyMember.id} [{standbyMember.display_name}] about vacant roles")
+
+        # Candidate accepted notification
+        if (
+            rsvpAction == "accepted"
+            and event.get("type", "").lower() == "operation"
+            and interaction.user.id in event["accepted"]
+            and any(role.id == CANDIDATE for role in interaction.user.roles)
+        ):
+            channelRecruitmentHr = interaction.guild.get_channel(RECRUITMENT_AND_HR)
+            if not isinstance(channelRecruitmentHr, discord.TextChannel):
+                log.exception("Schedule _handlePersistentRSVPAction: channelRecruitmentHr not discord.TextChannel")
+            elif not await Schedule.hasCandidatePinged(interaction.user.id, event["title"], channelRecruitmentHr):
+                embed = discord.Embed(title="Candidate Accept", description=f"{interaction.user.mention} accepted operation `{event['title']}`", color=discord.Color.blue())
+                embed.set_footer(text=f"Candidate ID: {interaction.user.id}")
+                await channelRecruitmentHr.send(embed=embed)
+
+        with open(EVENTS_FILE, "w") as f:
+            json.dump(events, f, indent=4)
+
+        await interaction.response.edit_message(embed=Schedule.getEventEmbed(event, interaction.guild), view=Schedule.getEventView(event))
+
+    @staticmethod
+    async def _handlePersistentReserveAction(interaction: discord.Interaction, events: List[Dict], event: Dict) -> None:
+        # Reservable role blacklist check
+        with open(ROLE_RESERVATION_BLACKLIST_FILE) as f:
+            blacklist = json.load(f)
+        if any(interaction.user.id == member["id"] for member in blacklist):
+            await interaction.response.send_message(embed=discord.Embed(title="❌ Sorry, seems like you are not allowed to reserve any roles!", description="If you have any questions about this situation, please contact Unit Staff.", color=discord.Color.red()), ephemeral=True, delete_after=60.0)
+            return
+
+        if await Schedule.blockVerifiedRoleRSVP(interaction, event):
+            return
+
+        isAcceptAndReserve = event["reservableRoles"] and len(event["reservableRoles"]) == event["maxPlayers"]
+        playerCapReached = isinstance(event["maxPlayers"], int) and len(event["accepted"]) >= event["maxPlayers"]
+
+        # Full event without reserve or standby option
+        if not isAcceptAndReserve and playerCapReached and interaction.user.id not in event["accepted"]:
+            await interaction.response.send_message(embed=discord.Embed(title="❌ Sorry, seems like there's no space left in the :b:op!", color=discord.Color.red()), ephemeral=True, delete_after=60.0)
+            return
+
+        # Accept and reserve flow with standby list
+        if isAcceptAndReserve and interaction.user.id in event["standby"] and (all(event["reservableRoles"].values()) or playerCapReached):
+            event["standby"].remove(interaction.user.id)
+            with open(EVENTS_FILE, "w") as f:
+                json.dump(events, f, indent=4)
+            await interaction.response.edit_message(embed=Schedule.getEventEmbed(event, interaction.guild), view=Schedule.getEventView(event))
+            return
+
+        # Accept and move to standby list
+        if isAcceptAndReserve and playerCapReached and interaction.user.id not in event["accepted"] and interaction.user.id not in event["standby"]:
+            Schedule.clearUserRSVP(event, interaction.user.id)
+            event["standby"].append(interaction.user.id)
+
+            await interaction.response.send_message(embed=discord.Embed(title="✅ On standby list", description="The event player limit is reached!\nYou have been placed on the standby list. If an accepted member leaves, you will be notified about the vacant roles!", color=discord.Color.green()), ephemeral=True, delete_after=60.0)
+
+            if interaction.channel is None or isinstance(interaction.channel, discord.ForumChannel) or isinstance(interaction.channel, discord.CategoryChannel):
+                log.exception("Schedule _handlePersistentReserveAction: interaction.channel is invalid type")
+                return
+            msg = await interaction.channel.fetch_message(interaction.message.id)
+            await msg.edit(embed=Schedule.getEventEmbed(event, interaction.guild), view=Schedule.getEventView(event))
+
+            with open(EVENTS_FILE, "w") as f:
+                json.dump(events, f, indent=4)
+            return
+
+        # Show reservation options
+        vacantRoles = [btnRoleName for btnRoleName, memberId in event["reservableRoles"].items() if (memberId is None or interaction.user.guild.get_member(memberId) is None) and 1 <= len(btnRoleName) <= 100]
+        view = ScheduleView()
+        options = []
+        if len(vacantRoles) > 0:
+            for role in vacantRoles:
+                options.append(discord.SelectOption(label=role))
+            view.add_item(ScheduleSelect(eventMsg=interaction.message, placeholder="Select a role.", minValues=1, maxValues=1, customId="reserve_role_select", userId=interaction.user.id, row=0, options=options))
+
+        for roleName in event["reservableRoles"]:
+            if event["reservableRoles"][roleName] == interaction.user.id:
+                view.add_item(ScheduleButton(interaction.message, row=1, label="Unreserve Current Role", style=discord.ButtonStyle.danger, custom_id="reserve_role_unreserve"))
+                break
+
+        isStandbyButton = False
+        if isAcceptAndReserve and any(event["reservableRoles"].values()) and interaction.user.id not in event["standby"]:
+            isStandbyButton = True
+            view.add_item(ScheduleButton(interaction.message, row=1, label="Standby", style=discord.ButtonStyle.success, custom_id="standby_btn"))
+
+        msgContent = interaction.user.mention
+        if len(view.children) <= 0 + isStandbyButton:
+            msgContent += " All roles are reserved!"
+        await interaction.response.send_message(content=msgContent, view=view, ephemeral=True, delete_after=60.0)
+
+    @staticmethod
+    async def _handlePersistentConfigAction(interaction: discord.Interaction, event: Dict) -> None:
+        if Schedule.isAllowedToEdit(interaction.user, event["authorId"]) is False:
+            await interaction.response.send_message("Only the host, Unit Staff and Server Hampters can configure the event!", ephemeral=True, delete_after=60.0)
+            return
+
+        eventId = Schedule.ensureEventId(event)
+        view = ScheduleView()
+        view.add_item(ScheduleEventEditButton(eventId))
+        view.add_item(ScheduleButton(interaction.message, row=0, label="Delete", style=discord.ButtonStyle.danger, custom_id="delete"))
+        view.add_item(ScheduleButton(interaction.message, row=0, label="List RSVP", style=discord.ButtonStyle.secondary, custom_id="event_list_accepted"))
+        await interaction.response.send_message(content=f"{interaction.user.mention} What would you like to configure?", view=view, ephemeral=True, delete_after=30.0)
+
+    @staticmethod
+    async def _handlePersistentEditAction(interaction: discord.Interaction, event: Dict) -> None:
+        if Schedule.isAllowedToEdit(interaction.user, event["authorId"]) is False:
+            await interaction.response.send_message("Restart the editing process.\nThe button points to an event you aren't allowed to edit.", ephemeral=True, delete_after=5.0)
+            return
+
+        eventMsg = interaction.message
+        eventMessageId = event.get("messageId")
+        if isinstance(eventMessageId, int) and eventMsg.id != eventMessageId:
+            channelSchedule = interaction.guild.get_channel(SCHEDULE)
+            if not isinstance(channelSchedule, discord.TextChannel):
+                log.exception("Schedule _handlePersistentEditAction: channelSchedule not discord.TextChannel")
+                return
+            try:
+                eventMsg = await channelSchedule.fetch_message(eventMessageId)
+            except Exception:
+                await Schedule._sendPersistentEventMissing(interaction, str(event.get("eventId", "UNKNOWN")))
+                return
+
+        await Schedule.editEvent(interaction, event, eventMsg)
+
 
     @staticmethod
     async def updateSchedule(guild: discord.Guild) -> None:
@@ -873,6 +1184,7 @@ class Schedule(commands.Cog):
             newEvents: List[Dict] = []
             for event in sorted(events, key=lambda e: datetime.strptime(e["time"], TIME_FORMAT), reverse=True):
                 Schedule.applyMissingEventKeys(event, keySet="event")
+                Schedule.ensureEventId(event, events)
                 msg = await channelSchedule.send(embed=Schedule.getEventEmbed(event, guild), view=Schedule.getEventView(event), files=Schedule.getEventFiles(event))
                 event["messageId"] = msg.id
                 newEvents.append(event)
@@ -907,6 +1219,7 @@ class Schedule(commands.Cog):
 
         if keySet == "event":
             event.setdefault("authorId", None)
+            event.setdefault("eventId", None)
             event.setdefault("messageId", None)
             event.setdefault("accepted", [])
             event.setdefault("declined", [])
@@ -1011,24 +1324,25 @@ class Schedule(commands.Cog):
     def getEventView(event: Dict) -> discord.ui.View:
         view = ScheduleView()
         items = []
+        eventId = Schedule.ensureEventId(event)
 
         # Add attendance buttons if maxPlayers is not hidden
         if event["maxPlayers"] != "hidden":
             isAcceptAndReserve = event["reservableRoles"] and len(event["reservableRoles"]) == event["maxPlayers"]
 
             if isAcceptAndReserve:
-                items.append(ScheduleButton(None, row=0, label="Accept & Reserve", style=discord.ButtonStyle.success, custom_id="reserve"))
+                items.append(ScheduleAcceptAndReserveButton(eventId))
             else:
-                items.append(ScheduleButton(None, row=0, label="Accept", style=discord.ButtonStyle.success, custom_id="accepted"))
+                items.append(ScheduleAcceptButton(eventId))
 
             items.extend([
-                ScheduleButton(None, row=0, label="Decline", style=discord.ButtonStyle.danger, custom_id="declined"),
-                ScheduleButton(None, row=0, label="Tentative", style=discord.ButtonStyle.secondary, custom_id="tentative")
+                ScheduleDeclineButton(eventId),
+                ScheduleTentativeButton(eventId)
             ])
             if event["reservableRoles"] is not None and not isAcceptAndReserve:
-                items.append(ScheduleButton(None, row=0, label="Reserve", style=discord.ButtonStyle.secondary, custom_id="reserve"))
+                items.append(ScheduleReserveButton(eventId))
 
-        items.append(ScheduleButton(None, row=0, emoji="⚙️", style=discord.ButtonStyle.secondary, custom_id="config"))
+        items.append(ScheduleEventConfigButton(eventId))
         for item in items:
             view.add_item(item)
 
@@ -1621,6 +1935,80 @@ class ScheduleView(discord.ui.View):
         self.authorId = authorId
         self.previousMessageView = previousMessageView
 
+
+class BaseScheduleEventDynamicButton(discord.ui.DynamicItem[discord.ui.Button], template=r"^$"):
+    """Base class for persistent schedule event buttons."""
+    ACTION = ""
+    LABEL = ""
+    STYLE = discord.ButtonStyle.secondary
+    EMOJI: str | None = None
+
+    def __init__(self, eventId: str):
+        self.eventId = eventId
+        kwargs: Dict[str, Any] = {
+            "row": 0,
+            "style": self.STYLE,
+            "custom_id": f"schedule_{eventId}_{self.ACTION}"
+        }
+        if self.LABEL:
+            kwargs["label"] = self.LABEL
+        if self.EMOJI:
+            kwargs["emoji"] = self.EMOJI
+        super().__init__(discord.ui.Button(**kwargs))
+
+    @classmethod
+    async def from_custom_id(cls, interaction: discord.Interaction, item: discord.ui.Button, match: re.Match[str], /):
+        return cls(match.group("event_id"))
+
+    async def callback(self, interaction: discord.Interaction):
+        customId = interaction.data.get("custom_id") if isinstance(interaction.data, dict) else None
+        if not isinstance(customId, str):
+            log.exception("BaseScheduleEventDynamicButton callback: custom_id missing")
+            return
+        await Schedule.handlePersistentEventAction(interaction, customId)
+
+
+class ScheduleAcceptButton(BaseScheduleEventDynamicButton, template=r"schedule_(?P<event_id>\d+)_accept"):
+    ACTION = "accept"
+    LABEL = "Accept"
+    STYLE = discord.ButtonStyle.success
+
+
+class ScheduleAcceptAndReserveButton(BaseScheduleEventDynamicButton, template=r"schedule_(?P<event_id>\d+)_accept_reserve"):
+    ACTION = "accept_reserve"
+    LABEL = "Accept & Reserve"
+    STYLE = discord.ButtonStyle.success
+
+
+class ScheduleDeclineButton(BaseScheduleEventDynamicButton, template=r"schedule_(?P<event_id>\d+)_decline"):
+    ACTION = "decline"
+    LABEL = "Decline"
+    STYLE = discord.ButtonStyle.danger
+
+
+class ScheduleTentativeButton(BaseScheduleEventDynamicButton, template=r"schedule_(?P<event_id>\d+)_tentative"):
+    ACTION = "tentative"
+    LABEL = "Tentative"
+    STYLE = discord.ButtonStyle.secondary
+
+
+class ScheduleReserveButton(BaseScheduleEventDynamicButton, template=r"schedule_(?P<event_id>\d+)_reserve"):
+    ACTION = "reserve"
+    LABEL = "Reserve"
+    STYLE = discord.ButtonStyle.secondary
+
+
+class ScheduleEventEditButton(BaseScheduleEventDynamicButton, template=r"schedule_(?P<event_id>\d+)_edit"):
+    ACTION = "edit"
+    LABEL = "Edit"
+    STYLE = discord.ButtonStyle.primary
+
+
+class ScheduleEventConfigButton(BaseScheduleEventDynamicButton, template=r"schedule_(?P<event_id>\d+)_config"):
+    ACTION = "config"
+    STYLE = discord.ButtonStyle.secondary
+    EMOJI = "⚙️"
+
 class ScheduleButton(discord.ui.Button):
     """Handling all schedule buttons."""
     def __init__(self, message: discord.Message | None, *args, **kwargs):
@@ -1648,95 +2036,8 @@ class ScheduleButton(discord.ui.Button):
 
             scheduleNeedsUpdate = True
             fetchMsg = False
-            eventList: List[Dict] = [event for event in events if event["messageId"] == interaction.message.id]
 
-            rsvpOptions = ("accepted", "declined", "tentative", "standby")
-            if customId in rsvpOptions:
-                event = eventList[0]
-
-                if await Schedule.blockVerifiedRoleRSVP(interaction, event):
-                    return
-
-                isAcceptAndReserve = event["reservableRoles"] and len(event["reservableRoles"]) == event["maxPlayers"]
-
-                # Promote standby to accepted if not AcceptAndReserve
-                if interaction.user.id in event["accepted"] and not isAcceptAndReserve and len(event["standby"]) > 0:
-                    standbyMemberId = event["standby"].pop(0)
-                    event["accepted"].append(standbyMemberId)
-
-                    # Notify (DM) promoted member
-                    standbyMember = interaction.guild.get_member(standbyMemberId)
-                    if standbyMember is None:
-                        log.warning(f"ScheduleButton callback: Failed to fetch promoted accepted member '{standbyMemberId}'")
-                    else:
-                        embed = discord.Embed(title=f"✅ Accepted to {event['type'].lower()}", description=f"You have been promoted from standby to accepted in `{event['title']}`\nTime: {discord.utils.format_dt(UTC.localize(datetime.strptime(event['time'], TIME_FORMAT)), style='F')}\nDuration: {event['duration']}", color=discord.Color.green())
-                        try:
-                            await standbyMember.send(embed=embed)
-                        except Exception:
-                            log.warning(f"ScheduleButton callback: Failed to DM {standbyMemberId} [{standbyMember.display_name}] about acceptance")
-
-                # User click on button twice - remove
-                if interaction.user.id in event[customId]:
-                    event[customId].remove(interaction.user.id)
-                elif customId == "accepted" and interaction.user.id in event["standby"]:
-                    event["standby"].remove(interaction.user.id)
-
-                # "New" button
-                else:
-                    for option in rsvpOptions:
-                        if interaction.user.id in event[option]:
-                            event[option].remove(interaction.user.id)
-
-                    # Place in standby if player cap is reached
-                    if customId == "accepted" and isinstance(event["maxPlayers"], int) and len(event["accepted"]) >= event["maxPlayers"]:
-                        event["standby"].append(interaction.user.id)
-                    else:
-                        event[customId].append(interaction.user.id)
-
-                # Remove player from reservable role
-                hadReservedARole = False
-                if event["reservableRoles"] is not None:
-                    for btnRoleName in event["reservableRoles"]:
-                        if event["reservableRoles"][btnRoleName] == interaction.user.id:
-                            event["reservableRoles"][btnRoleName] = None
-                            hadReservedARole = True
-
-                # User removes self from reserved role - Notify people on standby
-                if isAcceptAndReserve and hadReservedARole and len(event["standby"]) > 0:
-                    vacantRoles = "\n".join([f"`{role}`" for role, reservedUser in event["reservableRoles"].items() if not reservedUser])
-                    embed = discord.Embed(
-                        title="Role(s) vacant",
-                        description=f"The following role(s) are now vacant for event `{event['title']}`:\n{vacantRoles}",
-                        color=discord.Color.green()
-                    )
-
-                    for standbyMemberId in event["standby"]:
-                        standbyMember = interaction.guild.get_member(standbyMemberId)
-                        if standbyMember is None:
-                            log.warning(f"ScheduleButton callback: Failed to get member with id '{standbyMemberId}'")
-                            continue
-
-                        try:
-                            await standbyMember.send(embed=embed)
-                        except Exception:
-                            log.warning(f"ScheduleButton callback: Failed to DM {standbyMember.id} [{standbyMember.display_name}] about vacant roles")
-
-
-            # Ping Recruitment Team if candidate accepts
-            if customId == "accepted" and eventList[0]["type"].lower() == "operation" and interaction.user.id in eventList[0]["accepted"] and any([True for role in interaction.user.roles if role.id == CANDIDATE]):
-                if not isinstance(interaction.guild, discord.Guild):
-                    log.exception("ScheduleButton callback: interaction.guild not discord.Guild")
-                    return
-                channelRecruitmentHr = interaction.guild.get_channel(RECRUITMENT_AND_HR)
-                if not isinstance(channelRecruitmentHr, discord.TextChannel):
-                    log.exception("ScheduleButton callback: channelRecruitmentHr not discord.TextChannel")
-                    return
-                if not await Schedule.hasCandidatePinged(interaction.user.id, eventList[0]["title"], channelRecruitmentHr):
-                    embed = discord.Embed(title="Candidate Accept", description=f"{interaction.user.mention} accepted operation `{eventList[0]['title']}`", color=discord.Color.blue())
-                    embed.set_footer(text=f"Candidate ID: {interaction.user.id}")
-                    await channelRecruitmentHr.send(embed=embed)
-
-            elif customId == "standby_btn":
+            if customId == "standby_btn":
                 event = [event for event in events if event["messageId"] == self.message.id][0]
 
                 Schedule.clearUserRSVP(event, interaction.user.id)
@@ -1752,93 +2053,6 @@ class ScheduleButton(discord.ui.Button):
 
                 embed = Schedule.getEventEmbed(event, interaction.guild)
                 await self.message.edit(embed=embed)
-                return
-
-            elif customId == "reserve":
-                # Check if blacklisted
-                with open(ROLE_RESERVATION_BLACKLIST_FILE) as f:
-                    blacklist = json.load(f)
-                if any(interaction.user.id == member["id"] for member in blacklist):
-                    await interaction.response.send_message(embed=discord.Embed(title="❌ Sorry, seems like you are not allowed to reserve any roles!", description="If you have any questions about this situation, please contact Unit Staff.", color=discord.Color.red()), ephemeral=True, delete_after=60.0)
-                    return
-
-                event = eventList[0]
-                scheduleNeedsUpdate = False
-
-                if await Schedule.blockVerifiedRoleRSVP(interaction, event):
-                    return
-
-                isAcceptAndReserve = event["reservableRoles"] and len(event["reservableRoles"]) == event["maxPlayers"]
-                playerCapReached = isinstance(event["maxPlayers"], int) and len(event["accepted"]) >= event["maxPlayers"]
-
-                # Normal reservation, but no space left
-                if not isAcceptAndReserve and playerCapReached and interaction.user.id not in event["accepted"]:
-                    await interaction.response.send_message(embed=discord.Embed(title="❌ Sorry, seems like there's no space left in the :b:op!", color=discord.Color.red()), ephemeral=True, delete_after=60.0)
-                    return
-
-                # Remove from standby; if no vacant roles, or player cap reached
-                if isAcceptAndReserve and interaction.user.id in event["standby"] and (all(event["reservableRoles"].values()) or playerCapReached):
-                    event["standby"].remove(interaction.user.id)
-                    embed = Schedule.getEventEmbed(event, interaction.guild)
-                    await interaction.response.edit_message(embed=embed)
-
-                    with open(EVENTS_FILE, "w") as f:
-                        json.dump(events, f, indent=4)
-                    return
-
-                # Add to standby if player cap reached and not on list
-                if isAcceptAndReserve and playerCapReached and interaction.user.id not in event["accepted"] and interaction.user.id not in event["standby"]:
-                    Schedule.clearUserRSVP(event, interaction.user.id)
-                    event["standby"].append(interaction.user.id)
-
-                    await interaction.response.send_message(embed=discord.Embed(title="✅ On standby list", description="The event player limit is reached!\nYou have been placed on the standby list. If an accepted member leaves, you will be notified about the vacant roles!", color=discord.Color.green()), ephemeral=True, delete_after=60.0)
-
-                    if interaction.channel is None or isinstance(interaction.channel, discord.ForumChannel) or isinstance(interaction.channel, discord.CategoryChannel):
-                        log.exception("ScheduleButton callback: interaction.channel is invalid type")
-                        return
-                    embed = Schedule.getEventEmbed(event, interaction.guild)
-                    originalMsgId = interaction.message.id
-                    msg = await interaction.channel.fetch_message(originalMsgId)
-                    await msg.edit(embed=embed)
-
-                    with open(EVENTS_FILE, "w") as f:
-                        json.dump(events, f, indent=4)
-                    return
-
-
-                # Select role to (un)reserve
-                if not isinstance(interaction.user, discord.Member):
-                    log.exception("ScheduleButton callback: interaction.user not discord.Member")
-                    return
-
-                vacantRoles = [btnRoleName for btnRoleName, memberId in event["reservableRoles"].items() if (memberId is None or interaction.user.guild.get_member(memberId) is None) and 1 <= len(btnRoleName) <= 100]
-
-                view = ScheduleView()
-                options = []
-
-                if len(vacantRoles) > 0:
-                    for role in vacantRoles:
-                        options.append(discord.SelectOption(label=role))
-                    view.add_item(ScheduleSelect(eventMsg=interaction.message, placeholder="Select a role.", minValues=1, maxValues=1, customId="reserve_role_select", userId=interaction.user.id, row=0, options=options))
-
-
-                # Disable button if user hasn't reserved
-                for roleName in event["reservableRoles"]:
-                    if event["reservableRoles"][roleName] == interaction.user.id:
-                        view.add_item(ScheduleButton(interaction.message, row=1, label="Unreserve Current Role", style=discord.ButtonStyle.danger, custom_id="reserve_role_unreserve"))
-                        break
-
-                # Standby button; if any role reserved, but not accepted
-                isStandbyButton = False
-                if isAcceptAndReserve and any(event["reservableRoles"].values()) and interaction.user.id not in event["standby"]:
-                    isStandbyButton = True
-                    view.add_item(ScheduleButton(interaction.message, row=1, label="Standby", style=discord.ButtonStyle.success, custom_id="standby_btn"))
-
-                msgContent = interaction.user.mention
-                if len(view.children) <= 0 + isStandbyButton:
-                    msgContent += " All roles are reserved!"
-
-                await interaction.response.send_message(content=msgContent, view=view, ephemeral=True, delete_after=60.0)
                 return
 
             elif customId == "reserve_role_unreserve":
@@ -1894,32 +2108,6 @@ class ScheduleButton(discord.ui.Button):
                             except Exception:
                                 log.warning(f"ScheduleButton callback: Failed to DM {standbyMember.id} [{standbyMember.display_name}] about vacant roles")
                         break
-
-            elif customId == "config":
-                event = eventList[0]
-                scheduleNeedsUpdate = False
-
-                if Schedule.isAllowedToEdit(interaction.user, event["authorId"]) is False:
-                    await interaction.response.send_message("Only the host, Unit Staff and Server Hampters can configure the event!", ephemeral=True, delete_after=60.0)
-                    return
-
-                view = ScheduleView()
-                view.add_item(ScheduleButton(interaction.message, row=0, label="Edit", style=discord.ButtonStyle.primary, custom_id="edit"))
-                view.add_item(ScheduleButton(interaction.message, row=0, label="Delete", style=discord.ButtonStyle.danger, custom_id="delete"))
-                view.add_item(ScheduleButton(interaction.message, row=0, label="List RSVP", style=discord.ButtonStyle.secondary, custom_id="event_list_accepted"))
-                await interaction.response.send_message(content=f"{interaction.user.mention} What would you like to configure?", view=view, ephemeral=True, delete_after=30.0)
-
-            elif customId == "edit":
-                scheduleNeedsUpdate = False
-                if self.message is None:
-                    log.exception("ScheduleButton callback edit: self.message is None")
-                    return
-
-                event = [event for event in events if event["messageId"] == self.message.id][0]
-                if Schedule.isAllowedToEdit(interaction.user, event["authorId"]) is False:
-                    await interaction.response.send_message("Restart the editing process.\nThe button points to an event you aren't allowed to edit.", ephemeral=True, delete_after=5.0)
-                    return
-                await Schedule.editEvent(interaction, event, self.message)
 
             elif customId == "delete":
                 if self.message is None:
@@ -2322,6 +2510,7 @@ class ScheduleButton(discord.ui.Button):
                         # Append event to JSON
                         with open(EVENTS_FILE) as f:
                             events = json.load(f)
+                        previewEmbedDict["eventId"] = Schedule.ensureEventId(previewEmbedDict, events)
                         events.append(previewEmbedDict)
                         with open(EVENTS_FILE, "w") as f:
                             json.dump(events, f, indent=4)
@@ -3456,3 +3645,12 @@ async def setup(bot: commands.Bot) -> None:
     Schedule.commend.error(Utils.onSlashError)
     Schedule.scheduleOperation.error(Utils.onSlashError)
     await bot.add_cog(Schedule(bot))
+    bot.add_dynamic_items(
+        ScheduleAcceptButton,
+        ScheduleAcceptAndReserveButton,
+        ScheduleDeclineButton,
+        ScheduleTentativeButton,
+        ScheduleReserveButton,
+        ScheduleEventEditButton,
+        ScheduleEventConfigButton
+    )

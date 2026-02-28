@@ -992,8 +992,6 @@ class Staff(commands.Cog):
     async def zitfeedback(self, interaction: discord.Interaction, zeus: discord.Member) -> None:
         """Submit feedback for a Zeus in Training (ZiT).
 
-        Creates embed with buttons to open modals for feedback submission.
-
         Parameters:
         zeus (discord.Member): Target ZiT to receive feedback.
         """
@@ -1012,46 +1010,7 @@ class Staff(commands.Cog):
             await interaction.response.send_message(embed=embed, ephemeral=True)
             return
 
-        embed = discord.Embed(
-            title="📝 ZiT Feedback",
-            description=f"Please fill out the following fields to submit feedback for {zeus.mention}.\n[Red = Mandatory]\n[Blue = Optional]",
-            color=discord.Color.purple()
-        )
-        embed.set_footer(text=f"Submitted by {interaction.user.display_name}")
-        for _ in range(5):
-            embed.add_field(name="", value="", inline=False)
-
-        viewCFG = {
-            "opName": {"label": "Operation Name & Date", "id": "opname", "row": 0, "placeholder": "Operation Honda Civic - YYYY-MM-DD"},
-            "wentWell": {"label": "Things Done Well", "id": "wentwell" , "row": 0, "placeholder": "Refer to #zeus-guidelines and Zeus Promotion Criteria Document.\n(Max 1024 characters)"},
-            "couldImprove": {"label": "Points for Improvement", "id": "couldimprove", "row": 0, "placeholder": "Refer to #zeus-guidelines and Zeus Promotion Criteria Document.\n(Max 1024 characters)"},
-            "additionalComments": {"label": "Additional Comments", "id": "additionalcomments", "row": 0, "placeholder": "Enter any additional comments.\n(Max 1024 characters)"},
-            "recommend_yes": {"label": "[Recommend for Full Zeus Tags]", "id": "recommend_yes", "row": 1},
-            "recommend_no": {"label": "[Don't Recommended for Full Zeus Tags]", "id": "recommend_no", "row": 1},
-            "submit": {"label": "Submit", "id": "submit", "row": 2}
-        }
-
-        view = discord.ui.View(timeout=None)
-
-        for id, customId in viewCFG.items():
-            view.add_item(StaffButton(
-                style = discord.ButtonStyle.danger if id in ["opName", "wentWell", "couldImprove", "recommend_yes", "recommend_no"] else discord.ButtonStyle.primary if id == "additionalComments" else discord.ButtonStyle.success,
-                label = customId["label"],
-                custom_id = f"staff_button_zitfeedback_{customId['id']}",
-                row = customId.get("row", 0),
-                disabled = False if id != "submit" else True
-            ))
-
-        # Store zeusId in view for later use and initialize required fields
-        view.zeusId = zeus.id
-        view.requiredFieldsFilled = {
-            "opName": None,
-            "wentWell": None,
-            "couldImprove": None,
-            "recommend": None
-        }
-        view.CFG = viewCFG
-        await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
+        await interaction.response.send_modal(ZiTFeedbackModal(zeus.id))
 
 
     # Snek Lord command
@@ -1310,91 +1269,6 @@ class StaffButton(discord.ui.Button):
             await channelRecruitmentAndHR.send(roleRecruitmentCoordinator.mention, embed=embed)
             return
 
-        # ZiT Feedback buttons
-        if customId.startswith("staff_button_zitfeedback_"):
-            view: discord.ui.View = self.view  # type: ignore
-            zeusId = view.zeusId  # type: ignore
-            zeusMember = interaction.guild.get_member(zeusId)
-            embed = interaction.message.embeds[0]
-            if customId == "staff_button_zitfeedback_submit":
-                if not isinstance(zeusMember, discord.Member):
-                    log.exception(f"StaffButton callback: zeusMember not discord.Member, id '{zeusId}'")
-                    return
-
-                recommend = view.requiredFieldsFilled["recommend"]  # type: ignore
-                zeusRole = interaction.guild.get_role(ZEUS)
-                curatorRole = interaction.guild.get_role(CURATOR)
-                embed.title = f"✅ ZiT Feedback Submitted" if recommend else f"❌ ZiT Feedback Submitted"
-                embed.set_field_at(4, name="Recommendation", value = f"✅ Recommending for {zeusRole.mention}" if recommend else f"❌ Not recommended for {zeusRole.mention}", inline=False)
-                embed.color = discord.Color.green() if recommend else discord.Color.purple()
-                embed.timestamp = datetime.now()
-                embed.description = ""
-                zFeedback = interaction.guild.get_channel(ZEUS_FEEDBACK)
-
-                log.info(f"{interaction.user.id} [{interaction.user.display_name}] Submitted ZiT feedback for {zeusMember.id} [{zeusMember.display_name}]")
-
-                await interaction.response.edit_message(content = "Thank you for submitting ZiT feedback!", embed = None, view = None)
-                await zFeedback.send(content = f"{curatorRole.mention} Feedback is now ready for review.\n\nFeedback submitted for {zeusMember.mention} by {interaction.user.mention}.", embed=embed)
-                return
-
-            if customId in ("staff_button_zitfeedback_recommend_yes", "staff_button_zitfeedback_recommend_no"):
-                if not isinstance(zeusMember, discord.Member):
-                    log.exception(f"StaffButton callback: zeusMember not discord.Member, id '{zeusId}'")
-                    return
-                recommend = customId.split("_")[-1]
-                if recommend == "yes":
-                    btn = view.children[4]  # type: ignore
-                    btnNotRecommend = view.children[5]  # type: ignore
-
-                    btn.style = discord.ButtonStyle.green
-                    btn.disabled = True
-                    btnNotRecommend.style = discord.ButtonStyle.gray
-                    btnNotRecommend.disabled = False
-                    view.requiredFieldsFilled["recommend"] = True
-                    embed.set_field_at(4, name="Recommendation", value="✅ Recommending for Full Zeus Tags", inline=False)
-                else:
-                    btn = view.children[5]  # type: ignore
-                    btnRecommend = view.children[4]  # type: ignore
-
-                    btn.style = discord.ButtonStyle.red
-                    btn.disabled = True
-                    btnRecommend.style = discord.ButtonStyle.gray
-                    btnRecommend.disabled = False
-                    view.requiredFieldsFilled["recommend"] = False
-                    embed.set_field_at(4, name="Recommendation", value="❌ Not Recommending for Full Zeus Tags", inline=False)
-                try:
-                    allComplete = all(value is not None for key, value in view.requiredFieldsFilled.items())
-                    view.children[6].disabled = not allComplete  # type: ignore
-                    await interaction.response.edit_message(embed=embed, view=view)
-                    return
-                except Exception:
-                    await interaction.response.edit_message(embed=embed, view=view)
-
-            fieldId = customId.split("_")[3]
-            cfg = next((c for c in view.CFG.values() if c.get("id") == fieldId), {})  # searhces view.CFG for matching fieldId
-            default = None
-            if customId == "staff_button_zitfeedback_opname":
-                default = embed.fields[0].value if embed.fields[0].value != "" else None
-            elif customId == "staff_button_zitfeedback_wentwell":
-                default = embed.fields[1].value if embed.fields[1].value != "" else None
-            elif customId == "staff_button_zitfeedback_couldimprove":
-                default = embed.fields[2].value if embed.fields[2].value != "" else None
-            elif customId == "staff_button_zitfeedback_additionalcomments":
-                default = embed.fields[3].value if embed.fields[3].value != "" else None
-
-            modal = StaffModal(self.view, f"ZiT Feedback", f"staff_modal_zitfeedback_{fieldId}")
-            modal.add_item(discord.ui.TextInput(
-                label = cfg.get("label", ""),
-                placeholder = str(cfg.get("placeholder", ""))[:100],
-                default = default,
-                style = discord.TextStyle.short if (cfg.get("id") == "opname") else discord.TextStyle.paragraph,
-                required = (cfg.get("id") != "additionalcomments"),
-                max_length = 1024
-            ))
-            modal.embed = interaction.message.embeds[0]  # store embed in modal for later use
-            await interaction.response.send_modal(modal)
-            return
-
 class StaffModal(discord.ui.Modal):
     """Handling all staff modals."""
     def __init__(self, instance, title: str, customId: str) -> None:
@@ -1407,43 +1281,6 @@ class StaffModal(discord.ui.Modal):
             return
         if interaction.guild is None:
             log.exception("StaffModal on_submit: interaction.guild is None")
-            return
-
-        if interaction.data["custom_id"].startswith("staff_modal_zitfeedback"):
-            embed = self.embed  # type: ignore
-            fieldId = interaction.data["custom_id"].split("_")[-1]
-            view: discord.ui.View = self.instance  # type: ignore
-            userInput = self.children[0].value.strip()
-
-            cfgKey, _ = next(((k, v) for k, v in view.CFG.items() if v.get("id") == fieldId), (None, {}))  # searches view.CFG for matching fieldId
-
-            # Find the button that corresponds to this field
-            btn = next((c for c in view.children if isinstance(c, discord.ui.Button) and c.custom_id == f"staff_button_zitfeedback_{fieldId}"), None)
-
-            if cfgKey == "opName":
-                btn.style = discord.ButtonStyle.green
-                embed.set_field_at(0, name="Operation Name & Date", value=f"{userInput}", inline=False)
-                view.requiredFieldsFilled["opName"] = True
-            elif cfgKey == "wentWell":
-                btn.style = discord.ButtonStyle.green
-                embed.set_field_at(1, name="Things Done Well", value=f"{userInput}", inline=False)
-                view.requiredFieldsFilled["wentWell"] = True
-            elif cfgKey == "couldImprove":
-                btn.style = discord.ButtonStyle.green
-                embed.set_field_at(2, name="Points for Improvement", value=f"{userInput}", inline=False)
-                view.requiredFieldsFilled["couldImprove"] = True
-            elif cfgKey == "additionalComments":
-                btn.style = discord.ButtonStyle.green
-                embed.set_field_at(3, name="Additional Comments", value=f"{userInput}", inline=False)
-
-            # Enable submit button only when required fields are filled
-            try:
-                allComplete = all(value is not None for key, value in view.requiredFieldsFilled.items())
-                view.children[6].disabled = not allComplete  # type: ignore
-            except Exception:
-                pass
-
-            await interaction.response.edit_message(embed=embed, view=view)
             return
 
         if interaction.data["custom_id"] != "staff_modal_maps":
@@ -1460,6 +1297,123 @@ class StaffModal(discord.ui.Modal):
             json.dump(genericData, f, indent=4)
 
         await interaction.response.send_message(f"Maps updated!", ephemeral=True, delete_after=30.0)
+
+    async def on_error(self, interaction: discord.Interaction, error: Exception) -> None:
+        log.exception(error)
+
+class ZiTFeedbackModal(discord.ui.Modal):
+    """Single-form ZiT feedback modal."""
+    def __init__(self, zeusId: int) -> None:
+        super().__init__(title="ZiT Feedback", custom_id="staff_modal_zitfeedback_single")
+        self.zeusId = zeusId
+
+        self.operationNameDate = discord.ui.TextInput(
+            label="Operation Name & Date",
+            placeholder="Operation Honda Civic - YYYY-MM-DD",
+            style=discord.TextStyle.short,
+            required=True,
+            max_length=DISCORD_LIMITS["message_embed"]["embed_field_value"]
+        )
+        self.add_item(self.operationNameDate)
+
+        self.wentWell = discord.ui.TextInput(
+            label="Things Done Well",
+            placeholder="Refer to #zeus-guidelines and Zeus Promotion Criteria Document.",
+            style=discord.TextStyle.long,
+            required=True,
+            max_length=DISCORD_LIMITS["message_embed"]["embed_field_value"]
+        )
+        self.add_item(self.wentWell)
+
+        self.couldImprove = discord.ui.TextInput(
+            label="Points for Improvement",
+            placeholder="Refer to #zeus-guidelines and Zeus Promotion Criteria Document.",
+            style=discord.TextStyle.long,
+            required=True,
+            max_length=DISCORD_LIMITS["message_embed"]["embed_field_value"]
+        )
+        self.add_item(self.couldImprove)
+
+        self.additionalComments = discord.ui.TextInput(
+            label="Additional Comments",
+            placeholder="Enter any additional comments (optional).",
+            style=discord.TextStyle.long,
+            required=False,
+            max_length=DISCORD_LIMITS["message_embed"]["embed_field_value"]
+        )
+        self.add_item(self.additionalComments)
+
+        self.recommendation = discord.ui.Label(
+            text="Recommend ZiT for Full Zeus Tags?",
+            component=discord.ui.RadioGroup(
+                custom_id="zit_recommendation",
+                required=True,
+                options=[
+                    discord.RadioGroupOption(label="Yes", value="yes"),
+                    discord.RadioGroupOption(label="No", value="no"),
+                ],
+            )
+        )
+        self.add_item(self.recommendation)
+
+
+    async def on_submit(self, interaction: discord.Interaction) -> None:
+        if not isinstance(interaction.user, discord.Member):
+            log.exception("ZiTFeedbackModal on_submit: interaction.user not discord.Member")
+            return
+        if not isinstance(interaction.guild, discord.Guild):
+            log.exception("ZiTFeedbackModal on_submit: interaction.guild not discord.Guild")
+            return
+
+        zeusMember = interaction.guild.get_member(self.zeusId)
+        if not isinstance(zeusMember, discord.Member):
+            log.exception(f"ZiTFeedbackModal on_submit: zeusMember not discord.Member, id '{self.zeusId}'")
+            await interaction.response.send_message("Failed to submit feedback: Zeus in Training member not found.", ephemeral=True)
+            return
+
+        if not isinstance(self.recommendation.component, discord.ui.RadioGroup):
+            log.exception(f"ZiTFeedbackModal on_submit: self.recommendation.component not discord.ui.RadioGroup, id '{self.zeusId}'")
+            await interaction.response.send_message("Failed to submit feedback: Invalid recommendation component.", ephemeral=True)
+            return
+
+        recommendationRaw = self.recommendation.component.value
+        if recommendationRaw is None:
+            await interaction.response.send_message("Recommendation is required.", ephemeral=True)
+            return
+        recommend = recommendationRaw == "yes"
+
+        zeusRole = interaction.guild.get_role(ZEUS)
+        curatorRole = interaction.guild.get_role(CURATOR)
+        feedbackChannel = interaction.guild.get_channel(ZEUS_FEEDBACK)
+        if not isinstance(feedbackChannel, discord.TextChannel):
+            log.exception("ZiTFeedbackModal on_submit: feedbackChannel not discord.TextChannel")
+            await interaction.response.send_message("Failed to submit feedback: Feedback channel not found.", ephemeral=True)
+            return
+
+        recommendText = "Recommending for Full Zeus Tags" if zeusRole is None else f"Recommending for {zeusRole.mention}"
+        notRecommendText = "Not recommended for Full Zeus Tags" if zeusRole is None else f"Not recommended for {zeusRole.mention}"
+        additionalCommentsValue = self.additionalComments.value.strip()
+
+        embed = discord.Embed(
+            title="✅ ZiT Feedback Submitted" if recommend else "❌ ZiT Feedback Submitted",
+            color=discord.Color.green() if recommend else discord.Color.purple(),
+            timestamp=datetime.now()
+        )
+        embed.add_field(name="Operation Name & Date", value=self.operationNameDate.value.strip(), inline=False)
+        embed.add_field(name="Things Done Well", value=self.wentWell.value.strip(), inline=False)
+        embed.add_field(name="Points for Improvement", value=self.couldImprove.value.strip(), inline=False)
+        if additionalCommentsValue:
+            embed.add_field(name="Additional Comments", value=additionalCommentsValue, inline=False)
+        embed.add_field(name="Recommendation", value=f"✅ {recommendText}" if recommend else f"❌ {notRecommendText}", inline=False)
+        embed.set_footer(text=f"Submitted by {interaction.user.display_name}")
+
+        reviewPing = "" if curatorRole is None else f"{curatorRole.mention} "
+        await feedbackChannel.send(
+            content=f"{reviewPing}Feedback is now ready for review.\n\nFeedback submitted for {zeusMember.mention} by {interaction.user.mention}.",
+            embed=embed
+        )
+        log.info(f"{interaction.user.id} [{interaction.user.display_name}] Submitted ZiT feedback for {zeusMember.id} [{zeusMember.display_name}]")
+        await interaction.response.send_message("Thank you for submitting ZiT feedback!", ephemeral=True)
 
     async def on_error(self, interaction: discord.Interaction, error: Exception) -> None:
         log.exception(error)

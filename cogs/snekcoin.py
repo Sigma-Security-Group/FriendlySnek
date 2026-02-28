@@ -748,13 +748,8 @@ class SnekcoinButton(discord.ui.Button):
                 await interaction.response.send_message(embed=discord.Embed(color=discord.Color.red(), title="❌ Failed", description="Could not build gambling menu."), ephemeral=True, delete_after=15.0)
                 return
 
-            await interaction.response.send_message(
-                embed=discord.Embed(color=discord.Color.blurple(), title="🎲 Returning to gambling menu"),
-                ephemeral=True,
-                delete_after=30.0
-            )
             menuEmbed, menuView = menu
-            await interaction.followup.send(embed=menuEmbed, view=menuView, ephemeral=True)
+            await interaction.response.send_message(embed=menuEmbed, view=menuView, ephemeral=True)
             await interaction.followup.send(embed=embed, ephemeral=False)
 
         if customId.startswith("snekcoin_button_leaderboardPrevious"):
@@ -894,7 +889,6 @@ class SnekcoinModal(discord.ui.Modal):
             return
 
         menuEmbed, menuView = menu
-        await interaction.followup.send(embed=discord.Embed(color=discord.Color.blurple(), title="🎲 Returning to gambling menu"), ephemeral=True)
         await interaction.followup.send(embed=menuEmbed, view=menuView, ephemeral=True)
         await interaction.followup.send(embed=embed, ephemeral=False)
 

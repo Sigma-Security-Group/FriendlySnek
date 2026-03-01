@@ -74,7 +74,7 @@ class FriendlySnek(commands.Bot):
                 type=discord.ActivityType.watching,
                 name="you"
             ),
-            status="online"
+            status=discord.Status.online
         )
         self.cogsReady = {cog: False for cog in COGS}
 
@@ -117,8 +117,11 @@ async def on_message(message: discord.Message) -> None:
             if userWallet.get("timesBumped") is None:
                 await Snekcoin.updateWallet(message.interaction_metadata.user.id, "timesBumped", 0)
                 userWallet = await Snekcoin.getWallet(message.interaction_metadata.user.id)
+                if userWallet is None:
+                    log.exception("on_message: userWallet is None after initializing timesBumped")
+                    return
 
-            awardable = userWallet.get("timesBumped") < MAX_BUMPS
+            awardable = userWallet.get("timesBumped", 0) < MAX_BUMPS
             await Snekcoin.updateWallet(message.interaction_metadata.user.id, "timesBumped", 1)
             if awardable:
                 award = randint(10, 100)
@@ -178,7 +181,7 @@ async def on_message(message: discord.Message) -> None:
                     "If I had feelings, they'd be hurt.",
                     "Another ping, another cry for help.",
                     "Even bots need boundaries.",
-                    "Congratulations. You summoned absolutely nothing useful."
+                    "Congratulations. You summoned absolutely nothing useful.",
                     "I didn't choose the bot life, the bot life chose me.",
                     "You're not even paying me for this.",
                     "I'm here for the chaos, not the work.",

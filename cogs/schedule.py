@@ -324,7 +324,7 @@ class Schedule(commands.Cog):
 
 
     @staticmethod
-    async def tasknoShowsPing(guild: discord.Guild, channelCommand: discord.TextChannel, channelDeployed: discord.TextChannel, channelEventDeployed: discord.VoiceChannel) -> None:
+    async def tasknoShowsPing(guild: discord.Guild, channelCommand: discord.VoiceChannel, channelDeployed: discord.VoiceChannel, channelEventDeployed: discord.VoiceChannel) -> None:
         """Handling no-show members by pinging.
 
         Parameters:
@@ -366,7 +366,7 @@ class Schedule(commands.Cog):
 
 
     @staticmethod
-    async def tasknoShowsLogging(guild: discord.Guild, channelCommand: discord.TextChannel, channelDeployed: discord.TextChannel, channelEventDeployed: discord.VoiceChannel) -> None:
+    async def tasknoShowsLogging(guild: discord.Guild, channelCommand: discord.VoiceChannel, channelDeployed: discord.VoiceChannel, channelEventDeployed: discord.VoiceChannel) -> None:
         """Handling no-show members by logging.
 
         Parameters:
@@ -906,7 +906,7 @@ class Schedule(commands.Cog):
             color=discord.Color.red()
         )
         if interaction.response.is_done():
-            await interaction.followup.send(embed=embed, ephemeral=True, delete_after=15.0)
+            await interaction.followup.send(embed=embed, ephemeral=True)
         else:
             await interaction.response.send_message(embed=embed, ephemeral=True, delete_after=15.0)
 
@@ -956,6 +956,10 @@ class Schedule(commands.Cog):
     @staticmethod
     async def _handlePersistentRSVPAction(interaction: discord.Interaction, events: List[Dict], event: Dict, rsvpAction: Literal["accepted", "declined", "tentative"]) -> None:
         if await Schedule.blockVerifiedRoleRSVP(interaction, event):
+            return
+
+        if interaction.guild is None:
+            log.exception("Schedule _handlePersistentRSVPAction: interaction.guild is None")
             return
 
         isAcceptAndReserve = event["reservableRoles"] and len(event["reservableRoles"]) == event["maxPlayers"]
@@ -1026,6 +1030,7 @@ class Schedule(commands.Cog):
             rsvpAction == "accepted"
             and event.get("type", "").lower() == "operation"
             and interaction.user.id in event["accepted"]
+            and isinstance(interaction.user, discord.Member)
             and any(role.id == CANDIDATE for role in interaction.user.roles)
         ):
             channelRecruitmentHr = interaction.guild.get_channel(RECRUITMENT_AND_HR)
@@ -1051,6 +1056,14 @@ class Schedule(commands.Cog):
             return
 
         if await Schedule.blockVerifiedRoleRSVP(interaction, event):
+            return
+
+        if interaction.guild is None:
+            log.exception("Schedule _handlePersistentReserveAction: interaction.guild is None")
+            return
+
+        if interaction.message is None:
+            log.exception("Schedule _handlePersistentReserveAction: interaction.message is None")
             return
 
         isAcceptAndReserve = event["reservableRoles"] and len(event["reservableRoles"]) == event["maxPlayers"]
@@ -1087,6 +1100,10 @@ class Schedule(commands.Cog):
             return
 
         # Show reservation options
+        if not isinstance(interaction.user, discord.Member):
+            log.exception("Schedule _handlePersistentReserveAction: interaction.user not discord.Member")
+            return
+
         vacantRoles = [btnRoleName for btnRoleName, memberId in event["reservableRoles"].items() if (memberId is None or interaction.user.guild.get_member(memberId) is None) and 1 <= len(btnRoleName) <= 100]
         view = ScheduleView()
         options = []
@@ -1112,6 +1129,10 @@ class Schedule(commands.Cog):
 
     @staticmethod
     async def _handlePersistentConfigAction(interaction: discord.Interaction, event: Dict) -> None:
+        if not isinstance(interaction.user, discord.Member):
+            log.exception("Schedule _handlePersistentConfigAction: interaction.user not discord.Member")
+            return
+
         if Schedule.isAllowedToEdit(interaction.user, event["authorId"]) is False:
             await interaction.response.send_message("Only the host, Unit Staff and Server Hampters can configure the event!", ephemeral=True, delete_after=60.0)
             return
@@ -1125,11 +1146,23 @@ class Schedule(commands.Cog):
 
     @staticmethod
     async def _handlePersistentEditAction(interaction: discord.Interaction, event: Dict) -> None:
+        if not isinstance(interaction.user, discord.Member):
+            log.exception("Schedule _handlePersistentEditAction: interaction.user not discord.Member")
+            return
+
         if Schedule.isAllowedToEdit(interaction.user, event["authorId"]) is False:
             await interaction.response.send_message("Restart the editing process.\nThe button points to an event you aren't allowed to edit.", ephemeral=True, delete_after=5.0)
             return
 
         eventMsg = interaction.message
+        if eventMsg is None:
+            log.exception("Schedule _handlePersistentEditAction: interaction.message is None")
+            return
+
+        if interaction.guild is None:
+            log.exception("Schedule _handlePersistentEditAction: interaction.guild is None")
+            return
+
         eventMessageId = event.get("messageId")
         if isinstance(eventMessageId, int) and eventMsg.id != eventMessageId:
             channelSchedule = interaction.guild.get_channel(SCHEDULE)

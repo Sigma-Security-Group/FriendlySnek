@@ -42,10 +42,9 @@ def setupJSONDataFile(filename: str, dump: list | dict) -> None:
 DATA_FILES = {
     EVENTS_FILE: [],
     EVENTS_HISTORY_FILE: [],
+    EVENT_TEMPLATES_FILE: [],
     WORKSHOP_TEMPLATES_FILE: [],
     ROLE_RESERVATION_BLACKLIST_FILE: [],
-    "data/workshopTemplates.json": [],
-    "data/eventTemplates.json": [],
     MEMBER_TIME_ZONES_FILE: {},
     REMINDERS_FILE: {},
     REPEATED_MSG_DATE_LOG_FILE: {},

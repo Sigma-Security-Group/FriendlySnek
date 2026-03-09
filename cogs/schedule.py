@@ -898,6 +898,33 @@ class Schedule(commands.Cog):
         return None
 
     @staticmethod
+    async def getEventMessageByEventId(guild: discord.Guild, eventId: str, events: List[Dict] | None = None) -> tuple[Dict | None, discord.Message | None]:
+        """Fetches the current event record and current schedule message for an event id."""
+        if events is None:
+            with open(EVENTS_FILE) as f:
+                events = json.load(f)
+
+        event = Schedule.getEventByEventId(events, eventId)
+        if event is None:
+            return None, None
+
+        eventMessageId = event.get("messageId")
+        if not isinstance(eventMessageId, int):
+            return event, None
+
+        channelSchedule = guild.get_channel(SCHEDULE)
+        if not isinstance(channelSchedule, discord.TextChannel):
+            log.exception("Schedule getEventMessageByEventId: channelSchedule not discord.TextChannel")
+            return event, None
+
+        try:
+            eventMsg = await channelSchedule.fetch_message(eventMessageId)
+        except Exception:
+            return event, None
+
+        return event, eventMsg
+
+    @staticmethod
     async def _sendPersistentEventMissing(interaction: discord.Interaction, eventId: str) -> None:
         """Replies with a user-facing message for missing/expired events."""
         embed = discord.Embed(
@@ -1140,8 +1167,8 @@ class Schedule(commands.Cog):
         eventId = Schedule.ensureEventId(event)
         view = ScheduleView()
         view.add_item(ScheduleEventEditButton(eventId))
-        view.add_item(ScheduleButton(interaction.message, row=0, label="Delete", style=discord.ButtonStyle.danger, custom_id="delete"))
-        view.add_item(ScheduleButton(interaction.message, row=0, label="List RSVP", style=discord.ButtonStyle.secondary, custom_id="event_list_accepted"))
+        view.add_item(ScheduleButton(interaction.message, row=0, label="Delete", style=discord.ButtonStyle.danger, custom_id=f"delete_{eventId}"))
+        view.add_item(ScheduleButton(interaction.message, row=0, label="List RSVP", style=discord.ButtonStyle.secondary, custom_id=f"event_list_accepted_{eventId}"))
         await interaction.response.send_message(content=f"{interaction.user.mention} What would you like to configure?", view=view, ephemeral=True, delete_after=30.0)
 
     @staticmethod
@@ -2142,34 +2169,38 @@ class ScheduleButton(discord.ui.Button):
                                 log.warning(f"ScheduleButton callback: Failed to DM {standbyMember.id} [{standbyMember.display_name}] about vacant roles")
                         break
 
-            elif customId == "delete":
-                if self.message is None:
-                    log.exception("ScheduleButton callback delete: self.message is None")
+            elif re.fullmatch(r"delete_\d+", customId):
+                eventId = customId[len("delete_"):]
+
+                event, _ = await Schedule.getEventMessageByEventId(interaction.guild, eventId, events)
+                if event is None:
+                    await Schedule._sendPersistentEventMissing(interaction, eventId)
                     return
 
-                event = [event for event in events if event["messageId"] == self.message.id][0]
+                if Schedule.isAllowedToEdit(interaction.user, event["authorId"]) is False:
+                    await interaction.response.send_message("Only the host, Unit Staff and Server Hampters can configure the event!", ephemeral=True, delete_after=60.0)
+                    return
+
                 scheduleNeedsUpdate = False
 
                 embed = discord.Embed(title=f"Are you sure you want to delete this {event['type'].lower()}: `{event['title']}`?", color=discord.Color.orange())
                 view = ScheduleView()
                 items = [
-                    ScheduleButton(self.message, row=0, label="Delete", style=discord.ButtonStyle.success, custom_id="delete_event_confirm"),
-                    ScheduleButton(self.message, row=0, label="Cancel", style=discord.ButtonStyle.danger, custom_id="delete_event_cancel"),
+                    ScheduleButton(self.message, row=0, label="Delete", style=discord.ButtonStyle.success, custom_id=f"delete_event_confirm_{eventId}"),
+                    ScheduleButton(self.message, row=0, label="Cancel", style=discord.ButtonStyle.danger, custom_id=f"delete_event_cancel_{eventId}"),
                 ]
                 for item in items:
                     view.add_item(item)
                 await interaction.response.send_message(embed=embed, view=view, ephemeral=True, delete_after=60.0)
 
-            elif customId == "delete_event_confirm":
+            elif customId.startswith("delete_event_confirm_"):
                 scheduleNeedsUpdate = False
 
                 if self.view is None:
                     log.exception("ScheduleButton callback delete_event_confirm: self.view is None")
                     return
 
-                if self.message is None:
-                    log.exception("ScheduleButton callback delete_event_confirm: self.message is None")
-                    return
+                eventId = customId[len("delete_event_confirm_"):]
 
                 # Disable buttons
                 for button in self.view.children:
@@ -2177,8 +2208,20 @@ class ScheduleButton(discord.ui.Button):
                 await interaction.response.edit_message(view=self.view)
 
                 # Delete event
-                event = [event for event in events if event["messageId"] == self.message.id][0]
-                await self.message.delete()
+                event, eventMsg = await Schedule.getEventMessageByEventId(interaction.guild, eventId, events)
+                if event is None:
+                    await Schedule._sendPersistentEventMissing(interaction, eventId)
+                    return
+
+                if Schedule.isAllowedToEdit(interaction.user, event["authorId"]) is False:
+                    await interaction.followup.send("Only the host, Unit Staff and Server Hampters can configure the event!", ephemeral=True)
+                    return
+
+                if eventMsg is None:
+                    await Schedule._sendPersistentEventMissing(interaction, eventId)
+                    return
+
+                await eventMsg.delete()
                 try:
                     log.info(f"{interaction.user.id} [{interaction.user.display_name}] deleted the event '{event['title']}'")
                     await interaction.followup.send(embed=discord.Embed(title=f"✅ {event['type']} deleted!", color=discord.Color.green()), ephemeral=True)
@@ -2202,7 +2245,7 @@ class ScheduleButton(discord.ui.Button):
                     log.exception(f"{interaction.user.id} [{interaction.user.display_name}]")
                 events.remove(event)
 
-            elif customId == "delete_event_cancel":
+            elif customId.startswith("delete_event_cancel_"):
                 if self.view is None:
                     log.exception("ScheduleButton callback delete_event_cancel: self.view is None")
                     return
@@ -2213,12 +2256,17 @@ class ScheduleButton(discord.ui.Button):
                 await interaction.followup.send(embed=discord.Embed(title=f"❌ Event deletion canceled!", color=discord.Color.red()), ephemeral=True)
                 return
 
-            elif customId == "event_list_accepted":
-                if self.message is None:
-                    log.exception("ScheduleButton callback event_list_accepted: self.message is None")
+            elif customId.startswith("event_list_accepted_"):
+                eventId = customId[len("event_list_accepted_"):]
+
+                event = Schedule.getEventByEventId(events, eventId)
+                if event is None:
+                    await Schedule._sendPersistentEventMissing(interaction, eventId)
                     return
 
-                event = [event for event in events if event["messageId"] == self.message.id][0]
+                if Schedule.isAllowedToEdit(interaction.user, event["authorId"]) is False:
+                    await interaction.response.send_message("Only the host, Unit Staff and Server Hampters can configure the event!", ephemeral=True, delete_after=60.0)
+                    return
 
                 description = ""
                 accepted = [member.mention for memberId in event["accepted"] if (member := interaction.guild.get_member(memberId)) is not None]

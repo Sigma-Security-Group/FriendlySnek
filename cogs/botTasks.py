@@ -1,5 +1,5 @@
 from collections.abc import AsyncIterator
-import secret, os, random, json, re, aiohttp, discord, logging, asyncio
+import secret, os, random, json, re, aiohttp, discord, logging, asyncio, tarfile
 import asyncpraw, pytz  # type: ignore
 
 from typing import Tuple
@@ -38,6 +38,9 @@ class BotTasks(commands.Cog):
 
         if not self.fiveMinTasks.is_running():
             self.fiveMinTasks.start()
+
+        if not self.fifteenMinTasks.is_running():
+            self.fifteenMinTasks.start()
 
 
     @staticmethod
@@ -456,6 +459,43 @@ Join Us:
             log.exception(f"Bottasks getPingString: roleId {roles[roles.index(None)]} returns None")
             return None
         return " ".join([role.mention for role in roles])  # type: ignore
+
+    @staticmethod
+    def pruneOldDataBackups() -> None:
+        """Delete backup archives older than 48 hours based on their filename timestamp."""
+        backupCutoff = datetime.now() - timedelta(hours=48)
+
+        for entry in os.scandir(BACKUP_DIR):
+            if not entry.is_file():
+                continue
+
+            if not re.match(r"^\d{4}-\d{2}-\d{2}_\d{2}-\d{2}_data\.tar\.xz$", entry.name):
+                continue
+
+            try:
+                backupTime = datetime.strptime(entry.name.removesuffix("_data.tar.xz"), "%Y-%m-%d_%H-%M")
+            except ValueError:
+                log.warning(f"BotTasks pruneOldDataBackups: invalid backup filename '{entry.name}'")
+                continue
+
+            if backupTime < backupCutoff:
+                os.remove(entry.path)
+
+    @staticmethod
+    def createDataBackup() -> None:
+        """Create a timestamped tar.xz archive of the data directory."""
+        os.makedirs(BACKUP_DIR, exist_ok=True)
+        BotTasks.pruneOldDataBackups()
+
+        timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M")
+        archivePath = os.path.join(BACKUP_DIR, f"{timestamp}_data.tar.xz")
+
+        if os.path.exists(archivePath):
+            log.warning(f"BotTasks createDataBackup: backup already exists '{archivePath}', skipping")
+            return
+
+        with tarfile.open(archivePath, mode="x:xz") as archive:
+            archive.add(DATA_DIR, arcname=os.path.basename(DATA_DIR), recursive=True)
 
     async def smeReminder(self) -> None:
         """Pings SME role if workshops haven't been hosted in required time."""
@@ -898,6 +938,14 @@ Join Us:
 
         with open(REMINDERS_FILE, "w", encoding="utf-8") as f:
             json.dump(reminders, f, indent=4)
+
+
+    @tasks.loop(minutes=15)
+    async def fifteenMinTasks(self) -> None:
+        try:
+            BotTasks.createDataBackup()
+        except Exception:
+            log.exception("BotTasks fifteenMinTasks: failed to create data backup")
 
 
 @discord.app_commands.guilds(GUILD)

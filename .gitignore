@@ -6,6 +6,7 @@ spreadsheet_account_creds.json
 logs/
 data/
 tmp/
+backups/
 
 # Env
 update.sh

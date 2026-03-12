@@ -1052,7 +1052,7 @@ class Recruitment(commands.GroupCog, name="recruitment"):
             return
 
         isAuthorStaff = [True for role in interaction.user.roles if role.id == UNIT_STAFF]
-        async for message in channelRecruitmentAndHR.history(limit=1000):
+        async for message in channelRecruitmentAndHR.history(limit=500):
             if message.embeds and message.embeds[0].title == "❌ Prospect denied" and message.embeds[0].footer.text and message.embeds[0].footer.text == f"Prospect ID: {member.id}":
                 if isAuthorStaff:
                     embed = discord.Embed(title="⚠️ Prospect denied", description=f"Prospect ({member.mention}) has been denied before. Since you're Unit Staff, you may still continue and override the decision!", color=discord.Color.yellow())

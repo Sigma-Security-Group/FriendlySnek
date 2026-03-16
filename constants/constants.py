@@ -6,6 +6,9 @@ GUILD = discord.Object(id=GUILD_ID)
 # DATA FILES
 ####################
 
+DATA_DIR = "data"
+BACKUP_DIR = "backups"
+
 # Events
 EVENTS_FILE = "data/events.json"
 EVENTS_HISTORY_FILE = "data/eventsHistory.json"

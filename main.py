@@ -228,11 +228,19 @@ async def on_message(message: discord.Message) -> None:
         ]
 
         try:
+            # 0.1% chance for funny thing
+            if random.random() < 0.001:
+                await Snekcoin.updateWallet(message.author.id, "money", 1)
+                # respond
+                await message.reply(
+                    content="You have been awarded 🪙`1` snekcoin!",
+                    file=discord.File("./constants/images/funny_response.png")
+                )
             # 5% chance to react
-            if random.random() < 0.05:
+            elif random.random() < 0.05:
                 await message.add_reaction(random.choice(reactions))
 
-            # 95% chance to reply
+            # 94.9% chance to reply
             else:
                 await message.reply(random.choice(replies))
         except Exception as e:

@@ -419,7 +419,7 @@ async def on_member_unban(guild: discord.Guild, user: discord.User) -> None:
 @client.event
 async def on_error(event: str, *args, **kwargs) -> None:
     """On error event."""
-    log.exception(f"An error occured! {event} | {args} | {kwargs}")
+    log.exception(f"An error occurred! {event} | {args} | {kwargs}")
 
 
 @client.event

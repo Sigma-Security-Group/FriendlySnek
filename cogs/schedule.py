@@ -1305,7 +1305,7 @@ class Schedule(commands.Cog):
         Returns:
         discord.Embed: The generated embed.
         """
-        embed = discord.Embed(title=event["title"], description=event["description"], color=EVENT_TYPE_COLORS[event.get("type", "Operation")])
+        embed = discord.Embed(title=event["title"] + TROUT, description=event["description"] + TROUT, color=EVENT_TYPE_COLORS[event.get("type", "Operation")])
 
         # Reservable Roles
         if event["reservableRoles"] is not None:
@@ -1325,24 +1325,24 @@ class Schedule(commands.Cog):
                     resRolesDescription.append(f"{roleName} - *{member.display_name}*")
 
             embed.add_field(
-                name=f"Reservable Roles ({resRolesTaken}/{len(event['reservableRoles'])}) 👤",
+                name=f"Reservable Roles ({resRolesTaken}/{len(event['reservableRoles'])}) {TROUT}",
                 value="\n".join(resRolesDescription), inline=False
             )
 
         # Duration and Time
         durationHours = int(event["duration"].split("h")[0].strip()) if "h" in event["duration"] else 0
         embed.add_field(name="\u200B", value="\u200B", inline=False)
-        embed.add_field(name="Time", value=f"{discord.utils.format_dt(UTC.localize(datetime.strptime(event['time'], TIME_FORMAT)), style='F')} - {discord.utils.format_dt(UTC.localize(datetime.strptime(event['endTime'], TIME_FORMAT)), style='t' if durationHours < 24 else 'F')}", inline=(durationHours < 24))
-        embed.add_field(name="Duration", value=event["duration"], inline=True)
+        embed.add_field(name=f"Time {TROUT}", value=f"{discord.utils.format_dt(UTC.localize(datetime.strptime(event['time'], TIME_FORMAT)), style='F')} - {discord.utils.format_dt(UTC.localize(datetime.strptime(event['endTime'], TIME_FORMAT)), style='t' if durationHours < 24 else 'F')}", inline=(durationHours < 24))
+        embed.add_field(name=f"Duration {TROUT}", value=event["duration"], inline=True)
 
         # Map
         if event["map"] is not None:
-            embed.add_field(name="Map", value=event["map"], inline=False)
+            embed.add_field(name=f"Map {TROUT}", value=event["map"], inline=False)
 
         # External URL
         if event["externalURL"] is not None:
             embed.add_field(name="\u200B", value="\u200B", inline=False)
-            embed.add_field(name="External URL", value=event["externalURL"], inline=False)
+            embed.add_field(name=f"External URL {TROUT}", value=event["externalURL"], inline=False)
         embed.add_field(name="\u200B", value="\u200B", inline=False)
 
         # RSVP Lists
@@ -1362,20 +1362,20 @@ class Schedule(commands.Cog):
 
         # No limit || limit
         if event["maxPlayers"] is None or isinstance(event["maxPlayers"], int):
-            embed.add_field(name=f"Accepted ({len(accepted)}) ✅" if event["maxPlayers"] is None else f"Accepted ({len(accepted)}/{event['maxPlayers']}) ✅", value="\n".join(name for name in accepted) if len(accepted) > 0 else "-", inline=True)
-            embed.add_field(name=f"Declined ({len(declined)}) ❌", value=("\n".join("❌ " + name for name in declined)) if len(declined) > 0 else "-", inline=True)
-            embed.add_field(name=f"Tentative ({len(tentative)}) ❓", value="\n".join(name for name in tentative) if len(tentative) > 0 else "-", inline=True)
+            embed.add_field(name=f"Accepted ({len(accepted)}) {TROUT}" if event["maxPlayers"] is None else f"Accepted ({len(accepted)}/{event['maxPlayers']}) {TROUT}", value="\n".join(name for name in accepted) if len(accepted) > 0 else "-", inline=True)
+            embed.add_field(name=f"Declined ({len(declined)}) {TROUT}", value=("\n".join(name for name in declined)) if len(declined) > 0 else "-", inline=True)
+            embed.add_field(name=f"Tentative ({len(tentative)}) {TROUT}", value="\n".join(name for name in tentative) if len(tentative) > 0 else "-", inline=True)
             if len(standby) > 0:
-                embed.add_field(name=f"Standby ({len(standby)}) :clock3:", value="\n".join(name for name in standby), inline=False)
+                embed.add_field(name=f"Standby ({len(standby)}) {TROUT}", value="\n".join(name for name in standby), inline=False)
 
         # Anonymous
         elif event["maxPlayers"] == "anonymous":
-            embed.add_field(name=f"Accepted ({len(accepted) + len(standby)}) ✅", value="\u200B", inline=True)
-            embed.add_field(name=f"Declined ({len(declined)}) ❌", value="\u200B", inline=True)
-            embed.add_field(name=f"Tentative ({len(tentative)}) ❓", value="\u200B", inline=True)
+            embed.add_field(name=f"Accepted ({len(accepted) + len(standby)}) {TROUT}", value="\u200B", inline=True)
+            embed.add_field(name=f"Declined ({len(declined)}) {TROUT}", value="\u200B", inline=True)
+            embed.add_field(name=f"Tentative ({len(tentative)}) {TROUT}", value="\u200B", inline=True)
 
         author = guild.get_member(event["authorId"])
-        embed.set_footer(text="Created by Unknown User" if author is None else f"Created by {author.display_name}")
+        embed.set_footer(text="Created by Unknown User" if author is None else f"Created by Trout")
         embed.timestamp = UTC.localize(datetime.strptime(event["time"], TIME_FORMAT))
 
         return embed
@@ -2014,6 +2014,9 @@ class BaseScheduleEventDynamicButton(discord.ui.DynamicItem[discord.ui.Button], 
             kwargs["label"] = self.LABEL
         if self.EMOJI:
             kwargs["emoji"] = self.EMOJI
+        else:
+            kwargs["emoji"] = TROUT
+
         super().__init__(discord.ui.Button(**kwargs))
 
     @classmethod

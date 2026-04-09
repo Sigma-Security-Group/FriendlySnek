@@ -1362,11 +1362,11 @@ class Schedule(commands.Cog):
 
         # No limit || limit
         if event["maxPlayers"] is None or isinstance(event["maxPlayers"], int):
-            embed.add_field(name=f"Accepted ({len(accepted)}) ✅" if event["maxPlayers"] is None else f"Accepted ({len(accepted)}/{event['maxPlayers']}) ✅", value="\n".join(name for name in accepted) if len(accepted) > 0 else "-", inline=True)
-            embed.add_field(name=f"Declined ({len(declined)}) ❌", value=("\n".join("❌ " + name for name in declined)) if len(declined) > 0 else "-", inline=True)
-            embed.add_field(name=f"Tentative ({len(tentative)}) ❓", value="\n".join(name for name in tentative) if len(tentative) > 0 else "-", inline=True)
+            embed.add_field(name=f"Accepted ({len(accepted)}) ✅" if event["maxPlayers"] is None else f"Accepted ({len(accepted)}/{event['maxPlayers']}) ✅", value="\n".join(accepted) if len(accepted) > 0 else "-", inline=True)
+            embed.add_field(name=f"Declined ({len(declined)}) ❌", value=("\n".join(declined)) if len(declined) > 0 else "-", inline=True)
+            embed.add_field(name=f"Tentative ({len(tentative)}) ❓", value="\n".join(tentative) if len(tentative) > 0 else "-", inline=True)
             if len(standby) > 0:
-                embed.add_field(name=f"Standby ({len(standby)}) :clock3:", value="\n".join(name for name in standby), inline=False)
+                embed.add_field(name=f"Standby ({len(standby)}) :clock3:", value="\n".join(standby), inline=False)
 
         # Anonymous
         elif event["maxPlayers"] == "anonymous":

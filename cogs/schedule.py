@@ -196,6 +196,17 @@ class Schedule(commands.Cog):
         except Exception as e:
             log.exception(f"Schedule on_ready: failed to backfill events data: {e}")
 
+        guild = self.bot.get_guild(GUILD_ID)
+        if guild is None:
+            log.exception("Schedule on_ready: guild is None")
+        else:
+            try:
+                if await Schedule.scheduleRequiresRefresh(guild):
+                    log.info("Schedule on_ready: schedule mismatch detected, refreshing schedule")
+                    await Schedule.updateSchedule(guild)
+            except Exception as e:
+                log.exception(f"Schedule on_ready: failed to reconcile schedule: {e}")
+
         if not self.tenMinTask.is_running():
             self.tenMinTask.start()
 
@@ -1253,6 +1264,104 @@ class Schedule(commands.Cog):
                 json.dump(newEvents, f, indent=4)
         except Exception as e:
             log.exception(e)
+
+    @staticmethod
+    def getScheduleIntroMessage(channelSchedule: discord.TextChannel) -> str:
+        """Gets the current schedule introduction message."""
+        return f"__Welcome to the schedule channel!__\n🟩 Schedule operations: `/operation` (`/bop`)\n🟦 Workshops: `/workshop` (`/ws`)\n🟨 Generic events: `/event`\n\nThe datetime you see in here are based on __your local time zone__.\nChange timezone when scheduling events with `/changetimezone`.\n\nSuggestions/bugs contact: {', '.join([f'**{developerName.display_name}**' for name in DEVELOPERS if (developerName := channelSchedule.guild.get_member(name)) is not None])} -- <https://github.com/Sigma-Security-Group/FriendlySnek>"
+
+    @staticmethod
+    def getScheduleAttachmentNames(event: Dict) -> List[str]:
+        """Gets normalized attachment filenames for an event."""
+        attachmentNames = []
+        for eventFile in event.get("files", []):
+            try:
+                filenameShort = eventFile.split("_", 2)[2]
+            except Exception:
+                filenameShort = eventFile
+
+            if filenameShort not in attachmentNames:
+                attachmentNames.append(filenameShort)
+        return attachmentNames
+
+    @staticmethod
+    def getMessageComponentCustomIds(message: discord.Message) -> List[str]:
+        """Gets custom_id values from a Discord message's components."""
+        customIds: List[str] = []
+        for row in message.components:
+            for child in getattr(row, "children", []):
+                customId = getattr(child, "custom_id", None)
+                if customId is not None:
+                    customIds.append(customId)
+        return customIds
+
+    @staticmethod
+    def getViewCustomIds(view: discord.ui.View) -> List[str]:
+        """Gets custom_id values from a Discord UI view."""
+        return [item.custom_id for item in view.children if getattr(item, "custom_id", None) is not None]
+
+    @staticmethod
+    async def scheduleRequiresRefresh(guild: discord.Guild) -> bool:
+        """Checks if the posted schedule channel differs from local events storage."""
+        channelSchedule = guild.get_channel(SCHEDULE)
+        if not isinstance(channelSchedule, discord.TextChannel):
+            log.exception("Schedule scheduleRequiresRefresh: channelSchedule not discord.TextChannel")
+            return False
+
+        with open(EVENTS_FILE) as f:
+            events = json.load(f)
+
+        expectedEvents: List[Dict] = []
+        for event in sorted(events, key=lambda e: datetime.strptime(e["time"], TIME_FORMAT), reverse=True):
+            Schedule.applyMissingEventKeys(event, keySet="event")
+            Schedule.ensureEventId(event, events)
+            expectedEvents.append(event)
+
+        botMessages = [message async for message in channelSchedule.history(limit=None, oldest_first=True) if message.author.id in FRIENDLY_SNEKS]
+        scheduleIntroMessage = Schedule.getScheduleIntroMessage(channelSchedule)
+        introMessages = [message for message in botMessages if message.content == scheduleIntroMessage]
+        nonIntroMessages = [message for message in botMessages if message.content != scheduleIntroMessage]
+
+        if len(introMessages) != 1:
+            log.info(f"Schedule scheduleRequiresRefresh: expected 1 intro message, found {len(introMessages)}")
+            return True
+
+        if len(expectedEvents) == 0:
+            emptyScheduleMessages = ["...\nNo bop?\n...\nSnek is sad", ":cry:"]
+            currentMessages = [message.content for message in nonIntroMessages]
+            if currentMessages != emptyScheduleMessages:
+                log.info("Schedule scheduleRequiresRefresh: empty schedule placeholder messages differ")
+                return True
+            return False
+
+        if len(nonIntroMessages) != len(expectedEvents):
+            log.info(f"Schedule scheduleRequiresRefresh: expected {len(expectedEvents)} event messages, found {len(nonIntroMessages)}")
+            return True
+
+        for event, message in zip(expectedEvents, nonIntroMessages):
+            if event.get("messageId") != message.id:
+                log.info(f"Schedule scheduleRequiresRefresh: message id mismatch for eventId {event.get('eventId')}")
+                return True
+
+            expectedEmbed = Schedule.getEventEmbed(event, guild).to_dict()
+            actualEmbed = message.embeds[0].to_dict() if len(message.embeds) > 0 else None
+            if actualEmbed != expectedEmbed:
+                log.info(f"Schedule scheduleRequiresRefresh: embed mismatch for eventId {event.get('eventId')}")
+                return True
+
+            expectedAttachments = Schedule.getScheduleAttachmentNames(event)
+            actualAttachments = [attachment.filename for attachment in message.attachments]
+            if actualAttachments != expectedAttachments:
+                log.info(f"Schedule scheduleRequiresRefresh: attachment mismatch for eventId {event.get('eventId')}")
+                return True
+
+            expectedCustomIds = Schedule.getViewCustomIds(Schedule.getEventView(event))
+            actualCustomIds = Schedule.getMessageComponentCustomIds(message)
+            if actualCustomIds != expectedCustomIds:
+                log.info(f"Schedule scheduleRequiresRefresh: component mismatch for eventId {event.get('eventId')}")
+                return True
+
+        return False
 
     @staticmethod
     def applyMissingEventKeys(event: Dict, *, keySet: Literal["event", "template"], removeKeys:bool = False) -> None:

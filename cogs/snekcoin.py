@@ -1,7 +1,7 @@
 import json, discord, logging
 
 from typing import Dict, Tuple, List, Literal
-from random import random, randint, choices
+from random import random, randint, choices, choice
 
 from discord.ext import commands  # type: ignore
 
@@ -906,6 +906,15 @@ class SnekcoinModal(discord.ui.Modal):
         menuEmbed, menuView = menu
         await interaction.followup.send(embed=menuEmbed, view=menuView, ephemeral=True)
         await interaction.followup.send(embed=embed, ephemeral=False)
+
+        if userWallet["money"] == 0 and random() < 0.5:  # 50% chance to send a broke message if the user is broke
+            brokeResponses = [
+                "womp womp",
+                "better luck next time champ",
+                "you're supposed to earn SnekCoins, not lose them all!",
+                "[need help?](https://gamblersanonymous.org/)"
+            ]
+            await interaction.followup.send(choice(brokeResponses))
 
 
 async def setup(bot: commands.Bot) -> None:

@@ -1071,10 +1071,12 @@ class Recruitment(commands.GroupCog, name="recruitment"):
         view.add_item(StaffButton(style=discord.ButtonStyle.green, label="Verify", custom_id=f"staff_button_interview_verify_{member.id}"))
         view.add_item(StaffButton(style=discord.ButtonStyle.red, label="Deny", custom_id=f"staff_button_interview_deny_{member.id}"))
 
+        bornBefore = datetime.now(timezone.utc)
+        bornBefore = bornBefore.replace(year=bornBefore.year - 17)
         interviewQuestions = f"""- Be enthusiastic about sigma and the interview, your energy will set the stage for how our unit operates, if it sounds like you dont care or are disinterested it will affect the quality of the unit in the eyes of the interviewee.
 - Be informative to the point and honest, don't sugar-coat things, be straight forward.
 
-1. What year were you born in? (min. ~{datetime.now(timezone.utc).year - 17})
+1. What year were you born in? (min. {bornBefore.strftime('%d %B %Y')})
 2. Do you have any previous experience with Arma 3 or any milsim game?
  a. Have you been in any other units? What kind of units were they?
 3. Have you used Arma 3 mods before?

@@ -7,7 +7,7 @@ requires-python = ">=3.14"
 dependencies = [
     "asyncpraw>=7.8.1",
     "beautifulsoup4>=4.14.3",
-    "discord>=2.3.2",
+    "discord.py>=2.7.0",
     "gspread>=6.2.1",
     "paramiko>=4.0.0",
     "python-dateutil>=2.9.0.post0",

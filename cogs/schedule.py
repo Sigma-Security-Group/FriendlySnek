@@ -1387,7 +1387,7 @@ class Schedule(commands.Cog):
         elif keySet == "template":
             event.setdefault("templateName", None)
             if removeKeys:
-                validKeys = {"title", "description", "externalURL", "reservableRoles", "maxPlayers", "map", "duration", "files", "templateName"}
+                validKeys = {"title", "description", "externalURL", "reservableRoles", "maxPlayers", "map", "duration", "files", "templateName", "workshopInterest"}
                 invalidKeys = set(event.keys()) - validKeys
                 for key in invalidKeys:
                     del event[key]

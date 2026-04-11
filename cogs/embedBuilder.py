@@ -85,24 +85,24 @@ class EmbedBuilder(commands.Cog):
 
 
         # Send preview embed (empty)
-        view = BuilderView(channel.id, messageid)
+        view = BuilderView(channel.id, messageid, authorId=interaction.user.id)
         items = [
-            BuilderButton(self, authorId=interaction.user.id, row=0, label="Title", style=discord.ButtonStyle.secondary, custom_id="builder_button_title"),
-            BuilderButton(self, authorId=interaction.user.id, row=0, label="Description", style=discord.ButtonStyle.secondary, custom_id="builder_button_description"),
-            BuilderButton(self, authorId=interaction.user.id, row=0, label="URL", style=discord.ButtonStyle.secondary, custom_id="builder_button_url", disabled=True),
-            BuilderButton(self, authorId=interaction.user.id, row=0, label="Timestamp", style=discord.ButtonStyle.secondary, custom_id="builder_button_timestamp", disabled=True),
-            BuilderButton(self, authorId=interaction.user.id, row=0, label="Color", style=discord.ButtonStyle.secondary, custom_id="builder_button_color", disabled=True),
+            BuilderButton(self, row=0, label="Title", style=discord.ButtonStyle.secondary, custom_id="builder_button_title"),
+            BuilderButton(self, row=0, label="Description", style=discord.ButtonStyle.secondary, custom_id="builder_button_description"),
+            BuilderButton(self, row=0, label="URL", style=discord.ButtonStyle.secondary, custom_id="builder_button_url", disabled=True),
+            BuilderButton(self, row=0, label="Timestamp", style=discord.ButtonStyle.secondary, custom_id="builder_button_timestamp", disabled=True),
+            BuilderButton(self, row=0, label="Color", style=discord.ButtonStyle.secondary, custom_id="builder_button_color", disabled=True),
 
-            BuilderButton(self, authorId=interaction.user.id, row=1, label="Thumbnail", style=discord.ButtonStyle.secondary, custom_id="builder_button_thumbnail"),
-            BuilderButton(self, authorId=interaction.user.id, row=1, label="Image", style=discord.ButtonStyle.secondary, custom_id="builder_button_image"),
+            BuilderButton(self, row=1, label="Thumbnail", style=discord.ButtonStyle.secondary, custom_id="builder_button_thumbnail"),
+            BuilderButton(self, row=1, label="Image", style=discord.ButtonStyle.secondary, custom_id="builder_button_image"),
 
-            BuilderButton(self, authorId=interaction.user.id, row=1, label="Author", style=discord.ButtonStyle.secondary, custom_id="builder_button_author"),
-            BuilderButton(self, authorId=interaction.user.id, row=1, label="Footer", style=discord.ButtonStyle.secondary, custom_id="builder_button_footer"),
+            BuilderButton(self, row=1, label="Author", style=discord.ButtonStyle.secondary, custom_id="builder_button_author"),
+            BuilderButton(self, row=1, label="Footer", style=discord.ButtonStyle.secondary, custom_id="builder_button_footer"),
 
-            BuilderButton(self, authorId=interaction.user.id, row=2, label="Change Channel", style=discord.ButtonStyle.success, custom_id="builder_button_change_channel"),
-            BuilderButton(self, authorId=interaction.user.id, row=2, label="Cancel", style=discord.ButtonStyle.danger, custom_id="builder_button_cancel"),
-            BuilderButton(self, authorId=interaction.user.id, row=2, label="Submit", style=discord.ButtonStyle.primary, custom_id="builder_button_submit", disabled=(not attachment)),
-            BuilderButton(self, authorId=interaction.user.id, row=2, label="Submit as new", style=discord.ButtonStyle.primary, custom_id="builder_button_submit_as_new", disabled=(not attachment)),
+            BuilderButton(self, row=2, label="Change Channel", style=discord.ButtonStyle.success, custom_id="builder_button_change_channel"),
+            BuilderButton(self, row=2, label="Cancel", style=discord.ButtonStyle.danger, custom_id="builder_button_cancel"),
+            BuilderButton(self, row=2, label="Submit", style=discord.ButtonStyle.primary, custom_id="builder_button_submit", disabled=(not attachment)),
+            BuilderButton(self, row=2, label="Submit as new", style=discord.ButtonStyle.primary, custom_id="builder_button_submit_as_new", disabled=(not attachment)),
         ]
         for item in items:
             view.add_item(item)
@@ -191,24 +191,26 @@ class EmbedBuilder(commands.Cog):
 
 class BuilderView(discord.ui.View):
     """Handling all builder views."""
-    def __init__(self, targetChannel: int, messageId: int | None, *args, **kwargs):
+    def __init__(self, targetChannel: int, messageId: int | None, authorId: int | None = None, *args, **kwargs):
         super().__init__(timeout=None, *args, **kwargs)
         self.targetChannel = targetChannel
         self.messageId = messageId
+        self._authorId = authorId
+
+    async def interaction_check(self, interaction: discord.Interaction) -> bool:
+        if self._authorId is not None and interaction.user.id != self._authorId:
+            await interaction.response.send_message(f"{interaction.user.mention} Only the one who executed the command may interact with the buttons!", ephemeral=True, delete_after=15.0)
+            return False
+        return True
 
 
 class BuilderButton(discord.ui.Button):
     """Handling all builder buttons."""
-    def __init__(self, instance, authorId: int, *args, **kwargs):
+    def __init__(self, instance, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.instance = instance
-        self.authorId = authorId
 
     async def callback(self, interaction: discord.Interaction):
-        if interaction.user.id != self.authorId:
-            await interaction.response.send_message(f"{interaction.user.mention} Only the one who executed the command may interact with the buttons!", ephemeral=True, delete_after=15.0)
-            return
-
         if not isinstance(interaction.user, discord.Member):
             log.exception("EmbedBuilder buttonHandling: user not discord.Member")
             return

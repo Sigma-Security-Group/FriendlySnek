@@ -2099,10 +2099,16 @@ class Schedule(commands.Cog):
 
 class ScheduleView(discord.ui.View):
     """Handling all schedule views."""
-    def __init__(self, *, authorId: int = None, previousMessageView = None, **kwargs):
+    def __init__(self, *, authorId: int | None = None, previousMessageView = None, **kwargs):
         super().__init__(timeout=None, **kwargs)
-        self.authorId = authorId
+        self._ownerId = authorId
         self.previousMessageView = previousMessageView
+
+    async def interaction_check(self, interaction: discord.Interaction) -> bool:
+        if self._ownerId is not None and interaction.user.id != self._ownerId:
+            await interaction.response.send_message(f"{interaction.user.mention} Only the one who executed the command may interact with the buttons!", ephemeral=True, delete_after=10.0)
+            return False
+        return True
 
 
 class BaseScheduleEventDynamicButton(discord.ui.DynamicItem[discord.ui.Button], template=r"^$"):
@@ -2403,10 +2409,6 @@ class ScheduleButton(discord.ui.Button):
             elif customId is not None and customId.startswith("event_schedule_"):
                 if self.view is None:
                     log.exception("ScheduleButton callback event_schedule_: self.view is None")
-                    return
-
-                if interaction.user.id != self.view.authorId:
-                    await interaction.response.send_message(f"{interaction.user.mention} Only the one who executed the command may interact with the buttons!", ephemeral=True, delete_after=10.0)
                     return
 
                 buttonLabel = customId[len("event_schedule_"):]

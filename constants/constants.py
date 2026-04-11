@@ -29,6 +29,7 @@ CANDIDATE_TRACKING_FILE = "data/candidateTracking.json"
 # Staff
 ROLE_RESERVATION_BLACKLIST_FILE = "data/roleReservationBlacklist.json"
 NO_SHOW_FILE = "data/noShow.json"
+TEMPLATES_DELETED_FILE = "data/templatesDeleted.json"
 
 
 ####################

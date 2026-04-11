@@ -116,19 +116,7 @@ SCHEDULE_EVENT_VIEW: Dict[str, Dict[str, discord.ButtonStyle | bool | int | None
         "startDisabled": True,
         "customStyle": None
     },
-    "Select Template: None": {
-        "required": False,
-        "row": 2,
-        "startDisabled": True,
-        "customStyle": None
-    },
-    "Save As Template": {
-        "required": False,
-        "row": 2,
-        "startDisabled": True,
-        "customStyle": None
-    },
-    "Update Template": {
+    "Templates": {
         "required": False,
         "row": 2,
         "startDisabled": True,
@@ -1643,7 +1631,97 @@ class Schedule(commands.Cog):
         return outputDict
 
     @staticmethod
-    def fromDictToPreviewEmbed(previewDict: Dict, guild: discord.Guild) -> discord.Embed:
+    def isTemplateType(eventType: str | None) -> bool:
+        return eventType in ("Workshop", "Event")
+
+    @staticmethod
+    def getTemplateFile(eventType: str) -> str:
+        return f"data/{eventType.lower()}Templates.json"
+
+    @staticmethod
+    def loadTemplates(eventType: str) -> List[Dict]:
+        with open(Schedule.getTemplateFile(eventType)) as f:
+            templates: List[Dict] = json.load(f)
+        return templates
+
+    @staticmethod
+    def saveTemplates(eventType: str, templates: List[Dict]) -> None:
+        templates.sort(key=lambda template : template["templateName"])
+        with open(Schedule.getTemplateFile(eventType), "w") as f:
+            json.dump(templates, f, indent=4)
+
+    @staticmethod
+    def findTemplateIndex(templates: List[Dict], templateName: str) -> int | None:
+        for idx, template in enumerate(templates):
+            if template.get("templateName", None) == templateName:
+                return idx
+        return None
+
+    @staticmethod
+    def loadDeletedTemplates() -> List[Dict]:
+        if not os.path.exists(TEMPLATES_DELETED_FILE):
+            return []
+        with open(TEMPLATES_DELETED_FILE) as f:
+            deletedTemplates: List[Dict] = json.load(f)
+        return deletedTemplates
+
+    @staticmethod
+    def saveDeletedTemplates(entries: List[Dict]) -> None:
+        with open(TEMPLATES_DELETED_FILE, "w") as f:
+            json.dump(entries, f, indent=4)
+
+    @staticmethod
+    def getSelectedTemplateName(view: discord.ui.View | None) -> str | None:
+        selectedTemplateName = getattr(view, "selectedTemplateName", None)
+        if not isinstance(selectedTemplateName, str) or selectedTemplateName == "None":
+            return None
+        return selectedTemplateName
+
+    @staticmethod
+    def setSelectedTemplateName(view: discord.ui.View | None, templateName: str | None) -> None:
+        if view is not None:
+            setattr(view, "selectedTemplateName", templateName)
+
+    @staticmethod
+    def buildPreviewFooterText(guild: discord.Guild, authorId: int, selectedTemplateName: str | None = None) -> str:
+        author = guild.get_member(authorId)
+        footer = f"Created by {'Unknown User' if author is None else author.display_name}"
+        if selectedTemplateName:
+            footer += f" | Template: {selectedTemplateName}"
+        return footer
+
+    @staticmethod
+    def refreshTemplateButton(view: discord.ui.View | None, eventType: str | None) -> None:
+        if view is None:
+            return
+        for child in view.children:
+            if isinstance(child, discord.ui.Button) and child.custom_id == "event_schedule_templates":
+                child.disabled = not Schedule.isTemplateType(eventType)
+                child.style = discord.ButtonStyle.success if Schedule.getSelectedTemplateName(view) else discord.ButtonStyle.secondary
+                child.emoji = None
+                break
+
+    @staticmethod
+    def generateTemplateManagementView(eventMsg: discord.Message, userId: int, eventMsgView: discord.ui.View) -> discord.ui.View:
+        view = ScheduleView(authorId=userId, previousMessageView=eventMsgView)
+        selectedTemplateName = Schedule.getSelectedTemplateName(eventMsgView)
+        eventType = Schedule.fromPreviewEmbedToDict(eventMsg.embeds[0]).get("type", None)
+        isTemplateType = Schedule.isTemplateType(eventType)
+
+        items = [
+            ScheduleButton(eventMsg, row=0, label="Select template", style=discord.ButtonStyle.primary, custom_id="event_schedule_templates_select", disabled=not isTemplateType),
+            ScheduleButton(eventMsg, row=0, label="Save as", style=discord.ButtonStyle.success, custom_id="event_schedule_templates_save_as", disabled=not isTemplateType),
+            ScheduleButton(eventMsg, row=0, label="Update", style=discord.ButtonStyle.success, custom_id="event_schedule_templates_update", disabled=(not isTemplateType) or (selectedTemplateName is None)),
+            ScheduleButton(eventMsg, row=1, label="Rename", style=discord.ButtonStyle.secondary, custom_id="event_schedule_templates_rename", disabled=(not isTemplateType) or (selectedTemplateName is None)),
+            ScheduleButton(eventMsg, row=1, label="Delete", style=discord.ButtonStyle.danger, custom_id="event_schedule_templates_delete", disabled=(not isTemplateType) or (selectedTemplateName is None))
+        ]
+        for item in items:
+            view.add_item(item)
+
+        return view
+
+    @staticmethod
+    def fromDictToPreviewEmbed(previewDict: Dict, guild: discord.Guild, selectedTemplateName: str | None = None) -> discord.Embed:
         """Generates event dict from preview embed."""
         # Title, Description, Color
         embed = discord.Embed(title=previewDict["title"], description=previewDict["description"], color=None if previewDict["type"] is None else EVENT_TYPE_COLORS[previewDict["type"]])
@@ -1693,7 +1771,7 @@ class Schedule(commands.Cog):
         # Author, Footer, Timestamp
         if previewDict["type"] == "Workshop" and "workshopInterest" in previewDict:
             embed.set_author(name=f"Linking: {previewDict['workshopInterest']}")
-        embed.set_footer(text="Created by Unknown User" if (author := guild.get_member(previewDict["authorId"])) is None else f"Created by {author.display_name}")
+        embed.set_footer(text=Schedule.buildPreviewFooterText(guild, previewDict["authorId"], selectedTemplateName))
         if previewDict["time"] is not None:
             embed.timestamp = UTC.localize(datetime.strptime(previewDict["time"], TIME_FORMAT))
 
@@ -1713,12 +1791,10 @@ class Schedule(commands.Cog):
         return embed
 
     @staticmethod
-    def fromDictToPreviewView(previewDict: Dict, selectedTemplate: str) -> discord.ui.View:
+    def fromDictToPreviewView(previewDict: Dict, selectedTemplate: str | None) -> discord.ui.View:
         """Generates preview view from event dict."""
-        view = ScheduleView(authorId=previewDict["authorId"])
+        view = ScheduleView(authorId=previewDict["authorId"], selectedTemplateName=(None if selectedTemplate in (None, "None") else selectedTemplate))
         for label, data in SCHEDULE_EVENT_VIEW.items():
-            permittedEventTypesForTemplates = ("Workshop", "Event")
-
             style = discord.ButtonStyle.secondary
             previewDictKey = label.lower().replace("url", "URL").replace("linking", "workshopInterest").replace(" ", "")
             if label == "Type" or (previewDictKey in previewDict and previewDict[previewDictKey] is not None):
@@ -1742,27 +1818,13 @@ class Schedule(commands.Cog):
             if label == "Linking":
                 button.disabled = (previewDict["type"] != "Workshop")  # Only workshop
 
-            elif label == "Select Template: None":
-                button.label = f"Select Template: {selectedTemplate}"
-                # Quick disable if not permitted event type
-                if previewDict["type"] is None or previewDict["type"] not in permittedEventTypesForTemplates:
-                    button.disabled = True
-                else:
-                    # Disable if no templates exist
-                    filename = f"data/{previewDict['type'].lower()}Templates.json"
-                    with open(filename) as f:
-                        templates = json.load(f)
-                    button.disabled = len(templates) == 0
-
-            elif label == "Save As Template":
-                button.disabled = (previewDict["type"] not in permittedEventTypesForTemplates)
-
-            # Allow if correct type and template selected
-            elif label == "Update Template":
-                button.disabled = (selectedTemplate == "None") or (previewDict["type"] not in permittedEventTypesForTemplates)
+            elif label == "Templates":
+                button.disabled = not Schedule.isTemplateType(previewDict["type"])
+                button.style = discord.ButtonStyle.success if Schedule.getSelectedTemplateName(view) else discord.ButtonStyle.secondary
 
             view.add_item(button)
 
+        Schedule.refreshTemplateButton(view, previewDict["type"])
         return view
 
     @staticmethod
@@ -1954,13 +2016,13 @@ class Schedule(commands.Cog):
 
         previewDict = {
             "authorId": interaction.user.id,
-            "type": preselectedType
+            "type": preselectedType,
+            "title": SCHEDULE_EVENT_PREVIEW_EMBED["title"],
+            "description": SCHEDULE_EVENT_PREVIEW_EMBED["description"]
         }
-        view = Schedule.fromDictToPreviewView(previewDict, "None")
-
-        embed=discord.Embed(title=SCHEDULE_EVENT_PREVIEW_EMBED["title"], description=SCHEDULE_EVENT_PREVIEW_EMBED["description"], color=EVENT_TYPE_COLORS[preselectedType])
-        embed.add_field(name="\u200B", value="\u200B", inline=False)
-        embed.set_footer(text=f"Created by {interaction.user.display_name}")
+        view = Schedule.fromDictToPreviewView(previewDict, None)
+        Schedule.applyMissingEventKeys(previewDict, keySet="event")
+        embed = Schedule.fromDictToPreviewEmbed(previewDict, interaction.guild)
         await interaction.response.send_message("Schedule an event using the buttons, and get a live preview!", embed=embed, view=view)
 
 
@@ -2099,10 +2161,11 @@ class Schedule(commands.Cog):
 
 class ScheduleView(discord.ui.View):
     """Handling all schedule views."""
-    def __init__(self, *, authorId: int | None = None, previousMessageView = None, **kwargs):
+    def __init__(self, *, authorId: int | None = None, previousMessageView = None, selectedTemplateName: str | None = None, **kwargs):
         super().__init__(timeout=None, **kwargs)
         self._ownerId = authorId
         self.previousMessageView = previousMessageView
+        self.selectedTemplateName = selectedTemplateName
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
         if self._ownerId is not None and interaction.user.id != self._ownerId:
@@ -2412,9 +2475,14 @@ class ScheduleButton(discord.ui.Button):
                     return
 
                 buttonLabel = customId[len("event_schedule_"):]
+                previewView = self.view.previousMessageView if self.view.previousMessageView is not None else self.view
+                if previewView is None:
+                    log.exception("ScheduleButton callback event_schedule_: previewView is None")
+                    return
+                eventMsg = self.message if self.message is not None else interaction.message
 
                 generateModal = lambda style, placeholder, default, required, minLength, maxLength: ScheduleModal(
-                        title="Create event", customId=f"modal_create_{buttonLabel}", userId=interaction.user.id, eventMsg=interaction.message, view=self.view
+                        title="Create event", customId=f"modal_create_{buttonLabel}", userId=interaction.user.id, eventMsg=eventMsg, view=previewView
                     ).add_item(
                         discord.ui.TextInput(
                             label=buttonLabel.replace("_", " ").capitalize(),
@@ -2427,10 +2495,10 @@ class ScheduleButton(discord.ui.Button):
                         )
                     )
 
-                previewEmbedDict = Schedule.fromPreviewEmbedToDict(interaction.message.embeds[0])
+                previewEmbedDict = Schedule.fromPreviewEmbedToDict(eventMsg.embeds[0])
 
                 requiredInfoRemaining = [
-                    child.label for child in self.view.children
+                    child.label for child in previewView.children
                     if isinstance(child, discord.ui.Button) and child.style == discord.ButtonStyle.danger and child.disabled == False
                 ]
 
@@ -2449,11 +2517,11 @@ class ScheduleButton(discord.ui.Button):
                             typeOptions,
                             False,
                             previewEmbedDict["type"] or "",
-                            interaction.message,
+                            eventMsg,
                             "Select event type.",
                             "select_create_type",
                             interaction.user.id,
-                            self.view
+                            previewView
                         ),
                             ephemeral=True,
                             delete_after=60.0
@@ -2527,11 +2595,11 @@ class ScheduleButton(discord.ui.Button):
                             options,
                             True,
                             previewEmbedDict["map"],
-                            interaction.message,
+                            eventMsg,
                             "Select a map.",
                             "select_create_map",
                             interaction.user.id,
-                            self.view
+                            previewView
                         ),
                             ephemeral=True,
                             delete_after=60.0
@@ -2561,11 +2629,11 @@ class ScheduleButton(discord.ui.Button):
                             options,
                             True,
                             previewEmbedDict["workshopInterest"] if "workshopInterest" in previewEmbedDict else "",
-                            interaction.message,
+                            eventMsg,
                             "Link event to a workshop.",
                             "select_create_linking",
                             interaction.user.id,
-                            self.view
+                            previewView
                         ),
                             ephemeral=True,
                             delete_after=60.0
@@ -2574,10 +2642,10 @@ class ScheduleButton(discord.ui.Button):
 
                     # FILES
                     case "files":
-                        view = ScheduleView(authorId=interaction.user.id, previousMessageView=self.view)
+                        view = ScheduleView(authorId=interaction.user.id, previousMessageView=previewView)
                         items = [
-                            ScheduleButton(interaction.message, row=0, label="Add", style=discord.ButtonStyle.success, custom_id="event_schedule_files_add", disabled=(len(previewEmbedDict["files"]) == 10)),
-                            ScheduleButton(interaction.message, row=0, label="Remove", style=discord.ButtonStyle.danger, custom_id="event_schedule_files_remove", disabled=(len(previewEmbedDict["files"]) == 0)),
+                            ScheduleButton(eventMsg, row=0, label="Add", style=discord.ButtonStyle.success, custom_id="event_schedule_files_add", disabled=(len(previewEmbedDict["files"]) == 10)),
+                            ScheduleButton(eventMsg, row=0, label="Remove", style=discord.ButtonStyle.danger, custom_id="event_schedule_files_remove", disabled=(len(previewEmbedDict["files"]) == 0)),
                         ]
                         for item in items:
                             view.add_item(item)
@@ -2621,7 +2689,38 @@ class ScheduleButton(discord.ui.Button):
 
 
                     # TEMPLATES
-                    case "save_as_template":
+                    case "templates":
+                        embed = discord.Embed(
+                            title="Templates",
+                            description=f"Selected template: `{Schedule.getSelectedTemplateName(previewView) or 'None'}`",
+                            color=discord.Color.gold()
+                        )
+                        await interaction.response.send_message(
+                            interaction.user.mention,
+                            embed=embed,
+                            view=Schedule.generateTemplateManagementView(eventMsg, interaction.user.id, previewView),
+                            ephemeral=True,
+                            delete_after=15.0
+                        )
+
+                    case "templates_select":
+                        templates = Schedule.loadTemplates(previewEmbedDict["type"]) if Schedule.isTemplateType(previewEmbedDict["type"]) else []
+                        options = [discord.SelectOption(label=template["templateName"], description=template["description"][:DISCORD_LIMITS["interactions"]["select_option_description"]]) for template in sorted(templates, key=lambda template : template["templateName"])]
+                        await interaction.response.send_message(interaction.user.mention, view=Schedule.generateSelectView(
+                            options,
+                            True,
+                            Schedule.getSelectedTemplateName(previewView),
+                            eventMsg,
+                            "Select a template.",
+                            "select_create_select_template",
+                            interaction.user.id,
+                            previewView
+                        ),
+                            ephemeral=True,
+                            delete_after=30.0
+                        )
+
+                    case "templates_save_as":
                         if (len(requiredInfoRemaining) >= 2) or (len(requiredInfoRemaining) == 1 and ("Time" not in requiredInfoRemaining)):
                             await interaction.response.send_message(f"{interaction.user.mention} Before saving the event as a template, you need to fill out the mandatory (red buttons) information!", ephemeral=True, delete_after=10.0)
                             return
@@ -2632,37 +2731,25 @@ class ScheduleButton(discord.ui.Button):
                             default=None,
                             required=True,
                             minLength=1,
-                            maxLength=63  # (BUTTON_LABEL_MAX_LEN := 80) - len("Select Template: ")
+                            maxLength=64  # Arbitrary limit
                         ))
 
-                    case "update_template":
+                    case "templates_update":
                         if (len(requiredInfoRemaining) >= 2) or (len(requiredInfoRemaining) == 1 and ("Time" not in requiredInfoRemaining)):
                             await interaction.response.send_message(f"{interaction.user.mention} Before updating the template, you need to fill out the mandatory (red buttons) information!", ephemeral=True, delete_after=10.0)
                             return
 
-                        # Fetch template name from button label
-                        templateName = ""
-                        for child in self.view.children:
-                            if isinstance(child, discord.ui.Button) and child.label is not None and child.label.startswith("Select Template"):
-                                templateName = "".join(child.label.split(":")[1:]).strip()
-                                break
-                        if templateName == "":
-                            log.exception("ScheduleButton callback: templateName is empty")
+                        templateName = Schedule.getSelectedTemplateName(previewView)
+                        if templateName is None:
+                            await interaction.response.send_message(embed=discord.Embed(title="❌ No template selected", color=discord.Color.red()), ephemeral=True, delete_after=30.0)
                             return
 
-                        # Write to file
-                        filename = f"data/{previewEmbedDict['type'].lower()}Templates.json"
+                        eventType = previewEmbedDict["type"]
                         Schedule.applyMissingEventKeys(previewEmbedDict, keySet="template", removeKeys=True)
-                        with open(filename) as f:
-                            templates = json.load(f)
-
-                        templateIndex = None
-                        for idx, template in enumerate(templates):
-                            if template.get("templateName", None) == templateName:
-                                templateIndex = idx
-                                break
-                        else:
-                            log.exception("ScheduleButton callback: templateIndex not found")
+                        templates = Schedule.loadTemplates(eventType)
+                        templateIndex = Schedule.findTemplateIndex(templates, templateName)
+                        if templateIndex is None:
+                            await interaction.response.send_message(embed=discord.Embed(title="❌ Template not found", description=f"`{templateName}` no longer exists.", color=discord.Color.red()), ephemeral=True, delete_after=30.0)
                             return
 
                         previewEmbedDict["templateName"] = templateName
@@ -2673,13 +2760,79 @@ class ScheduleButton(discord.ui.Button):
 
                         log.info(f"{interaction.user.id} [{interaction.user.display_name}] Updated template '{templateName}'")
                         templates[templateIndex] = previewEmbedDict
-                        with open(filename, "w") as f:
-                            json.dump(templates, f, indent=4)
+                        Schedule.saveTemplates(eventType, templates)
 
                         # Reply
                         embed = discord.Embed(title="✅ Updated", description=f"Updated template: `{templateName}`", color=discord.Color.green())
                         await interaction.response.send_message(embed=embed, ephemeral=True, delete_after=30.0)
 
+                    case "templates_rename":
+                        templateName = Schedule.getSelectedTemplateName(previewView)
+                        if templateName is None:
+                            await interaction.response.send_message(embed=discord.Embed(title="❌ No template selected", color=discord.Color.red()), ephemeral=True, delete_after=30.0)
+                            return
+                        await interaction.response.send_modal(generateModal(
+                            style=discord.TextStyle.short,
+                            placeholder=templateName,
+                            default=templateName,
+                            required=True,
+                            minLength=1,
+                            maxLength=64  # Arbitrary limit
+                        ))
+
+                    case "templates_delete":
+                        templateName = Schedule.getSelectedTemplateName(previewView)
+                        if templateName is None:
+                            await interaction.response.send_message(embed=discord.Embed(title="❌ No template selected", color=discord.Color.red()), ephemeral=True, delete_after=30.0)
+                            return
+                        embed = discord.Embed(title="Delete template?", description=f"Are you sure you want to delete `{templateName}`?", color=discord.Color.orange())
+                        view = ScheduleView(authorId=interaction.user.id, previousMessageView=previewView)
+                        items = [
+                            ScheduleButton(eventMsg, row=0, label="Delete", style=discord.ButtonStyle.danger, custom_id="event_schedule_templates_delete_confirm"),
+                            ScheduleButton(eventMsg, row=0, label="Cancel", style=discord.ButtonStyle.secondary, custom_id="event_schedule_templates_delete_cancel"),
+                        ]
+                        for item in items:
+                            view.add_item(item)
+                        await interaction.response.send_message(embed=embed, view=view, ephemeral=True, delete_after=30.0)
+
+                    case "templates_delete_confirm":
+                        templateName = Schedule.getSelectedTemplateName(previewView)
+                        if templateName is None:
+                            await interaction.response.send_message(embed=discord.Embed(title="❌ No template selected", color=discord.Color.red()), ephemeral=True, delete_after=30.0)
+                            return
+                        templates = Schedule.loadTemplates(previewEmbedDict["type"])
+                        templateIndex = Schedule.findTemplateIndex(templates, templateName)
+                        if templateIndex is None:
+                            await interaction.response.send_message(embed=discord.Embed(title="❌ Template not found", description=f"`{templateName}` no longer exists.", color=discord.Color.red()), ephemeral=True, delete_after=30.0)
+                            return
+                        templateDeleted = deepcopy(templates[templateIndex])
+                        templates.pop(templateIndex)
+                        Schedule.saveTemplates(previewEmbedDict["type"], templates)
+                        deletedTemplates = Schedule.loadDeletedTemplates()
+                        deletedTemplates.append({
+                            "templateName": templateName,
+                            "type": previewEmbedDict["type"],
+                            "title": templateDeleted.get("title", None),
+                            "description": templateDeleted.get("description", None),
+                            "reservableRoles": templateDeleted.get("reservableRoles", None),
+                            "duration": templateDeleted.get("duration", None),
+                            "map": templateDeleted.get("map", None),
+                            "externalURL": templateDeleted.get("externalURL", None),
+                            "maxPlayers": templateDeleted.get("maxPlayers", None),
+                            "workshopInterest": templateDeleted.get("workshopInterest", None),
+                            "deletedAt": int(datetime.now(timezone.utc).timestamp()),
+                            "deletedBy": interaction.user.id
+                        })
+                        Schedule.saveDeletedTemplates(deletedTemplates)
+                        Schedule.setSelectedTemplateName(previewView, None)
+                        Schedule.refreshTemplateButton(previewView, previewEmbedDict["type"])
+                        await interaction.response.edit_message(view=None)
+                        await eventMsg.edit(embed=Schedule.fromDictToPreviewEmbed(previewEmbedDict, interaction.guild, None), view=previewView)
+                        await interaction.followup.send(embed=discord.Embed(title="✅ Deleted", description=f"Deleted template: `{templateName}`", color=discord.Color.green()), ephemeral=True)
+
+                    case "templates_delete_cancel":
+                        await interaction.response.edit_message(view=None)
+                        await interaction.followup.send(embed=discord.Embed(title="❌ Deletion canceled", color=discord.Color.red()), ephemeral=True)
 
                     # EVENT FINISHING
                     case "submit":
@@ -2782,33 +2935,6 @@ class ScheduleButton(discord.ui.Button):
                                 child.disabled = True
                         await interaction.response.edit_message(view=self.view)
                         await interaction.followup.send(content="Alright, I won't cancel the scheduling.", ephemeral=True)
-
-                if buttonLabel.startswith("select_template"):
-                    filename = f"data/{previewEmbedDict['type'].lower()}Templates.json"
-                    with open(filename) as f:
-                        templates: List[Dict] = json.load(f)
-                    templates.sort(key=lambda template : template["templateName"])
-
-                    options = [discord.SelectOption(label=template["templateName"], description=template["description"][:DISCORD_LIMITS["interactions"]["select_option_description"]]) for template in templates]
-                    setOptionLabel = ""
-                    for child in self.view.children:
-                        if isinstance(child, discord.ui.Button) and child.label is not None and child.label.startswith("Select Template"):
-                            setOptionLabel = "".join(child.label.split(":")[1:]).strip()
-
-                    await interaction.response.send_message(interaction.user.mention, view=Schedule.generateSelectView(
-                        options,
-                        True,
-                        setOptionLabel,
-                        interaction.message,
-                        "Select a template.",
-                        "select_create_select_template",
-                        interaction.user.id,
-                        self.view
-                    ),
-                        ephemeral=True,
-                        delete_after=60.0
-                    )
-
 
                 return
 
@@ -3009,19 +3135,14 @@ class ScheduleSelect(discord.ui.Select):
             match infoLabel:
                 case "type":
                     previewEmbedDict["type"] = selectedValue
-
-                    templateName = "None"
-                    # Fetch templateName
-                    for child in self.eventMsgView.children:
-                        if isinstance(child, discord.ui.Button) and child.label is not None and child.label.startswith("Select Template: "):
-                            templateName = ":".join(child.label.split(":")[1:]).strip()
-                            break
+                    templateName = None
 
                     # Update view
                     previewView = Schedule.fromDictToPreviewView(previewEmbedDict, templateName)
                     self.eventMsgView.clear_items()
                     for item in previewView.children:
                         self.eventMsgView.add_item(item)
+                    Schedule.setSelectedTemplateName(self.eventMsgView, None)
 
                 case "map":
                     previewEmbedDict["map"] = None if previewEmbedDict["map"] == "None" else selectedValue
@@ -3030,25 +3151,22 @@ class ScheduleSelect(discord.ui.Select):
                     previewEmbedDict["workshopInterest"] = None if selectedValue == "None" else selectedValue
 
                 case "select_template":
-                    # Update template buttons label & disabled
-                    for child in self.eventMsgView.children:
-                        if not isinstance(child, discord.ui.Button) or child.label is None:
-                            continue
-                        if child.label.startswith("Select Template"):
-                            child.label = f"Select Template: {selectedValue}"
-                        elif child.label == "Update Template":
-                            child.disabled = (selectedValue == "None")
+                    selectedTemplateName = None if selectedValue == "None" else selectedValue
+                    Schedule.setSelectedTemplateName(self.eventMsgView, selectedTemplateName)
+                    Schedule.refreshTemplateButton(self.eventMsgView, previewEmbedDict["type"])
+
+                    if selectedTemplateName is None:
+                        await eventMsgNew.edit(embed=Schedule.fromDictToPreviewEmbed(previewEmbedDict, interaction.guild, None), view=self.eventMsgView)
+                        return
 
                     # Insert template info into preview embed and view
-                    filename = f"data/{previewEmbedDict['type'].lower()}Templates.json"
-                    with open(filename) as f:
-                        templates = json.load(f)
+                    templates = Schedule.loadTemplates(previewEmbedDict["type"])
                     for template in templates:
-                        if template.get("templateName", None) == selectedValue:
+                        if template.get("templateName", None) == selectedTemplateName:
                             template["authorId"] = interaction.user.id
                             Schedule.applyMissingEventKeys(template, keySet="template")
                             template["type"] = previewEmbedDict["type"]
-                            embed = Schedule.fromDictToPreviewEmbed(template, interaction.guild)
+                            embed = Schedule.fromDictToPreviewEmbed(template, interaction.guild, selectedTemplateName)
                             for child in self.eventMsgView.children:
                                 if not isinstance(child, discord.ui.Button) or child.label is None:
                                     continue
@@ -3069,7 +3187,7 @@ class ScheduleSelect(discord.ui.Select):
                                     continue
 
                                 # Ignore template buttons
-                                if "Template" in child.label or child.style == discord.ButtonStyle.primary:
+                                if child.label == "Templates" or child.style == discord.ButtonStyle.primary:
                                     continue
 
                                 # Optional fields
@@ -3109,7 +3227,7 @@ class ScheduleSelect(discord.ui.Select):
                     break
 
             # Edit preview embed & view
-            await eventMsgNew.edit(embed=Schedule.fromDictToPreviewEmbed(previewEmbedDict, interaction.guild), view=self.eventMsgView)
+            await eventMsgNew.edit(embed=Schedule.fromDictToPreviewEmbed(previewEmbedDict, interaction.guild, Schedule.getSelectedTemplateName(self.eventMsgView)), view=self.eventMsgView)
 
 
         elif customId.startswith("select_noshow_entry_"):
@@ -3611,50 +3729,58 @@ class ScheduleModal(discord.ui.Modal):
                         followupMsg["embed"] = discord.Embed(title="⚠️ Too few slots", description="You have more reservable roles than slots available.\nPlease increase the number of slots or remove some roles.", color=discord.Color.orange())
                         followupMsg["embed"].set_footer(text="You may still continue with the provided slots - but not recommended.")
 
-                case "save_as_template":
-                    previewEmbedDict["templateName"] = value
+                case "templates_save_as":
+                    eventType = previewEmbedDict["type"]
+                    templateDict = deepcopy(previewEmbedDict)
+                    templateDict["templateName"] = value
+                    templates = Schedule.loadTemplates(eventType)
 
-                    # Write to file
-                    filename = f"data/{previewEmbedDict['type'].lower()}Templates.json"
-                    with open(filename) as f:
-                        templates: List[Dict] = json.load(f)
+                    Schedule.applyMissingEventKeys(templateDict, keySet="template", removeKeys=True)
 
-                    Schedule.applyMissingEventKeys(previewEmbedDict, keySet="template", removeKeys=True)
-
-                    if previewEmbedDict in templates:
+                    if templateDict in templates:
                         await interaction.response.send_message(embed=discord.Embed(title="❌ No diff", description="The new template data does not differ from the old template.\nTemplate not overwritten.", color=discord.Color.red()), ephemeral=True, delete_after=30.0)
                         return
 
-                    templateOverwritten = (False, 0)
-                    for idx, template in enumerate(templates):
-                        if template["templateName"] == previewEmbedDict["templateName"]:
-                            templateOverwritten = (True, idx)
-                            break
+                    if Schedule.findTemplateIndex(templates, templateDict["templateName"]) is not None:
+                        await interaction.response.send_message(embed=discord.Embed(title="❌ Duplicate template", description=f"A template named `{value}` already exists.", color=discord.Color.red()), ephemeral=True, delete_after=30.0)
+                        return
 
-                    status = "[Overwritten]" if templateOverwritten[0] else "[New]"
-                    log.info(f"{interaction.user.id} [{interaction.user.display_name}] Saved {status} a template as '{previewEmbedDict['templateName']}'")
-                    if templateOverwritten[0]:
-                        templates.pop(templateOverwritten[1])
+                    log.info(f"{interaction.user.id} [{interaction.user.display_name}] Saved as new template: '{templateDict['templateName']}'")
 
-                    templates.append(previewEmbedDict)
-                    templates.sort(key=lambda template : template["templateName"])
-                    with open(filename, "w") as f:
-                        json.dump(templates, f, indent=4)
-
-                    # Update label
-                    for child in self.view.children:
-                        if not isinstance(child, discord.ui.Button) or child.label is None:
-                            continue
-                        if child.label.startswith("Select Template"):
-                            child.label = f"Select Template: {value}"
-                            child.disabled = False
-                        elif child.label == "Update Template":
-                            child.disabled = False
+                    templates.append(templateDict)
+                    Schedule.saveTemplates(eventType, templates)
+                    Schedule.setSelectedTemplateName(self.view, value)
+                    Schedule.refreshTemplateButton(self.view, eventType)
 
                     # Reply & edit msg
-                    embed = discord.Embed(title=f"✅ Saved {status}", description=f"Saved template as: `{value}`", color=discord.Color.green())
+                    embed = discord.Embed(title="✅ Saved as a new template", description=f"Saved template as: `{value}`", color=discord.Color.green())
                     await interaction.response.send_message(embed=embed, ephemeral=True, delete_after=10.0)
-                    await self.eventMsg.edit(view=self.view)
+                    await self.eventMsg.edit(embed=Schedule.fromDictToPreviewEmbed(previewEmbedDict, interaction.guild, value), view=self.view)
+                    return
+
+                case "templates_rename":
+                    selectedTemplateName = Schedule.getSelectedTemplateName(self.view)
+                    if selectedTemplateName is None:
+                        await interaction.response.send_message(embed=discord.Embed(title="❌ No template selected", color=discord.Color.red()), ephemeral=True, delete_after=30.0)
+                        return
+
+                    templates = Schedule.loadTemplates(previewEmbedDict["type"])
+                    templateIndex = Schedule.findTemplateIndex(templates, selectedTemplateName)
+                    if templateIndex is None:
+                        await interaction.response.send_message(embed=discord.Embed(title="❌ Template not found", description=f"`{selectedTemplateName}` no longer exists.", color=discord.Color.red()), ephemeral=True, delete_after=30.0)
+                        return
+
+                    duplicateIndex = Schedule.findTemplateIndex(templates, value)
+                    if duplicateIndex is not None and duplicateIndex != templateIndex:
+                        await interaction.response.send_message(embed=discord.Embed(title="❌ Duplicate template", description=f"A template named `{value}` already exists.", color=discord.Color.red()), ephemeral=True, delete_after=30.0)
+                        return
+
+                    templates[templateIndex]["templateName"] = value
+                    Schedule.saveTemplates(previewEmbedDict["type"], templates)
+                    Schedule.setSelectedTemplateName(self.view, value)
+                    Schedule.refreshTemplateButton(self.view, previewEmbedDict["type"])
+                    await interaction.response.send_message(embed=discord.Embed(title="✅ Renamed", description=f"Renamed template to: `{value}`", color=discord.Color.green()), ephemeral=True, delete_after=10.0)
+                    await self.eventMsg.edit(embed=Schedule.fromDictToPreviewEmbed(previewEmbedDict, interaction.guild, value), view=self.view)
                     return
 
             # Update button style
@@ -3666,7 +3792,7 @@ class ScheduleModal(discord.ui.Modal):
                         child.style = discord.ButtonStyle.success
                     break
 
-            await interaction.response.edit_message(embed=Schedule.fromDictToPreviewEmbed(previewEmbedDict, interaction.guild), view=self.view)
+            await interaction.response.edit_message(embed=Schedule.fromDictToPreviewEmbed(previewEmbedDict, interaction.guild, Schedule.getSelectedTemplateName(self.view)), view=self.view)
             if followupMsg:
                 await interaction.followup.send(followupMsg["content"] if "content" in followupMsg else None, embed=(followupMsg["embed"] if "embed" in followupMsg else None), ephemeral=True)
             return

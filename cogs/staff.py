@@ -1345,7 +1345,7 @@ class ZiTFeedbackModal(discord.ui.Modal):
         self.recommendation = discord.ui.Label(
             text="Recommend ZiT for Full Zeus Tags?",
             component=discord.ui.RadioGroup(
-                custom_id="zit_recommendation",
+                custom_id="staff_select_zit_recommendation",
                 required=True,
                 options=[
                     discord.RadioGroupOption(label="Yes", value="yes"),

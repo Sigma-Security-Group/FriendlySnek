@@ -176,8 +176,8 @@ class WorkshopInterest(commands.Cog):
         """Builds the persistent workshop interest button view."""
         view = discord.ui.View(timeout=None)
         buttons = (
-            WorkshopInterestButton(custom_id="workshopinterest_add", row=0, label="Interested", style=discord.ButtonStyle.success),
-            WorkshopInterestButton(custom_id="workshopinterest_remove", row=0, label="Not Interested", style=discord.ButtonStyle.danger)
+            WorkshopInterestButton(custom_id="workshopInterest_button_interest_add", row=0, label="Interested", style=discord.ButtonStyle.success),
+            WorkshopInterestButton(custom_id="workshopInterest_button_interest_remove", row=0, label="Not Interested", style=discord.ButtonStyle.danger)
         )
         for button in buttons:
             view.add_item(item=button)
@@ -368,7 +368,7 @@ class WorkshopInterest(commands.Cog):
         await ctx.send(embed=discord.Embed(title="❌ Invalid workshop name", description=f"Could not find workshop '{worskhopListName}'.", color=discord.Color.red()))
 
 
-class WorkshopInterestButton(discord.ui.DynamicItem[discord.ui.Button], template=r"workshopinterest_(?P<action>add|remove)"):
+class WorkshopInterestButton(discord.ui.DynamicItem[discord.ui.Button], template=r"workshopInterest_button_interest_(?P<action>add|remove)"):
     """Handling all workshop interest buttons."""
     def __init__(self, custom_id="", *args, **kwargs):
         super().__init__(discord.ui.Button(custom_id=custom_id, *args, **kwargs))
@@ -398,14 +398,14 @@ class WorkshopInterestButton(discord.ui.DynamicItem[discord.ui.Button], template
                     break
             wsMembers = workshopInterest[wsTitle]["members"]
 
-            if interaction.data["custom_id"] == "workshopinterest_add":
+            if interaction.data["custom_id"] == "workshopInterest_button_interest_add":
                 if interaction.user.id not in wsMembers:
                     wsMembers.append(interaction.user.id)  # Add member to WS
                 else:
                     await interaction.response.send_message("You are already interested!", ephemeral=True)
                     return
 
-            elif interaction.data["custom_id"] == "workshopinterest_remove":
+            elif interaction.data["custom_id"] == "workshopInterest_button_interest_remove":
                 if interaction.user.id in wsMembers:
                     wsMembers.remove(interaction.user.id)  # Remove member from WS
                 else:

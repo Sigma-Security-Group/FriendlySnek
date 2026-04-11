@@ -8,8 +8,8 @@ from constants import *
 if DEBUG:
     from constants.debug import *
 
-CUSTOMID_PERSISTENT_BUTTON_REGEX = r"buttonrole_persistent_(?P<whitelistid>\d+)_(?P<roleid>\d+)"
-CUSTOMID_PERSISTENT_BUTTON_FORMAT = "buttonrole_persistent_{}_{}"
+CUSTOMID_PERSISTENT_BUTTON_REGEX = r"(?:buttonroles_button_persistent|buttonrole_persistent)_(?P<whitelistid>\d+)_(?P<roleid>\d+)"
+CUSTOMID_PERSISTENT_BUTTON_FORMAT = "buttonroles_button_persistent_{}_{}"
 
 log = logging.getLogger("FriendlySnek")
 
@@ -170,8 +170,12 @@ class ButtonRoles(commands.GroupCog, group_name="button-role"):
         view = discord.ui.View.from_message(message, timeout=None)
         isUpdateView = False
         for item in view.children:
-            whitelistId, roleId = item.custom_id.split("_")[-2:]
-            role = guild.get_role(int(roleId))
+            parsedCustomId = ButtonRoles.parsePersistentButtonCustomId(item.custom_id)
+            if parsedCustomId is None:
+                continue
+
+            _, roleId = parsedCustomId
+            role = guild.get_role(roleId)
 
             # Role no longer exist; remove button
             if not isinstance(role, discord.Role):
@@ -194,8 +198,8 @@ class ButtonRoles(commands.GroupCog, group_name="button-role"):
         embed = discord.Embed(title=f"Edit button role message", url=message.jump_url, description="Choose wheter to add or remove a role from the target button role message.\nYou can have up to 25 roles.", color=discord.Color.gold())
         view = ButtonRolesView()
         buttons = (
-            ButtonRolesButton(msgChannel=message_channel, buttonRoleMsgId=message.id, custom_id="buttonrole_edit_add", label="Add", style=discord.ButtonStyle.success),
-            ButtonRolesButton(msgChannel=message_channel, buttonRoleMsgId=message.id, custom_id="buttonrole_edit_remove", label="Remove", style=discord.ButtonStyle.danger)
+            ButtonRolesButton(msgChannel=message_channel, buttonRoleMsgId=message.id, custom_id="buttonroles_button_edit_add", label="Add", style=discord.ButtonStyle.success),
+            ButtonRolesButton(msgChannel=message_channel, buttonRoleMsgId=message.id, custom_id="buttonroles_button_edit_remove", label="Remove", style=discord.ButtonStyle.danger)
         )
         for button in buttons:
             view.add_item(button)
@@ -203,6 +207,14 @@ class ButtonRoles(commands.GroupCog, group_name="button-role"):
         log.info(f"{interaction.user.id} [{interaction.user.display_name}] Edits a button-role message '{message_id}'")
         await interaction.response.send_message(embed=embed, view=view, ephemeral=True, delete_after=300.0)
 
+
+    @staticmethod
+    def parsePersistentButtonCustomId(customId: str) -> tuple[int, int] | None:
+        """Parses current and legacy persistent button custom_id values."""
+        match = re.match(CUSTOMID_PERSISTENT_BUTTON_REGEX, customId)
+        if match is None:
+            return None
+        return int(match["whitelistid"]), int(match["roleid"])
 
     @staticmethod
     def generateSelectMenu(msgChannel: discord.TextChannel, buttonRoleMsgId: int, whitelistRoleId: int, iterable: collections.abc.Iterable[discord.SelectOption], placeholder: str, customId: str) -> collections.abc.Generator:
@@ -307,15 +319,19 @@ class ButtonRolesButton(discord.ui.Button):
         activeRoleIds = []
         whitelistRoleId = 0
         for item in discord.ui.View.from_message(buttonRoleMsg, timeout=None).children:
-            whitelistRoleId, activeRoleIdRaw = item.custom_id.split("_")[-2:]
-            activeRoleIds.append(int(activeRoleIdRaw))
+            parsedCustomId = ButtonRoles.parsePersistentButtonCustomId(item.custom_id)
+            if parsedCustomId is None:
+                continue
+
+            whitelistRoleId, activeRoleId = parsedCustomId
+            activeRoleIds.append(activeRoleId)
 
         view = discord.ui.View()
         currentRoles = [guild.get_role(msgRoleId) for msgRoleId in activeRoleIds]
 
         # Button specific actions
         match interaction.data["custom_id"]:
-            case "buttonrole_edit_add":
+            case "buttonroles_button_edit_add" | "buttonrole_edit_add":
                 addableRoles = ButtonRoles.permittedAssignableRoles(guild.roles, blacklist=currentRoles)
                 if not addableRoles:
                     embed = discord.Embed(title="❌ No roles available", description="Cannot find any roles to add, that isn't already attached to the message.", color=discord.Color.red())
@@ -323,20 +339,20 @@ class ButtonRolesButton(discord.ui.Button):
                     return
 
                 options = [discord.SelectOption(label=addableRole.name, value=addableRole.id) for addableRole in addableRoles]
-                for item in ButtonRoles.generateSelectMenu(msgChannel=self.msgChannel, buttonRoleMsgId=self.buttonRoleMsgId, whitelistRoleId=whitelistRoleId, iterable=options, placeholder="Select a role to add.", customId="buttonrole_select_add"):
+                for item in ButtonRoles.generateSelectMenu(msgChannel=self.msgChannel, buttonRoleMsgId=self.buttonRoleMsgId, whitelistRoleId=whitelistRoleId, iterable=options, placeholder="Select a role to add.", customId="buttonroles_select_add"):
                     view.add_item(item)
 
                 embed = discord.Embed(title="Select role", description="Select a role from the dropdown, to add it from the button roles.", color=discord.Color.gold())
 
 
-            case "buttonrole_edit_remove":
+            case "buttonroles_button_edit_remove" | "buttonrole_edit_remove":
                 if not currentRoles:
                     embed = discord.Embed(title="❌ No roles available", description="Cannot find any roles attached to the message.", color=discord.Color.red())
                     await interaction.response.send_message(interaction.user.mention, embed=embed, ephemeral=True, delete_after=15.0)
                     return
 
                 options = [discord.SelectOption(label=currentRole.name, value=currentRole.id) for currentRole in currentRoles]
-                for item in ButtonRoles.generateSelectMenu(msgChannel=self.msgChannel, buttonRoleMsgId=self.buttonRoleMsgId, whitelistRoleId=whitelistRoleId, iterable=options, placeholder="Select a role to remove.", customId="buttonrole_select_remove"):
+                for item in ButtonRoles.generateSelectMenu(msgChannel=self.msgChannel, buttonRoleMsgId=self.buttonRoleMsgId, whitelistRoleId=whitelistRoleId, iterable=options, placeholder="Select a role to remove.", customId="buttonroles_select_remove"):
                     view.add_item(item)
 
                 embed = discord.Embed(title="Select role", description="Select a role from the dropdown, to remove it from the button roles.", color=discord.Color.gold())
@@ -360,7 +376,7 @@ class ButtonRolesSelect(discord.ui.Select):
         buttonRoleMsg = await self.msgChannel.fetch_message(self.buttonRoleMsgId)
 
         match infoLabel:
-            case "buttonrole_select_add":
+            case "buttonroles_select_add" | "buttonrole_select_add":
                 guild = interaction.guild
                 if not isinstance(guild, discord.Guild):
                     log.exception("ButtonRolesSelect callback: guild not discord.Guild")
@@ -401,10 +417,12 @@ class ButtonRolesSelect(discord.ui.Select):
                 await interaction.response.edit_message(embed=embed, view=None)
 
 
-            case "buttonrole_select_remove":
+            case "buttonroles_select_remove" | "buttonrole_select_remove":
                 view = discord.ui.View.from_message(buttonRoleMsg, timeout=None)
                 for item in view.children:
                     match = re.match(CUSTOMID_PERSISTENT_BUTTON_REGEX, item.custom_id)
+                    if match is None:
+                        continue
                     roleIdMatched = int(match["roleid"])
                     if roleIdSelected == roleIdMatched:
                         view.remove_item(item)

@@ -2806,6 +2806,7 @@ class ScheduleButton(discord.ui.Button):
                             await interaction.response.send_message(embed=discord.Embed(title="❌ Template not found", description=f"`{templateName}` no longer exists.", color=discord.Color.red()), ephemeral=True, delete_after=30.0)
                             return
                         templateDeleted = deepcopy(templates[templateIndex])
+                        log.info(f"{interaction.user.id} [{interaction.user.display_name}] Deleted template '{templateName}'")
                         templates.pop(templateIndex)
                         Schedule.saveTemplates(previewEmbedDict["type"], templates)
                         deletedTemplates = Schedule.loadDeletedTemplates()
@@ -3775,6 +3776,7 @@ class ScheduleModal(discord.ui.Modal):
                         await interaction.response.send_message(embed=discord.Embed(title="❌ Duplicate template", description=f"A template named `{value}` already exists.", color=discord.Color.red()), ephemeral=True, delete_after=30.0)
                         return
 
+                    log.info(f"{interaction.user.id} [{interaction.user.display_name}] Renamed template '{selectedTemplateName}' to '{value}'")
                     templates[templateIndex]["templateName"] = value
                     Schedule.saveTemplates(previewEmbedDict["type"], templates)
                     Schedule.setSelectedTemplateName(self.view, value)

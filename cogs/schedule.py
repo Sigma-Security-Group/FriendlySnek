@@ -3565,18 +3565,18 @@ class ScheduleModal(discord.ui.Modal):
             targetUserId = customId[len("modal_noshow_add_"):]
 
             # Operation name
-            value1 = self.children[1].value.strip()
+            opName = self.children[1].value.strip()
 
             # Reserved role
-            value2 = self.children[2].value.strip()
+            resRoles = self.children[2].value.strip()
 
             try:
                 dateTimestamp = int(datetimeParse(value).astimezone(timezone.utc).timestamp())
             except Exception as e:
-                print(e)
-                embedDescription = f"**Operation Name:** `{value1}`"
-                if value2:
-                    embedDescription += f"\n**Reserved Role:** `{value2}`"
+                log.warning(e)
+                embedDescription = f"**Operation Name:** `{opName}`"
+                if resRoles:
+                    embedDescription += f"\n**Reserved Role:** `{resRoles}`"
                 embed = discord.Embed(title="Invalid datetime", description=embedDescription, color=discord.Color.red())
                 await interaction.response.send_message(embed=embed, ephemeral=True, delete_after=30.0)
                 return
@@ -3590,16 +3590,16 @@ class ScheduleModal(discord.ui.Modal):
             noShowFile[targetUserId].append(
                 {
                     "date": dateTimestamp,
-                    "operationName": value1 or "Operation UNKNOWN",
-                    "reservedRole": value2 or None
+                    "operationName": opName or "Operation UNKNOWN",
+                    "reservedRole": resRoles or None
                 }
             )
             with open(NO_SHOW_FILE, "w") as f:
                 json.dump(noShowFile, f, indent=4)
 
-            embedDescription = f"**Date:** {datetime.fromtimestamp(dateTimestamp, timezone.utc).strftime(TIME_FORMAT)}\n**Operation Name:** `{value1}`"
-            if value2:
-                embedDescription += f"\n**Reserved Role:** `{value2}`"
+            embedDescription = f"**Date:** {datetime.fromtimestamp(dateTimestamp, timezone.utc).strftime(TIME_FORMAT)}\n**Operation Name:** `{opName}`"
+            if resRoles:
+                embedDescription += f"\n**Reserved Role:** `{resRoles}`"
             embed = discord.Embed(title="Entry added", description=embedDescription, color=discord.Color.green())
             await interaction.response.send_message("Execute /no-show again to view the updated listing.", embed=embed, ephemeral=True, delete_after=30.0)
             return

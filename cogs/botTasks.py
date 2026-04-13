@@ -1,10 +1,8 @@
-from collections.abc import AsyncIterator
 import secret, os, random, json, re, aiohttp, discord, logging, asyncio, tarfile
 import asyncpraw, pytz  # type: ignore
 
-from typing import Tuple
+from typing import Any
 from datetime import datetime, timezone, timedelta
-from bs4 import BeautifulSoup as BS  # type: ignore
 from .workshopInterest import WORKSHOP_INTEREST_LIST, WorkshopInterest  # type: ignore
 from .spreadsheet import Spreadsheet
 
@@ -162,78 +160,39 @@ class BotTasks(commands.Cog):
 
 
     @staticmethod
-    async def fetchWebsiteText(modIds: list[int]) -> AsyncIterator[Tuple[int, str]]:
-        MAX_INVALID_FETCHES = 3
-        invalidFetches = 0
-        iterMods = [(modID, CHANGELOG_URL.format(modID)) for modID in modIds]
-        random.shuffle(iterMods)  # Shuffle mod list to reduce chance of rate limiting / bot detection
+    async def fetchPublishedFileDetails(session: aiohttp.ClientSession, modIds: list[int]) -> list[dict[str, Any]]:
+        BATCH_SIZE = 50
+        REQUEST_TIMEOUT = aiohttp.ClientTimeout(total=30)
+        output: list[dict[str, Any]] = []
 
-        funCooldownValue = lambda start, stop: start + random.random() * (stop - start) # Cooldown between start and stop seconds
+        for modChunk in chunkList(modIds, BATCH_SIZE):
+            payload = {"itemcount": str(len(modChunk))}
+            payload.update({f"publishedfileids[{i}]": str(modID) for i, modID in enumerate(modChunk)})
 
-        cookies = {"steamCountry": "FR%7C4219667261a70fcd1f30065fd4923490"}
+            async with session.post(STEAM_PUBLISHED_FILE_DETAILS_URL, data=payload, timeout=REQUEST_TIMEOUT) as response:
+                if response.status != 200:
+                    raise aiohttp.ClientResponseError(
+                        response.request_info,
+                        response.history,
+                        status=response.status,
+                        message=f"Unexpected status from Steam published-file details endpoint: {response.status}",
+                        headers=response.headers
+                    )
 
-        async with aiohttp.ClientSession() as session:
-            for i, mod in enumerate(iterMods):
-                modID, url = mod
-                if invalidFetches >= MAX_INVALID_FETCHES:
-                    log.warning("BotTasks checkModUpdates: invalidFetches limit reached, breaking loop")
-                    break
+                responseData = await response.json()
+                publishedFileDetails = responseData.get("response", {}).get("publishedfiledetails", [])
+                if not isinstance(publishedFileDetails, list):
+                    log.warning("BotTasks fetchPublishedFileDetails: publishedfiledetails was not a list")
+                    continue
 
-                # Longer cooldown every 9 fetches
-                # Steam returns HTTP 429 on the 40th request
-                if i % 9 == 0 and i != 0:
-                    async with lock:
-                        await asyncio.sleep(funCooldownValue(15, 34))
+                output.extend([detail for detail in publishedFileDetails if isinstance(detail, dict)])
 
-                # Each fetch cooldown
-                async with lock:
-                    await asyncio.sleep(funCooldownValue(5.1, 10.9)) # Arbitrary Cooldown, sleep between 5.1 and 10.9 seconds
-
-                async with session.get(url, cookies=cookies) as response:
-                    if response.status != 200:
-                        invalidFetches += 1
-                        log.warning(f"BotTasks fetchWebsiteText: response.status is not 200 ({response.status}) '{url}' ({i+1}/{len(iterMods)})")
-                        async with lock:
-                            await asyncio.sleep(funCooldownValue(30, 60))  # Rate limit, sleep for longer
-                        continue
-                    yield (modID, await response.text())
-
-
-    @staticmethod
-    def parseModUpdateDate(modupdateTime: str) -> datetime:
-        """Parse mod update time from string to datetime.
-
-        Parameters:
-        modupdateTime (str): The mod update time string, either one of these formats:
-        'Update: 1 Jan @ 06:00am'
-        'Update: 1 Jan, 2026 @ 06:00pm'
-
-        Returns:
-        datetime: The parsed datetime.
-
-        Raises:
-        ValueError: If the date format is unrecognized.
-        """
-        formats = [
-            ("Update: %d %b, %Y @ %I:%M%p", True),   # with year
-            ("Update: %d %b @ %I:%M%p", False),      # without year
-        ]
-
-        for fmt, has_year in formats:
-            try:
-                dt = datetime.strptime(modupdateTime, fmt)
-                if not has_year:
-                    dt = dt.replace(year=datetime.now().year)
-                return dt
-            except ValueError:
-                pass
-
-        raise ValueError(f"Unrecognized date format: {modupdateTime}")
+        return output
 
 
     async def checkModUpdates(self) -> None:
         """Checks mod updates, pings hampters if detected."""
-        CHECK_MOD_UPDATE_INTERVAL = 8.0  # hours
+        CHECK_MOD_UPDATE_INTERVAL = 2  # hours
 
         output = []
         with open(GENERIC_DATA_FILE) as f:
@@ -245,62 +204,60 @@ class BotTasks(commands.Cog):
             if "jcaCounter" not in genericData:
                 genericData["jcaCounter"] = 0
 
+            if "modUpdateMetadata" not in genericData or not isinstance(genericData["modUpdateMetadata"], dict):
+                genericData["modUpdateMetadata"] = {}
+
         jcaModUpdateFound = False
+        detectedChanges: list[dict[str, Any]] = []
 
-        async for modID, website in BotTasks.fetchWebsiteText(genericData["modpackIds"]):
-            modUpdateDate = ""
-            # Fetch mod & parse HTML
-            soup = BS(website, "html.parser")
+        async with aiohttp.ClientSession() as session:
+            publishedFileDetails = await BotTasks.fetchPublishedFileDetails(session, genericData["modpackIds"])
 
-            # Mod Title
-            name = soup.find("div", class_="workshopItemTitle")
-            if name is None:
-                continue
-            name = name.string
-
-            # Find latest update
-            update = soup.find("div", class_="detailBox workshopAnnouncement noFooter changeLogCtn")
-            if update is None:
-                log.exception("BotTasks checkModUpdates: update is None")
-                return
-
-            # Loop paragraphs in latest update
-            for paragraph in update.descendants:
-                stripTxt = str(paragraph).strip()
-                if not stripTxt:  # Ignore empty shit
+            for detail in publishedFileDetails:
+                try:
+                    modID = int(detail["publishedfileid"])
+                except (KeyError, TypeError, ValueError):
+                    log.warning("BotTasks checkModUpdates: failed to parse publishedfileid from Steam response")
                     continue
 
-                # Find update time
-                elif stripTxt.startswith("Update: "):
-                    modUpdateDate = stripTxt
-                    break  # dw bout shit after this
+                if detail.get("result") != 1:
+                    log.warning(f"BotTasks checkModUpdates: Steam returned result={detail.get('result')} for mod '{modID}'")
+                    continue
 
-            # Parse time to datetime
-            try:
-                modDateParsed = BotTasks.parseModUpdateDate(modUpdateDate)
-            except Exception as e:
-                log.exception(f"BotTasks checkModUpdates: Error parsing mod update date: {e}")
-                continue
+                title = detail.get("title")
+                timeUpdated = detail.get("time_updated")
+                if not isinstance(title, str) or not isinstance(timeUpdated, int):
+                    log.warning(f"BotTasks checkModUpdates: missing title or time_updated for mod '{modID}'")
+                    continue
 
-            # Convert it into UTC (shitty arbitrary code)
-            modDateUTC = pytz.UTC.localize(modDateParsed + timedelta(hours=7))  # Change this if output time is wrong: will cause double ping
+                lastSeenTimeUpdated = genericData["modUpdateMetadata"].get(str(modID))
+                if not isinstance(lastSeenTimeUpdated, int):
+                    genericData["modUpdateMetadata"][str(modID)] = timeUpdated
+                    continue
 
-            # Current time
-            now = datetime.now(timezone.utc)
+                genericData["modUpdateMetadata"][str(modID)] = timeUpdated
 
-            # Check if update is new
-            if modDateUTC < now + timedelta(minutes=5.0) and modDateUTC > now - timedelta(hours=7, minutes=59.0):  # Relative time checking
-                log.debug(f"BotTasks checkModUpdates: Arma mod update '{name}' - '{modDateUTC}'")
-                output.append({
-                    "modID": modID,
-                    "name": name,
-                    "datetime": modDateUTC
-                })
+                if timeUpdated > lastSeenTimeUpdated:
+                    detectedChanges.append({
+                        "modID": modID,
+                        "name": title,
+                        "timeUpdated": timeUpdated
+                    })
 
-                # JCA counter
-                if modID in (3333302397, 3337555434):
-                    genericData["jcaCounter"] += 1
-                    jcaModUpdateFound = True
+        for changedMod in detectedChanges:
+            modID = changedMod["modID"]
+            modDateUTC = datetime.fromtimestamp(changedMod["timeUpdated"], tz=timezone.utc)
+            log.debug(f"BotTasks checkModUpdates: Arma mod update '{changedMod['name']}' - '{modDateUTC}'")
+            output.append({
+                "modID": modID,
+                "name": changedMod["name"],
+                "datetime": modDateUTC
+            })
+
+            # JCA counter
+            if modID in (3333302397, 3337555434):
+                genericData["jcaCounter"] += 1
+                jcaModUpdateFound = True
 
 
         with open(GENERIC_DATA_FILE, "w") as f:

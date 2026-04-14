@@ -3043,7 +3043,7 @@ class ScheduleButton(discord.ui.Button):
                 for entry in noShowFile[targetUserId]:
                     date = entry.get("date", 0)
                     noShowEntryTimestamp = datetime.fromtimestamp(date, timezone.utc).strftime(TIME_FORMAT)
-                    options.append(discord.SelectOption(label=entry.get("operationName", "Operation UNKNOWN"), description=noShowEntryTimestamp, value=date))
+                    options.append(discord.SelectOption(label=entry.get("operationName", "Operation UNKNOWN"), description=noShowEntryTimestamp, value=str(date)))
 
                 await interaction.response.send_message(interaction.user.mention, view=Schedule.generateSelectView(
                     options=options,
@@ -3231,8 +3231,8 @@ class ScheduleSelect(discord.ui.Select):
             await eventMsgNew.edit(embed=Schedule.fromDictToPreviewEmbed(previewEmbedDict, interaction.guild, Schedule.getSelectedTemplateName(self.eventMsgView)), view=self.eventMsgView)
 
 
-        elif customId.startswith("select_noshow_entry_"):
-            userId = customId[len("select_noshow_entry_"):]
+        elif customId.startswith("schedule_select_noshow_entry_"):
+            userId = customId[len("schedule_select_noshow_entry_"):]
             userId = "_".join(userId.split("_")[:-1])  # Remove "_REMOVE0"
 
             with open(NO_SHOW_FILE) as f:
@@ -3245,7 +3245,7 @@ class ScheduleSelect(discord.ui.Select):
 
             for entry in noShowFile[userId]:
                 date = entry.get("date", "0")
-                if int(selectedValue) == date:
+                if int(selectedValue) == int(date):
                     date = discord.utils.format_dt(datetime.fromtimestamp(date, timezone.utc), style="R")
                     embedDescription = f"**Date:** {date}\n**Operation Name:** `{entry.get('operationName', 'Operation UNKNOWN')}`"
                     if entry.get("reservedRole", None):

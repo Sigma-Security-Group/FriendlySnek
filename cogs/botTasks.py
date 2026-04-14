@@ -1,11 +1,8 @@
-from collections.abc import AsyncIterator
-import secret, os, random, json, re, aiohttp, discord, logging, asyncio
+import secret, os, random, json, re, aiohttp, discord, logging, asyncio, tarfile
 import asyncpraw, pytz  # type: ignore
 
-from typing import Tuple
+from typing import Any
 from datetime import datetime, timezone, timedelta
-from dateutil.relativedelta import relativedelta  # type: ignore
-from bs4 import BeautifulSoup as BS  # type: ignore
 from .workshopInterest import WORKSHOP_INTEREST_LIST, WorkshopInterest  # type: ignore
 from .spreadsheet import Spreadsheet
 
@@ -38,6 +35,9 @@ class BotTasks(commands.Cog):
 
         if not self.fiveMinTasks.is_running():
             self.fiveMinTasks.start()
+
+        if not self.fifteenMinTasks.is_running():
+            self.fifteenMinTasks.start()
 
 
     @staticmethod
@@ -160,78 +160,39 @@ class BotTasks(commands.Cog):
 
 
     @staticmethod
-    async def fetchWebsiteText(modIds: list[int]) -> AsyncIterator[Tuple[int, str]]:
-        MAX_INVALID_FETCHES = 3
-        invalidFetches = 0
-        iterMods = [(modID, CHANGELOG_URL.format(modID)) for modID in modIds]
-        random.shuffle(iterMods)  # Shuffle mod list to reduce chance of rate limiting / bot detection
+    async def fetchPublishedFileDetails(session: aiohttp.ClientSession, modIds: list[int]) -> list[dict[str, Any]]:
+        BATCH_SIZE = 50
+        REQUEST_TIMEOUT = aiohttp.ClientTimeout(total=30)
+        output: list[dict[str, Any]] = []
 
-        funCooldownValue = lambda start, stop: start + random.random() * (stop - start) # Cooldown between start and stop seconds
+        for modChunk in chunkList(modIds, BATCH_SIZE):
+            payload = {"itemcount": str(len(modChunk))}
+            payload.update({f"publishedfileids[{i}]": str(modID) for i, modID in enumerate(modChunk)})
 
-        cookies = {"steamCountry": "FR%7C4219667261a70fcd1f30065fd4923490"}
+            async with session.post(STEAM_PUBLISHED_FILE_DETAILS_URL, data=payload, timeout=REQUEST_TIMEOUT) as response:
+                if response.status != 200:
+                    raise aiohttp.ClientResponseError(
+                        response.request_info,
+                        response.history,
+                        status=response.status,
+                        message=f"Unexpected status from Steam published-file details endpoint: {response.status}",
+                        headers=response.headers
+                    )
 
-        async with aiohttp.ClientSession() as session:
-            for i, mod in enumerate(iterMods):
-                modID, url = mod
-                if invalidFetches >= MAX_INVALID_FETCHES:
-                    log.warning("BotTasks checkModUpdates: invalidFetches limit reached, breaking loop")
-                    break
+                responseData = await response.json()
+                publishedFileDetails = responseData.get("response", {}).get("publishedfiledetails", [])
+                if not isinstance(publishedFileDetails, list):
+                    log.warning("BotTasks fetchPublishedFileDetails: publishedfiledetails was not a list")
+                    continue
 
-                # Longer cooldown every 9 fetches
-                # Steam returns HTTP 429 on the 40th request
-                if i % 9 == 0 and i != 0:
-                    async with lock:
-                        await asyncio.sleep(funCooldownValue(15, 34))
+                output.extend([detail for detail in publishedFileDetails if isinstance(detail, dict)])
 
-                # Each fetch cooldown
-                async with lock:
-                    await asyncio.sleep(funCooldownValue(5.1, 10.9)) # Arbitrary Cooldown, sleep between 5.1 and 10.9 seconds
-
-                async with session.get(url, cookies=cookies) as response:
-                    if response.status != 200:
-                        invalidFetches += 1
-                        log.warning(f"BotTasks fetchWebsiteText: response.status is not 200 ({response.status}) '{url}' ({i+1}/{len(iterMods)})")
-                        async with lock:
-                            await asyncio.sleep(funCooldownValue(30, 60))  # Rate limit, sleep for longer
-                        continue
-                    yield (modID, await response.text())
-
-
-    @staticmethod
-    def parseModUpdateDate(modupdateTime: str) -> datetime:
-        """Parse mod update time from string to datetime.
-
-        Parameters:
-        modupdateTime (str): The mod update time string, either one of these formats:
-        'Update: 1 Jan @ 06:00am'
-        'Update: 1 Jan, 2026 @ 06:00pm'
-
-        Returns:
-        datetime: The parsed datetime.
-
-        Raises:
-        ValueError: If the date format is unrecognized.
-        """
-        formats = [
-            ("Update: %d %b, %Y @ %I:%M%p", True),   # with year
-            ("Update: %d %b @ %I:%M%p", False),      # without year
-        ]
-
-        for fmt, has_year in formats:
-            try:
-                dt = datetime.strptime(modupdateTime, fmt)
-                if not has_year:
-                    dt = dt.replace(year=datetime.now().year)
-                return dt
-            except ValueError:
-                pass
-
-        raise ValueError(f"Unrecognized date format: {modupdateTime}")
+        return output
 
 
     async def checkModUpdates(self) -> None:
         """Checks mod updates, pings hampters if detected."""
-        CHECK_MOD_UPDATE_INTERVAL = 8.0  # hours
+        CHECK_MOD_UPDATE_INTERVAL = 2  # hours
 
         output = []
         with open(GENERIC_DATA_FILE) as f:
@@ -243,62 +204,60 @@ class BotTasks(commands.Cog):
             if "jcaCounter" not in genericData:
                 genericData["jcaCounter"] = 0
 
+            if "modUpdateMetadata" not in genericData or not isinstance(genericData["modUpdateMetadata"], dict):
+                genericData["modUpdateMetadata"] = {}
+
         jcaModUpdateFound = False
+        detectedChanges: list[dict[str, Any]] = []
 
-        async for modID, website in BotTasks.fetchWebsiteText(genericData["modpackIds"]):
-            modUpdateDate = ""
-            # Fetch mod & parse HTML
-            soup = BS(website, "html.parser")
+        async with aiohttp.ClientSession() as session:
+            publishedFileDetails = await BotTasks.fetchPublishedFileDetails(session, genericData["modpackIds"])
 
-            # Mod Title
-            name = soup.find("div", class_="workshopItemTitle")
-            if name is None:
-                continue
-            name = name.string
-
-            # Find latest update
-            update = soup.find("div", class_="detailBox workshopAnnouncement noFooter changeLogCtn")
-            if update is None:
-                log.exception("BotTasks checkModUpdates: update is None")
-                return
-
-            # Loop paragraphs in latest update
-            for paragraph in update.descendants:
-                stripTxt = str(paragraph).strip()
-                if not stripTxt:  # Ignore empty shit
+            for detail in publishedFileDetails:
+                try:
+                    modID = int(detail["publishedfileid"])
+                except (KeyError, TypeError, ValueError):
+                    log.warning("BotTasks checkModUpdates: failed to parse publishedfileid from Steam response")
                     continue
 
-                # Find update time
-                elif stripTxt.startswith("Update: "):
-                    modUpdateDate = stripTxt
-                    break  # dw bout shit after this
+                if detail.get("result") != 1:
+                    log.warning(f"BotTasks checkModUpdates: Steam returned result={detail.get('result')} for mod '{modID}'")
+                    continue
 
-            # Parse time to datetime
-            try:
-                modDateParsed = BotTasks.parseModUpdateDate(modUpdateDate)
-            except Exception as e:
-                log.exception(f"BotTasks checkModUpdates: Error parsing mod update date: {e}")
-                continue
+                title = detail.get("title")
+                timeUpdated = detail.get("time_updated")
+                if not isinstance(title, str) or not isinstance(timeUpdated, int):
+                    log.warning(f"BotTasks checkModUpdates: missing title or time_updated for mod '{modID}'")
+                    continue
 
-            # Convert it into UTC (shitty arbitrary code)
-            modDateUTC = pytz.UTC.localize(modDateParsed + timedelta(hours=7))  # Change this if output time is wrong: will cause double ping
+                lastSeenTimeUpdated = genericData["modUpdateMetadata"].get(str(modID))
+                if not isinstance(lastSeenTimeUpdated, int):
+                    genericData["modUpdateMetadata"][str(modID)] = timeUpdated
+                    continue
 
-            # Current time
-            now = datetime.now(timezone.utc)
+                genericData["modUpdateMetadata"][str(modID)] = timeUpdated
 
-            # Check if update is new
-            if modDateUTC < now + timedelta(minutes=5.0) and modDateUTC > now - timedelta(hours=7, minutes=59.0):  # Relative time checking
-                log.debug(f"BotTasks checkModUpdates: Arma mod update '{name}' - '{modDateUTC}'")
-                output.append({
-                    "modID": modID,
-                    "name": name,
-                    "datetime": modDateUTC
-                })
+                if timeUpdated > lastSeenTimeUpdated:
+                    detectedChanges.append({
+                        "modID": modID,
+                        "name": title,
+                        "timeUpdated": timeUpdated
+                    })
 
-                # JCA counter
-                if modID in (3333302397, 3337555434):
-                    genericData["jcaCounter"] += 1
-                    jcaModUpdateFound = True
+        for changedMod in detectedChanges:
+            modID = changedMod["modID"]
+            modDateUTC = datetime.fromtimestamp(changedMod["timeUpdated"], tz=timezone.utc)
+            log.debug(f"BotTasks checkModUpdates: Arma mod update '{changedMod['name']}' - '{modDateUTC}'")
+            output.append({
+                "modID": modID,
+                "name": changedMod["name"],
+                "datetime": modDateUTC
+            })
+
+            # JCA counter
+            if modID in (3333302397, 3337555434):
+                genericData["jcaCounter"] += 1
+                jcaModUpdateFound = True
 
 
         with open(GENERIC_DATA_FILE, "w") as f:
@@ -456,6 +415,43 @@ Join Us:
             log.exception(f"Bottasks getPingString: roleId {roles[roles.index(None)]} returns None")
             return None
         return " ".join([role.mention for role in roles])  # type: ignore
+
+    @staticmethod
+    def pruneOldDataBackups() -> None:
+        """Delete backup archives older than 48 hours based on their filename timestamp."""
+        backupCutoff = datetime.now() - timedelta(hours=48)
+
+        for entry in os.scandir(BACKUP_DIR):
+            if not entry.is_file():
+                continue
+
+            if not re.match(r"^\d{4}-\d{2}-\d{2}_\d{2}-\d{2}_data\.tar\.xz$", entry.name):
+                continue
+
+            try:
+                backupTime = datetime.strptime(entry.name.removesuffix("_data.tar.xz"), "%Y-%m-%d_%H-%M")
+            except ValueError:
+                log.warning(f"BotTasks pruneOldDataBackups: invalid backup filename '{entry.name}'")
+                continue
+
+            if backupTime < backupCutoff:
+                os.remove(entry.path)
+
+    @staticmethod
+    def createDataBackup() -> None:
+        """Create a timestamped tar.xz archive of the data directory."""
+        os.makedirs(BACKUP_DIR, exist_ok=True)
+        BotTasks.pruneOldDataBackups()
+
+        timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M")
+        archivePath = os.path.join(BACKUP_DIR, f"{timestamp}_data.tar.xz")
+
+        if os.path.exists(archivePath):
+            log.warning(f"BotTasks createDataBackup: backup already exists '{archivePath}', skipping")
+            return
+
+        with tarfile.open(archivePath, mode="x:xz") as archive:
+            archive.add(DATA_DIR, arcname=os.path.basename(DATA_DIR), recursive=True)
 
     async def smeReminder(self) -> None:
         """Pings SME role if workshops haven't been hosted in required time."""
@@ -900,6 +896,14 @@ Join Us:
             json.dump(reminders, f, indent=4)
 
 
+    @tasks.loop(minutes=15)
+    async def fifteenMinTasks(self) -> None:
+        try:
+            BotTasks.createDataBackup()
+        except Exception:
+            log.exception("BotTasks fifteenMinTasks: failed to create data backup")
+
+
 @discord.app_commands.guilds(GUILD)
 class Reminders(commands.GroupCog, name="reminder"):
     """Reminders Cog."""
@@ -913,104 +917,29 @@ class Reminders(commands.GroupCog, name="reminder"):
             startDate = datetime.now(timezone.utc)
         return (startDate.replace(day=1) + timedelta(days=32)).replace(day=1, hour=12, minute=0, second=0, microsecond=0)
 
-    @staticmethod
-    def getFutureDate(datetimeDict: dict[str, int | None]) -> datetime:
-        """Create future datetime from time period values.
-
-        Parameters:
-        datetimeDict (dict[str, int | None]): Keys as time period [year/day/minute] (month is optional), values as None or stringed number.
-
-        Returns:
-        datetime: The future date.
-        """
-        futureDate = now = datetime.now()
-        yearsToAdd = datetimeDict.get("years") or 0
-        monthsToAdd = datetimeDict.get("months") or 0
-        if yearsToAdd or monthsToAdd:
-            futureDate = futureDate + relativedelta(years=yearsToAdd, months=monthsToAdd)
-
-        formatTime = lambda t: 0.0 if t is None else t
-        futureDate += timedelta(
-            weeks = formatTime(datetimeDict["weeks"]),
-            days = formatTime(datetimeDict["days"]),
-            hours = formatTime(datetimeDict["hours"]),
-            minutes = formatTime(datetimeDict["minutes"]),
-            seconds = formatTime(datetimeDict["seconds"])
-        )
-        return futureDate
-
-    @staticmethod
-    def filterMatches(matches) -> dict[str, int | None]:
-        """Merges multiple time dicts into one, by finding biggest values & adds recurring ones.
-
-        Parameters:
-        matches (): List of re.Match.
-
-        Returns:
-        dict[str, int | None]: The one dict.
-        """
-        totalValues: dict[str, int | None] = {}
-        for match in matches:
-            for key, value in match.groupdict().items():
-                if key not in totalValues or totalValues[key] is None:
-                    totalValues[key] = None if value is None else int(value)
-                elif isinstance(totalValues[key], int) and value is not None:
-                    totalValues[key] += int(value)
-        return totalValues
-
-    def parseRelativeTime(self, time: str) -> datetime | None:
-        """Parses raw str relative time into datetime object.
-
-        Parameters:
-        time (str): Unparsed relative time.
-
-        Returns:
-        datetime | None: DT object if time could be parsed, or None if unparsable.
-        """
-        timeStrip = time.strip()
-        shortTimeRegex = r"(?P<years>\d+(?=y))?(?P<weeks>\d+(?=w))?(?P<days>\d+(?=d))?(?P<hours>\d+(?=h))?(?P<minutes>\d+(?=m))?(?P<seconds>\d+(?=s))?"
-        timeDict = self.filterMatches(re.finditer(shortTimeRegex, timeStrip, re.I))
-
-        timeFound = lambda times: len([value for value in times.values() if value is not None]) > 0
-
-        # Short version of relative time inputted (e.g. "1y9m11wd99h111m999s")
-        if timeFound(timeDict):
-            return self.getFutureDate(timeDict)
-
-        # Long version of relative time inputted (e.g. "99 minutes")
-        longTimeRegex = r"(?P<years>\d+(?=\s?years?))?(?P<months>\d+(?=\s?months?))?(?P<weeks>\d+(?=\s?weeks?))?(?P<days>\d+(?=\s?days?))?(?P<hours>\d+(?=\s?hours?))?(?P<minutes>\d+(?=\s?minutes?))?(?P<seconds>\d+(?=\s?seconds?))?"
-        timeDict = self.filterMatches(re.finditer(longTimeRegex, timeStrip, re.I))
-        if timeFound(timeDict):
-            return self.getFutureDate(timeDict)
-
-        # timeFound is False on both accounts
-        return None
-
-
-    @discord.app_commands.command(name="set")
+    @discord.app_commands.command(name="set", description="Set a reminder using Discord's @time timestamp input.")
     @discord.app_commands.describe(
-        when = "When to be reminded of something.",
+        when = "When to remind you. Use Discord's @time picker/input only.",
         text = "What to be reminded of.",
         repeat = "If the reminder repeats."
     )
-    async def reminderSet(self, interaction: discord.Interaction, when: str, text: str | None = None, repeat: bool | None = None) -> None:
-        """Sets a reminder to remind you of something at a specific time."""
-        if when.strip() == "":
-            await interaction.response.send_message(embed=discord.Embed(title="❌ Input e.g. 'in 5 minutes' or '1 hour'.", color=discord.Color.red()), ephemeral=True, delete_after=10.0)
+    async def reminderSet(self, interaction: discord.Interaction, when: discord.app_commands.Transform[datetime, discord.app_commands.Timestamp], text: str | None = None, repeat: bool | None = None) -> None:
+        """Set a reminder using Discord's `@time` timestamp input."""
+        reminderTime = when.astimezone(timezone.utc) if when.tzinfo is not None else when.replace(tzinfo=timezone.utc)
+        now = datetime.now(timezone.utc)
+        reminderDelta = reminderTime - now
+
+        if reminderDelta <= timedelta():
+            await interaction.response.send_message(embed=discord.Embed(title="❌ Invalid time", description="Reminder time must be in the future. Use Discord's @time input.", color=discord.Color.red()), ephemeral=True, delete_after=10.0)
             return
 
-        reminderTime = self.parseRelativeTime(when)
-        if reminderTime is None:
-            await interaction.response.send_message(embed=discord.Embed(title="❌ Could not parse the given time.", color=discord.Color.red()), ephemeral=True, delete_after=10.0)
-            return
-
-        if repeat and ((reminderTime - datetime.now()) < timedelta(minutes=1)):
-            await interaction.response.send_message(embed=discord.Embed(title="❌ I will not spam-remind you.", color=discord.Color.red()), ephemeral=True, delete_after=10.0)
+        if repeat and reminderDelta < timedelta(minutes=5):
+            await interaction.response.send_message(embed=discord.Embed(title="❌ I will not spam-remind you", description="Repeat reminders must be at least 5 minutes apart.", color=discord.Color.red()), ephemeral=True, delete_after=10.0)
             return
 
         if interaction.channel is None:
             log.exception("BotTasks reminderSet: interaction.channel is None")
-            await interaction.response.send_message(embed=discord.Embed(title="❌ Invalid channel.", color=discord.Color.red()), ephemeral=True, delete_after=10.0)
+            await interaction.response.send_message(embed=discord.Embed(title="❌ Invalid channel", description="Unable to send reminder in this channel.", color=discord.Color.red()), ephemeral=True, delete_after=10.0)
             return
 
         with open(REMINDERS_FILE) as f:
@@ -1022,8 +951,8 @@ class Reminders(commands.GroupCog, name="reminder"):
             "channelID": interaction.channel.id,
             "messageID": None,
             "message": text or "",
-            "setTime": datetime.timestamp(datetime.now()),
-            "timedeltaSeconds": (reminderTime - datetime.now()).total_seconds(),
+            "setTime": datetime.timestamp(now),
+            "timedeltaSeconds": reminderDelta.total_seconds(),
             "repeat": repeat or False
         }
 

@@ -6,6 +6,9 @@ GUILD = discord.Object(id=GUILD_ID)
 # DATA FILES
 ####################
 
+DATA_DIR = "data"
+BACKUP_DIR = "backups"
+
 # Events
 EVENTS_FILE = "data/events.json"
 EVENTS_HISTORY_FILE = "data/eventsHistory.json"
@@ -26,6 +29,7 @@ CANDIDATE_TRACKING_FILE = "data/candidateTracking.json"
 # Staff
 ROLE_RESERVATION_BLACKLIST_FILE = "data/roleReservationBlacklist.json"
 NO_SHOW_FILE = "data/noShow.json"
+TEMPLATES_DELETED_FILE = "data/templatesDeleted.json"
 
 
 ####################

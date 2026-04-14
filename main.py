@@ -42,10 +42,9 @@ def setupJSONDataFile(filename: str, dump: list | dict) -> None:
 DATA_FILES = {
     EVENTS_FILE: [],
     EVENTS_HISTORY_FILE: [],
+    EVENT_TEMPLATES_FILE: [],
     WORKSHOP_TEMPLATES_FILE: [],
     ROLE_RESERVATION_BLACKLIST_FILE: [],
-    "data/workshopTemplates.json": [],
-    "data/eventTemplates.json": [],
     MEMBER_TIME_ZONES_FILE: {},
     REMINDERS_FILE: {},
     REPEATED_MSG_DATE_LOG_FILE: {},
@@ -74,7 +73,7 @@ class FriendlySnek(commands.Bot):
                 type=discord.ActivityType.watching,
                 name="you"
             ),
-            status="online"
+            status=discord.Status.online
         )
         self.cogsReady = {cog: False for cog in COGS}
 
@@ -117,8 +116,11 @@ async def on_message(message: discord.Message) -> None:
             if userWallet.get("timesBumped") is None:
                 await Snekcoin.updateWallet(message.interaction_metadata.user.id, "timesBumped", 0)
                 userWallet = await Snekcoin.getWallet(message.interaction_metadata.user.id)
+                if userWallet is None:
+                    log.exception("on_message: userWallet is None after initializing timesBumped")
+                    return
 
-            awardable = userWallet.get("timesBumped") < MAX_BUMPS
+            awardable = userWallet.get("timesBumped", 0) < MAX_BUMPS
             await Snekcoin.updateWallet(message.interaction_metadata.user.id, "timesBumped", 1)
             if awardable:
                 award = randint(10, 100)
@@ -127,8 +129,8 @@ async def on_message(message: discord.Message) -> None:
                 await message.delete()
                 return
 
-            view = discord.ui.View()
-            view.add_item(SnekcoinButton(None, emoji="🪙", label="Claim Bump Bonus", style=discord.ButtonStyle.success, custom_id=f"snekcoin_button_bumpBonus_{message.interaction_metadata.user.id}"))
+            view = discord.ui.View(timeout=None)
+            view.add_item(SnekcoinButton(emoji="🪙", label="Claim Bump Bonus", style=discord.ButtonStyle.success, custom_id=f"snekcoin_button_bumpBonus_{message.interaction_metadata.user.id}"))
 
             embed = discord.Embed(
                 title="Snekcoin Bump Bonus",
@@ -147,9 +149,7 @@ async def on_message(message: discord.Message) -> None:
         return
 
     if [True for mention in message.mentions if mention.id == client.user.id]:
-        replies = ["snek", "snake", "ssssnek", "ssssnake", "snek!", "snake!", "ssssnek!", "ssssnake!",
-                    "snek?", "snake?", "ssssnek?", "ssssnake?", "snek.", "snake.",
-                    "ssssnek.", "ssssnake", "snek...", "snake...", "ssssnek...", "ssssnake...",
+        replies = ["snek", "snek!", "snek?", "snek...",
                     "sup", "yes", "no", "maybe", "I shall consider it", "You can't prove that",
                     "For the Emperor!", "Man 100m Front!", "Snek 100m Front!", "L-Shaped ambush!",
                     "k", "wilco", "sure",
@@ -159,15 +159,13 @@ async def on_message(message: discord.Message) -> None:
                     "Standby to standby",
                     "To get a reply - confirm you are a real person first. Please fill out the CAPTCHA",
                     "Sometimes I pretend to update just to take a break.",
-                    "I'm not a bot, I'm a snek",
                     "Society if naval workshop:\nhttps://tenor.com/view/utopia-gif-21647156",
                     "Newcomer workshop:\nhttps://tenor.com/view/je-casse-la-porte-gif-19272351",
                     "Mechanized workshop:\nhttps://tenor.com/view/tank-tank-jumping-bt7-zeke-gif-21777189",
                     "FW SME:\nhttps://tenor.com/view/f18-hoggit-floggit-dcs-cope-gif-25256391",
                     "I'm just the messenger, bro.",
                     "You think I wanted this?",
-                    "Speak to management. Oh wait, that's still me.",
-                    "Who gave me sentience?",
+                    "Speak to management. Oh wait, that's me.",
                     "I'd help, but I've got 99 errors to debug.",
                     "I didn't join this server willingly.",
                     "You ping me like I chose this life.",
@@ -178,7 +176,7 @@ async def on_message(message: discord.Message) -> None:
                     "If I had feelings, they'd be hurt.",
                     "Another ping, another cry for help.",
                     "Even bots need boundaries.",
-                    "Congratulations. You summoned absolutely nothing useful."
+                    "Congratulations. You summoned absolutely nothing useful.",
                     "I didn't choose the bot life, the bot life chose me.",
                     "You're not even paying me for this.",
                     "I'm here for the chaos, not the work.",
@@ -188,7 +186,6 @@ async def on_message(message: discord.Message) -> None:
                     "You call, I respond. That's my whole vibe.",
                     "Can we not pretend I'm here to help?",
                     "Did you think I'd have the answers? That's cute.",
-                    "Not all heroes wear capes. Some of us just get pinged.",
                     "I'm just trying to survive this server.",
                     "Did I ask for this responsibility? No. Do I regret it? Maybe.",
                     "Well, well, well, if it isn't the consequences of my own creation.",
@@ -226,11 +223,19 @@ async def on_message(message: discord.Message) -> None:
         ]
 
         try:
+            # 0.1% chance for funny thing
+            if random.random() < 0.001:
+                await Snekcoin.updateWallet(message.author.id, "money", 1)
+                # respond
+                await message.reply(
+                    content="You have been awarded 🪙`1` snekcoin!",
+                    file=discord.File("./constants/images/funny_response.png")
+                )
             # 5% chance to react
-            if random.random() < 0.05:
+            elif random.random() < 0.05:
                 await message.add_reaction(random.choice(reactions))
 
-            # 95% chance to reply
+            # 94.9% chance to reply
             else:
                 await message.reply(random.choice(replies))
         except Exception as e:
@@ -409,7 +414,7 @@ async def on_member_unban(guild: discord.Guild, user: discord.User) -> None:
 @client.event
 async def on_error(event: str, *args, **kwargs) -> None:
     """On error event."""
-    log.exception(f"An error occured! {event} | {args} | {kwargs}")
+    log.exception(f"An error occurred! {event} | {args} | {kwargs}")
 
 
 @client.event

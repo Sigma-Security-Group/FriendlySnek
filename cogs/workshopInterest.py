@@ -120,6 +120,17 @@ class WorkshopInterest(commands.Cog):
                     json.dump(wsIntFile, f, indent=4)
 
 
+        guild = self.bot.get_guild(GUILD_ID)
+        if guild is None:
+            log.exception("WSINT on_ready: guild is None")
+            return
+
+        if not isUpdateChannel:
+            try:
+                isUpdateChannel = await WorkshopInterest.workshopInterestRequiresRefresh(guild)
+            except Exception as e:
+                log.exception(f"WSINT on_ready: failed to reconcile workshop interest channel: {e}")
+
         if isUpdateChannel:
             await self.updateChannel()
 
@@ -152,23 +163,83 @@ class WorkshopInterest(commands.Cog):
         for workshopName in WORKSHOP_INTEREST_LIST.keys():
             # Fetch embed
             embed = self.getWorkshopEmbed(guild, workshopName)
-
-            # Do button stuff
-            view = discord.ui.View(timeout=None)
-            buttons = (
-                WorkshopInterestButton(custom_id="workshopinterest_add", row=0, label="Interested", style=discord.ButtonStyle.success),
-                WorkshopInterestButton(custom_id="workshopinterest_remove", row=0, label="Not Interested", style=discord.ButtonStyle.danger)
-            )
-            for button in buttons:
-                view.add_item(item=button)
-
-            msg = await wsIntChannel.send(embed=embed, view=view)
+            msg = await wsIntChannel.send(embed=embed, view=WorkshopInterest.getWorkshopView())
 
             # Set embed messageId - used for removing people once workshop is done
             wsIntFile[workshopName]["messageId"] = msg.id
 
         with open(WORKSHOP_INTEREST_FILE, "w", encoding="utf-8") as f:
             json.dump(wsIntFile, f, indent=4)
+
+    @staticmethod
+    def getWorkshopView() -> discord.ui.View:
+        """Builds the persistent workshop interest button view."""
+        view = discord.ui.View(timeout=None)
+        buttons = (
+            WorkshopInterestButton(custom_id="workshopInterest_button_interest_add", row=0, label="Interested", style=discord.ButtonStyle.success),
+            WorkshopInterestButton(custom_id="workshopInterest_button_interest_remove", row=0, label="Not Interested", style=discord.ButtonStyle.danger)
+        )
+        for button in buttons:
+            view.add_item(item=button)
+        return view
+
+    @staticmethod
+    def getMessageComponentCustomIds(message: discord.Message) -> list[str]:
+        """Gets custom_id values from a Discord message's components."""
+        customIds: list[str] = []
+        for row in message.components:
+            for child in getattr(row, "children", []):
+                customId = getattr(child, "custom_id", None)
+                if customId is not None:
+                    customIds.append(customId)
+        return customIds
+
+    @staticmethod
+    def getViewCustomIds(view: discord.ui.View) -> list[str]:
+        """Gets custom_id values from a Discord UI view."""
+        return [item.custom_id for item in view.children if getattr(item, "custom_id", None) is not None]
+
+    @staticmethod
+    async def workshopInterestRequiresRefresh(guild: discord.Guild) -> bool:
+        """Checks if the posted workshop-interest channel differs from local storage."""
+        wsIntChannel = guild.get_channel(WORKSHOP_INTEREST)
+        if not isinstance(wsIntChannel, discord.TextChannel):
+            log.exception("WSINT workshopInterestRequiresRefresh: wsIntChannel not discord.TextChannel")
+            return False
+
+        with open(WORKSHOP_INTEREST_FILE) as f:
+            wsIntFile = json.load(f)
+
+        expectedWorkshopNames = list(WORKSHOP_INTEREST_LIST.keys())
+        botMessages = [message async for message in wsIntChannel.history(limit=None, oldest_first=True) if message.author.id in FRIENDLY_SNEKS]
+
+        if len(botMessages) != len(expectedWorkshopNames):
+            log.info(f"WSINT workshopInterestRequiresRefresh: expected {len(expectedWorkshopNames)} workshop messages, found {len(botMessages)}")
+            return True
+
+        expectedCustomIds = WorkshopInterest.getViewCustomIds(WorkshopInterest.getWorkshopView())
+        for workshopName, message in zip(expectedWorkshopNames, botMessages):
+            workshopData = wsIntFile.get(workshopName)
+            if workshopData is None:
+                log.info(f"WSINT workshopInterestRequiresRefresh: missing workshop '{workshopName}' in file")
+                return True
+
+            if workshopData.get("messageId") != message.id:
+                log.info(f"WSINT workshopInterestRequiresRefresh: message id mismatch for workshop '{workshopName}'")
+                return True
+
+            expectedEmbed = WorkshopInterest.getWorkshopEmbed(guild, workshopName).to_dict()
+            actualEmbed = message.embeds[0].to_dict() if len(message.embeds) > 0 else None
+            if actualEmbed != expectedEmbed:
+                log.info(f"WSINT workshopInterestRequiresRefresh: embed mismatch for workshop '{workshopName}'")
+                return True
+
+            actualCustomIds = WorkshopInterest.getMessageComponentCustomIds(message)
+            if actualCustomIds != expectedCustomIds:
+                log.info(f"WSINT workshopInterestRequiresRefresh: component mismatch for workshop '{workshopName}'")
+                return True
+
+        return False
 
 
     @staticmethod
@@ -297,7 +368,7 @@ class WorkshopInterest(commands.Cog):
         await ctx.send(embed=discord.Embed(title="❌ Invalid workshop name", description=f"Could not find workshop '{worskhopListName}'.", color=discord.Color.red()))
 
 
-class WorkshopInterestButton(discord.ui.DynamicItem[discord.ui.Button], template=r"workshopinterest_(?P<action>add|remove)"):
+class WorkshopInterestButton(discord.ui.DynamicItem[discord.ui.Button], template=r"workshopInterest_button_interest_(?P<action>add|remove)"):
     """Handling all workshop interest buttons."""
     def __init__(self, custom_id="", *args, **kwargs):
         super().__init__(discord.ui.Button(custom_id=custom_id, *args, **kwargs))
@@ -327,14 +398,14 @@ class WorkshopInterestButton(discord.ui.DynamicItem[discord.ui.Button], template
                     break
             wsMembers = workshopInterest[wsTitle]["members"]
 
-            if interaction.data["custom_id"] == "workshopinterest_add":
+            if interaction.data["custom_id"] == "workshopInterest_button_interest_add":
                 if interaction.user.id not in wsMembers:
                     wsMembers.append(interaction.user.id)  # Add member to WS
                 else:
                     await interaction.response.send_message("You are already interested!", ephemeral=True)
                     return
 
-            elif interaction.data["custom_id"] == "workshopinterest_remove":
+            elif interaction.data["custom_id"] == "workshopInterest_button_interest_remove":
                 if interaction.user.id in wsMembers:
                     wsMembers.remove(interaction.user.id)  # Remove member from WS
                 else:

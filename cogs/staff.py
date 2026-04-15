@@ -1043,8 +1043,24 @@ class Recruitment(commands.GroupCog, name="recruitment"):
         await interaction.response.defer(ephemeral=True, thinking=True)  # Ensure message history doesnt expire interaction deadline
 
         channelRecruitmentAndHR = interaction.guild.get_channel(RECRUITMENT_AND_HR)
+        workshopInterest = interaction.guild.get_channel(WORKSHOP_INTEREST)
+        serverInfo = interaction.guild.get_channel(SERVER_INFO)
+        documentation = interaction.guild.get_channel(DOCUMENTATION)
+        faq = interaction.guild.get_channel(FAQ)
         if not isinstance(channelRecruitmentAndHR, discord.TextChannel):
             log.exception("Staff interview: channelRecruitmentAndHR not discord.TextChannel")
+            return
+        if not isinstance(workshopInterest, discord.TextChannel):
+            log.exception("Staff interview: workshopInterest not discord.TextChannel")
+            return
+        if not isinstance(serverInfo, discord.TextChannel):
+            log.exception("Staff interview: serverInfo not discord.TextChannel")
+            return
+        if not isinstance(documentation, discord.TextChannel):
+            log.exception("Staff interview: documentation not discord.TextChannel")
+            return
+        if not isinstance(faq, discord.TextChannel):
+            log.exception("Staff interview: faq not discord.TextChannel")
             return
 
         if not isinstance(interaction.user, discord.Member):
@@ -1085,7 +1101,15 @@ class Recruitment(commands.GroupCog, name="recruitment"):
  c. Help install teamspeak client, and have connected/bookmarked SSG teamspeak server
 5. How did you find out about us?
 6. Is there a specific role or playstyle you are looking to do with us?
-7. Any questions?"""
+7. Any questions?
+
+## Next steps:
+* Have the prospect click interested for the newcomer workshop in <#{workshopInterest.id}> and explain the channel.
+* Inform prospect that a newcomer workshop is required before their firest op.
+* Show the prospect around the discord. Important channels to include are:
+<#{serverInfo.id}>
+<#{documentation.id}>
+<#{faq.id}>"""
 
         embed = discord.Embed(title="Interview Structure", description=interviewQuestions, color=discord.Color.gold())
         embed.set_footer(text=f"Prospect member id: {member.id}")
@@ -1184,6 +1208,10 @@ class StaffButton(discord.ui.Button):
         # Verify prospect from interview
         if customId.startswith("staff_button_interview_verify_"):
             memberId = int(customId.split("_")[-1])
+            channelRecruitmentAndHR = interaction.guild.get_channel(RECRUITMENT_AND_HR)
+            if not isinstance(channelRecruitmentAndHR, discord.TextChannel):
+                log.exception("StaffButton callback: channelRecruitmentAndHR not discord.TextChannel")
+                return
 
             if not isinstance(interaction.guild, discord.Guild):
                 log.exception("StaffButton callback: interaction.guild is not discord.Guild")
@@ -1198,10 +1226,11 @@ class StaffButton(discord.ui.Button):
             await Snekcoin.updateWallet(interaction.user.id, "money", verifyBonus)
 
             embed = discord.Embed(title="✅ Member verified", description=f"{member.mention} verified!", color=discord.Color.green())
-            embed.add_field(name="Snekcoin Reward", value=f"You have been awarded 🪙 `{verifyBonus}` for interviewing a new member!\nKeep up the good work!", inline=False)
+            embed.add_field(name="Snekcoin Reward", value=f"{interaction.user.mention} has been awarded 🪙 `{verifyBonus}` for interviewing a new member!\nKeep up the good work!", inline=False)
             embed.set_footer(text=f"Verified member id: {member.id}")
             embed.timestamp = datetime.now()
-            await interaction.response.send_message(embed=embed, ephemeral=True)
+            await interaction.response.send_message(content=f"{member.mention} has been verified! Keep up the good work!", embed=embed, ephemeral=True)
+            await channelRecruitmentAndHR.send(embed=embed)
 
             roleProspect = interaction.guild.get_role(PROSPECT)
             roleVerified = interaction.guild.get_role(VERIFIED)
@@ -1216,6 +1245,24 @@ class StaffButton(discord.ui.Button):
                 await member.add_roles(roleVerified, reason=reason)
 
             await member.add_roles(roleMember, reason=reason)
+
+            # Send next steps message to verified member
+            serverInfo = interaction.guild.get_channel(SERVER_INFO)
+            workshopInterest = interaction.guild.get_channel(WORKSHOP_INTEREST)
+            if not isinstance(workshopInterest, discord.TextChannel):
+                log.exception("StaffButton callback: workshopInterest not discord.TextChannel")
+                return
+            if not isinstance(serverInfo, discord.TextChannel):
+                log.exception("StaffButton callback: serverInfo not discord.TextChannel")
+                return
+
+
+            dmEmbed = discord.Embed(title="Welcome to Sigma Security Group!", description=f"Congratulations on being verified {member.mention}!\nHere are your next steps:\n\n1. Be sure that you have clicked the Interested button for the `newcomer workshop` in <#{workshopInterest.id}>. Attending a newcomer workshop is required before participating in your first op, and they are a great way to get familiar with our community and how we operate.\n\n2. Be sure to download Teamspeak 3 and all the required mods located in <#{serverInfo.id}>\n\n3. After completing 1 and 2 ping @Recruitment Team in any of the channels to schedule your newcomer workshop.")
+            dmEmbed.set_footer(text="If you have any questions, reach out to the Recruitment Team or Unit Staff!")
+            try:
+                await member.send(embed=dmEmbed)
+            except Exception as e:
+                log.warning(f"Failed to send DM to {member.id} [{member.display_name}] - {e}")
 
 
             # Logging

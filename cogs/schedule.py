@@ -5,6 +5,7 @@ from math import ceil
 from copy import deepcopy
 from datetime import datetime, timedelta, timezone
 from dateutil.parser import parse as datetimeParse  # type: ignore
+from dateutil.tz import gettz
 from typing import *
 from random import random, randint, choice
 
@@ -23,6 +24,29 @@ MAX_SERVER_ATTENDANCE = 50
 
 
 UTC = pytz.utc
+DATEUTIL_TZINFOS = {
+    "UTC": gettz("UTC"),
+    "GMT": gettz("UTC"),
+    "BST": gettz("Europe/London"),
+    "CET": gettz("Europe/Brussels"),
+    "CEST": gettz("Europe/Brussels"),
+    "EET": gettz("Europe/Sofia"),
+    "EEST": gettz("Europe/Sofia"),
+    "EST": gettz("America/New_York"),
+    "EDT": gettz("America/New_York"),
+    "CST": gettz("America/Chicago"),
+    "CDT": gettz("America/Chicago"),
+    "MST": gettz("America/Denver"),
+    "MDT": gettz("America/Denver"),
+    "PST": gettz("America/Los_Angeles"),
+    "PDT": gettz("America/Los_Angeles"),
+    "JST": gettz("Asia/Tokyo"),
+    "AWST": gettz("Australia/Perth"),
+    "ACWST": gettz("Australia/Eucla"),
+    "ACST": gettz("Australia/Adelaide"),
+    "AEST": gettz("Australia/Sydney"),
+    "AEDT": gettz("Australia/Sydney")
+}
 TIME_ZONES = {
     "UTC": "UTC",
     "British Time (London)": "Europe/London",
@@ -152,6 +176,11 @@ FILE_UPLOAD_EXTENSION_BLACKLIST = ["exe", "pif", "application", "gadget", "msi",
 
 
 log = logging.getLogger("FriendlySnek")
+
+
+def parseUserDatetime(value: str) -> datetime:
+    """Parse free-form user datetime input with common timezone abbreviations."""
+    return datetimeParse(value, tzinfos=DATEUTIL_TZINFOS)
 
 class Schedule(commands.Cog):
     """Schedule Cog."""
@@ -3571,7 +3600,10 @@ class ScheduleModal(discord.ui.Modal):
             resRoles = self.children[2].value.strip()
 
             try:
-                dateTimestamp = int(datetimeParse(value).astimezone(timezone.utc).timestamp())
+                parsedDate = parseUserDatetime(value)
+                if parsedDate.tzinfo is None:
+                    parsedDate = parsedDate.replace(tzinfo=timezone.utc)
+                dateTimestamp = int(parsedDate.astimezone(timezone.utc).timestamp())
             except Exception as e:
                 log.warning(e)
                 embedDescription = f"**Operation Name:** `{opName}`"
@@ -3882,7 +3914,7 @@ class ScheduleModal(discord.ui.Modal):
             hours, minutes, delta = durationDetails
 
             try:
-                startTime = datetimeParse(value)
+                startTime = parseUserDatetime(value)
             except ValueError:
                 await interaction.response.send_message(interaction.user.mention, embed=EMBED_INVALID, ephemeral=True, delete_after=10.0)
                 return
@@ -3890,7 +3922,10 @@ class ScheduleModal(discord.ui.Modal):
             with open(MEMBER_TIME_ZONES_FILE) as f:
                 memberTimeZones = json.load(f)
             timeZone = pytz.timezone(memberTimeZones[str(interaction.user.id)])
-            startTime = timeZone.localize(startTime).astimezone(UTC)
+            if startTime.tzinfo is None:
+                startTime = timeZone.localize(startTime).astimezone(UTC)
+            else:
+                startTime = startTime.astimezone(UTC)
 
             # Check if new time and old time is the same
             if startTime.strftime(TIME_FORMAT) == startTimeOld:

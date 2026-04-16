@@ -1,7 +1,8 @@
 import discord, re, logging
 
-from datetime import datetime
+from datetime import datetime, timezone
 from dateutil.parser import parse as datetimeParse  # type: ignore
+from dateutil.tz import gettz
 
 from discord.ext import commands # type: ignore
 
@@ -12,6 +13,35 @@ if DEBUG:
     from constants.debug import *
 
 log = logging.getLogger("FriendlySnek")
+
+DATEUTIL_TZINFOS = {
+    "UTC": gettz("UTC"),
+    "GMT": gettz("UTC"),
+    "BST": gettz("Europe/London"),
+    "CET": gettz("Europe/Brussels"),
+    "CEST": gettz("Europe/Brussels"),
+    "EET": gettz("Europe/Sofia"),
+    "EEST": gettz("Europe/Sofia"),
+    "EST": gettz("America/New_York"),
+    "EDT": gettz("America/New_York"),
+    "CST": gettz("America/Chicago"),
+    "CDT": gettz("America/Chicago"),
+    "MST": gettz("America/Denver"),
+    "MDT": gettz("America/Denver"),
+    "PST": gettz("America/Los_Angeles"),
+    "PDT": gettz("America/Los_Angeles"),
+    "JST": gettz("Asia/Tokyo"),
+    "AWST": gettz("Australia/Perth"),
+    "ACWST": gettz("Australia/Eucla"),
+    "ACST": gettz("Australia/Adelaide"),
+    "AEST": gettz("Australia/Sydney"),
+    "AEDT": gettz("Australia/Sydney")
+}
+
+
+def parseUserDatetime(value: str) -> datetime:
+    """Parse free-form user datetime input with common timezone abbreviations."""
+    return datetimeParse(value, tzinfos=DATEUTIL_TZINFOS)
 
 class EmbedBuilder(commands.Cog):
     """Embed Builder Cog."""
@@ -426,7 +456,8 @@ class BuilderModal(discord.ui.Modal):
                 EmbedBuilder.unLockDependents(self.view, dependencies, name, value)
             case "timestamp":
                 try:
-                    embed.timestamp = datetimeParse(value)
+                    parsedTimestamp = parseUserDatetime(value)
+                    embed.timestamp = parsedTimestamp if parsedTimestamp.tzinfo is not None else parsedTimestamp.replace(tzinfo=timezone.utc)
                 except Exception:
                     stderr = "Invalid timestamp format."
             case "color":

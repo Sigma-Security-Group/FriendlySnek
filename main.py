@@ -450,6 +450,15 @@ async def stop(ctx: commands.Context) -> None:
     await client.close()
 
 
+@client.command()
+@commands.has_any_role(SNEK_LORD)
+async def debug(ctx: commands.Context) -> None:
+    """Debug command."""
+    rankstructure = ctx.guild.get_channel(RANK_STRUCTURE)
+    async for message in rankstructure.history(limit=None):
+        if message.embeds:
+            print(message.embeds[0].to_dict())
+
 if __name__ == "__main__":
     log.info("Bot starting")
     try:

@@ -182,11 +182,403 @@ def parseUserDatetime(value: str) -> datetime:
     """Parse free-form user datetime input with common timezone abbreviations."""
     return datetimeParse(value, tzinfos=DATEUTIL_TZINFOS)
 
+PROMOTION_RECOMMENDATION_CONFIRMATION_TEXT = (
+    "Promotion recommendations should only be made after thorough evaluation against the rank criteria. Approval requires that both the Primary and Secondary recommender have directly observed the individual consistently meeting all criteria for the proposed rank over multiple operations. Recommendations that do not meet this standard should not be submitted.\n\n"
+    "Review the full set of criteria for the recommended rank and confirm that the individual meets all these requirements by typing `I confirm` below."
+)
+
 class Schedule(commands.Cog):
     """Schedule Cog."""
     def __init__(self, bot: commands.Bot) -> None:
         super().__init__()
         self.bot = bot
+
+    @staticmethod
+    async def _sendInteractionResponse(
+        interaction: discord.Interaction,
+        *,
+        content: str | None = None,
+        embed: discord.Embed = discord.Embed(),
+        embeds: List[discord.Embed] = [],
+        ephemeral: bool = True,
+        delete_after: float | None = None,
+        view: discord.ui.View = discord.ui.View()
+    ) -> None:
+        if not embeds and embed:
+            embeds = [embed]
+        if interaction.response.is_done():
+            await interaction.followup.send(content=content, embeds=embeds, ephemeral=ephemeral, view=view)
+        else:
+            await interaction.response.send_message(content=content, embeds=embeds, ephemeral=ephemeral, delete_after=delete_after, view=view)
+
+    @staticmethod
+    def _getPromotionTrackRanks(member: discord.Member) -> List[int]:
+        return [role.id for role in member.roles if role.id in PROMOTION_TRACK_RANKS]
+
+    @staticmethod
+    def _meetsPromotionRecommendationRequirement(member: discord.Member, targetRankId: int) -> bool:
+        requiredRoleIds = PROMOTION_RECOMMENDATION_MINIMUM_RECOMMENDER_ROLES.get(targetRankId, ())
+        memberRoleIds = {role.id for role in member.roles}
+        return any(roleId in memberRoleIds for roleId in requiredRoleIds)
+
+    @staticmethod
+    def _formatRoleMentions(guild: discord.Guild, roleIds: Iterable[int]) -> str:
+        roleMentions = []
+        for roleId in roleIds:
+            role = guild.get_role(roleId)
+            roleMentions.append(role.mention if role is not None else f"`{roleId}`")
+        return " or ".join(roleMentions)
+
+    @staticmethod
+    def _truncatePromotionReason(reason: str | None) -> str | None:
+        if reason is None:
+            return None
+        reasonValue = reason.strip()
+        if reasonValue == "":
+            return None
+        maxLength = DISCORD_LIMITS["message_embed"]["embed_field_value"]
+        if len(reasonValue) > maxLength:
+            return reasonValue[:maxLength - 3] + "..."
+        return reasonValue
+
+    @staticmethod
+    async def _getPromotionCriteriaEmbed(guild: discord.Guild, targetRankId: int) -> discord.Embed | None:
+        rankStructureChannel = guild.get_channel(RANK_STRUCTURE)
+        if not isinstance(rankStructureChannel, discord.TextChannel):
+            log.exception("Schedule _getPromotionCriteriaEmbed: rankStructureChannel not discord.TextChannel")
+            return None
+
+        targetRole = guild.get_role(targetRankId)
+        targetRankName = str(targetRankId) if targetRole is None else targetRole.name
+        async for message in rankStructureChannel.history(limit=100):
+            for embed in message.embeds:
+                if embed.title and embed.title.lower().startswith(targetRankName.lower()):
+                    return deepcopy(embed)
+        return None
+
+    @staticmethod
+    async def _sendPromotionRecommendationPreview(
+        interaction: discord.Interaction,
+        *,
+        memberId: int,
+        memberDisplayName: str,
+        firstRecommenderId: int,
+        secondRecommenderId: int,
+        targetRankId: int,
+        reason: str | None = None
+    ) -> None:
+        if not isinstance(interaction.guild, discord.Guild):
+            log.exception("Schedule _sendPromotionRecommendationPreview: interaction.guild not discord.Guild")
+            return
+
+        guild = interaction.guild
+        member = guild.get_member(memberId)
+        firstRecommender = guild.get_member(firstRecommenderId)
+        secondRecommender = guild.get_member(secondRecommenderId)
+        if not isinstance(member, discord.Member):
+            await Schedule._sendInteractionResponse(interaction, embed=discord.Embed(title="❌ Member not found", color=discord.Color.red()))
+            return
+        if not isinstance(firstRecommender, discord.Member):
+            log.exception("Schedule _sendPromotionRecommendationPreview: firstRecommender not discord.Member")
+            await Schedule._sendInteractionResponse(interaction, embed=discord.Embed(title="❌ Failed to resolve the Primary recommender", color=discord.Color.red()))
+            return
+        if not isinstance(secondRecommender, discord.Member):
+            await Schedule._sendInteractionResponse(interaction, embed=discord.Embed(title="❌ Secondary recommender not found", color=discord.Color.red()))
+            return
+
+        memberRankIds = Schedule._getPromotionTrackRanks(member)
+        if len(memberRankIds) == 0:
+            await Schedule._sendInteractionResponse(
+                interaction,
+                embed=discord.Embed(
+                    title="❌ No promotion rank found",
+                    description=f"{member.mention} does not have a recognized promotion-track rank.",
+                    color=discord.Color.red()
+                )
+            )
+            return
+        if len(memberRankIds) > 1:
+            await Schedule._sendInteractionResponse(
+                interaction,
+                embed=discord.Embed(
+                    title="❌ Ambiguous promotion rank",
+                    description=f"{member.mention} must have exactly one promotion-track rank.",
+                    color=discord.Color.red()
+                )
+            )
+            return
+
+        currentRankId = memberRankIds[0]
+        if currentRankId == PROSPECT:
+            await Schedule._sendInteractionResponse(
+                interaction,
+                embed=discord.Embed(
+                    title="❌ Invalid target",
+                    description=f"{member.mention} is a Prospect and must go through the interview process instead.",
+                    color=discord.Color.red()
+                )
+            )
+            return
+
+        allowedTargetIds = PROMOTION_RECOMMENDATION_ALLOWED_TARGETS.get(currentRankId, ())
+        if targetRankId not in allowedTargetIds:
+            targetRole = guild.get_role(targetRankId)
+            targetLabel = targetRole.mention if targetRole is not None else f"`{targetRankId}`"
+            await Schedule._sendInteractionResponse(
+                interaction,
+                embed=discord.Embed(
+                    title="❌ Invalid promotion target",
+                    description=f"{member.mention} cannot be recommended for {targetLabel} through this command.",
+                    color=discord.Color.red()
+                )
+            )
+            return
+
+        currentRole = guild.get_role(currentRankId)
+        targetRole = guild.get_role(targetRankId)
+
+        previewEmbeds = []
+        criteriaEmbed = await Schedule._getPromotionCriteriaEmbed(guild, targetRankId)
+        if criteriaEmbed is not None:
+            previewEmbeds.append(criteriaEmbed)
+        else:
+            rankStructureChannel = guild.get_channel(RANK_STRUCTURE)
+            channelMention = rankStructureChannel.mention if isinstance(rankStructureChannel, discord.TextChannel) else "`#rank-structure`"
+            fallbackEmbed = discord.Embed(
+                title="Criteria Preview Unavailable",
+                description=(
+                    f"Snek could not find a matching criteria embed for "
+                    f"{targetRole.mention if targetRole is not None else f'`{targetRankId}`'} in {channelMention}. "
+                    "Review the rank criteria manually before continuing."
+                ),
+                color=discord.Color.orange()
+            )
+            previewEmbeds.append(fallbackEmbed)
+
+        summaryEmbed = discord.Embed(
+            title="Promotion Recommendation Review",
+            color=discord.Color.pink(),
+            timestamp=datetime.now(timezone.utc)
+        )
+
+        # Highlight senior rank track change
+        if currentRankId in (MERCENARY, OPERATOR) and targetRankId in (TACTICIAN, STRATEGIST) or \
+            currentRankId in (TACTICIAN, STRATEGIST) and targetRankId in (MERCENARY, OPERATOR):
+            summaryEmbed.title = "Promotion Recommendation Review *[Senior Rank Track Change]*"
+
+        summaryEmbed.add_field(name="Current Rank", value=currentRole.mention if currentRole is not None else f"`{currentRankId}`", inline=True)
+        summaryEmbed.add_field(name="Recommended Rank", value=targetRole.mention if targetRole is not None else f"`{targetRankId}`", inline=True)
+        summaryEmbed.add_field(name="\u200B", value="\u200B", inline=True)
+        summaryEmbed.add_field(name="Primary", value=firstRecommender.mention, inline=True)
+        summaryEmbed.add_field(name="Secondary", value=secondRecommender.mention, inline=True)
+        summaryEmbed.add_field(name="\u200B", value="\u200B", inline=True)
+        if reasonValue := Schedule._truncatePromotionReason(reason):
+            summaryEmbed.add_field(name="Reason", value=reasonValue, inline=False)
+        summaryEmbed.add_field(name="\u200B", value="\u200B", inline=False)
+        summaryEmbed.add_field(name="Next Steps", value=f"1. Verify that **{memberDisplayName}** meets all criteria above.\n2. Once complete, click the button below to submit final confirmation.", inline=False)
+        previewEmbeds.append(summaryEmbed)
+
+        await Schedule._sendInteractionResponse(
+            interaction,
+            embeds=previewEmbeds,
+            view=PromotionRecommendationPreviewView(
+                memberId=memberId,
+                memberDisplayName=member.display_name,
+                firstRecommenderId=firstRecommenderId,
+                secondRecommenderId=secondRecommenderId,
+                targetRankId=targetRankId,
+                reason=reason,
+            ),
+            ephemeral=True
+        )
+
+    @staticmethod
+    def _buildPromotionRecommendationEmbed(
+        guild: discord.Guild,
+        member: discord.Member,
+        currentRankId: int,
+        targetRankId: int,
+        firstRecommender: discord.Member,
+        secondRecommender: discord.Member,
+        reason: str | None,
+        *,
+        reviewRequired: bool = False
+    ) -> discord.Embed:
+        currentRole = guild.get_role(currentRankId)
+        targetRole = guild.get_role(targetRankId)
+        embed = discord.Embed(
+            title=f"Promotion Recommendation: {member.display_name}",
+            description=f"{member.mention} has been recommended for promotion.",
+            color=discord.Color.pink(),
+            timestamp=datetime.now(timezone.utc)
+        )
+        embed.add_field(name="Current Rank", value=currentRole.mention if currentRole is not None else f"`{currentRankId}`", inline=True)
+        embed.add_field(name="Recommended Rank", value=targetRole.mention if targetRole is not None else f"`{targetRankId}`", inline=True)
+        embed.add_field(name="\u200B", value="\u200B", inline=True)
+        embed.add_field(name="Primary", value=firstRecommender.mention, inline=True)
+        embed.add_field(name="Secondary", value=secondRecommender.mention, inline=True)
+        embed.add_field(name="\u200B", value="\u200B", inline=True)
+        embed.add_field(name="Review", value="Advisor and Unit Staff review required." if reviewRequired else "Ready for Unit Staff review.", inline=False)
+        if reasonValue := Schedule._truncatePromotionReason(reason):
+            embed.add_field(name="Reason", value=reasonValue, inline=False)
+        embed.set_footer(text=f"Recommended by {firstRecommender.display_name}")
+        return embed
+
+    @staticmethod
+    async def processPromotionRecommendation(
+        interaction: discord.Interaction,
+        *,
+        memberId: int,
+        firstRecommenderId: int,
+        secondRecommenderId: int,
+        reason: str | None = None,
+        targetRankId: int
+    ) -> None:
+        if not isinstance(interaction.guild, discord.Guild):
+            log.exception("Schedule processPromotionRecommendation: interaction.guild not discord.Guild")
+            return
+
+        guild = interaction.guild
+        member = guild.get_member(memberId)
+        firstRecommender = guild.get_member(firstRecommenderId)
+        secondRecommender = guild.get_member(secondRecommenderId)
+        if not isinstance(member, discord.Member):
+            await Schedule._sendInteractionResponse(interaction, embed=discord.Embed(title="❌ Member not found", color=discord.Color.red()))
+            return
+        if not isinstance(firstRecommender, discord.Member):
+            log.exception("Schedule processPromotionRecommendation: firstRecommender not discord.Member")
+            await Schedule._sendInteractionResponse(interaction, embed=discord.Embed(title="❌ Failed to resolve the Primary recommender", color=discord.Color.red()))
+            return
+        if not isinstance(secondRecommender, discord.Member):
+            await Schedule._sendInteractionResponse(interaction, embed=discord.Embed(title="❌ Secondary recommender not found", color=discord.Color.red()))
+            return
+
+        if member.bot:
+            await Schedule._sendInteractionResponse(interaction, embed=discord.Embed(title="❌ Invalid target", description="You cannot recommend bots for promotion.", color=discord.Color.red()))
+            return
+        if secondRecommender.bot:
+            await Schedule._sendInteractionResponse(interaction, embed=discord.Embed(title="❌ Invalid recommender", description="The Secondary recommender cannot be a bot.", color=discord.Color.red()))
+            return
+        if member.id == firstRecommender.id:
+            await Schedule._sendInteractionResponse(interaction, embed=discord.Embed(title="❌ Invalid target", description="You cannot recommend yourself for promotion.", color=discord.Color.red()))
+            return
+        if member.id == secondRecommender.id:
+            await Schedule._sendInteractionResponse(interaction, embed=discord.Embed(title="❌ Invalid recommender", description="The Secondary recommender cannot be the member being recommended.", color=discord.Color.red()))
+            return
+        if firstRecommender.id == secondRecommender.id:
+            await Schedule._sendInteractionResponse(interaction, embed=discord.Embed(title="❌ Duplicate recommenders", description="Promotion recommendations require two different recommenders.", color=discord.Color.red()))
+            return
+
+        memberRankIds = Schedule._getPromotionTrackRanks(member)
+        if len(memberRankIds) == 0:
+            await Schedule._sendInteractionResponse(interaction, embed=discord.Embed(title="❌ No promotion rank found", description=f"{member.mention} does not have a recognized promotion-track rank.", color=discord.Color.red()))
+            return
+        if len(memberRankIds) > 1:
+            await Schedule._sendInteractionResponse(interaction, embed=discord.Embed(title="❌ Ambiguous promotion rank", description=f"{member.mention} has multiple promotion-track ranks. Please contact Unit Staff.", color=discord.Color.red()))
+            return
+
+        currentRankId = memberRankIds[0]
+        if currentRankId == PROSPECT:
+            await Schedule._sendInteractionResponse(interaction, embed=discord.Embed(title="❌ Invalid target", description=f"{member.mention} is a Prospect and must go through the interview process instead.", color=discord.Color.red()))
+            return
+        if currentRankId not in PROMOTION_RECOMMENDATION_SOURCE_RANKS:
+            await Schedule._sendInteractionResponse(interaction, embed=discord.Embed(title="❌ Invalid target", description=f"{member.mention} cannot be recommended for promotion from their current rank.", color=discord.Color.red()))
+            return
+
+        allowedTargetIds = PROMOTION_RECOMMENDATION_ALLOWED_TARGETS.get(currentRankId, ())
+        if targetRankId not in allowedTargetIds:
+            targetRole = guild.get_role(targetRankId)
+            targetLabel = targetRole.mention if targetRole is not None else f"`{targetRankId}`"
+            await Schedule._sendInteractionResponse(interaction, embed=discord.Embed(title="❌ Invalid promotion target", description=f"{member.mention} cannot be recommended for {targetLabel} through this command.", color=discord.Color.red()))
+            return
+
+        requiredRoleIds = PROMOTION_RECOMMENDATION_MINIMUM_RECOMMENDER_ROLES.get(targetRankId, ())
+        if len(requiredRoleIds) == 0:
+            await Schedule._sendInteractionResponse(interaction, embed=discord.Embed(title="❌ Recommendation rule missing", description="Snek is missing the qualification rule for this recommendation.", color=discord.Color.red()))
+            return
+
+        targetRole = guild.get_role(targetRankId)
+        targetLabel = targetRole.mention if targetRole is not None else f"`{targetRankId}`"
+
+        if not Schedule._meetsPromotionRecommendationRequirement(firstRecommender, targetRankId):
+            requirements = Schedule._formatRoleMentions(guild, requiredRoleIds)
+            await Schedule._sendInteractionResponse(
+                interaction,
+                embed=discord.Embed(
+                    title="❌ Primary recommender does not qualify",
+                    description=f"{firstRecommender.mention} must have one of these roles to recommend {member.mention} for {targetLabel}: {requirements}",
+                    color=discord.Color.red()
+                )
+            )
+            return
+
+        if not Schedule._meetsPromotionRecommendationRequirement(secondRecommender, targetRankId):
+            requirements = Schedule._formatRoleMentions(guild, requiredRoleIds)
+            await Schedule._sendInteractionResponse(
+                interaction,
+                embed=discord.Embed(
+                    title="❌ Secondary recommender does not qualify",
+                    description=f"{secondRecommender.mention} must have one of these roles to recommend {member.mention} for {targetLabel}: {requirements}",
+                    color=discord.Color.red()
+                )
+            )
+            return
+
+        channelCommendations = guild.get_channel(COMMENDATIONS)
+        channelAdvisorStaffComms = guild.get_channel(ADVISOR_STAFF_COMMS)
+        if not isinstance(channelCommendations, discord.TextChannel):
+            log.exception("Schedule processPromotionRecommendation: commendationsChannel not discord.TextChannel")
+            await Schedule._sendInteractionResponse(interaction, embed=discord.Embed(title="❌ Commendations channel not found", color=discord.Color.red()))
+            return
+        if not isinstance(channelAdvisorStaffComms, discord.TextChannel):
+            log.exception("Schedule processPromotionRecommendation: advisorStaffCommsChannel not discord.TextChannel")
+            await Schedule._sendInteractionResponse(interaction, embed=discord.Embed(title="❌ Staff review channel not found", color=discord.Color.red()))
+            return
+
+        roleUnitStaff = guild.get_role(UNIT_STAFF)
+        roleAdvisor = guild.get_role(ADVISOR)
+        juniorPromotion = targetRankId in (CANDIDATE, ASSOCIATE, CONTRACTOR)
+
+        commendationsEmbed = Schedule._buildPromotionRecommendationEmbed(
+            guild,
+            member,
+            currentRankId,
+            targetRankId,
+            firstRecommender,
+            secondRecommender,
+            reason,
+            reviewRequired=not juniorPromotion
+        )
+
+        if juniorPromotion:
+            content = f"{roleUnitStaff.mention} Promotion recommendation ready for review." if roleUnitStaff is not None else None
+            await channelCommendations.send(content=content, embed=commendationsEmbed)
+        else:
+            await channelCommendations.send(embed=commendationsEmbed)
+            reviewMentions = " ".join(role.mention for role in (roleAdvisor, roleUnitStaff) if role is not None) or None
+            reviewEmbed = Schedule._buildPromotionRecommendationEmbed(
+                guild,
+                member,
+                currentRankId,
+                targetRankId,
+                firstRecommender,
+                secondRecommender,
+                reason,
+                reviewRequired=True
+            )
+            await channelAdvisorStaffComms.send(content=reviewMentions, embed=reviewEmbed)
+
+        log.info(
+            f"{firstRecommender.id} [{firstRecommender.display_name}] and "
+            f"{secondRecommender.id} [{secondRecommender.display_name}] recommended "
+            f"{member.id} [{member.display_name}] from '{currentRankId}' to '{targetRankId}'"
+        )
+
+        responseLines = [f"Promotion recommendation submitted for {member.mention} to {targetLabel}."]
+        responseLines.append(f"Check it out in {channelCommendations.mention}.")
+        if not juniorPromotion and isinstance(channelAdvisorStaffComms, discord.TextChannel):
+            responseLines.append(f"Senior review request sent to {channelAdvisorStaffComms.mention}.")
+        await Schedule._sendInteractionResponse(interaction, content="\n".join(responseLines), ephemeral=True)
 
     @commands.Cog.listener()
     async def on_ready(self) -> None:
@@ -709,6 +1101,78 @@ class Schedule(commands.Cog):
 
 
 # ===== </AAR> ====
+
+
+# ===== <Recommend For Promotion> =====
+
+    @discord.app_commands.command(name="recommend-for-promotion")
+    @discord.app_commands.describe(member="Member to recommend for promotion", second_recommender="Second qualified recommender", reason="Reason for the promotion recommendation (optional)")
+    @discord.app_commands.guilds(GUILD)
+    @discord.app_commands.checks.has_any_role(MEMBER)
+    async def recommendForPromotion(self, interaction: discord.Interaction, member: discord.Member, second_recommender: discord.Member, *, reason: str | None = None) -> None:
+        """Recommend a member for promotion."""
+        if not isinstance(interaction.user, discord.Member):
+            log.exception("Schedule recommendForPromotion: interaction.user not discord.Member")
+            return
+        if member.bot:
+            await interaction.response.send_message(embed=discord.Embed(title="❌ Invalid target", description="You cannot recommend bots for promotion.", color=discord.Color.red()), ephemeral=True)
+            return
+        if second_recommender.bot:
+            await interaction.response.send_message(embed=discord.Embed(title="❌ Invalid recommender", description="The Secondary recommender cannot be a bot.", color=discord.Color.red()), ephemeral=True)
+            return
+        if member.id == interaction.user.id:
+            await interaction.response.send_message(embed=discord.Embed(title="❌ Invalid target", description="You cannot recommend yourself for promotion.", color=discord.Color.red()), ephemeral=True)
+            return
+        if member.id == second_recommender.id:
+            await interaction.response.send_message(embed=discord.Embed(title="❌ Invalid recommender", description="The Secondary recommender cannot be the member being recommended.", color=discord.Color.red()), ephemeral=True)
+            return
+        if second_recommender.id == interaction.user.id:
+            await interaction.response.send_message(embed=discord.Embed(title="❌ Duplicate recommenders", description="Promotion recommendations require two different recommenders.", color=discord.Color.red()), ephemeral=True)
+            return
+
+        memberRankIds = Schedule._getPromotionTrackRanks(member)
+        if len(memberRankIds) == 0:
+            await interaction.response.send_message(embed=discord.Embed(title="❌ No promotion rank found", description=f"{member.mention} does not have a recognized promotion-track rank.", color=discord.Color.red()), ephemeral=True)
+            return
+        if len(memberRankIds) > 1:
+            await interaction.response.send_message(embed=discord.Embed(title="❌ Ambiguous promotion rank", description=f"{member.mention} has multiple promotion-track ranks. Please contact Unit Staff.", color=discord.Color.red()), ephemeral=True)
+            return
+
+        currentRankId = memberRankIds[0]
+        if currentRankId == PROSPECT:
+            await interaction.response.send_message(embed=discord.Embed(title="❌ Invalid target", description=f"{member.mention} is a Prospect and must go through the interview process instead.", color=discord.Color.red()), ephemeral=True)
+            return
+
+        allowedTargetIds = PROMOTION_RECOMMENDATION_ALLOWED_TARGETS.get(currentRankId, ())
+        if len(allowedTargetIds) == 0:
+            await interaction.response.send_message(embed=discord.Embed(title="❌ No possible promotion", description=f"{member.mention} cannot be recommended for promotion through this command.", color=discord.Color.red()), ephemeral=True)
+            return
+
+        if len(allowedTargetIds) > 1:
+            await interaction.response.send_modal(
+                PromotionRecommendationTargetModal(
+                    memberId=member.id,
+                    memberDisplayName=member.display_name,
+                    firstRecommenderId=interaction.user.id,
+                    secondRecommenderId=second_recommender.id,
+                    allowedTargetIds=allowedTargetIds,
+                    reason=reason,
+                    guild=interaction.guild,
+                )
+            )
+            return
+
+        await Schedule._sendPromotionRecommendationPreview(
+            interaction,
+            memberId=member.id,
+            memberDisplayName=member.display_name,
+            firstRecommenderId=interaction.user.id,
+            secondRecommenderId=second_recommender.id,
+            reason=reason,
+            targetRankId=allowedTargetIds[0],
+        )
+
+# ===== </Recommend For Promotion> =====
 
 
 # ===== </Commend> =====
@@ -3568,6 +4032,169 @@ class ScheduleSelect(discord.ui.Select):
             await eventMsg.edit(embed=Schedule.getEventEmbed(event, interaction.guild))
             await interaction.response.send_message(embed=discord.Embed(title="✅ Event edited", color=discord.Color.green()), ephemeral=True, delete_after=5.0)
 
+
+class PromotionRecommendationTargetModal(discord.ui.Modal):
+    """Select the proposed rank for a promotion recommendation."""
+    def __init__(
+        self,
+        *,
+        memberId: int,
+        memberDisplayName: str,
+        firstRecommenderId: int,
+        secondRecommenderId: int,
+        allowedTargetIds: Iterable[int],
+        guild: discord.Guild | None,
+        reason: str | None = None
+    ) -> None:
+        super().__init__(title=f"Target Rank: {memberDisplayName[:28]}", custom_id="schedule_modal_promotion_target")
+        self.memberId = memberId
+        self.memberDisplayName = memberDisplayName
+        self.firstRecommenderId = firstRecommenderId
+        self.secondRecommenderId = secondRecommenderId
+        self.reason = reason
+        targetRankIds = tuple(allowedTargetIds)
+
+        self.targetRank = discord.ui.Label(
+            text="Select the recommended rank",
+            component=discord.ui.RadioGroup(
+                custom_id="schedule_select_promotion_target",
+                required=True,
+                options=[
+                    discord.RadioGroupOption(
+                        label=role.name if role is not None else str(targetRankId),
+                        value=str(targetRankId)
+                    )
+                    for targetRankId in targetRankIds
+                    for role in [guild.get_role(targetRankId) if guild is not None else None]
+                ],
+            )
+        )
+        self.add_item(self.targetRank)
+
+    async def on_submit(self, interaction: discord.Interaction) -> None:
+        if not isinstance(self.targetRank.component, discord.ui.RadioGroup):
+            log.exception("PromotionRecommendationTargetModal on_submit: targetRank.component not discord.ui.RadioGroup")
+            await interaction.response.send_message("Failed to submit recommendation: Invalid target selector.", ephemeral=True)
+            return
+
+        selectedTargetRank = self.targetRank.component.value
+        if selectedTargetRank is None:
+            await interaction.response.send_message("Please choose a rank before continuing.", ephemeral=True)
+            return
+
+        await Schedule._sendPromotionRecommendationPreview(
+            interaction,
+            memberId=self.memberId,
+            memberDisplayName=self.memberDisplayName,
+            firstRecommenderId=self.firstRecommenderId,
+            secondRecommenderId=self.secondRecommenderId,
+            reason=self.reason,
+            targetRankId=int(selectedTargetRank),
+        )
+
+
+class PromotionRecommendationPreviewView(discord.ui.View):
+    """Preview step before the final confirmation modal."""
+    def __init__(
+        self,
+        *,
+        memberId: int,
+        memberDisplayName: str,
+        firstRecommenderId: int,
+        secondRecommenderId: int,
+        targetRankId: int,
+        reason: str | None = None
+    ) -> None:
+        super().__init__(timeout=300)
+        self.memberId = memberId
+        self.memberDisplayName = memberDisplayName
+        self.firstRecommenderId = firstRecommenderId
+        self.secondRecommenderId = secondRecommenderId
+        self.targetRankId = targetRankId
+        self.reason = reason
+
+    async def interaction_check(self, interaction: discord.Interaction) -> bool:
+        if interaction.user.id != self.firstRecommenderId:
+            await interaction.response.send_message("Only the Primary recommender can submit the confirmation modal.", ephemeral=True)
+            return False
+        return True
+
+    @discord.ui.button(label="Open Confirmation", style=discord.ButtonStyle.primary)
+    async def openConfirmation(self, interaction: discord.Interaction, _: discord.ui.Button) -> None:
+        targetRole = interaction.guild.get_role(self.targetRankId) if isinstance(interaction.guild, discord.Guild) else None
+        await interaction.response.send_modal(
+            PromotionRecommendationConfirmationModal(
+                memberId=self.memberId,
+                memberDisplayName=self.memberDisplayName,
+                firstRecommenderId=self.firstRecommenderId,
+                secondRecommenderId=self.secondRecommenderId,
+                targetRankId=self.targetRankId,
+                targetRankName=targetRole.name if targetRole is not None else str(self.targetRankId),
+                reason=self.reason,
+            )
+        )
+
+
+class PromotionRecommendationConfirmationModal(discord.ui.Modal):
+    """Final confirmation modal for promotion recommendations."""
+    def __init__(
+        self,
+        *,
+        memberId: int,
+        memberDisplayName: str,
+        firstRecommenderId: int,
+        secondRecommenderId: int,
+        targetRankId: int,
+        targetRankName: str,
+        reason: str | None = None
+    ) -> None:
+        super().__init__(title="Confirm Promotion Recommendation", custom_id="schedule_modal_promotion_confirmation")
+        self.memberId = memberId
+        self.memberDisplayName = memberDisplayName
+        self.firstRecommenderId = firstRecommenderId
+        self.secondRecommenderId = secondRecommenderId
+        self.targetRankId = targetRankId
+        self.reason = reason
+
+        self.targetRankInfo = discord.ui.TextDisplay(content=f"Recommending **{memberDisplayName}** for Promotion to **{targetRankName}**")
+        self.add_item(self.targetRankInfo)
+
+        self.confirmationText = discord.ui.TextDisplay(content=PROMOTION_RECOMMENDATION_CONFIRMATION_TEXT)
+        self.add_item(self.confirmationText)
+
+        self.confirmationInput = discord.ui.Label(
+            text="Type `I confirm` to submit",
+            component=discord.ui.TextInput(
+                custom_id="schedule_text_promotion_confirmation",
+                style=discord.TextStyle.short,
+                placeholder="I confirm",
+                required=True,
+                max_length=32,
+            )
+        )
+        self.add_item(self.confirmationInput)
+
+    async def on_submit(self, interaction: discord.Interaction) -> None:
+        if not isinstance(self.confirmationInput.component, discord.ui.TextInput):
+            log.exception("PromotionRecommendationConfirmationModal on_submit: confirmationInput.component not discord.ui.TextInput")
+            await interaction.response.send_message("Failed to submit recommendation: Invalid confirmation input.", ephemeral=True)
+            return
+
+        if self.confirmationInput.component.value != "I confirm":
+            await interaction.response.send_message("Confirmation failed. Type `I confirm` exactly to submit this recommendation.", ephemeral=True)
+            return
+
+        await interaction.response.defer(ephemeral=True, thinking=True)
+        await Schedule.processPromotionRecommendation(
+            interaction,
+            memberId=self.memberId,
+            firstRecommenderId=self.firstRecommenderId,
+            secondRecommenderId=self.secondRecommenderId,
+            reason=self.reason,
+            targetRankId=self.targetRankId,
+        )
+
+
 class ScheduleModal(discord.ui.Modal):
     """Handling all schedule modals."""
     def __init__(self, title: str, customId: str, userId: int, eventMsg: discord.Message, view: discord.ui.View | None = None, eventId: str | None = None) -> None:
@@ -4018,6 +4645,7 @@ async def setup(bot: commands.Bot) -> None:
     Schedule.trackACandidate.error(Utils.onSlashError)
     Schedule.refreshSchedule.error(Utils.onSlashError)
     Schedule.aar.error(Utils.onSlashError)
+    Schedule.recommendForPromotion.error(Utils.onSlashError)
     Schedule.commend.error(Utils.onSlashError)
     Schedule.scheduleOperation.error(Utils.onSlashError)
     await bot.add_cog(Schedule(bot))

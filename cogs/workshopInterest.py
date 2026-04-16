@@ -222,21 +222,28 @@ class WorkshopInterest(commands.Cog):
             workshopData = wsIntFile.get(workshopName)
             if workshopData is None:
                 log.info(f"WSINT workshopInterestRequiresRefresh: missing workshop '{workshopName}' in file")
+                log.debug("Expected Workshop Name:", workshopName)
                 return True
 
             if workshopData.get("messageId") != message.id:
                 log.info(f"WSINT workshopInterestRequiresRefresh: message id mismatch for workshop '{workshopName}'")
+                log.debug("Expected Message ID:", workshopData.get("messageId"))
+                log.debug("Actual Message ID:", message.id)
                 return True
 
             expectedEmbed = WorkshopInterest.getWorkshopEmbed(guild, workshopName).to_dict()
             actualEmbed = message.embeds[0].to_dict() if len(message.embeds) > 0 else None
             if actualEmbed != expectedEmbed:
                 log.info(f"WSINT workshopInterestRequiresRefresh: embed mismatch for workshop '{workshopName}'")
+                log.debug("Expected Embed:", expectedEmbed)
+                log.debug("Actual Embed:", actualEmbed)
                 return True
 
             actualCustomIds = WorkshopInterest.getMessageComponentCustomIds(message)
             if actualCustomIds != expectedCustomIds:
                 log.info(f"WSINT workshopInterestRequiresRefresh: component mismatch for workshop '{workshopName}'")
+                log.debug("Expected Custom IDs:", expectedCustomIds)
+                log.debug("Actual Custom IDs:", actualCustomIds)
                 return True
 
         return False
@@ -253,7 +260,11 @@ class WorkshopInterest(commands.Cog):
         Returns:
         discord.Embed: The generated embed.
         """
-        embed = discord.Embed(title=f"{WORKSHOP_INTEREST_LIST[workshopName]['emoji']} {workshopName}", description=WORKSHOP_INTEREST_LIST[workshopName]["description"], color=discord.Color.dark_blue())
+        embed = discord.Embed(
+            title=f"{WORKSHOP_INTEREST_LIST[workshopName]['emoji']} {workshopName}",
+            description=WORKSHOP_INTEREST_LIST[workshopName]["description"],
+            color=discord.Color.dark_blue()
+        )
 
         with open(WORKSHOP_INTEREST_FILE) as f:
             workshopInterest = json.load(f)
@@ -279,9 +290,9 @@ class WorkshopInterest(commands.Cog):
             interestedMembers = "-"
             lenInterested = 0
         else:
-            lenInterested = len(interestedMembers.strip().split('\n'))
+            lenInterested = len(interestedMembers.split("\n"))
 
-        embed.add_field(name=f"Interested People ({lenInterested})", value=interestedMembers)
+        embed.add_field(name=f"Interested People ({lenInterested})", value=interestedMembers.strip("\n"))
         # 1 discord.Role as SME
         if (wsRole := WORKSHOP_INTEREST_LIST[workshopName]["role"]) and isinstance(wsRole, int):
             wsIntRole = guild.get_role(wsRole)

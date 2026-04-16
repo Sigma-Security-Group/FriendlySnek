@@ -222,28 +222,28 @@ class WorkshopInterest(commands.Cog):
             workshopData = wsIntFile.get(workshopName)
             if workshopData is None:
                 log.info(f"WSINT workshopInterestRequiresRefresh: missing workshop '{workshopName}' in file")
-                log.debug("Expected Workshop Name:", workshopName)
+                log.debug(f"Expected Workshop Name: {workshopName}")
                 return True
 
             if workshopData.get("messageId") != message.id:
                 log.info(f"WSINT workshopInterestRequiresRefresh: message id mismatch for workshop '{workshopName}'")
-                log.debug("Expected Message ID:", workshopData.get("messageId"))
-                log.debug("Actual Message ID:", message.id)
+                log.debug(f"Expected Message ID: {workshopData.get('messageId')}")
+                log.debug(f"Actual Message ID: {message.id}")
                 return True
 
             expectedEmbed = WorkshopInterest.getWorkshopEmbed(guild, workshopName).to_dict()
             actualEmbed = message.embeds[0].to_dict() if len(message.embeds) > 0 else None
             if actualEmbed != expectedEmbed:
                 log.info(f"WSINT workshopInterestRequiresRefresh: embed mismatch for workshop '{workshopName}'")
-                log.debug("Expected Embed:", expectedEmbed)
-                log.debug("Actual Embed:", actualEmbed)
+                log.debug(f"Expected Embed: {expectedEmbed}")
+                log.debug(f"Actual Embed: {actualEmbed}")
                 return True
 
             actualCustomIds = WorkshopInterest.getMessageComponentCustomIds(message)
             if actualCustomIds != expectedCustomIds:
                 log.info(f"WSINT workshopInterestRequiresRefresh: component mismatch for workshop '{workshopName}'")
-                log.debug("Expected Custom IDs:", expectedCustomIds)
-                log.debug("Actual Custom IDs:", actualCustomIds)
+                log.debug(f"Expected Custom IDs: {expectedCustomIds}")
+                log.debug(f"Actual Custom IDs: {actualCustomIds}")
                 return True
 
         return False

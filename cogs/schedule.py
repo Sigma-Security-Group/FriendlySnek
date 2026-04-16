@@ -3700,7 +3700,10 @@ class ScheduleModal(discord.ui.Modal):
                         await interaction.response.send_message(interaction.user.mention, embed=EMBED_INVALID, ephemeral=True, delete_after=10.0)
                         return
 
-                    startTime = timeZone.localize(startTime).astimezone(pytz.utc)
+                    if startTime.tzinfo is None:
+                        startTime = timeZone.localize(startTime).astimezone(pytz.utc)
+                    else:
+                        startTime = startTime.astimezone(pytz.utc)
                     if startTime < (datetime.now(timezone.utc) - timedelta(weeks=52/2)):
                         await interaction.response.send_message(interaction.user.mention, embed=discord.Embed(title="❌ Operation set too far in the past!", description="You've entered a time that is too far in the past!", color=discord.Color.red()), ephemeral=True, delete_after=10.0)
                         return

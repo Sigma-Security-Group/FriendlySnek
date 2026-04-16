@@ -86,6 +86,6 @@ log.setLevel(level)
 log.addHandler(handler)
 
 # Add file handler to write logs to a file and clear logs on new sessions
-fileHandler = logging.FileHandler(LOG_FILE, mode="w")
+fileHandler = logging.FileHandler(LOG_FILE, mode="w", encoding="utf-8")
 fileHandler.setFormatter(formatter)
 log.addHandler(fileHandler)

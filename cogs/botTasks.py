@@ -5,6 +5,7 @@ from typing import Any
 from datetime import datetime, timezone, timedelta
 from .workshopInterest import WORKSHOP_INTEREST_LIST, WorkshopInterest  # type: ignore
 from .spreadsheet import Spreadsheet
+from utils import Utils  # type: ignore
 
 from discord.ext import commands, tasks  # type: ignore
 
@@ -966,6 +967,21 @@ class Reminders(commands.GroupCog, name="reminder"):
         with open(REMINDERS_FILE, "w", encoding="utf-8") as f:
             json.dump(reminders, f, indent=4)
 
+    async def reminderSetError(self, interaction: discord.Interaction, error: discord.app_commands.AppCommandError) -> None:
+        if isinstance(error, discord.app_commands.TransformerError):
+            embed = discord.Embed(
+                title="❌ Invalid time",
+                description="Use Discord's `@time` input for the `when` field. Inputs like `2h` are not supported here.",
+                color=discord.Color.red()
+            )
+            if interaction.response.is_done():
+                await interaction.followup.send(embed=embed, ephemeral=True, delete_after=10.0)
+            else:
+                await interaction.response.send_message(embed=embed, ephemeral=True, delete_after=10.0)
+            return
+
+        await Utils.onSlashError(self, interaction, error)
+
     @discord.app_commands.command(name="list")
     async def reminderList(self, interaction: discord.Interaction) -> None:
         """Shows the currently running reminders."""
@@ -1065,5 +1081,6 @@ class Reminders(commands.GroupCog, name="reminder"):
 
 
 async def setup(bot: commands.Bot) -> None:
+    Reminders.reminderSet.error(Reminders.reminderSetError)
     await bot.add_cog(BotTasks(bot))
     await bot.add_cog(Reminders(bot))

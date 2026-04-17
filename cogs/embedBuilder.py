@@ -95,10 +95,7 @@ class EmbedBuilder(commands.Cog):
 
 
             stderr = None
-            if len(messageEdit.embeds) == 0:
-                stderr = "Message does not have an embed!"
-
-            elif messageEdit.author.id != self.bot.user.id:
+            if messageEdit.author.id != self.bot.user.id:
                 stderr = f"Message is not sent by me ({self.bot.user.mention})!"
 
             if stderr:
@@ -108,7 +105,8 @@ class EmbedBuilder(commands.Cog):
 
             log.info(f"{interaction.user.id} [{interaction.user.display_name}] Is editing a message ({messageid}) embed")
 
-            messageEditEmbed = messageEdit.embeds[0]
+            if len(messageEdit.embeds) > 0:
+                messageEditEmbed = messageEdit.embeds[0]
 
         else:
             log.info(f"{interaction.user.id} [{interaction.user.display_name}] Is building an embed")

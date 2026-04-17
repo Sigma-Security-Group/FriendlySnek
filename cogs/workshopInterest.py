@@ -299,7 +299,7 @@ class WorkshopInterest(commands.Cog):
             if wsIntRole is None:
                 raise ValueError("WSINT getWorkshopEmbed: wsIntRole is None")
 
-            smes = [sme.display_name for sme in wsIntRole.members]
+            smes = sorted([sme.display_name for sme in wsIntRole.members])
             if smes:
                 embed.set_footer(text=f"SME{'s' * (len(smes) > 1)}: {', '.join(smes)}")
 

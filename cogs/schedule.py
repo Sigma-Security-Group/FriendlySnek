@@ -3372,7 +3372,7 @@ class ScheduleButton(discord.ui.Button):
                         with open(MEMBER_TIME_ZONES_FILE) as f:
                             memberTimeZones = json.load(f)
                         if str(interaction.user.id) not in memberTimeZones:
-                            await interaction.response.send_message(embed=discord.Embed(title="❌ Apply timezone", description="You must provide a time zone. Execute the command `/changetimezone`", color=discord.Color.red()), ephemeral=True, delete_after=30.0)
+                            await interaction.response.send_message(embed=discord.Embed(title="❌ Apply timezone", description="You must provide a time zone. Enter one in the time field, or use `/changetimezone` to store your time zone persistently.", color=discord.Color.red()), ephemeral=True, delete_after=30.0)
                             return
 
                         timeZone = pytz.timezone(memberTimeZones[str(interaction.user.id)])
@@ -4275,7 +4275,7 @@ class ScheduleSelect(discord.ui.Select):
                     with open(MEMBER_TIME_ZONES_FILE) as f:
                         memberTimeZones = json.load(f)
                     if str(interaction.user.id) not in memberTimeZones:
-                        await interaction.response.send_message(embed=discord.Embed(title="❌ Apply timezone", description="You must provide a time zone. Execute the command `/changetimezone`", color=discord.Color.red()), ephemeral=True, delete_after=30.0)
+                        await interaction.response.send_message(embed=discord.Embed(title="❌ Apply timezone", description="You must provide a time zone. Enter one in the time field, or use `/changetimezone` to store your time zone persistently.", color=discord.Color.red()), ephemeral=True, delete_after=30.0)
                         return
 
                     # Send modal

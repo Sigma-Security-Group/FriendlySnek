@@ -280,7 +280,7 @@ async def analyzeChannel(client, message: discord.Message, channelID: int, attac
 
     try:
         await message.delete()
-    except Exception as e:
+    except Exception:
         log.exception(f"{message.author.id} [{message.author}]")
 
     try:

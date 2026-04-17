@@ -3242,9 +3242,9 @@ class ScheduleButton(discord.ui.Button):
                                 embed.set_footer(text=f"By: {interaction.user}")
                                 try:
                                     await member.send(embed=embed)
-                                except Exception as e:
+                                except Exception:
                                     log.warning(f"{member.id} [{member.display_name}]")
-                except Exception as e:
+                except Exception:
                     log.exception(f"{interaction.user.id} [{interaction.user.display_name}]")
                 events.remove(event)
 
@@ -3899,14 +3899,14 @@ class ScheduleButton(discord.ui.Button):
                         await msg.edit(embed=embed)
                     else:
                         await interaction.response.edit_message(embed=embed)
-                except Exception as e:
+                except Exception:
                     log.exception(f"{interaction.user.id} | [{interaction.user.display_name}]")
 
             with open(EVENTS_FILE, "w") as f:
                 json.dump(events, f, indent=4)
             if len(events) == 0:
                 await Schedule.updateSchedule(interaction.guild)
-        except Exception as e:
+        except Exception:
             log.exception(f"{interaction.user.id} | [{interaction.user.display_name}]")
 
 class ScheduleSelect(discord.ui.Select):

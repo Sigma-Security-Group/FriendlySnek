@@ -4,7 +4,7 @@ from datetime import datetime
 
 from discord.ext import commands, tasks  # type: ignore
 from google.oauth2.service_account import Credentials
-from typing import *
+from typing import List
 
 import secret
 from constants import *
@@ -27,15 +27,6 @@ class Dropdown:
         self.title = title
         self.reference = reference
         self.values = values
-
-    #def getNextValue(self, currentValue: str) -> str | None:
-    #    if currentValue not in self.values:
-    #        return None
-    #    idx = self.values.index(currentValue)
-    #    nextIdx = (idx + 1) % len(self.values)
-    #    return self.values[nextIdx]
-
-
 dropdownStatus = Dropdown(
     title="Status",
     reference="variables!$F$6:$F$13",

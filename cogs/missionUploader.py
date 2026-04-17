@@ -1,5 +1,5 @@
 import os, contextlib, secret, discord, logging
-import paramiko, pytz  # type: ignore
+import paramiko  # type: ignore
 
 from datetime import datetime, timezone
 from discord.ext import commands  # type: ignore
@@ -10,7 +10,6 @@ if secret.DEBUG:
     from constants.debug import *
 
 MISSIONS_UPLOADED_FILE = "data/missionsUploaded.log"
-UTC = pytz.utc
 
 log = logging.getLogger("FriendlySnek")
 
@@ -114,7 +113,7 @@ class MissionUploader(commands.Cog):
         # Cleanup
         try:
             os.remove(f"tmp/missionUpload/{missionfile.filename}")
-        except Exception as e:
+        except Exception:
             log.exception("MissionUploader uploadMission: Failed to delete mission file after upload")
 
         # Log the upload

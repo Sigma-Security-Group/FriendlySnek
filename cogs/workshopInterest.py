@@ -352,7 +352,7 @@ class WorkshopInterest(commands.Cog):
                             msg = await channelWSINT.fetch_message(workshopInterest[workshop]["messageId"])
                             try:
                                 await msg.edit(embed=self.getWorkshopEmbed(ctx.guild, workshop))
-                            except Exception as e:
+                            except Exception:
                                 log.exception(f"{ctx.author.id} [{ctx.author.display_name}]")
 
                             await ctx.send(embed=discord.Embed(title="✅ Removed user", description=f"Removed user {targetMember.mention} (`{targetMember.id}`) from the workshop `{workshop}` interest list.", color=discord.Color.green()))
@@ -370,7 +370,7 @@ class WorkshopInterest(commands.Cog):
                     msg = await channelWSINT.fetch_message(workshopInterest[workshop]["messageId"])
                     try:
                         await msg.edit(embed=self.getWorkshopEmbed(ctx.guild, workshop))
-                    except Exception as e:
+                    except Exception:
                         log.exception(f"{ctx.author.id} [{ctx.author.display_name}]")
                     await ctx.send(embed=discord.Embed(title="✅ Cleared workshop list!", description=f"Cleared workshop list '{workshop}'.", color=discord.Color.green()))
                     return
@@ -431,10 +431,10 @@ class WorkshopInterestButton(discord.ui.DynamicItem[discord.ui.Button], template
                 return
             try:
                 await interaction.response.edit_message(embed=WorkshopInterest.getWorkshopEmbed(interaction.guild, wsTitle))
-            except Exception as e:
+            except Exception:
                 log.exception(f"{interaction.user.id} [{interaction.user.display_name}]")
 
-        except Exception as e:
+        except Exception:
             log.exception(f"{interaction.user.id} [{interaction.user.display_name}]")
 
 

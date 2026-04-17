@@ -33,7 +33,7 @@ SFTP = {  # SFTP credentials to server(s)
         "port": <ftp_port>,
         "directory": "<server_ip>_<connection_port>/mpmissions",
         "username": "<ftp_user>",
-        "password": "<<ftp_password>",
+        "password": "<ftp_password>",
     },
 }
 

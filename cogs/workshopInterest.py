@@ -390,6 +390,8 @@ class WorkshopInterestButton(discord.ui.DynamicItem[discord.ui.Button], template
 
     async def callback(self, interaction: discord.Interaction):
         try:
+            await interaction.response.defer()
+
             with open(WORKSHOP_INTEREST_FILE) as f:
                 workshopInterest = json.load(f)
 
@@ -430,7 +432,7 @@ class WorkshopInterestButton(discord.ui.DynamicItem[discord.ui.Button], template
                 log.exception("WSINT updateInterestList: interaction.guild is None")
                 return
             try:
-                await interaction.response.edit_message(embed=WorkshopInterest.getWorkshopEmbed(interaction.guild, wsTitle))
+                await interaction.message.edit(embed=WorkshopInterest.getWorkshopEmbed(interaction.guild, wsTitle))
             except Exception:
                 log.exception(f"{interaction.user.id} [{interaction.user.display_name}]")
 

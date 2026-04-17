@@ -230,6 +230,105 @@ class Schedule(commands.Cog):
         return " or ".join(roleMentions)
 
     @staticmethod
+    def _validatePromotionRecommendation(
+        guild: discord.Guild,
+        *,
+        memberId: int,
+        firstRecommenderId: int,
+        secondRecommenderId: int,
+        targetRankId: int | None = None
+    ) -> tuple[dict[str, Any] | None, discord.Embed | None]:
+        """ Validate a promotion recommendation based on the provided criteria.
+
+        Parameters:
+        guild (discord.Guild): The Discord guild where the recommendation is being made.
+        memberId (int): The ID of the member being recommended for promotion.
+        firstRecommenderId (int): The ID of the primary recommender.
+        secondRecommenderId (int): The ID of the secondary recommender.
+        targetRankId (int | None): The ID of the target rank for the promotion recommendation. If None, only validate that the member can be recommended for at least one possible target rank.
+
+        Returns:
+        tuple[dict[str, Any] | None, discord.Embed | None]:
+            A tuple where the first element is a dictionary containing the validated member, recommenders, current rank, allowed target ranks, and specified target rank (if applicable) if the validation is successful, or None if validation fails.
+            The second element is a discord.Embed containing an error message if validation fails, or None if validation is successful.
+        """
+        member = guild.get_member(memberId)
+        firstRecommender = guild.get_member(firstRecommenderId)
+        secondRecommender = guild.get_member(secondRecommenderId)
+
+        if not isinstance(member, discord.Member):
+            return None, discord.Embed(title="❌ Member not found", color=discord.Color.red())
+        if not isinstance(firstRecommender, discord.Member):
+            log.exception("Schedule _validatePromotionRecommendation: firstRecommender not discord.Member")
+            return None, discord.Embed(title="❌ Failed to resolve the Primary recommender", color=discord.Color.red())
+        if not isinstance(secondRecommender, discord.Member):
+            return None, discord.Embed(title="❌ Secondary recommender not found", color=discord.Color.red())
+
+        if member.bot:
+            return None, discord.Embed(title="❌ Invalid target", description="You cannot recommend bots for promotion.", color=discord.Color.red())
+        if secondRecommender.bot:
+            return None, discord.Embed(title="❌ Invalid recommender", description="The Secondary recommender cannot be a bot.", color=discord.Color.red())
+        if member.id == firstRecommender.id:
+            return None, discord.Embed(title="❌ Invalid target", description="You cannot recommend yourself for promotion.", color=discord.Color.red())
+        if member.id == secondRecommender.id:
+            return None, discord.Embed(title="❌ Invalid recommender", description="The Secondary recommender cannot be the member being recommended.", color=discord.Color.red())
+        if firstRecommender.id == secondRecommender.id:
+            return None, discord.Embed(title="❌ Duplicate recommenders", description="Promotion recommendations require two different recommenders.", color=discord.Color.red())
+
+        memberRankIds = Schedule._getPromotionTrackRanks(member)
+        if len(memberRankIds) == 0:
+            return None, discord.Embed(title="❌ No promotion rank found", description=f"{member.mention} does not have a recognized promotion-track rank.", color=discord.Color.red())
+        if len(memberRankIds) > 1:
+            return None, discord.Embed(title="❌ Ambiguous promotion rank", description=f"{member.mention} has multiple promotion-track ranks. Please contact Unit Staff.", color=discord.Color.red())
+
+        currentRankId = memberRankIds[0]
+        if currentRankId == PROSPECT:
+            return None, discord.Embed(title="❌ Invalid target", description=f"{member.mention} is a Prospect and must go through the interview process instead.", color=discord.Color.red())
+        if currentRankId not in PROMOTION_RECOMMENDATION_SOURCE_RANKS:
+            return None, discord.Embed(title="❌ Invalid target", description=f"{member.mention} cannot be recommended for promotion from their current rank.", color=discord.Color.red())
+
+        allowedTargetIds = tuple(PROMOTION_RECOMMENDATION_ALLOWED_TARGETS.get(currentRankId, ()))
+        if len(allowedTargetIds) == 0:
+            return None, discord.Embed(title="❌ No possible promotion", description=f"{member.mention} cannot be recommended for promotion through this command.", color=discord.Color.red())
+
+        if targetRankId is not None:
+            if targetRankId not in allowedTargetIds:
+                targetRole = guild.get_role(targetRankId)
+                targetLabel = targetRole.mention if targetRole is not None else f"`{targetRankId}`"
+                return None, discord.Embed(title="❌ Invalid promotion target", description=f"{member.mention} cannot be recommended for {targetLabel} through this command.", color=discord.Color.red())
+
+            requiredRoleIds = PROMOTION_RECOMMENDATION_MINIMUM_RECOMMENDER_ROLES.get(targetRankId, ())
+            if len(requiredRoleIds) == 0:
+                return None, discord.Embed(title="❌ Recommendation rule missing", description="Snek is missing the qualification rule for this recommendation.", color=discord.Color.red())
+
+            targetRole = guild.get_role(targetRankId)
+            targetLabel = targetRole.mention if targetRole is not None else f"`{targetRankId}`"
+            requirements = Schedule._formatRoleMentions(guild, requiredRoleIds)
+
+            if not Schedule._meetsPromotionRecommendationRequirement(firstRecommender, targetRankId):
+                return None, discord.Embed(
+                    title="❌ Primary recommender does not qualify",
+                    description=f"{firstRecommender.mention} must have one of these roles to recommend {member.mention} for {targetLabel}: {requirements}",
+                    color=discord.Color.red()
+                )
+
+            if not Schedule._meetsPromotionRecommendationRequirement(secondRecommender, targetRankId):
+                return None, discord.Embed(
+                    title="❌ Secondary recommender does not qualify",
+                    description=f"{secondRecommender.mention} must have one of these roles to recommend {member.mention} for {targetLabel}: {requirements}",
+                    color=discord.Color.red()
+                )
+
+        return {
+            "member": member,
+            "firstRecommender": firstRecommender,
+            "secondRecommender": secondRecommender,
+            "currentRankId": currentRankId,
+            "allowedTargetIds": allowedTargetIds,
+            "targetRankId": targetRankId,
+        }, None
+
+    @staticmethod
     def _truncatePromotionReason(reason: str | None) -> str | None:
         if reason is None:
             return None
@@ -272,68 +371,27 @@ class Schedule(commands.Cog):
             return
 
         guild = interaction.guild
-        member = guild.get_member(memberId)
-        firstRecommender = guild.get_member(firstRecommenderId)
-        secondRecommender = guild.get_member(secondRecommenderId)
-        if not isinstance(member, discord.Member):
-            await Schedule._sendInteractionResponse(interaction, embed=discord.Embed(title="❌ Member not found", color=discord.Color.red()))
-            return
-        if not isinstance(firstRecommender, discord.Member):
-            log.exception("Schedule _sendPromotionRecommendationPreview: firstRecommender not discord.Member")
-            await Schedule._sendInteractionResponse(interaction, embed=discord.Embed(title="❌ Failed to resolve the Primary recommender", color=discord.Color.red()))
-            return
-        if not isinstance(secondRecommender, discord.Member):
-            await Schedule._sendInteractionResponse(interaction, embed=discord.Embed(title="❌ Secondary recommender not found", color=discord.Color.red()))
+        validationResult, validationError = Schedule._validatePromotionRecommendation(
+            guild,
+            memberId=memberId,
+            firstRecommenderId=firstRecommenderId,
+            secondRecommenderId=secondRecommenderId,
+            targetRankId=targetRankId,
+        )
+        if validationError is not None:
+            await Schedule._sendInteractionResponse(interaction, embed=validationError)
             return
 
-        memberRankIds = Schedule._getPromotionTrackRanks(member)
-        if len(memberRankIds) == 0:
-            await Schedule._sendInteractionResponse(
-                interaction,
-                embed=discord.Embed(
-                    title="❌ No promotion rank found",
-                    description=f"{member.mention} does not have a recognized promotion-track rank.",
-                    color=discord.Color.red()
-                )
-            )
-            return
-        if len(memberRankIds) > 1:
-            await Schedule._sendInteractionResponse(
-                interaction,
-                embed=discord.Embed(
-                    title="❌ Ambiguous promotion rank",
-                    description=f"{member.mention} must have exactly one promotion-track rank.",
-                    color=discord.Color.red()
-                )
-            )
+        if validationResult is None:
+            log.exception("Schedule _sendPromotionRecommendationPreview: validationResult is None")
+            await Schedule._sendInteractionResponse(interaction, embed=discord.Embed(title="❌ Promotion recommendation validation failed", color=discord.Color.red()))
             return
 
-        currentRankId = memberRankIds[0]
-        if currentRankId == PROSPECT:
-            await Schedule._sendInteractionResponse(
-                interaction,
-                embed=discord.Embed(
-                    title="❌ Invalid target",
-                    description=f"{member.mention} is a Prospect and must go through the interview process instead.",
-                    color=discord.Color.red()
-                )
-            )
-            return
-
-        allowedTargetIds = PROMOTION_RECOMMENDATION_ALLOWED_TARGETS.get(currentRankId, ())
-        if targetRankId not in allowedTargetIds:
-            targetRole = guild.get_role(targetRankId)
-            targetLabel = targetRole.mention if targetRole is not None else f"`{targetRankId}`"
-            await Schedule._sendInteractionResponse(
-                interaction,
-                embed=discord.Embed(
-                    title="❌ Invalid promotion target",
-                    description=f"{member.mention} cannot be recommended for {targetLabel} through this command.",
-                    color=discord.Color.red()
-                )
-            )
-            return
-
+        member = cast(discord.Member, validationResult["member"])
+        firstRecommender = cast(discord.Member, validationResult["firstRecommender"])
+        secondRecommender = cast(discord.Member, validationResult["secondRecommender"])
+        currentRankId = cast(int, validationResult["currentRankId"])
+        targetRankId = cast(int, validationResult["targetRankId"])
         currentRole = guild.get_role(currentRankId)
         targetRole = guild.get_role(targetRankId)
 
@@ -439,90 +497,29 @@ class Schedule(commands.Cog):
             return
 
         guild = interaction.guild
-        member = guild.get_member(memberId)
-        firstRecommender = guild.get_member(firstRecommenderId)
-        secondRecommender = guild.get_member(secondRecommenderId)
-        if not isinstance(member, discord.Member):
-            await Schedule._sendInteractionResponse(interaction, embed=discord.Embed(title="❌ Member not found", color=discord.Color.red()))
-            return
-        if not isinstance(firstRecommender, discord.Member):
-            log.exception("Schedule processPromotionRecommendation: firstRecommender not discord.Member")
-            await Schedule._sendInteractionResponse(interaction, embed=discord.Embed(title="❌ Failed to resolve the Primary recommender", color=discord.Color.red()))
-            return
-        if not isinstance(secondRecommender, discord.Member):
-            await Schedule._sendInteractionResponse(interaction, embed=discord.Embed(title="❌ Secondary recommender not found", color=discord.Color.red()))
+        validationResult, validationError = Schedule._validatePromotionRecommendation(
+            guild,
+            memberId=memberId,
+            firstRecommenderId=firstRecommenderId,
+            secondRecommenderId=secondRecommenderId,
+            targetRankId=targetRankId,
+        )
+        if validationError is not None:
+            await Schedule._sendInteractionResponse(interaction, embed=validationError)
             return
 
-        if member.bot:
-            await Schedule._sendInteractionResponse(interaction, embed=discord.Embed(title="❌ Invalid target", description="You cannot recommend bots for promotion.", color=discord.Color.red()))
-            return
-        if secondRecommender.bot:
-            await Schedule._sendInteractionResponse(interaction, embed=discord.Embed(title="❌ Invalid recommender", description="The Secondary recommender cannot be a bot.", color=discord.Color.red()))
-            return
-        if member.id == firstRecommender.id:
-            await Schedule._sendInteractionResponse(interaction, embed=discord.Embed(title="❌ Invalid target", description="You cannot recommend yourself for promotion.", color=discord.Color.red()))
-            return
-        if member.id == secondRecommender.id:
-            await Schedule._sendInteractionResponse(interaction, embed=discord.Embed(title="❌ Invalid recommender", description="The Secondary recommender cannot be the member being recommended.", color=discord.Color.red()))
-            return
-        if firstRecommender.id == secondRecommender.id:
-            await Schedule._sendInteractionResponse(interaction, embed=discord.Embed(title="❌ Duplicate recommenders", description="Promotion recommendations require two different recommenders.", color=discord.Color.red()))
+        if validationResult is None:
+            log.exception("Schedule processPromotionRecommendation: validationResult is None")
+            await Schedule._sendInteractionResponse(interaction, embed=discord.Embed(title="❌ Promotion recommendation validation failed", color=discord.Color.red()))
             return
 
-        memberRankIds = Schedule._getPromotionTrackRanks(member)
-        if len(memberRankIds) == 0:
-            await Schedule._sendInteractionResponse(interaction, embed=discord.Embed(title="❌ No promotion rank found", description=f"{member.mention} does not have a recognized promotion-track rank.", color=discord.Color.red()))
-            return
-        if len(memberRankIds) > 1:
-            await Schedule._sendInteractionResponse(interaction, embed=discord.Embed(title="❌ Ambiguous promotion rank", description=f"{member.mention} has multiple promotion-track ranks. Please contact Unit Staff.", color=discord.Color.red()))
-            return
-
-        currentRankId = memberRankIds[0]
-        if currentRankId == PROSPECT:
-            await Schedule._sendInteractionResponse(interaction, embed=discord.Embed(title="❌ Invalid target", description=f"{member.mention} is a Prospect and must go through the interview process instead.", color=discord.Color.red()))
-            return
-        if currentRankId not in PROMOTION_RECOMMENDATION_SOURCE_RANKS:
-            await Schedule._sendInteractionResponse(interaction, embed=discord.Embed(title="❌ Invalid target", description=f"{member.mention} cannot be recommended for promotion from their current rank.", color=discord.Color.red()))
-            return
-
-        allowedTargetIds = PROMOTION_RECOMMENDATION_ALLOWED_TARGETS.get(currentRankId, ())
-        if targetRankId not in allowedTargetIds:
-            targetRole = guild.get_role(targetRankId)
-            targetLabel = targetRole.mention if targetRole is not None else f"`{targetRankId}`"
-            await Schedule._sendInteractionResponse(interaction, embed=discord.Embed(title="❌ Invalid promotion target", description=f"{member.mention} cannot be recommended for {targetLabel} through this command.", color=discord.Color.red()))
-            return
-
-        requiredRoleIds = PROMOTION_RECOMMENDATION_MINIMUM_RECOMMENDER_ROLES.get(targetRankId, ())
-        if len(requiredRoleIds) == 0:
-            await Schedule._sendInteractionResponse(interaction, embed=discord.Embed(title="❌ Recommendation rule missing", description="Snek is missing the qualification rule for this recommendation.", color=discord.Color.red()))
-            return
-
+        member = cast(discord.Member, validationResult["member"])
+        firstRecommender = cast(discord.Member, validationResult["firstRecommender"])
+        secondRecommender = cast(discord.Member, validationResult["secondRecommender"])
+        currentRankId = cast(int, validationResult["currentRankId"])
+        targetRankId = cast(int, validationResult["targetRankId"])
         targetRole = guild.get_role(targetRankId)
         targetLabel = targetRole.mention if targetRole is not None else f"`{targetRankId}`"
-
-        if not Schedule._meetsPromotionRecommendationRequirement(firstRecommender, targetRankId):
-            requirements = Schedule._formatRoleMentions(guild, requiredRoleIds)
-            await Schedule._sendInteractionResponse(
-                interaction,
-                embed=discord.Embed(
-                    title="❌ Primary recommender does not qualify",
-                    description=f"{firstRecommender.mention} must have one of these roles to recommend {member.mention} for {targetLabel}: {requirements}",
-                    color=discord.Color.red()
-                )
-            )
-            return
-
-        if not Schedule._meetsPromotionRecommendationRequirement(secondRecommender, targetRankId):
-            requirements = Schedule._formatRoleMentions(guild, requiredRoleIds)
-            await Schedule._sendInteractionResponse(
-                interaction,
-                embed=discord.Embed(
-                    title="❌ Secondary recommender does not qualify",
-                    description=f"{secondRecommender.mention} must have one of these roles to recommend {member.mention} for {targetLabel}: {requirements}",
-                    color=discord.Color.red()
-                )
-            )
-            return
 
         channelCommendations = guild.get_channel(COMMENDATIONS)
         channelAdvisorStaffComms = guild.get_channel(ADVISOR_STAFF_COMMS)
@@ -1114,39 +1111,26 @@ class Schedule(commands.Cog):
         if not isinstance(interaction.user, discord.Member):
             log.exception("Schedule recommendForPromotion: interaction.user not discord.Member")
             return
-        if member.bot:
-            await interaction.response.send_message(embed=discord.Embed(title="❌ Invalid target", description="You cannot recommend bots for promotion.", color=discord.Color.red()), ephemeral=True)
-            return
-        if second_recommender.bot:
-            await interaction.response.send_message(embed=discord.Embed(title="❌ Invalid recommender", description="The Secondary recommender cannot be a bot.", color=discord.Color.red()), ephemeral=True)
-            return
-        if member.id == interaction.user.id:
-            await interaction.response.send_message(embed=discord.Embed(title="❌ Invalid target", description="You cannot recommend yourself for promotion.", color=discord.Color.red()), ephemeral=True)
-            return
-        if member.id == second_recommender.id:
-            await interaction.response.send_message(embed=discord.Embed(title="❌ Invalid recommender", description="The Secondary recommender cannot be the member being recommended.", color=discord.Color.red()), ephemeral=True)
-            return
-        if second_recommender.id == interaction.user.id:
-            await interaction.response.send_message(embed=discord.Embed(title="❌ Duplicate recommenders", description="Promotion recommendations require two different recommenders.", color=discord.Color.red()), ephemeral=True)
+        if not isinstance(interaction.guild, discord.Guild):
+            log.exception("Schedule recommendForPromotion: interaction.guild not discord.Guild")
             return
 
-        memberRankIds = Schedule._getPromotionTrackRanks(member)
-        if len(memberRankIds) == 0:
-            await interaction.response.send_message(embed=discord.Embed(title="❌ No promotion rank found", description=f"{member.mention} does not have a recognized promotion-track rank.", color=discord.Color.red()), ephemeral=True)
-            return
-        if len(memberRankIds) > 1:
-            await interaction.response.send_message(embed=discord.Embed(title="❌ Ambiguous promotion rank", description=f"{member.mention} has multiple promotion-track ranks. Please contact Unit Staff.", color=discord.Color.red()), ephemeral=True)
-            return
-
-        currentRankId = memberRankIds[0]
-        if currentRankId == PROSPECT:
-            await interaction.response.send_message(embed=discord.Embed(title="❌ Invalid target", description=f"{member.mention} is a Prospect and must go through the interview process instead.", color=discord.Color.red()), ephemeral=True)
+        validationResult, validationError = Schedule._validatePromotionRecommendation(
+            interaction.guild,
+            memberId=member.id,
+            firstRecommenderId=interaction.user.id,
+            secondRecommenderId=second_recommender.id,
+        )
+        if validationError is not None:
+            await interaction.response.send_message(embed=validationError, ephemeral=True)
             return
 
-        allowedTargetIds = PROMOTION_RECOMMENDATION_ALLOWED_TARGETS.get(currentRankId, ())
-        if len(allowedTargetIds) == 0:
-            await interaction.response.send_message(embed=discord.Embed(title="❌ No possible promotion", description=f"{member.mention} cannot be recommended for promotion through this command.", color=discord.Color.red()), ephemeral=True)
+        if validationResult is None:
+            log.exception("Schedule recommendForPromotion: validationResult is None")
+            await interaction.response.send_message(embed=discord.Embed(title="❌ Promotion recommendation validation failed", color=discord.Color.red()), ephemeral=True)
             return
+
+        allowedTargetIds = cast(tuple[int, ...], validationResult["allowedTargetIds"])
 
         if len(allowedTargetIds) > 1:
             await interaction.response.send_modal(
@@ -1162,6 +1146,23 @@ class Schedule(commands.Cog):
             )
             return
 
+        targetRankId = allowedTargetIds[0]
+        validationResult, validationError = Schedule._validatePromotionRecommendation(
+            interaction.guild,
+            memberId=member.id,
+            firstRecommenderId=interaction.user.id,
+            secondRecommenderId=second_recommender.id,
+            targetRankId=targetRankId,
+        )
+        if validationError is not None:
+            await interaction.response.send_message(embed=validationError, ephemeral=True)
+            return
+
+        if validationResult is None:
+            log.exception("Schedule recommendForPromotion: single-target validationResult is None")
+            await interaction.response.send_message(embed=discord.Embed(title="❌ Promotion recommendation validation failed", color=discord.Color.red()), ephemeral=True)
+            return
+
         await Schedule._sendPromotionRecommendationPreview(
             interaction,
             memberId=member.id,
@@ -1169,7 +1170,7 @@ class Schedule(commands.Cog):
             firstRecommenderId=interaction.user.id,
             secondRecommenderId=second_recommender.id,
             reason=reason,
-            targetRankId=allowedTargetIds[0],
+            targetRankId=targetRankId,
         )
 
 # ===== </Recommend For Promotion> =====
@@ -4080,6 +4081,27 @@ class PromotionRecommendationTargetModal(discord.ui.Modal):
         selectedTargetRank = self.targetRank.component.value
         if selectedTargetRank is None:
             await interaction.response.send_message("Please choose a rank before continuing.", ephemeral=True)
+            return
+
+        if not isinstance(interaction.guild, discord.Guild):
+            log.exception("PromotionRecommendationTargetModal on_submit: interaction.guild not discord.Guild")
+            await interaction.response.send_message("Failed to submit recommendation: Server context unavailable.", ephemeral=True)
+            return
+
+        validationResult, validationError = Schedule._validatePromotionRecommendation(
+            interaction.guild,
+            memberId=self.memberId,
+            firstRecommenderId=self.firstRecommenderId,
+            secondRecommenderId=self.secondRecommenderId,
+            targetRankId=int(selectedTargetRank),
+        )
+        if validationError is not None:
+            await interaction.response.send_message(embed=validationError, ephemeral=True)
+            return
+
+        if validationResult is None:
+            log.exception("PromotionRecommendationTargetModal on_submit: validationResult is None")
+            await interaction.response.send_message(embed=discord.Embed(title="❌ Promotion recommendation validation failed", color=discord.Color.red()), ephemeral=True)
             return
 
         await Schedule._sendPromotionRecommendationPreview(

@@ -6,7 +6,7 @@ A Discord bot made for *Sigma Security Group* that implements custom commands an
 
 * [Discord Application](https://discord.com/developers/applications) with Bot and all intents enabled
 
-* [Python 3.12+](https://www.python.org/)
+* [Python 3.14+](https://www.python.org/)
 
 * Installed dependencies:
     * (Recommended) [UV](https://docs.astral.sh/uv/getting-started/installation/): `uv sync`
@@ -61,6 +61,8 @@ DISCORD_LOGGING = {  # Log levels based on type of event
 ```
 
 * You can easily toggle the bot's debug mode by changing the DEBUG variable in `secret.py`. On debug mode, the bot will use the debug server (`debug.py` constants).
+
+* If `SPREADSHEET_ACTIVE = True`, place a Google service account key file named `spreadsheet_account_creds.json` in the project root. The service account must have access to the target spreadsheet.
 
 * All constants in `constants/debug.py` are for Adrian's personal Bot Testing Range (BTR). If you want the bot to work on another server you must replace all the IDs in said file.
 

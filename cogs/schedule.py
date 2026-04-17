@@ -494,6 +494,247 @@ class Schedule(commands.Cog):
         return embed
 
     @staticmethod
+    def _buildPromotionDecisionView(
+        *,
+        memberId: int,
+        currentRankId: int,
+        targetRankId: int,
+        juniorPromotion: bool
+    ) -> discord.ui.View:
+        scope = "junior" if juniorPromotion else "senior"
+        view = discord.ui.View(timeout=None)
+        view.add_item(PromotionDecisionPromoteButton(memberId, currentRankId, targetRankId, scope))
+        view.add_item(PromotionDecisionDenyButton(memberId, currentRankId, targetRankId, scope))
+        return view
+
+    @staticmethod
+    def _getPromotionRecommendationReason(message: discord.Message | None) -> str | None:
+        if message is None or len(message.embeds) == 0:
+            return None
+        for field in message.embeds[0].fields:
+            if field.name == "Reason":
+                reason = field.value.strip()
+                return reason or None
+        return None
+
+    @staticmethod
+    def _extractMentionedUserId(value: str) -> int | None:
+        match = re.search(r"<@!?(\d+)>", value)
+        if match is None:
+            return None
+        return int(match.group(1))
+
+    @staticmethod
+    def _getPromotionRecommendationRecommenderIds(message: discord.Message | None) -> tuple[int | None, int | None]:
+        if message is None or len(message.embeds) == 0:
+            return None, None
+
+        firstRecommenderId = None
+        secondRecommenderId = None
+        for field in message.embeds[0].fields:
+            if field.name == "Primary":
+                firstRecommenderId = Schedule._extractMentionedUserId(field.value)
+            elif field.name == "Secondary":
+                secondRecommenderId = Schedule._extractMentionedUserId(field.value)
+        return firstRecommenderId, secondRecommenderId
+
+    @staticmethod
+    def _promotionDecisionButtonsDisabled(message: discord.Message | None) -> bool:
+        if message is None:
+            return False
+        hasButtons = False
+        for row in message.components:
+            for child in getattr(row, "children", []):
+                if getattr(child, "custom_id", None) is not None:
+                    hasButtons = True
+                    if not getattr(child, "disabled", False):
+                        return False
+        return hasButtons
+
+    @staticmethod
+    def _buildDisabledViewFromMessage(message: discord.Message) -> discord.ui.View:
+        view = discord.ui.View.from_message(message, timeout=None)
+        for item in view.children:
+            if hasattr(item, "disabled"):
+                item.disabled = True
+        return view
+
+    @staticmethod
+    def _buildPromotionDecisionLogEmbed(
+        guild: discord.Guild,
+        *,
+        member: discord.Member,
+        currentRankId: int,
+        targetRankId: int,
+        firstRecommender: discord.Member,
+        secondRecommender: discord.Member,
+        reviewer: discord.Member,
+        approved: bool,
+        reason: str | None,
+        denyReason: str | None = None
+    ) -> discord.Embed:
+        currentRole = guild.get_role(currentRankId)
+        targetRole = guild.get_role(targetRankId)
+        decisionLabel = "Promotion Approved" if approved else "Promotion Denied"
+        embed = discord.Embed(
+            title=decisionLabel,
+            color=discord.Color.green() if approved else discord.Color.red(),
+            timestamp=datetime.now(timezone.utc)
+        )
+        embed.add_field(name="Member", value=member.mention, inline=True)
+        embed.add_field(name="Decision By", value=reviewer.mention, inline=True)
+        embed.add_field(name="Decision", value="Promote" if approved else "Deny", inline=True)
+        embed.add_field(name="Current Rank", value=currentRole.mention if currentRole is not None else f"`{currentRankId}`", inline=True)
+        embed.add_field(name="Recommended Rank", value=targetRole.mention if targetRole is not None else f"`{targetRankId}`", inline=True)
+        embed.add_field(name="\u200B", value="\u200B", inline=True)
+        embed.add_field(name="Primary", value=firstRecommender.mention, inline=True)
+        embed.add_field(name="Secondary", value=secondRecommender.mention, inline=True)
+        embed.add_field(name="\u200B", value="\u200B", inline=True)
+        if reasonValue := Schedule._truncatePromotionReason(reason):
+            embed.add_field(name="Recommendation Reason", value=reasonValue, inline=False)
+        if not approved and (denyReasonValue := Schedule._truncatePromotionReason(denyReason)):
+            embed.add_field(name="Deny Reason", value=denyReasonValue, inline=False)
+        embed.set_footer(text=f"Member ID: {member.id} | Reviewer ID: {reviewer.id}")
+        embed.set_thumbnail(url=member.display_avatar.url)
+        return embed
+
+    @staticmethod
+    def _buildResolvedPromotionRecommendationEmbed(
+        embed: discord.Embed,
+        *,
+        reviewer: discord.Member,
+        approved: bool
+    ) -> discord.Embed:
+        updatedEmbed = deepcopy(embed)
+        decisionText = f"{'Approved' if approved else 'Denied'} by {reviewer.mention}"
+        reviewFieldIndex = next((index for index, field in enumerate(updatedEmbed.fields) if field.name == "Review"), None)
+        if reviewFieldIndex is not None:
+            updatedEmbed.set_field_at(reviewFieldIndex, name="Review", value=decisionText, inline=False)
+        else:
+            updatedEmbed.add_field(name="Review", value=decisionText, inline=False)
+
+        footerText = updatedEmbed.footer.text or ""
+        updatedEmbed.set_footer(text=f"{footerText} | Decision recorded".strip(" |"))
+        updatedEmbed.color = discord.Color.green() if approved else discord.Color.red()
+        updatedEmbed.timestamp = datetime.now(timezone.utc)
+        return updatedEmbed
+
+    @staticmethod
+    async def handlePromotionRecommendationDecision(
+        interaction: discord.Interaction,
+        *,
+        action: str,
+        memberId: int,
+        currentRankId: int,
+        targetRankId: int,
+        scope: str,
+        denyReason: str | None = None,
+        reviewMessage: discord.Message | None = None
+    ) -> None:
+        if not isinstance(interaction.guild, discord.Guild):
+            log.exception("Schedule handlePromotionRecommendationDecision: interaction.guild not discord.Guild")
+            return
+        if not isinstance(interaction.user, discord.Member):
+            log.exception("Schedule handlePromotionRecommendationDecision: interaction.user not discord.Member")
+            return
+        if reviewMessage is None:
+            reviewMessage = interaction.message
+        if reviewMessage is None:
+            log.exception("Schedule handlePromotionRecommendationDecision: interaction.message is None")
+            return
+
+        guild = interaction.guild
+        reviewer = interaction.user
+        allowedRoleIds = {UNIT_STAFF} if scope == "junior" else {UNIT_STAFF, ADVISOR}
+        if not any(role.id in allowedRoleIds for role in reviewer.roles):
+            await interaction.response.send_message("You are not allowed to review this promotion recommendation.", ephemeral=True)
+            return
+
+        if Schedule._promotionDecisionButtonsDisabled(reviewMessage):
+            await interaction.response.send_message("This promotion recommendation has already been resolved.", ephemeral=True)
+            return
+
+        if action == "deny" and denyReason is None:
+            await interaction.response.send_modal(
+                PromotionRecommendationDenyModal(
+                    memberId=memberId,
+                    currentRankId=currentRankId,
+                    targetRankId=targetRankId,
+                    scope=scope,
+                    reviewChannelId=reviewMessage.channel.id,
+                    reviewMessageId=reviewMessage.id
+                )
+            )
+            return
+
+        firstRecommenderId, secondRecommenderId = Schedule._getPromotionRecommendationRecommenderIds(reviewMessage)
+        member = guild.get_member(memberId)
+        firstRecommender = guild.get_member(firstRecommenderId)
+        secondRecommender = guild.get_member(secondRecommenderId)
+        if not isinstance(member, discord.Member):
+            await interaction.response.send_message("Failed to resolve the member for this promotion recommendation.", ephemeral=True)
+            return
+        if not isinstance(firstRecommender, discord.Member) or not isinstance(secondRecommender, discord.Member):
+            await interaction.response.send_message("Failed to resolve the recommenders for this promotion recommendation.", ephemeral=True)
+            return
+
+        currentRole = guild.get_role(currentRankId)
+        targetRole = guild.get_role(targetRankId)
+        if currentRole is None or targetRole is None:
+            await interaction.response.send_message("This promotion recommendation references a missing rank role.", ephemeral=True)
+            return
+
+        if currentRole not in member.roles:
+            await interaction.response.send_message(f"{member.mention} no longer has the expected current rank for this recommendation.", ephemeral=True)
+            return
+
+        disabledView = Schedule._buildDisabledViewFromMessage(reviewMessage)
+        approved = action == "promote"
+
+        if approved:
+            auditReason = f"Promotion recommendation approved by {reviewer}."
+            await member.remove_roles(currentRole, reason=auditReason)
+            await member.add_roles(targetRole, reason=auditReason)
+
+        resolvedEmbed = Schedule._buildResolvedPromotionRecommendationEmbed(reviewMessage.embeds[0], reviewer=reviewer, approved=approved)
+        if interaction.message is not None and interaction.message.id == reviewMessage.id:
+            await interaction.response.edit_message(embed=resolvedEmbed, view=disabledView)
+        else:
+            await reviewMessage.edit(embed=resolvedEmbed, view=disabledView)
+            await interaction.response.send_message(f"Promotion recommendation {'approved' if approved else 'denied'}.", ephemeral=True)
+
+        reason = Schedule._getPromotionRecommendationReason(reviewMessage)
+        decisionEmbed = Schedule._buildPromotionDecisionLogEmbed(
+            guild,
+            member=member,
+            currentRankId=currentRankId,
+            targetRankId=targetRankId,
+            firstRecommender=firstRecommender,
+            secondRecommender=secondRecommender,
+            reviewer=reviewer,
+            approved=approved,
+            reason=reason,
+            denyReason=denyReason
+        )
+
+        channelAdvisorStaffComms = guild.get_channel(ADVISOR_STAFF_COMMS)
+        if isinstance(channelAdvisorStaffComms, discord.TextChannel):
+            await channelAdvisorStaffComms.send(embed=decisionEmbed)
+        else:
+            log.exception("Schedule handlePromotionRecommendationDecision: advisorStaffCommsChannel not discord.TextChannel")
+
+        channelAuditLogs = guild.get_channel(AUDIT_LOGS)
+        if isinstance(channelAuditLogs, discord.TextChannel):
+            await channelAuditLogs.send(embed=decisionEmbed)
+        else:
+            log.exception("Schedule handlePromotionRecommendationDecision: channelAuditLogs not discord.TextChannel")
+
+        log.info(
+            f"{reviewer.id} [{reviewer.display_name}] {'approved' if approved else 'denied'} "
+            f"promotion recommendation for {member.id} [{member.display_name}] from '{currentRankId}' to '{targetRankId}'"
+        )
+
+    @staticmethod
     async def processPromotionRecommendation(
         interaction: discord.Interaction,
         *,
@@ -546,6 +787,12 @@ class Schedule(commands.Cog):
         roleUnitStaff = guild.get_role(UNIT_STAFF)
         roleAdvisor = guild.get_role(ADVISOR)
         juniorPromotion = targetRankId in (CANDIDATE, ASSOCIATE, CONTRACTOR)
+        reviewView = Schedule._buildPromotionDecisionView(
+            memberId=member.id,
+            currentRankId=currentRankId,
+            targetRankId=targetRankId,
+            juniorPromotion=juniorPromotion
+        )
 
         commendationsEmbed = Schedule._buildPromotionRecommendationEmbed(
             guild,
@@ -560,7 +807,7 @@ class Schedule(commands.Cog):
 
         if juniorPromotion:
             content = f"{roleUnitStaff.mention} Promotion recommendation ready for review." if roleUnitStaff is not None else None
-            await channelCommendations.send(content=content, embed=commendationsEmbed)
+            await channelCommendations.send(content=content, embed=commendationsEmbed, view=reviewView)
         else:
             await channelCommendations.send(embed=commendationsEmbed)
             reviewMentions = " ".join(role.mention for role in (roleAdvisor, roleUnitStaff) if role is not None) or None
@@ -574,7 +821,7 @@ class Schedule(commands.Cog):
                 reason,
                 reviewRequired=True
             )
-            await channelAdvisorStaffComms.send(content=reviewMentions, embed=reviewEmbed)
+            await channelAdvisorStaffComms.send(content=reviewMentions, embed=reviewEmbed, view=reviewView)
 
         log.info(
             f"{firstRecommender.id} [{firstRecommender.display_name}] and "
@@ -2752,6 +2999,79 @@ class ScheduleEventConfigButton(BaseScheduleEventDynamicButton, template=r"sched
     STYLE = discord.ButtonStyle.secondary
     EMOJI = "⚙️"
 
+class BasePromotionDecisionDynamicButton(discord.ui.DynamicItem[discord.ui.Button], template=r"^$"):
+    """Base class for persistent promotion recommendation decision buttons."""
+    ACTION = ""
+    LABEL = ""
+    STYLE = discord.ButtonStyle.secondary
+
+    def __init__(
+        self,
+        memberId: int,
+        currentRankId: int,
+        targetRankId: int,
+        scope: str
+    ) -> None:
+        self.memberId = memberId
+        self.currentRankId = currentRankId
+        self.targetRankId = targetRankId
+        self.scope = scope
+        super().__init__(
+            discord.ui.Button(
+                label=self.LABEL,
+                style=self.STYLE,
+                row=0,
+                custom_id=(
+                    f"schedule_button_promotion_{self.ACTION}_"
+                    f"{memberId}_{currentRankId}_{targetRankId}_{scope}"
+                )
+            )
+        )
+
+    @classmethod
+    async def from_custom_id(cls, interaction: discord.Interaction, item: discord.ui.Button, match: re.Match[str], /):
+        return cls(
+            int(match.group("member_id")),
+            int(match.group("current_rank_id")),
+            int(match.group("target_rank_id")),
+            match.group("scope")
+        )
+
+    async def callback(self, interaction: discord.Interaction):
+        await Schedule.handlePromotionRecommendationDecision(
+            interaction,
+            action=self.ACTION,
+            memberId=self.memberId,
+            currentRankId=self.currentRankId,
+            targetRankId=self.targetRankId,
+            scope=self.scope
+        )
+
+
+class PromotionDecisionPromoteButton(
+    BasePromotionDecisionDynamicButton,
+    template=(
+        r"schedule_button_promotion_promote_"
+        r"(?P<member_id>\d+)_(?P<current_rank_id>\d+)_(?P<target_rank_id>\d+)_(?P<scope>junior|senior)"
+    )
+):
+    ACTION = "promote"
+    LABEL = "Promote"
+    STYLE = discord.ButtonStyle.success
+
+
+class PromotionDecisionDenyButton(
+    BasePromotionDecisionDynamicButton,
+    template=(
+        r"schedule_button_promotion_deny_"
+        r"(?P<member_id>\d+)_(?P<current_rank_id>\d+)_(?P<target_rank_id>\d+)_(?P<scope>junior|senior)"
+    )
+):
+    ACTION = "deny"
+    LABEL = "Deny"
+    STYLE = discord.ButtonStyle.danger
+
+
 class ScheduleButton(discord.ui.Button):
     """Handling all schedule buttons."""
     def __init__(self, message: discord.Message | None, *args, **kwargs):
@@ -4228,6 +4548,73 @@ class PromotionRecommendationConfirmationModal(discord.ui.Modal):
         )
 
 
+class PromotionRecommendationDenyModal(discord.ui.Modal):
+    """Collects a deny reason before resolving a promotion recommendation."""
+    def __init__(
+        self,
+        *,
+        memberId: int,
+        currentRankId: int,
+        targetRankId: int,
+        scope: str,
+        reviewChannelId: int,
+        reviewMessageId: int
+    ) -> None:
+        super().__init__(title="Deny Promotion Recommendation", custom_id="schedule_modal_promotion_deny")
+        self.memberId = memberId
+        self.currentRankId = currentRankId
+        self.targetRankId = targetRankId
+        self.scope = scope
+        self.reviewChannelId = reviewChannelId
+        self.reviewMessageId = reviewMessageId
+
+        self.denyReason = discord.ui.TextInput(
+            label="Deny reason",
+            custom_id="schedule_text_promotion_deny_reason",
+            style=discord.TextStyle.long,
+            placeholder="Explain why this promotion recommendation is being denied.",
+            required=True,
+            min_length=1,
+            max_length=DISCORD_LIMITS["message_embed"]["embed_field_value"]
+        )
+        self.add_item(self.denyReason)
+
+    async def on_submit(self, interaction: discord.Interaction) -> None:
+        if not isinstance(interaction.guild, discord.Guild):
+            log.exception("PromotionRecommendationDenyModal on_submit: interaction.guild not discord.Guild")
+            await interaction.response.send_message("Failed to deny promotion recommendation: Guild not found.", ephemeral=True)
+            return
+
+        channel = interaction.guild.get_channel(self.reviewChannelId)
+        if not isinstance(channel, discord.TextChannel):
+            log.exception("PromotionRecommendationDenyModal on_submit: review channel not discord.TextChannel")
+            await interaction.response.send_message("Failed to deny promotion recommendation: Review channel not found.", ephemeral=True)
+            return
+
+        try:
+            reviewMessage = await channel.fetch_message(self.reviewMessageId)
+        except Exception as error:
+            log.exception(f"PromotionRecommendationDenyModal on_submit: failed to fetch review message - {error}")
+            await interaction.response.send_message("Failed to deny promotion recommendation: Review message not found.", ephemeral=True)
+            return
+
+        denyReason = self.denyReason.value.strip()
+        if denyReason == "":
+            await interaction.response.send_message("A deny reason is required.", ephemeral=True)
+            return
+
+        await Schedule.handlePromotionRecommendationDecision(
+            interaction,
+            action="deny",
+            memberId=self.memberId,
+            currentRankId=self.currentRankId,
+            targetRankId=self.targetRankId,
+            scope=self.scope,
+            denyReason=denyReason,
+            reviewMessage=reviewMessage
+        )
+
+
 class ScheduleModal(discord.ui.Modal):
     """Handling all schedule modals."""
     def __init__(self, title: str, customId: str, userId: int, eventMsg: discord.Message, view: discord.ui.View | None = None, eventId: str | None = None) -> None:
@@ -4689,5 +5076,7 @@ async def setup(bot: commands.Bot) -> None:
         ScheduleTentativeButton,
         ScheduleReserveButton,
         ScheduleEventEditButton,
-        ScheduleEventConfigButton
+        ScheduleEventConfigButton,
+        PromotionDecisionPromoteButton,
+        PromotionDecisionDenyButton
     )

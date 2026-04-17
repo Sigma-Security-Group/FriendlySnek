@@ -256,6 +256,11 @@ class Schedule(commands.Cog):
         firstRecommender = guild.get_member(firstRecommenderId)
         secondRecommender = guild.get_member(secondRecommenderId)
 
+        roleMember = guild.get_role(MEMBER)
+        if roleMember is None:
+            log.exception("Schedule _validatePromotionRecommendation: MEMBER role not found in guild")
+            return None, discord.Embed(title="❌ Server misconfiguration", description="The server is missing the required MEMBER role. Please contact Unit Staff.", color=discord.Color.red())
+
         if not isinstance(member, discord.Member):
             return None, discord.Embed(title="❌ Member not found", color=discord.Color.red())
         if not isinstance(firstRecommender, discord.Member):
@@ -266,8 +271,12 @@ class Schedule(commands.Cog):
 
         if member.bot:
             return None, discord.Embed(title="❌ Invalid target", description="You cannot recommend bots for promotion.", color=discord.Color.red())
+        if MEMBER not in {role.id for role in firstRecommender.roles}:
+            return None, discord.Embed(title="❌ Invalid recommender", description=f"The Primary recommender {firstRecommender.mention} does not have the {roleMember.mention} role.", color=discord.Color.red())
         if secondRecommender.bot:
             return None, discord.Embed(title="❌ Invalid recommender", description="The Secondary recommender cannot be a bot.", color=discord.Color.red())
+        if MEMBER not in {role.id for role in secondRecommender.roles}:
+            return None, discord.Embed(title="❌ Invalid recommender", description=f"The Secondary recommender {secondRecommender.mention} does not have the {roleMember.mention} role.", color=discord.Color.red())
         if member.id == firstRecommender.id:
             return None, discord.Embed(title="❌ Invalid target", description="You cannot recommend yourself for promotion.", color=discord.Color.red())
         if member.id == secondRecommender.id:
@@ -286,6 +295,8 @@ class Schedule(commands.Cog):
             return None, discord.Embed(title="❌ Invalid target", description=f"{member.mention} is a Prospect and must go through the interview process instead.", color=discord.Color.red())
         if currentRankId not in PROMOTION_RECOMMENDATION_SOURCE_RANKS:
             return None, discord.Embed(title="❌ Invalid target", description=f"{member.mention} cannot be recommended for promotion from their current rank.", color=discord.Color.red())
+        if MEMBER not in {role.id for role in member.roles}:
+            return None, discord.Embed(title="❌ Invalid target", description=f"{member.mention} does not have the {roleMember.mention} role.", color=discord.Color.red())
 
         allowedTargetIds = tuple(PROMOTION_RECOMMENDATION_ALLOWED_TARGETS.get(currentRankId, ()))
         if len(allowedTargetIds) == 0:

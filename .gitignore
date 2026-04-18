@@ -1,12 +1,13 @@
 # Projects
-__pycache__
-secret.py
-bot.log
-spreadsheet_account_creds.json
+__pycache__/
 logs/
 data/
 tmp/
 backups/
+secret.py
+bot.log
+spreadsheet_account_creds.json
+AGENTS.md
 
 # Env
 update.sh

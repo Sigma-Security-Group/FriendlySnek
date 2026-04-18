@@ -231,14 +231,6 @@ class WorkshopInterest(commands.Cog):
                 log.debug(f"Actual Message ID: {message.id}")
                 return True
 
-            expectedEmbed = WorkshopInterest.getWorkshopEmbed(guild, workshopName).to_dict()
-            actualEmbed = message.embeds[0].to_dict() if len(message.embeds) > 0 else None
-            if actualEmbed != expectedEmbed:
-                log.info(f"WSINT workshopInterestRequiresRefresh: embed mismatch for workshop '{workshopName}'")
-                log.debug(f"Expected Embed: {expectedEmbed}")
-                log.debug(f"Actual Embed: {actualEmbed}")
-                return True
-
             actualCustomIds = WorkshopInterest.getMessageComponentCustomIds(message)
             if actualCustomIds != expectedCustomIds:
                 log.info(f"WSINT workshopInterestRequiresRefresh: component mismatch for workshop '{workshopName}'")

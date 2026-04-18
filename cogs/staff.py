@@ -948,9 +948,140 @@ class Staff(commands.Cog):
 @discord.app_commands.guilds(GUILD)
 class Recruitment(commands.GroupCog, name="recruitment"):
     """Recruitment related commands."""
+    RECRUITMENT_EVENT_LABELS = {
+        "verified": "Verified",
+        "denied": "Denied",
+        "newcomer_completed": "Newcomer completed",
+    }
+    RECRUITMENT_NEWCOMER_STATUS_LABELS = {
+        "any": "Any",
+        "pending": "Pending newcomer",
+        "completed": "Completed newcomer",
+    }
+
     def __init__(self, bot: commands.Bot) -> None:
         super().__init__()
         self.bot = bot
+
+    @staticmethod
+    def _loadRecruitmentHistory() -> list[dict]:
+        try:
+            with open(RECRUITMENT_HISTORY_FILE) as f:
+                history = json.load(f)
+        except FileNotFoundError:
+            return []
+        except Exception:
+            log.exception("Recruitment _loadRecruitmentHistory: failed to load recruitment history")
+            return []
+
+        if not isinstance(history, list):
+            log.warning("Recruitment _loadRecruitmentHistory: recruitment history file is not a list")
+            return []
+        return history
+
+    @staticmethod
+    def _appendRecruitmentHistory(eventType: str, memberId: int, actorId: int) -> None:
+        history = Recruitment._loadRecruitmentHistory()
+        history.append({
+            "eventType": eventType,
+            "createdAt": datetime.now(timezone.utc).isoformat(),
+            "memberId": memberId,
+            "actorId": actorId,
+        })
+        try:
+            with open(RECRUITMENT_HISTORY_FILE, "w") as f:
+                json.dump(history, f, indent=4)
+        except Exception:
+            log.exception("Recruitment _appendRecruitmentHistory: failed to save recruitment history")
+
+    @staticmethod
+    def _formatRecruitmentUser(guild: discord.Guild, userId: int | None) -> str:
+        if userId is None:
+            return "Unknown"
+        member = guild.get_member(userId)
+        if member is not None:
+            return member.mention
+        return f"<@{userId}> (`{userId}`)"
+
+    @staticmethod
+    def _formatRecruitmentTimestamp(createdAt: str | None) -> str:
+        if not createdAt:
+            return "Unknown time"
+        try:
+            timestamp = int(datetime.fromisoformat(createdAt).timestamp())
+        except ValueError:
+            return createdAt
+        return f"<t:{timestamp}:f>"
+
+    @staticmethod
+    def _getRecruitmentRecordTimestamp(record: dict) -> datetime:
+        createdAt = record.get("createdAt")
+        if not isinstance(createdAt, str):
+            return datetime.min.replace(tzinfo=timezone.utc)
+        try:
+            return datetime.fromisoformat(createdAt)
+        except ValueError:
+            return datetime.min.replace(tzinfo=timezone.utc)
+
+    @staticmethod
+    def _getLatestRecruitmentRecordsByMember(history: list[dict], eventType: str) -> dict[int, dict]:
+        latestRecords = {}
+        for record in history:
+            memberId = record.get("memberId")
+            if record.get("eventType") != eventType or not isinstance(memberId, int):
+                continue
+            latestRecord = latestRecords.get(memberId)
+            if latestRecord is None or Recruitment._getRecruitmentRecordTimestamp(record) > Recruitment._getRecruitmentRecordTimestamp(latestRecord):
+                latestRecords[memberId] = record
+        return latestRecords
+
+    @staticmethod
+    def _filterRecruitmentHistory(history: list[dict], *, memberId: int | None, actorId: int | None, eventType: str | None, newcomerStatus: str) -> list[dict]:
+        if newcomerStatus == "pending":
+            latestVerifiedRecords = Recruitment._getLatestRecruitmentRecordsByMember(history, "verified")
+            latestNewcomerRecords = Recruitment._getLatestRecruitmentRecordsByMember(history, "newcomer_completed")
+            filteredHistory = [
+                verifiedRecord for verifiedMemberId, verifiedRecord in latestVerifiedRecords.items()
+                if (
+                    (newcomerRecord := latestNewcomerRecords.get(verifiedMemberId)) is None
+                    or Recruitment._getRecruitmentRecordTimestamp(newcomerRecord) <= Recruitment._getRecruitmentRecordTimestamp(verifiedRecord)
+                )
+            ]
+        elif newcomerStatus == "completed":
+            filteredHistory = list(Recruitment._getLatestRecruitmentRecordsByMember(history, "newcomer_completed").values())
+        else:
+            filteredHistory = history
+
+        filteredHistory = [
+            record for record in filteredHistory
+            if (memberId is None or record.get("memberId") == memberId)
+            and (actorId is None or record.get("actorId") == actorId)
+            and (eventType is None or record.get("eventType") == eventType)
+        ]
+        filteredHistory.sort(key=Recruitment._getRecruitmentRecordTimestamp, reverse=True)
+        return filteredHistory
+
+    @staticmethod
+    def _buildRecruitmentHistoryEmbed(guild: discord.Guild, records: list[dict], *, totalMatches: int) -> discord.Embed:
+        embed = discord.Embed(title="Recruitment History", color=discord.Color.blue())
+        if not records:
+            embed.description = "No recruitment history records found."
+            return embed
+
+        lines = []
+        for record in records:
+            eventType = record.get("eventType")
+            memberId = record.get("memberId")
+            actorId = record.get("actorId")
+            label = Recruitment.RECRUITMENT_EVENT_LABELS.get(eventType, str(eventType or "Unknown"))
+            createdAt = Recruitment._formatRecruitmentTimestamp(record.get("createdAt"))
+            memberText = Recruitment._formatRecruitmentUser(guild, memberId if isinstance(memberId, int) else None)
+            actorText = Recruitment._formatRecruitmentUser(guild, actorId if isinstance(actorId, int) else None)
+            lines.append(f"**{label}** - {createdAt}\nMember: {memberText}\nRecruiter: {actorText}")
+
+        embed.description = "\n\n".join(lines)
+        embed.set_footer(text=f"Showing {len(records)} of {totalMatches} matching records")
+        return embed
 
     @discord.app_commands.command(name="interview")
     @discord.app_commands.describe(member = "Target prospect member.")
@@ -1121,7 +1252,49 @@ class Recruitment(commands.GroupCog, name="recruitment"):
         embed.timestamp = datetime.now()
         log.info(f"{interaction.user.id} [{interaction.user.display_name}] Onboarded {member.id} [{member.display_name}] as newcomer")
         await channelRecruitmentAndHR.send(embed=embed)
+        Recruitment._appendRecruitmentHistory("newcomer_completed", member.id, interaction.user.id)
         await interaction.followup.send(f"Successfully onboarded {member.mention} as a newcomer.\nYou have been awarded a recruitment bonus of 🪙 `{bonus}` SnekCoins.", ephemeral=True)
+
+
+    @discord.app_commands.command(name="history")
+    @discord.app_commands.describe(
+        member="Show history for a member or prospect.",
+        recruiter="Show history handled by a recruiter.",
+        event_type="Filter by recruitment event type.",
+        newcomer_status="Filter by newcomer workshop completion status.",
+        limit="Maximum records to show.",
+    )
+    @discord.app_commands.choices(event_type=[
+        discord.app_commands.Choice(name="Verified", value="verified"),
+        discord.app_commands.Choice(name="Denied", value="denied"),
+        discord.app_commands.Choice(name="Newcomer completed", value="newcomer_completed"),
+    ], newcomer_status=[
+        discord.app_commands.Choice(name="Any", value="any"),
+        discord.app_commands.Choice(name="Pending newcomer", value="pending"),
+        discord.app_commands.Choice(name="Completed newcomer", value="completed"),
+    ])
+    @discord.app_commands.guilds(GUILD)
+    @discord.app_commands.checks.has_any_role(*CMD_LIMIT_INTERVIEW)
+    async def history(self, interaction: discord.Interaction, member: discord.Member | None = None, recruiter: discord.Member | None = None, event_type: discord.app_commands.Choice[str] | None = None, newcomer_status: discord.app_commands.Choice[str] | None = None, limit: discord.app_commands.Range[int, 1, 15] = 10) -> None:
+        """View and search recruitment interview history."""
+        if not isinstance(interaction.guild, discord.Guild):
+            await interaction.response.send_message("Failed to search recruitment history: Guild not found.", ephemeral=True)
+            log.exception("Recruitment history: interaction.guild not discord.Guild")
+            return
+
+        history = Recruitment._loadRecruitmentHistory()
+        eventType = event_type.value if event_type is not None else None
+        newcomerStatus = newcomer_status.value if newcomer_status is not None else "any"
+        filteredHistory = Recruitment._filterRecruitmentHistory(
+            history,
+            memberId=member.id if member is not None else None,
+            actorId=recruiter.id if recruiter is not None else None,
+            eventType=eventType,
+            newcomerStatus=newcomerStatus,
+        )
+        records = filteredHistory[:limit]
+        embed = Recruitment._buildRecruitmentHistoryEmbed(interaction.guild, records, totalMatches=len(filteredHistory))
+        await interaction.response.send_message(embed=embed, ephemeral=True)
 
 
 class StaffButton(discord.ui.Button):
@@ -1206,6 +1379,7 @@ class StaffButton(discord.ui.Button):
             embed.title = "✅ Member verified"
             embed.color = discord.Color.green()
             await channelRecruitmentAndHR.send(embed=embed)
+            Recruitment._appendRecruitmentHistory("verified", member.id, interaction.user.id)
 
         # Deny prospect from interview
         if customId.startswith("staff_button_interview_deny_"):
@@ -1245,6 +1419,7 @@ class StaffButton(discord.ui.Button):
             embed.timestamp = datetime.now()
 
             await channelRecruitmentAndHR.send(roleRecruitmentCoordinator.mention, embed=embed)
+            Recruitment._appendRecruitmentHistory("denied", member.id, interaction.user.id)
             return
 
 class StaffModal(discord.ui.Modal):
@@ -1402,6 +1577,7 @@ class ZiTFeedbackModal(discord.ui.Modal):
 async def setup(bot: commands.Bot) -> None:
     Recruitment.interview.error(Utils.onSlashError)
     Recruitment.newcomers.error(Utils.onSlashError)
+    Recruitment.history.error(Utils.onSlashError)
     Staff.updatemodpack.error(Utils.onSlashError)
     Staff.zitfeedback.error(Utils.onSlashError)
     Staff.ban.error(Utils.onSlashError)

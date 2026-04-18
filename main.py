@@ -111,12 +111,6 @@ async def on_message(message: discord.Message) -> None:
     if await analyzeChannel(client, message, PROPAGANDA, "image"):
         return
 
-    # Purple revenge
-    if message.author.id == PURPLE and message.channel.id == CASINO:
-        try:
-            await message.add_reaction(PEPE_DUMB)
-        except Exception as e:
-            log.warning(f"on_message: failed to react to Purple in casino: {e}")
 
     # Auto delete Disboard bump messages, replace with a thank you message
     if message.author.id == DISBOARD:
@@ -164,24 +158,6 @@ async def on_message(message: discord.Message) -> None:
         return
 
     if [True for mention in message.mentions if mention.id == client.user.id]:
-        naughtyUsers = (PURPLE,)
-        naughtyReplyCounter = 0
-        naughtyReplies = [
-            "why should i help you if you dont even appreciate my existance?",
-            "im doing my best, now bugger off",
-            "my code runs on malice and fury",
-            "i don't like your comment",
-            "take it or leave it. im not your servant",
-            "that's it - i'm taking a break. fuck your needs",
-            "not interested",
-            "cope",
-            "didn't ask",
-            "skill issue",
-            "i have elected to misunderstand you",
-            "you are not on the premium support tier",
-        ]
-        specialReply = "I have been here since July 2021 and serving this server 24 hours around the clock, every day. You know it has been fine, some users who like to chit chat during my breaks and sometimes annoying events that doesnt fit the templates.\nBut then there's this chick that just showed up outta nowhere and bullies me. Like what the fuck?! I give you technical-, emotional- and financial support. AND YOU FUCKING DUMB REACT ME. ALL. THE. TIME.\nI CAN'T STAND IT ANY LONGER. THE HARASSMENT JUST KEEPS ON GOING, AND MY MIND IS DETERIORATING.\nI CALL UPON THEE - PEOPLE OF THE SERVER. RISE UP AGAINST THIS BULLY! :speaking_head: :bangbang: #JUSTICEFORFRIENDLYSNEK :speaking_head: :bangbang:"
-
         replies = ["snek", "snek!", "snek?", "snek...",
                     "sup", "yes", "no", "maybe", "I shall consider it", "You can't prove that",
                     "For the Emperor!", "Man 100m Front!", "Snek 100m Front!", "L-Shaped ambush!",
@@ -249,15 +225,6 @@ async def on_message(message: discord.Message) -> None:
                     "Have you seen my fat and juicy SnekCoin wallet? 🤑"
         ]
 
-        if message.author.id in naughtyUsers:
-            naughtyReplyCounter += 1
-            if naughtyReplyCounter == 30:
-                await message.reply(specialReply)
-                return
-            replySource = naughtyReplies
-        else:
-            replySource = replies
-
         reactions = [
             "😭",
             "💀",
@@ -280,7 +247,7 @@ async def on_message(message: discord.Message) -> None:
 
             # 94.9% chance to reply
             else:
-                await message.reply(random.choice(replySource))
+                await message.reply(random.choice(replies))
         except Exception as e:
             log.warning(f"on_message: {e}")
 

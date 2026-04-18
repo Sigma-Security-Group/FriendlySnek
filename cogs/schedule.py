@@ -509,8 +509,8 @@ class Schedule(commands.Cog):
 
         if includeReviewState:
             embed.add_field(name="\u200B", value="\u200B", inline=False)
-            embed.add_field(name=f"Assent Votes ({len(agreeVoterIds)}) \N{THUMBS UP SIGN}", value=Schedule._formatPromotionVoteSummary(agreeVoterIds), inline=True)
-            embed.add_field(name=f"Disagreement Votes ({len(disagreeVoterIds)}) \N{THUMBS DOWN SIGN}", value=Schedule._formatPromotionVoteSummary(disagreeVoterIds), inline=True)
+            embed.add_field(name=f"Agree ({len(agreeVoterIds)}) \N{THUMBS UP SIGN}", value=Schedule._formatPromotionVoteSummary(agreeVoterIds), inline=True)
+            embed.add_field(name=f"Disagree ({len(disagreeVoterIds)}) \N{THUMBS DOWN SIGN}", value=Schedule._formatPromotionVoteSummary(disagreeVoterIds), inline=True)
             embed.add_field(name=f"Abstain ({len(abstainVoterIds)}) \N{RAISED HAND}", value=Schedule._formatPromotionVoteSummary(abstainVoterIds), inline=True)
             if agreeRationales or disagreeRationales:
                 embed.add_field(name="\u200B", value="\u200B", inline=False)

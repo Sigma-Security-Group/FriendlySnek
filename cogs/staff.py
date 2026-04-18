@@ -1390,8 +1390,10 @@ class ZiTFeedbackModal(discord.ui.Modal):
             content=f"{reviewPing}Feedback is now ready for review.\n\nFeedback submitted for {zeusMember.mention} by {interaction.user.mention}.",
             embed=embed
         )
+        feedbackBonus = randint(30, 80)
+        await Snekcoin.updateWallet(interaction.user.id, "money", feedbackBonus)
         log.info(f"{interaction.user.id} [{interaction.user.display_name}] Submitted ZiT feedback for {zeusMember.id} [{zeusMember.display_name}]")
-        await interaction.response.send_message("Thank you for submitting ZiT feedback!", ephemeral=True)
+        await interaction.response.send_message(f"Thank you for submitting ZiT feedback!\nYou have been awarded \N{COIN} `{feedbackBonus}` SnekCoins for submitting the feedback.", ephemeral=True)
 
     async def on_error(self, interaction: discord.Interaction, error: Exception) -> None:
         log.exception(error)

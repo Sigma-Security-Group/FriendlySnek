@@ -105,6 +105,12 @@ async def on_message(message: discord.Message) -> None:
     if message.guild is None or message.guild.id != GUILD_ID:  # Ignore messages that were not sent on the correct server
         return
 
+    if message.author.id == PURPLE and message.channel.id == CASINO:
+        try:
+            await message.add_reaction(PEPE_DUMB)
+        except Exception as e:
+            log.warning(f"on_message: failed to react to Purple in casino: {e}")
+
     if message.author.id == DISBOARD: # Auto delete Disboard bump messages, replace with a thank you message
         embed = message.embeds[0] if message.embeds else None
         if embed and embed.description and "Bump done" in embed.description and message.interaction_metadata:

@@ -1377,6 +1377,24 @@ class Schedule(commands.Cog):
                     del event[key]
 
     @staticmethod
+    def isDefaultCreateTextField(key: str, value: Any) -> bool:
+        """Checks if a create text field is blank or still using preview defaults."""
+        if key not in ("title", "description"):
+            return False
+        if value is None:
+            return True
+        value = str(value).strip()
+        return value == "" or value == SCHEDULE_EVENT_PREVIEW_EMBED[key]
+
+    @staticmethod
+    def getInvalidDefaultCreateTextFields(event: Dict) -> List[str]:
+        return [
+            label
+            for label, key in (("Title", "title"), ("Description", "description"))
+            if Schedule.isDefaultCreateTextField(key, event.get(key))
+        ]
+
+    @staticmethod
     def getEventEmbed(event: Dict, guild: discord.Guild) -> discord.Embed:
         """Generates an embed from the given event.
 
@@ -1781,7 +1799,9 @@ class Schedule(commands.Cog):
         for label, data in SCHEDULE_EVENT_VIEW.items():
             style = discord.ButtonStyle.secondary
             previewDictKey = label.lower().replace("url", "URL").replace("linking", "workshopInterest").replace(" ", "")
-            if label == "Type" or (previewDictKey in previewDict and previewDict[previewDictKey] is not None):
+            if label in ("Title", "Description") and Schedule.isDefaultCreateTextField(previewDictKey, previewDict.get(previewDictKey)):
+                style = discord.ButtonStyle.danger
+            elif label == "Type" or (previewDictKey in previewDict and previewDict[previewDictKey] is not None):
                 style = discord.ButtonStyle.success
             elif isinstance(data["customStyle"], discord.ButtonStyle):
                 style = data["customStyle"]
@@ -3001,6 +3021,15 @@ class ScheduleButton(discord.ui.Button):
                     # EVENT FINISHING
                     case "submit":
                         # Check if all mandatory fields are filled
+                        invalidDefaultFields = Schedule.getInvalidDefaultCreateTextFields(previewEmbedDict)
+                        if invalidDefaultFields:
+                            for child in previewView.children:
+                                if isinstance(child, discord.ui.Button) and child.label in invalidDefaultFields:
+                                    child.style = discord.ButtonStyle.danger
+                            await eventMsg.edit(embed=Schedule.fromDictToPreviewEmbed(previewEmbedDict, interaction.guild, Schedule.getSelectedTemplateName(previewView)), view=previewView)
+                            await interaction.response.send_message(f"{interaction.user.mention} Before creating the event, you need to replace the default title and description.", ephemeral=True, delete_after=10.0)
+                            return
+
                         if len(requiredInfoRemaining) != 0:
                             await interaction.response.send_message(f"{interaction.user.mention} Before creating the event, you need to fill out the mandatory (red buttons) information!", ephemeral=True, delete_after=10.0)
                             return
@@ -3337,6 +3366,10 @@ class ScheduleSelect(discord.ui.Select):
 
                                 # Time is required but will not be saved in templates
                                 if child.label == "Time":
+                                    child.style = discord.ButtonStyle.danger
+                                    continue
+
+                                if child.label in ("Title", "Description") and Schedule.isDefaultCreateTextField(child.label.lower(), template.get(child.label.lower())):
                                     child.style = discord.ButtonStyle.danger
                                     continue
 
@@ -3808,10 +3841,10 @@ class ScheduleModal(discord.ui.Modal):
 
             match infoLabel:
                 case "title":
-                    previewEmbedDict["title"] = SCHEDULE_EVENT_PREVIEW_EMBED["title"] if value == "" else value
+                    previewEmbedDict["title"] = SCHEDULE_EVENT_PREVIEW_EMBED["title"] if Schedule.isDefaultCreateTextField("title", value) else value
 
                 case "description":
-                    previewEmbedDict["description"] = SCHEDULE_EVENT_PREVIEW_EMBED["description"] if value == "" else value
+                    previewEmbedDict["description"] = SCHEDULE_EVENT_PREVIEW_EMBED["description"] if Schedule.isDefaultCreateTextField("description", value) else value
 
                 case "duration":
                     if not re.match(r"^\s*((([1-9]\d*)?\d\s*h(\s*([0-5])?\d\s*m?)?)|(([0-5])?\d\s*m))\s*$", value):
@@ -3959,7 +3992,9 @@ class ScheduleModal(discord.ui.Modal):
             # Update button style
             for child in self.view.children:
                 if isinstance(child, discord.ui.Button) and child.label is not None and child.label.lower().replace(" ", "_") == infoLabel:
-                    if value == "":
+                    if infoLabel in ("title", "description") and Schedule.isDefaultCreateTextField(infoLabel, previewEmbedDict[infoLabel]):
+                        child.style = discord.ButtonStyle.danger
+                    elif value == "":
                         child.style = discord.ButtonStyle.danger if SCHEDULE_EVENT_VIEW[infoLabel.replace("_", " ").title().replace("Url", "URL")]["required"] else discord.ButtonStyle.secondary
                     else:
                         child.style = discord.ButtonStyle.success

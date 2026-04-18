@@ -339,7 +339,7 @@ class Snekcoin(commands.GroupCog, name = "snekcoin"):
                 embed = discord.Embed(title="🏆 SnekCoin Leaderboard 🏆", color=discord.Color.gold())
                 embed.description = ""
                 pageEntries = 0
-            embed.description += f"{count:,}. **{member.mention}** - 🪙 `{wallets[user].get('money', 0):,}` SnekCoins\n"
+            embed.description += f"{count:,}. **{member.mention}**  •  \N{COIN} {wallets[user].get('money', 0):,}\n"
             pageEntries += 1
             count += 1
         if embed.description:
@@ -438,10 +438,10 @@ class Snekcoin(commands.GroupCog, name = "snekcoin"):
 
         # Build and send payday summary embed
         embed = discord.Embed(title="💰 Payday Processed 💰", color=discord.Color.gold())
-        embed.add_field(name="Zeus", value=f"{interaction.user.mention} hosted the Operation and was paid 🪙 `{zeusPay:,}` SnekCoins.", inline=False)
-        embed.add_field(name="Actual", value=f"{actual.mention} was paid 🪙 `{actualPay:,}` SnekCoins.", inline=False)
+        embed.add_field(name="Zeus", value=f"{interaction.user.mention} hosted the Operation and was paid 🪙 {zeusPay:,} SnekCoins.", inline=False)
+        embed.add_field(name="Actual", value=f"{actual.mention} was paid 🪙 {actualPay:,} SnekCoins.", inline=False)
         if paidTLs:
-            tlPaymentText = "\n".join([f"{tl}: 🪙 `{amount:,}` SnekCoins" for tl, amount in paidTLs.items()])
+            tlPaymentText = "\n".join([f"{tl} \N{COIN} {amount:,} SnekCoins" for tl, amount in paidTLs.items()])
             embed.add_field(name="Team Leaders Paid", value=tlPaymentText, inline=False)
         embed.set_footer(text="Thank you for hosting the operation!")
 
@@ -466,12 +466,15 @@ class Snekcoin(commands.GroupCog, name = "snekcoin"):
                 delete_after=30.0
             )
 
-        tlMentions = (f"- Team Leaders:\n" + "\n".join([f"  - {tl}: 🪙 `{amount:,}` SnekCoins" for tl, amount in paidTLs.items()]) if paidTLs else "")
+        tlMentions = (f"- Team Leaders:\n" + "\n".join([f"  - {tl}  •  \N{COIN} {amount:,}" for tl, amount in paidTLs.items()]) if paidTLs else "")
 
         embed = discord.Embed(
             title="💰 Payday Executed 💰",
-            description=f"{interaction.user.mention} has executed payday.\n\n**Payments:**\n" \
-            f"- Zeus: {interaction.user.mention} - 🪙 `{zeusPay:,}` SnekCoins\n- Actual: {actual.mention} - 🪙 `{actualPay:,}` SnekCoins\n{tlMentions}",
+            description=f"{interaction.user.mention} has executed payday.\n\n"
+                "**Payments:**\n"
+                f"- Zeus: {interaction.user.mention}  •  \N{COIN} {zeusPay:,}\n"
+                f"- Actual: {actual.mention}  •  \N{COIN} {actualPay:,}\n"
+                f"{tlMentions}",
             color=discord.Color.blue()
         )
         await auditLogs.send(embed=embed)
@@ -653,8 +656,8 @@ class Snekcoin(commands.GroupCog, name = "snekcoin"):
             return
 
         embed = discord.Embed(title="💰 SnekCoin Wallet 💰", color=discord.Color.green())
-        embed.add_field(name="Current Balance", value=f"🪙 `{walletData['money']:,}` SnekCoins", inline=False)
-        embed.add_field(name="Total SnekCoins Spent", value=f"🪙 `{walletData['moneySpent']:,}` SnekCoins", inline=False)
+        embed.add_field(name="Current Balance", value=f"\N{COIN} {walletData['money']:,}", inline=False)
+        embed.add_field(name="Total SnekCoins Spent", value=f"\N{COIN} {walletData['moneySpent']:,}", inline=False)
         await interaction.response.send_message(embed=embed, ephemeral=True, delete_after=30.0)
 
 

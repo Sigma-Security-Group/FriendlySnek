@@ -1440,13 +1440,13 @@ class Schedule(commands.Cog):
     @discord.app_commands.describe(member="Member to commend", reason="Reason for the commendation (optional)")
     @discord.app_commands.guilds(GUILD)
     @discord.app_commands.checks.has_any_role(MEMBER)
-    async def commend(self, interaction: discord.Interaction, member: discord.Member, *, reason: str | None = None) -> None:
+    async def commend(self, interaction: discord.Interaction, member: discord.Member, reason: str) -> None:
         """Pick a member to commend. Reason is optional.
 
         Parameters:
         interaction (discord.Interaction): The Discord interaction.
         member (discord.Member): Member to commend.
-        reason (str | None): Reason for the commendation.
+        reason (str): Reason for the commendation.
 
         Returns:
         None.
@@ -1542,12 +1542,10 @@ class Schedule(commands.Cog):
             description=f"{member.mention} {choice(actionPhrases)} {choice(commentaryPhrases)}",
             color=discord.Color.green()
         )
-        if reason:
-            embed.add_field(name="Reason:", value=reason, inline=False)
-            if random() < 0.50:
-                bonusAmount = randint(100, 150)
-        elif random() < 0.25:
-            bonusAmount = randint(25, 75)
+        embed.add_field(name="Reason:", value=reason, inline=False)
+
+        if random() < 0.30:
+            bonusAmount = randint(100, 150)
         if bonusAmount > 0:
             embed.add_field(name="Bonus:", value=f"Received `{bonusAmount}` SnekCoins! 🪙", inline=False)
             targetEntry["money"] = int(targetEntry.get("money", 0)) + bonusAmount

@@ -536,7 +536,7 @@ class Schedule(commands.Cog):
 
     @staticmethod
     def _formatPromotionVoteSummary(voterIds: Sequence[int]) -> str:
-        mentions = ", ".join(f"<@{voterId}>" for voterId in voterIds)
+        mentions = "\n".join(f"<@{voterId}>" for voterId in voterIds)
         return mentions if mentions else "-"
 
     @staticmethod

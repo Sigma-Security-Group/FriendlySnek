@@ -2,5 +2,8 @@
     "editor.insertSpaces": true,
     "editor.wordWrap": "on",
     "files.trimTrailingWhitespace": true,
-    "diffEditor.ignoreTrimWhitespace": false
+    "diffEditor.ignoreTrimWhitespace": false,
+    "[python]": {
+        "diffEditor.ignoreTrimWhitespace": false
+    }
 }

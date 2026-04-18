@@ -545,7 +545,7 @@ class Schedule(commands.Cog):
                     warningMsg = f"⚠️ {noshowCount} no-shows in the last 90 days"
 
                 reservedRole = getReservedRoleName(noShowEvent["event"]["reservableRoles"], noShowMember.id)
-                noShowEventEmbedFieldValue.append(noShowMember.display_name + (f" -- **{reservedRole}**" * bool(reservedRole)) + f" {warningMsg}")
+                noShowEventEmbedFieldValue.append(noShowMember.mention + (f" -- `{reservedRole}`" * bool(reservedRole)) + f" {warningMsg}")
 
             Schedule._addLineListEmbedFields(embed, noShowEvent["event"]["title"], noShowEventEmbedFieldValue)
 

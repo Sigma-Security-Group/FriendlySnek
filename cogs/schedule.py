@@ -600,6 +600,54 @@ class Schedule(commands.Cog):
 
 
 # ===== </Track-a-Candidate> =====
+    @staticmethod
+    async def trackCandidateAttendance(guild: discord.Guild, tracker: discord.Member, member: discord.Member) -> str:
+        """Track one candidate's operation attendance."""
+        OPERATIONS_REQUIRED_TO_ATTEND = 3
+
+        log.info(f"{tracker.id} [{tracker.display_name}] is tracking candidate {member.id} [{member.display_name}]")
+
+        try:
+            with open(CANDIDATE_TRACKING_FILE) as f:
+                candidateTracking = json.load(f)
+        except Exception:
+            candidateTracking = {}
+
+        channelCommendations = guild.get_channel(COMMENDATIONS)
+        if not isinstance(channelCommendations, discord.TextChannel):
+            log.exception("Schedule trackCandidateAttendance: channelCommendations not discord.TextChannel")
+            return f"Failed to track {member.display_name}: Commendations channel not found."
+        roleUnitStaff = guild.get_role(UNIT_STAFF)
+        if roleUnitStaff is None:
+            log.exception("Schedule trackCandidateAttendance: roleUnitStaff is None")
+            return f"Failed to track {member.display_name}: Unit Staff role not found."
+
+        key = str(member.id)
+        if candidateTracking.get(key) is None:
+            candidateTracking[key] = 0
+
+        candidateTracking[key] += 1
+        if candidateTracking[key] < OPERATIONS_REQUIRED_TO_ATTEND:
+            embed = discord.Embed(title="Track-a-Candidate", description=f"{member.mention} has attended {candidateTracking[key]} operations.", color=discord.Color.dark_blue())
+            embed.set_footer(text=f"Tracked by {tracker.display_name}")
+            await channelCommendations.send(embed=embed)
+            result = "Tracking submitted!"
+        else:
+            embed = discord.Embed(
+                title="Candidate Graduated!",
+                description=f"{member.mention} has attended {OPERATIONS_REQUIRED_TO_ATTEND} operations and has now graduated from Candidate! Congratulations!\n",
+                color=discord.Color.purple()
+            )
+
+            await channelCommendations.send(f"{roleUnitStaff.mention} This candidate need a levelup!", embed=embed)
+            del candidateTracking[key]
+            result = "Candidate has graduated!"
+
+        with open(CANDIDATE_TRACKING_FILE, "w") as f:
+              json.dump(candidateTracking, f, indent=4)
+
+        return result
+
     @discord.app_commands.command(name="track-a-candidate")
     @discord.app_commands.guilds(GUILD)
     @discord.app_commands.checks.has_any_role(*CMD_LIMIT_ZEUS)
@@ -614,13 +662,17 @@ class Schedule(commands.Cog):
         Returns:
         None.
         """
-        OPERATIONS_REQUIRED_TO_ATTEND = 3
-
         if interaction.guild is None:
             log.exception("Schedule trackACandidate: guild is None")
             return
+        if not isinstance(interaction.user, discord.Member):
+            log.exception("Schedule trackACandidate: interaction.user not discord.Member")
+            return
 
         await interaction.response.defer(ephemeral=True, thinking=True)
+        result = await Schedule.trackCandidateAttendance(interaction.guild, interaction.user, member)
+        await interaction.followup.send(result, ephemeral=True)
+        return
         log.info(f"{interaction.user.id} [{interaction.user.display_name}] is tracking candidate {member.id} [{member.display_name}]")
 
         try:
@@ -714,17 +766,43 @@ class Schedule(commands.Cog):
 
         channelCommand = guild.get_channel(COMMAND)
         if not isinstance(channelCommand, discord.VoiceChannel):
-            log.exception("Schedule aar: channelDeployed is None")
+            log.exception("Schedule aar: channelCommand is None")
             return
 
         await interaction.response.send_message("AAR has started, Thanks for running a bop!", ephemeral=True)
 
-        deployed_members = channelDeployed.members
+        deployed_members = channelDeployed.members.copy()
+        command_members = channelCommand.members.copy()
         for member in deployed_members:
             try:
                 await member.move_to(channelCommand)
             except Exception:
                 log.warning(f"Schedule aar: failed to move {member.id} [{member.display_name}]")
+
+        membersPresent = list({member.id: member for member in command_members + deployed_members}.values())
+        candidateMembers = [member for member in membersPresent if any(role.id == CANDIDATE for role in member.roles)]
+        if candidateMembers:
+            channelZeusZone = guild.get_channel(ZEUS_ZONE)
+            if not isinstance(channelZeusZone, discord.TextChannel):
+                log.exception("Schedule aar: channelZeusZone not discord.TextChannel")
+                return
+
+            candidateLimit = DISCORD_LIMITS["interactions"]["select_menu_option"]
+            candidateMembersSelectable = candidateMembers[:candidateLimit]
+            candidateMembersManual = candidateMembers[candidateLimit:]
+            candidateMentions = "\n".join(candidate.mention for candidate in candidateMembersSelectable)
+            plural = "s" if len(candidateMembers) > 1 else ""
+            manualTrackingText = ""
+            if candidateMembersManual:
+                manualTrackingText = f"\n\n{len(candidateMembersManual)} additional candidate{'' if len(candidateMembersManual) == 1 else 's'} must be tracked manually due to Discord's dropdown limit."
+            embed = discord.Embed(
+                title="Candidate Attendance",
+                description=f"The following candidate{plural} attended this operation:\n{candidateMentions}\n\nPlease confirm their attendance below.{manualTrackingText}",
+                color=discord.Color.blue()
+            )
+            embed.set_footer(text=f"AAR started by {interaction.user.display_name}")
+            view = AARCandidateAttendanceView(interaction.user.id, candidateMembersSelectable)
+            await channelZeusZone.send(f"{interaction.user.mention}", embed=embed, view=view)
 
 
 # ===== </AAR> ====
@@ -2078,6 +2156,184 @@ class ScheduleView(discord.ui.View):
             await interaction.response.send_message(f"{interaction.user.mention} Only the one who executed the command may interact with the buttons!", ephemeral=True, delete_after=10.0)
             return False
         return True
+
+
+class AARCandidateAttendanceView(discord.ui.View):
+    """Tracks candidate attendance from AAR prompt controls."""
+    def __init__(self, authorId: int, candidates: List[discord.Member]):
+        super().__init__(timeout=None)
+        self.authorId = authorId
+        self.candidateIds = [candidate.id for candidate in candidates]
+        self.selectedCandidateIds: List[int] = []
+        self.submitted = False
+
+        # If only 1 candidate, skip select menu and just have 2 buttons for participated/absent
+        if len(candidates) == 1:
+            candidateId = candidates[0].id
+            self.add_item(AARCandidateAttendanceButton(
+                candidateId=candidateId,
+                authorId=authorId,
+                participated=True,
+                label="Participated",
+                style=discord.ButtonStyle.success,
+                custom_id=f"schedule_button_aar_candidate_participated_{candidateId}_{authorId}"
+            ))
+            self.add_item(AARCandidateAttendanceButton(
+                candidateId=candidateId,
+                authorId=authorId,
+                participated=False,
+                label="Absent",
+                style=discord.ButtonStyle.danger,
+                custom_id=f"schedule_button_aar_candidate_absent_{candidateId}_{authorId}"
+            ))
+            return
+
+        # Multiple candidates, use select menu
+        self.add_item(AARCandidateAttendanceSelect(
+            authorId=authorId,
+            candidates=candidates,
+            custom_id=f"schedule_select_aar_candidate_attendance_{authorId}"
+        ))
+        self.add_item(AARCandidateAttendanceSubmitButton(
+            authorId=authorId,
+            custom_id=f"schedule_button_aar_candidate_submit_{authorId}"
+        ))
+
+    async def interaction_check(self, interaction: discord.Interaction) -> bool:
+        if not isinstance(interaction.user, discord.Member):
+            log.exception("AARCandidateAttendanceView interaction_check: interaction.user not discord.Member")
+            return False
+
+        if interaction.user.id == self.authorId:
+            return True
+
+        if any(role.id in (UNIT_STAFF, SNEK_LORD) for role in interaction.user.roles):
+            return True
+
+        await interaction.response.send_message("Only the AAR runner, Unit Staff, or Snek Lord can confirm candidate attendance.", ephemeral=True, delete_after=10.0)
+        return False
+
+    def _membersFromIds(self, guild: discord.Guild, candidateIds: List[int]) -> Tuple[List[discord.Member], List[int]]:
+        members = []
+        missingIds = []
+        for candidateId in candidateIds:
+            member = guild.get_member(candidateId)
+            if member is None:
+                missingIds.append(candidateId)
+                continue
+            members.append(member)
+        return members, missingIds
+
+    def _resultEmbed(self, title: str, trackedMembers: List[discord.Member], absentMembers: List[discord.Member], skippedIds: List[int], tracker: discord.Member) -> discord.Embed:
+        descriptionParts = []
+        if trackedMembers:
+            descriptionParts.append("Tracked:\n" + "\n".join(member.mention for member in trackedMembers))
+        if absentMembers:
+            descriptionParts.append("Not tracked:\n" + "\n".join(member.mention for member in absentMembers))
+        if skippedIds:
+            descriptionParts.append("Skipped:\n" + "\n".join(str(candidateId) for candidateId in skippedIds))
+        if not descriptionParts:
+            descriptionParts.append("No candidate attendance was tracked.")
+
+        embed = discord.Embed(title=title, description="\n\n".join(descriptionParts), color=discord.Color.green())
+        embed.set_footer(text=f"Confirmed by {tracker.display_name}")
+        return embed
+
+    async def submitAttendance(self, interaction: discord.Interaction, selectedCandidateIds: List[int]) -> None:
+        if not isinstance(interaction.guild, discord.Guild):
+            log.exception("AARCandidateAttendanceView submitAttendance: interaction.guild not discord.Guild")
+            return
+        if not isinstance(interaction.user, discord.Member):
+            log.exception("AARCandidateAttendanceView submitAttendance: interaction.user not discord.Member")
+            return
+        if interaction.message is None:
+            log.exception("AARCandidateAttendanceView submitAttendance: interaction.message is None")
+            return
+
+        if self.submitted:
+            await interaction.response.send_message("Candidate attendance has already been confirmed from this message.", ephemeral=True, delete_after=10.0)
+            return
+        self.submitted = True
+        await interaction.response.defer(ephemeral=True, thinking=True)
+
+        selectedCandidateIds = [candidateId for candidateId in selectedCandidateIds if candidateId in self.candidateIds]
+        trackedMembers, skippedIds = self._membersFromIds(interaction.guild, selectedCandidateIds)
+        absentCandidateIds = [candidateId for candidateId in self.candidateIds if candidateId not in selectedCandidateIds]
+        absentMembers, missingAbsentIds = self._membersFromIds(interaction.guild, absentCandidateIds)
+        skippedIds.extend(missingAbsentIds)
+
+        results = []
+        for member in trackedMembers:
+            results.append(f"{member.display_name}: {await Schedule.trackCandidateAttendance(interaction.guild, interaction.user, member)}")
+
+        embed = self._resultEmbed("Candidate Attendance Confirmed", trackedMembers, absentMembers, skippedIds, interaction.user)
+        await interaction.message.edit(embed=embed, view=None)
+
+        if skippedIds:
+            log.warning(f"AARCandidateAttendanceView submitAttendance: skipped candidate ids {skippedIds}")
+        if not results:
+            results.append("No candidate attendance was tracked.")
+        if skippedIds:
+            results.append(f"Skipped missing candidate ids: {', '.join(str(candidateId) for candidateId in skippedIds)}")
+        await interaction.followup.send("\n".join(results), ephemeral=True)
+
+
+class AARCandidateAttendanceSelect(discord.ui.Select):
+    def __init__(self, authorId: int, candidates: List[discord.Member], *args, **kwargs):
+        options = [
+            discord.SelectOption(
+                label=candidate.display_name[:DISCORD_LIMITS["interactions"]["select_option_description"]],
+                value=str(candidate.id),
+                description=str(candidate)[:DISCORD_LIMITS["interactions"]["select_option_description"]]
+            )
+            for candidate in candidates
+        ]
+        super().__init__(
+            *args,
+            placeholder="Select candidates who participated.",
+            min_values=1,
+            max_values=len(options),
+            row=0,
+            options=options,
+            **kwargs
+        )
+        self.authorId = authorId
+
+    async def callback(self, interaction: discord.Interaction) -> None:
+        if not isinstance(self.view, AARCandidateAttendanceView):
+            log.exception("AARCandidateAttendanceSelect callback: self.view not AARCandidateAttendanceView")
+            return
+
+        self.view.selectedCandidateIds = [int(value) for value in self.values]
+        await interaction.response.send_message(f"Selected {len(self.values)} candidate(s). Press Submit to track attendance.", ephemeral=True, delete_after=10.0)
+
+
+class AARCandidateAttendanceSubmitButton(discord.ui.Button):
+    def __init__(self, authorId: int, *args, **kwargs):
+        super().__init__(*args, label="Submit", style=discord.ButtonStyle.success, row=1, **kwargs)
+        self.authorId = authorId
+
+    async def callback(self, interaction: discord.Interaction) -> None:
+        if not isinstance(self.view, AARCandidateAttendanceView):
+            log.exception("AARCandidateAttendanceSubmitButton callback: self.view not AARCandidateAttendanceView")
+            return
+
+        await self.view.submitAttendance(interaction, self.view.selectedCandidateIds)
+
+
+class AARCandidateAttendanceButton(discord.ui.Button):
+    def __init__(self, candidateId: int, authorId: int, participated: bool, *args, **kwargs):
+        super().__init__(*args, row=0, **kwargs)
+        self.candidateId = candidateId
+        self.authorId = authorId
+        self.participated = participated
+
+    async def callback(self, interaction: discord.Interaction) -> None:
+        if not isinstance(self.view, AARCandidateAttendanceView):
+            log.exception("AARCandidateAttendanceButton callback: self.view not AARCandidateAttendanceView")
+            return
+
+        await self.view.submitAttendance(interaction, [self.candidateId] if self.participated else [])
 
 
 class BaseScheduleEventDynamicButton(discord.ui.DynamicItem[discord.ui.Button], template=r"^$"):

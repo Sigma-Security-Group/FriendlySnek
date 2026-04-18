@@ -90,6 +90,7 @@ BOT = 702231226618216630
 # Zeuses / Curators
 ZEUS_GUIDELINES = 943226056402419793
 ZEUS_FEEDBACK = 1294336572342145207
+ZEUS_ZONE = 743598235561623603
 
 # Scheduling
 SCHEDULE = 852299426936782898
@@ -314,6 +315,7 @@ DISCORD_LIMITS = {
         "buttons_per_row": 5,
         "buttons_per_message": 25,
         "select_menu_option": 25,
+        "select_option_label": 100,
         "select_option_description": 100,
         "modal_items": 5,
         "text_input_value": 4000,

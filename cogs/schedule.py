@@ -1826,6 +1826,8 @@ class Schedule(commands.Cog):
             # (Un)lock buttons depending on current event type
             if label == "Linking":
                 button.disabled = (previewDict["type"] != "Workshop")  # Only workshop
+                if previewDict.get("workshopInterest") is None:
+                    button.style = discord.ButtonStyle.secondary
 
             elif label == "Templates":
                 button.disabled = not Schedule.isTemplateType(previewDict["type"])
@@ -1835,6 +1837,69 @@ class Schedule(commands.Cog):
 
         Schedule.refreshTemplateButton(view, previewDict["type"])
         return view
+
+    @staticmethod
+    async def submitCreatedEvent(interaction: discord.Interaction, previewEmbedDict: Dict, eventMsg: discord.Message) -> None:
+        """Finalize a schedule preview into an event."""
+        log.info(f"{interaction.user.id} [{interaction.user.display_name}] Created a '{previewEmbedDict['type']}' titled '{previewEmbedDict['title']}'")
+        previewEmbedDict["authorId"] = interaction.user.id
+        filesRealName = []
+        for filenameShort in previewEmbedDict["files"]:
+            for osFile in os.listdir("tmp/fileUpload"):
+                if str(interaction.user.id) in osFile and filenameShort in osFile:
+                    filesRealName.append(osFile)
+        previewEmbedDict["files"] = filesRealName
+
+        with open(EVENTS_FILE) as f:
+            events = json.load(f)
+        previewEmbedDict["eventId"] = Schedule.ensureEventId(previewEmbedDict, events)
+        events.append(previewEmbedDict)
+        with open(EVENTS_FILE, "w") as f:
+            json.dump(events, f, indent=4)
+
+        replyContent = f"`{previewEmbedDict['title']}` is now on <#{SCHEDULE}>!"
+        if interaction.message == eventMsg:
+            await interaction.response.edit_message(content=replyContent, embed=None, view=None)
+        else:
+            await interaction.response.edit_message(content=replyContent, embed=None, view=None)
+            await eventMsg.edit(content=replyContent, embed=None, view=None)
+
+        await Schedule.updateSchedule(interaction.guild)
+
+        workshopInterestValue = previewEmbedDict.get("workshopInterest", None)
+        if workshopInterestValue:
+            with open(WORKSHOP_INTEREST_FILE) as f:
+                fileWSINT = json.load(f)
+            targetWorkshopMembers = [wsDetails.get("members", []) for wsName, wsDetails in fileWSINT.items() if workshopInterestValue == wsName][0]
+            if targetWorkshopMembers:
+                channelArmaDiscussion = interaction.guild.get_channel(ARMA_DISCUSSION)
+                if not isinstance(channelArmaDiscussion, discord.TextChannel):
+                    log.exception("Schedule submitCreatedEvent: channelArmaDiscussion not discord.TextChannel")
+                    return
+
+                msg = ""
+                for memberId in targetWorkshopMembers:
+                    msg += workshopMember.mention + " " if (workshopMember := interaction.guild.get_member(memberId)) else ""
+                await channelArmaDiscussion.send(f"{msg}\n**{previewEmbedDict['title']}** is up on <#{SCHEDULE}> - which you are interested in.\nNo longer interested? Unlist yourself in <#{WORKSHOP_INTEREST}>")
+
+        if previewEmbedDict["type"].lower() == "operation":
+            roleOperationPings = interaction.guild.get_role(OPERATION_PINGS)
+            if not isinstance(roleOperationPings, discord.Role):
+                log.exception("Schedule submitCreatedEvent: roleOperationPings not discord.Role")
+                return
+
+            channelOperationAnnouncements = interaction.guild.get_channel(OPERATION_ANNOUNCEMENTS)
+            if not isinstance(channelOperationAnnouncements, discord.TextChannel):
+                log.exception("Schedule submitCreatedEvent: channelOperationAnnouncements not discord.TextChannel")
+                return
+
+            with open(EVENTS_FILE) as f:
+                events = json.load(f)
+            event = [event for event in events if event["authorId"] == interaction.user.id and event["title"] == previewEmbedDict["title"] and event["description"] == previewEmbedDict["description"]][0]
+
+            embed = discord.Embed(title="Operation scheduled", url=f"https://discord.com/channels/{GUILD_ID}/{SCHEDULE}/{event['messageId']}", description=f"Title: **{previewEmbedDict['title']}**\nTime: {discord.utils.format_dt(UTC.localize(datetime.strptime(previewEmbedDict['time'], TIME_FORMAT)), style='F')}\nDuration: {previewEmbedDict['duration']}", color=EVENT_TYPE_COLORS["Operation"])
+            embed.set_footer(text=f"Created by {interaction.user.display_name}")
+            await channelOperationAnnouncements.send(content=roleOperationPings.mention, embed=embed)
 
     @staticmethod
     def isAllowedToEdit(user: discord.Member, eventAuthorId: int) -> bool:
@@ -3029,7 +3094,10 @@ class ScheduleButton(discord.ui.Button):
                         await interaction.followup.send(embed=discord.Embed(title="❌ Deletion canceled", color=discord.Color.red()), ephemeral=True)
 
                     # EVENT FINISHING
-                    case "submit":
+                    case "ok_fine":
+                        await interaction.response.edit_message(content="Alright, set Linking before submitting the workshop.", embed=None, view=None)
+
+                    case "submit" | "submit_anyway":
                         # Check if all mandatory fields are filled
                         invalidDefaultFields = Schedule.getInvalidDefaultCreateTextFields(previewEmbedDict)
                         if invalidDefaultFields:
@@ -3040,72 +3108,36 @@ class ScheduleButton(discord.ui.Button):
                             await interaction.response.send_message(f"{interaction.user.mention} Before creating the event, you need to replace the default title and description.", ephemeral=True, delete_after=10.0)
                             return
 
+                        if buttonLabel == "submit_anyway":
+                            requiredInfoRemaining = [label for label in requiredInfoRemaining if label != "Linking"]
+
+                        requiredInfoRemainingWithoutLinking = [label for label in requiredInfoRemaining if label != "Linking"]
+                        if len(requiredInfoRemainingWithoutLinking) != 0:
+                            await interaction.response.send_message(f"{interaction.user.mention} Before creating the event, you need to fill out the mandatory (red buttons) information!", ephemeral=True, delete_after=10.0)
+                            return
+
+                        if buttonLabel != "submit_anyway" and previewEmbedDict["type"] == "Workshop" and previewEmbedDict.get("workshopInterest") is None:
+                            for child in previewView.children:
+                                if isinstance(child, discord.ui.Button) and child.label == "Linking":
+                                    child.style = discord.ButtonStyle.secondary
+                                    break
+                            await eventMsg.edit(embed=Schedule.fromDictToPreviewEmbed(previewEmbedDict, interaction.guild, Schedule.getSelectedTemplateName(previewView)), view=previewView)
+                            view = ScheduleView(authorId=interaction.user.id)
+                            view.add_item(ScheduleButton(eventMsg, row=0, label="Submit anyway", style=discord.ButtonStyle.primary, custom_id="schedule_button_create_submit_anyway"))
+                            view.add_item(ScheduleButton(eventMsg, row=0, label="Ok fine", style=discord.ButtonStyle.secondary, custom_id="schedule_button_create_ok_fine"))
+                            await interaction.response.send_message(
+                                f"{interaction.user.mention} No linking set. With linking, people signed up in <#{WORKSHOP_INTEREST}> will get pinged and automatically removed upon completing the workshop. This workshop will also be registered as one of the de facto workshops and you will not be pinged during the SME-reminder.",
+                                view=view,
+                                ephemeral=True,
+                                delete_after=60.0
+                            )
+                            return
+
                         if len(requiredInfoRemaining) != 0:
                             await interaction.response.send_message(f"{interaction.user.mention} Before creating the event, you need to fill out the mandatory (red buttons) information!", ephemeral=True, delete_after=10.0)
                             return
 
-                        log.info(f"{interaction.user.id} [{interaction.user.display_name}] Created a '{previewEmbedDict['type']}' titled '{previewEmbedDict['title']}'")
-                        # Final fixup
-                        previewEmbedDict["authorId"] = interaction.user.id
-                        filesRealName = []
-                        for filenameShort in previewEmbedDict["files"]:
-                            for osFile in os.listdir("tmp/fileUpload"):
-                                if str(interaction.user.id) in osFile and filenameShort in osFile:
-                                    filesRealName.append(osFile)
-                        previewEmbedDict["files"] = filesRealName
-
-
-                        # Append event to JSON
-                        with open(EVENTS_FILE) as f:
-                            events = json.load(f)
-                        previewEmbedDict["eventId"] = Schedule.ensureEventId(previewEmbedDict, events)
-                        events.append(previewEmbedDict)
-                        with open(EVENTS_FILE, "w") as f:
-                            json.dump(events, f, indent=4)
-
-                        # Reply
-                        await interaction.response.edit_message(content=f"`{previewEmbedDict['title']}` is now on <#{SCHEDULE}>!", embed=None, view=None)
-
-                        # Update schedule
-                        await Schedule.updateSchedule(interaction.guild)
-
-                        # Workshop interest ping
-                        workshopInterestValue = previewEmbedDict.get("workshopInterest", None)
-                        if workshopInterestValue:
-                            with open(WORKSHOP_INTEREST_FILE) as f:
-                                fileWSINT = json.load(f)
-                            targetWorkshopMembers = [wsDetails.get("members", []) for wsName, wsDetails in fileWSINT.items() if workshopInterestValue == wsName][0]
-                            if targetWorkshopMembers:
-                                channelArmaDiscussion = interaction.guild.get_channel(ARMA_DISCUSSION)
-                                if not isinstance(channelArmaDiscussion, discord.TextChannel):
-                                    log.exception("ScheduleButton callback: channelArmaDiscussion not discord.TextChannel")
-                                    return
-
-                                msg = ""
-                                for memberId in targetWorkshopMembers:
-                                    msg += workshopMember.mention + " " if (workshopMember := interaction.guild.get_member(memberId)) else ""
-                                await channelArmaDiscussion.send(f"{msg}\n**{previewEmbedDict['title']}** is up on <#{SCHEDULE}> - which you are interested in.\nNo longer interested? Unlist yourself in <#{WORKSHOP_INTEREST}>")
-
-
-                        # Operation Pings
-                        if previewEmbedDict["type"].lower() == "operation":
-                            roleOperationPings = interaction.guild.get_role(OPERATION_PINGS)
-                            if not isinstance(roleOperationPings, discord.Role):
-                                log.exception("ScheduleButton callback: roleOperationPings not discord.Role")
-                                return
-
-                            channelOperationAnnouncements = interaction.guild.get_channel(OPERATION_ANNOUNCEMENTS)
-                            if not isinstance(channelOperationAnnouncements, discord.TextChannel):
-                                log.exception("ScheduleButton callback: channelOperationAnnouncements not discord.TextChannel")
-                                return
-
-                            with open(EVENTS_FILE) as f:
-                                events = json.load(f)
-                            event = [event for event in events if event["authorId"] == interaction.user.id and event["title"] == previewEmbedDict["title"] and event["description"] == previewEmbedDict["description"]][0]
-
-                            embed = discord.Embed(title="Operation scheduled", url=f"https://discord.com/channels/{GUILD_ID}/{SCHEDULE}/{event['messageId']}", description=f"Title: **{previewEmbedDict['title']}**\nTime: {discord.utils.format_dt(UTC.localize(datetime.strptime(previewEmbedDict['time'], TIME_FORMAT)), style='F')}\nDuration: {previewEmbedDict['duration']}", color=EVENT_TYPE_COLORS["Operation"])
-                            embed.set_footer(text=f"Created by {interaction.user.display_name}")
-                            await channelOperationAnnouncements.send(content=roleOperationPings.mention, embed=embed)
+                        await Schedule.submitCreatedEvent(interaction, previewEmbedDict, eventMsg)
 
                     case "cancel":
                         embed = discord.Embed(title="Are you sure you want to cancel this event scheduling?", color=discord.Color.orange())
@@ -3389,8 +3421,8 @@ class ScheduleSelect(discord.ui.Select):
                                     continue
 
                                 # Linking
-                                if child.label == "Linking" and embed.footer.icon_url is not None:
-                                    child.style = discord.ButtonStyle.success
+                                if child.label == "Linking":
+                                    child.style = discord.ButtonStyle.secondary if template.get("workshopInterest") is None else discord.ButtonStyle.success
                                     continue
 
                                 # Ignore template buttons
@@ -3430,7 +3462,7 @@ class ScheduleSelect(discord.ui.Select):
             # Update eventMsg button style
             for child in self.eventMsgView.children:
                 if isinstance(child, discord.ui.Button) and child.label is not None and child.label.lower().replace(" ", "_") == infoLabel:
-                    child.style = discord.ButtonStyle.success
+                    child.style = discord.ButtonStyle.secondary if infoLabel == "linking" and previewEmbedDict.get("workshopInterest") is None else discord.ButtonStyle.success
                     break
 
             # Edit preview embed & view

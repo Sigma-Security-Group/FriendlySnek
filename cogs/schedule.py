@@ -4022,6 +4022,7 @@ class ScheduleModal(discord.ui.Modal):
             return
 
         followupMsg = {}
+        autoUnreservedRoleNotifications = []
         with open(EVENTS_FILE) as f:
             events = json.load(f)
         event, eventMsg = await Schedule.getEventMessageByEventId(interaction.guild, self.eventId, events)
@@ -4029,22 +4030,32 @@ class ScheduleModal(discord.ui.Modal):
             await Schedule._sendPersistentEventMissing(interaction, self.eventId)
             return
 
-        if value == "":
+        if value == "" and customId != "schedule_modal_edit_reservableRoles":
             event[customId[len("schedule_modal_edit_"):]] = None
 
         elif customId == "schedule_modal_edit_reservableRoles":
-            reservableRoles = value.split("\n")
+            reservableRoles = [role.strip() for role in value.split("\n") if role.strip() != ""]
             if len(reservableRoles) > 20:
                 await interaction.response.send_message(embed=discord.Embed(title="❌ Too many roles", description=f"Due to Discord character limitation, we've set the cap to 20 roles.\nLink your order, e.g. OPORD, under URL if you require more flexibility.\n\nYour roles:\n{value}"[:DISCORD_LIMITS["message_embed"]["embed_description"]], color=discord.Color.red()), ephemeral=True, delete_after=10.0)
                 return
 
+            oldReservableRoles = event["reservableRoles"] or {}
+            autoUnreservedRoleNotifications = [
+                (roleName, memberId)
+                for roleName, memberId in oldReservableRoles.items()
+                if memberId is not None and roleName not in reservableRoles
+            ]
+
+            if not reservableRoles:
+                event["reservableRoles"] = None
+
             # No res roles or all roles are unoccupied
-            if event["reservableRoles"] is None or all([id is None for id in event["reservableRoles"].values()]):
-                event["reservableRoles"] = {role.strip(): None for role in reservableRoles}
+            elif event["reservableRoles"] is None or all([id is None for id in event["reservableRoles"].values()]):
+                event["reservableRoles"] = {role: None for role in reservableRoles}
 
             # Res roles are set and some occupied
             else:
-                event["reservableRoles"] = {role.strip(): event["reservableRoles"][role.strip()] if role in event["reservableRoles"] else None for role in reservableRoles}
+                event["reservableRoles"] = {role: oldReservableRoles[role] if role in oldReservableRoles else None for role in reservableRoles}
 
             # Check if too few slots
             if event["reservableRoles"] and isinstance(event["maxPlayers"], int) and event["maxPlayers"] < len(event["reservableRoles"]):
@@ -4229,6 +4240,24 @@ class ScheduleModal(discord.ui.Modal):
 
         if followupMsg:
             await interaction.followup.send(followupMsg["content"] if "content" in followupMsg else None, embed=(followupMsg["embed"] if "embed" in followupMsg else None), ephemeral=True)
+
+        for roleName, memberId in autoUnreservedRoleNotifications:
+            member = interaction.guild.get_member(memberId)
+            if member is None:
+                log.warning(f"ScheduleModal on_submit: Failed to get member with id '{memberId}' for automatic role unreserve notification")
+                continue
+
+            embed = discord.Embed(
+                title="Reserved role removed",
+                description=f"Your reserved role `{roleName}` is no longer available for event `{event['title']}` because the reservable roles were edited.\n\nYou are still on the accepted list. Please reserve another role if needed.",
+                color=discord.Color.orange()
+            )
+            embed.add_field(name="\u200B", value=eventMsg.jump_url, inline=False)
+            embed.set_footer(text=f"By: {interaction.user}")
+            try:
+                await member.send(embed=embed)
+            except Exception:
+                log.warning(f"ScheduleModal on_submit: Failed to DM {member.id} [{member.display_name}] about automatic role unreserve")
 
 
     async def on_error(self, interaction: discord.Interaction, error: Exception) -> None:

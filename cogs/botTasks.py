@@ -91,8 +91,8 @@ class BotTasks(commands.Cog):
         # Add to spreadsheet
         Spreadsheet.memberJoin(member)
 
-        #if Member account was created less than 45 days ago, alert unit staff and assign only suspicious account role
-        if (datetime.now(timezone.utc) - member.created_at) < timedelta(days=45):
+        #if Member account was created less than 60 days ago, alert unit staff and assign only suspicious account role
+        if (datetime.now(timezone.utc) - member.created_at) < timedelta(days=60):
             channelStaffChat = guild.get_channel(STAFF_CHAT)
             if not isinstance(channelStaffChat, discord.TextChannel):
                 log.exception("BotTasks on_member_join: channelStaffChat not discord.TextChannel")

@@ -638,7 +638,7 @@ class Snekcoin(commands.GroupCog, name = "snekcoin"):
         embed.set_author(name=interaction.user.display_name, icon_url=interaction.user.display_avatar)
         if comment is not None:
             embed.add_field(name="Message", value=comment, inline=False)
-        await interaction.response.send_message(embed=embed)
+        await interaction.response.send_message(content=user.mention, embed=embed)
 
 
     @discord.app_commands.command(name="checkwallet")

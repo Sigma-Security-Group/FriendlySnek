@@ -1453,6 +1453,21 @@ class Schedule(commands.Cog):
         return value == "" or value == SCHEDULE_EVENT_PREVIEW_EMBED[key]
 
     @staticmethod
+    def fromExternalURLFieldsToMarkdown(name: str, url: str) -> str:
+        return f"[{name.strip()}]({url.strip()})"
+
+    @staticmethod
+    def fromExternalURLMarkdownToFields(value: str | None) -> tuple[str, str]:
+        if value is None:
+            return "", ""
+
+        match = re.match(r"^\[(?P<name>[^\]]+)\]\((?P<url>[^)]+)\)$", value.strip())
+        if match is None:
+            return "", value.strip()
+
+        return match.group("name"), match.group("url")
+
+    @staticmethod
     def getInvalidDefaultCreateTextFields(event: Dict) -> List[str]:
         return [
             label
@@ -3083,9 +3098,27 @@ class ScheduleButton(discord.ui.Button):
                         ))
 
                     case "external_url":
-                        placeholder = "[OPORD](https://www.gnu.org)" if previewEmbedDict["externalURL"] is None else previewEmbedDict["externalURL"]
-                        default = "" if previewEmbedDict["externalURL"] is None else previewEmbedDict["externalURL"]
-                        await interaction.response.send_modal(generateModal(discord.TextStyle.short, placeholder, default, False, None, DISCORD_LIMITS["message_embed"]["embed_field_value"]))
+                        externalURLName, externalURL = Schedule.fromExternalURLMarkdownToFields(previewEmbedDict["externalURL"])
+                        modal = ScheduleModal("Create event", f"schedule_modal_create_{buttonLabel}", interaction.user.id, eventMsg, view=previewView)
+                        modal.add_item(discord.ui.TextInput(
+                            label="Name",
+                            style=discord.TextStyle.short,
+                            placeholder="OPORD",
+                            default=externalURLName or None,
+                            required=True,
+                            min_length=1,
+                            max_length=100
+                        ))
+                        modal.add_item(discord.ui.TextInput(
+                            label="URL",
+                            style=discord.TextStyle.short,
+                            placeholder="https://www.gnu.org",
+                            default=externalURL or None,
+                            required=True,
+                            min_length=1,
+                            max_length=DISCORD_LIMITS["message_embed"]["embed_field_value"]
+                        ))
+                        await interaction.response.send_modal(modal)
 
                     case "reservable_roles":
                         placeholder = "Co-Zeus\nActual\nJTAC\nF-35A Pilot"
@@ -3882,12 +3915,23 @@ class ScheduleSelect(discord.ui.Select):
                 # Editing URL
                 case "External URL":
                     modal = ScheduleModal("External URL", "schedule_modal_edit_externalURL", interaction.user.id, eventMsg, eventId=self.eventId)
+                    externalURLName, externalURL = Schedule.fromExternalURLMarkdownToFields(event["externalURL"])
+                    modal.add_item(discord.ui.TextInput(
+                        label="Name",
+                        style=discord.TextStyle.short,
+                        placeholder="OPORD",
+                        default=externalURLName or None,
+                        required=True,
+                        min_length=1,
+                        max_length=100
+                    ))
                     modal.add_item(discord.ui.TextInput(
                         label="URL",
-                        style=discord.TextStyle.long,
-                        placeholder="[OPORD](https://www.gnu.org)",
-                        default=event["externalURL"],
-                        required=False,
+                        style=discord.TextStyle.short,
+                        placeholder="https://www.gnu.org",
+                        default=externalURL or None,
+                        required=True,
+                        min_length=1,
                         max_length=DISCORD_LIMITS["message_embed"]["embed_field_value"]
                     ))
                     await interaction.response.send_modal(modal)
@@ -4198,7 +4242,16 @@ class ScheduleModal(discord.ui.Modal):
                         followupMsg["embed"] = discord.Embed(title="⚠️ Operation set in the past!", description="You've entered a time that is in the past!", color=discord.Color.orange())
 
                 case "external_url":
-                    previewEmbedDict["externalURL"] = value or None
+                    externalURLName = self.children[0].value.strip()
+                    externalURL = self.children[1].value.strip()
+                    if not externalURLName or not externalURL:
+                        await interaction.response.send_message(interaction.user.mention, embed=EMBED_INVALID, ephemeral=True, delete_after=10.0)
+                        return
+                    externalURLMarkdown = Schedule.fromExternalURLFieldsToMarkdown(externalURLName, externalURL)
+                    if len(externalURLMarkdown) > DISCORD_LIMITS["message_embed"]["embed_field_value"]:
+                        await interaction.response.send_message(interaction.user.mention, embed=EMBED_INVALID, ephemeral=True, delete_after=10.0)
+                        return
+                    previewEmbedDict["externalURL"] = externalURLMarkdown
 
                 case "reservable_roles":
                     previewEmbedDict["reservableRoles"] = None if value == "" else {role.strip(): None for role in value.split("\n") if role.strip() != ""}
@@ -4318,7 +4371,7 @@ class ScheduleModal(discord.ui.Modal):
             await Schedule._sendPersistentEventMissing(interaction, self.eventId)
             return
 
-        if value == "" and customId != "schedule_modal_edit_reservableRoles":
+        if value == "" and customId not in ("schedule_modal_edit_reservableRoles", "schedule_modal_edit_externalURL"):
             event[customId[len("schedule_modal_edit_"):]] = None
 
         elif customId == "schedule_modal_edit_reservableRoles":
@@ -4350,6 +4403,18 @@ class ScheduleModal(discord.ui.Modal):
                 followupMsg["content"] = interaction.user.mention
                 followupMsg["embed"] = discord.Embed(title="⚠️ Too few slots", description="You have more reservable roles than slots available.\nPlease increase the number of slots or remove some roles.", color=discord.Color.orange())
                 followupMsg["embed"].set_footer(text="You may still continue with the provided slots - but not recommended.")
+
+        elif customId == "schedule_modal_edit_externalURL":
+            externalURLName = self.children[0].value.strip()
+            externalURL = self.children[1].value.strip()
+            if not externalURLName or not externalURL:
+                await interaction.response.send_message(interaction.user.mention, embed=EMBED_INVALID, ephemeral=True, delete_after=10.0)
+                return
+            externalURLMarkdown = Schedule.fromExternalURLFieldsToMarkdown(externalURLName, externalURL)
+            if len(externalURLMarkdown) > DISCORD_LIMITS["message_embed"]["embed_field_value"]:
+                await interaction.response.send_message(interaction.user.mention, embed=EMBED_INVALID, ephemeral=True, delete_after=10.0)
+                return
+            event["externalURL"] = externalURLMarkdown
 
         elif customId == "schedule_modal_edit_maxPlayers":
             valueLower = value.lower()

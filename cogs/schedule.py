@@ -3408,12 +3408,22 @@ class PromotionReviewExecuteButton(
     STYLE = discord.ButtonStyle.secondary
 
     async def callback(self, interaction: discord.Interaction):
-        await Schedule.handlePromotionRecommendationExecute(
-            interaction,
-            memberId=self.memberId,
-            currentRankId=self.currentRankId,
-            targetRankId=self.targetRankId,
-            scope=self.scope
+        if not isinstance(interaction.guild, discord.Guild):
+            log.exception("PromotionReviewExecuteButton callback: interaction.guild not discord.Guild")
+            return
+        if interaction.message is None:
+            log.exception("PromotionReviewExecuteButton callback: interaction.message is None")
+            return
+
+        await interaction.response.send_modal(
+            PromotionReviewActionConfirmationModal(
+                action="execute",
+                memberId=self.memberId,
+                currentRankId=self.currentRankId,
+                targetRankId=self.targetRankId,
+                scope=self.scope,
+                reviewMessage=interaction.message,
+            )
         )
 
 
@@ -3429,12 +3439,22 @@ class PromotionReviewDiscardButton(
     STYLE = discord.ButtonStyle.secondary
 
     async def callback(self, interaction: discord.Interaction):
-        await Schedule.handlePromotionRecommendationDiscard(
-            interaction,
-            memberId=self.memberId,
-            currentRankId=self.currentRankId,
-            targetRankId=self.targetRankId,
-            scope=self.scope
+        if not isinstance(interaction.guild, discord.Guild):
+            log.exception("PromotionReviewDiscardButton callback: interaction.guild not discord.Guild")
+            return
+        if interaction.message is None:
+            log.exception("PromotionReviewDiscardButton callback: interaction.message is None")
+            return
+
+        await interaction.response.send_modal(
+            PromotionReviewActionConfirmationModal(
+                action="discard",
+                memberId=self.memberId,
+                currentRankId=self.currentRankId,
+                targetRankId=self.targetRankId,
+                scope=self.scope,
+                reviewMessage=interaction.message,
+            )
         )
 
 
@@ -4911,6 +4931,57 @@ class PromotionRecommendationConfirmationModal(discord.ui.Modal):
             secondRecommenderId=self.secondRecommenderId,
             additionalComments=self.additionalComments,
             targetRankId=self.targetRankId,
+        )
+
+
+class PromotionReviewActionConfirmationModal(discord.ui.Modal):
+    """Confirmation modal for destructive promotion review actions."""
+    def __init__(
+        self,
+        *,
+        action: Literal["execute", "discard"],
+        memberId: int,
+        currentRankId: int,
+        targetRankId: int,
+        scope: str,
+        reviewMessage: discord.Message
+    ) -> None:
+        title = "Confirm Execute Promotion" if action == "execute" else "Confirm Discard Recommendation"
+        customId = f"schedule_modal_promotion_review_{action}"
+        super().__init__(title=title, custom_id=customId)
+        self.action = action
+        self.memberId = memberId
+        self.currentRankId = currentRankId
+        self.targetRankId = targetRankId
+        self.scope = scope
+        self.reviewMessage = reviewMessage
+
+        if action == "execute":
+            self.warningText = discord.ui.TextDisplay(content="Are you sure you want to continue with the promotion?")
+        else:
+            self.warningText = discord.ui.TextDisplay(content="Are you sure you want to discard this recommendation?")
+
+        self.add_item(self.warningText)
+
+    async def on_submit(self, interaction: discord.Interaction) -> None:
+        if self.action == "execute":
+            await Schedule.handlePromotionRecommendationExecute(
+                interaction,
+                memberId=self.memberId,
+                currentRankId=self.currentRankId,
+                targetRankId=self.targetRankId,
+                scope=self.scope,
+                reviewMessage=self.reviewMessage
+            )
+            return
+
+        await Schedule.handlePromotionRecommendationDiscard(
+            interaction,
+            memberId=self.memberId,
+            currentRankId=self.currentRankId,
+            targetRankId=self.targetRankId,
+            scope=self.scope,
+            reviewMessage=self.reviewMessage
         )
 
 

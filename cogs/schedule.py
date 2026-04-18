@@ -4268,7 +4268,7 @@ class ScheduleModal(discord.ui.Modal):
                         memberTimeZones = json.load(f)
                     timeZone = pytz.timezone(memberTimeZones[str(interaction.user.id)])
                     try:
-                        startTime = datetimeParse(value, tzinfos=None)
+                        startTime = parseUserDatetime(value)
                     except Exception:
                         await interaction.response.send_message(interaction.user.mention, embed=EMBED_INVALID, ephemeral=True, delete_after=10.0)
                         return

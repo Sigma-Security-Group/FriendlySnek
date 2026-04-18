@@ -406,14 +406,14 @@ class WorkshopInterestButton(discord.ui.DynamicItem[discord.ui.Button], template
             if interaction.user.id not in wsMembers:
                 wsMembers.append(interaction.user.id)  # Add member to WS
             else:
-                await interaction.response.send_message("You are already interested!", ephemeral=True)
+                await interaction.followup.send("You are already interested!", ephemeral=True)
                 return
 
         elif interaction.data["custom_id"] == "workshopInterest_button_interest_remove":
             if interaction.user.id in wsMembers:
                 wsMembers.remove(interaction.user.id)  # Remove member from WS
             else:
-                await interaction.response.send_message("You are already not interested!", ephemeral=True)
+                await interaction.followup.send("You are already not interested!", ephemeral=True)
                 return
 
         with open(WORKSHOP_INTEREST_FILE, "w") as f:

@@ -363,8 +363,8 @@ class Recognition(commands.Cog):
     def _buildPromotionReviewView(*, memberId: int, currentRankId: int, targetRankId: int, juniorPromotion: bool) -> discord.ui.View:
         scope = "junior" if juniorPromotion else "senior"
         view = discord.ui.View(timeout=None)
-        view.add_item(PromotionReviewAssentButton(memberId, currentRankId, targetRankId, scope))
-        view.add_item(PromotionReviewDisagreementButton(memberId, currentRankId, targetRankId, scope))
+        view.add_item(PromotionReviewAgreeButton(memberId, currentRankId, targetRankId, scope))
+        view.add_item(PromotionReviewDisagreeButton(memberId, currentRankId, targetRankId, scope))
         view.add_item(PromotionReviewAbstainButton(memberId, currentRankId, targetRankId, scope))
         view.add_item(PromotionReviewExecuteButton(memberId, currentRankId, targetRankId, scope))
         view.add_item(PromotionReviewDiscardButton(memberId, currentRankId, targetRankId, scope))
@@ -565,7 +565,7 @@ class Recognition(commands.Cog):
         guild = interaction.guild
         voter = interaction.user
         if rationale is None:
-            existingRationales = Recognition._getPromotionRecommendationRationales(reviewMessage, vote="agree" if vote == "assent" else "disagree")
+            existingRationales = Recognition._getPromotionRecommendationRationales(reviewMessage, vote="agree" if vote == "agree" else "disagree")
             await interaction.response.send_modal(
                 PromotionRecommendationVoteRationaleModal(
                     memberId=memberId,
@@ -598,10 +598,10 @@ class Recognition(commands.Cog):
         abstainVoterIds.discard(voter.id)
         agreeRationales.pop(voter.id, None)
         disagreeRationales.pop(voter.id, None)
-        if vote == "assent":
+        if vote == "agree":
             agreeVoterIds.add(voter.id)
             agreeRationales[voter.id] = rationale.strip()
-        elif vote == "disagreement":
+        elif vote == "disagree":
             disagreeVoterIds.add(voter.id)
             disagreeRationales[voter.id] = rationale.strip()
         else:
@@ -1042,7 +1042,7 @@ class BasePromotionReviewDynamicButton(discord.ui.DynamicItem[discord.ui.Button]
         self.currentRankId = currentRankId
         self.targetRankId = targetRankId
         self.scope = scope
-        super().__init__(discord.ui.Button(label=self.LABEL, style=self.STYLE, emoji=self.EMOJI, row=0, custom_id=f"promorev_{self.ACTION}_{memberId}_{currentRankId}_{targetRankId}_{scope}"))
+        super().__init__(discord.ui.Button(label=self.LABEL, style=self.STYLE, emoji=self.EMOJI, row=0, custom_id=f"recognition_button_promo_{self.ACTION}_{memberId}_{currentRankId}_{targetRankId}_{scope}"))
 
     @classmethod
     async def from_custom_id(cls, interaction: discord.Interaction, item: discord.ui.Button, match: re.Match[str], /):
@@ -1052,26 +1052,26 @@ class BasePromotionReviewDynamicButton(discord.ui.DynamicItem[discord.ui.Button]
         raise NotImplementedError
 
 
-class PromotionReviewAssentButton(BasePromotionReviewDynamicButton, template=r"promorev_a_(?P<member_id>\d+)_(?P<current_rank_id>\d+)_(?P<target_rank_id>\d+)_(?P<scope>junior|senior)"):
-    ACTION = "a"
+class PromotionReviewAgreeButton(BasePromotionReviewDynamicButton, template=r"recognition_button_promo_agree_(?P<member_id>\d+)_(?P<current_rank_id>\d+)_(?P<target_rank_id>\d+)_(?P<scope>junior|senior)"):
+    ACTION = "agree"
     STYLE = discord.ButtonStyle.primary
     EMOJI = "\N{THUMBS UP SIGN}"
 
     async def callback(self, interaction: discord.Interaction):
-        await Recognition.handlePromotionRecommendationVote(interaction, vote="assent", memberId=self.memberId, currentRankId=self.currentRankId, targetRankId=self.targetRankId, scope=self.scope)
+        await Recognition.handlePromotionRecommendationVote(interaction, vote="agree", memberId=self.memberId, currentRankId=self.currentRankId, targetRankId=self.targetRankId, scope=self.scope)
 
 
-class PromotionReviewDisagreementButton(BasePromotionReviewDynamicButton, template=r"promorev_d_(?P<member_id>\d+)_(?P<current_rank_id>\d+)_(?P<target_rank_id>\d+)_(?P<scope>junior|senior)"):
-    ACTION = "d"
+class PromotionReviewDisagreeButton(BasePromotionReviewDynamicButton, template=r"recognition_button_promo_disagree_(?P<member_id>\d+)_(?P<current_rank_id>\d+)_(?P<target_rank_id>\d+)_(?P<scope>junior|senior)"):
+    ACTION = "disagree"
     STYLE = discord.ButtonStyle.primary
     EMOJI = "\N{THUMBS DOWN SIGN}"
 
     async def callback(self, interaction: discord.Interaction):
-        await Recognition.handlePromotionRecommendationVote(interaction, vote="disagreement", memberId=self.memberId, currentRankId=self.currentRankId, targetRankId=self.targetRankId, scope=self.scope)
+        await Recognition.handlePromotionRecommendationVote(interaction, vote="disagree", memberId=self.memberId, currentRankId=self.currentRankId, targetRankId=self.targetRankId, scope=self.scope)
 
 
-class PromotionReviewAbstainButton(BasePromotionReviewDynamicButton, template=r"promorev_b_(?P<member_id>\d+)_(?P<current_rank_id>\d+)_(?P<target_rank_id>\d+)_(?P<scope>junior|senior)"):
-    ACTION = "b"
+class PromotionReviewAbstainButton(BasePromotionReviewDynamicButton, template=r"recognition_button_promo_abstain_(?P<member_id>\d+)_(?P<current_rank_id>\d+)_(?P<target_rank_id>\d+)_(?P<scope>junior|senior)"):
+    ACTION = "abstain"
     STYLE = discord.ButtonStyle.primary
     EMOJI = "\N{RAISED HAND}"
 
@@ -1079,8 +1079,8 @@ class PromotionReviewAbstainButton(BasePromotionReviewDynamicButton, template=r"
         await Recognition.handlePromotionRecommendationVote(interaction, vote="abstain", memberId=self.memberId, currentRankId=self.currentRankId, targetRankId=self.targetRankId, scope=self.scope, rationale="")
 
 
-class PromotionReviewExecuteButton(BasePromotionReviewDynamicButton, template=r"promorev_x_(?P<member_id>\d+)_(?P<current_rank_id>\d+)_(?P<target_rank_id>\d+)_(?P<scope>junior|senior)"):
-    ACTION = "x"
+class PromotionReviewExecuteButton(BasePromotionReviewDynamicButton, template=r"recognition_button_promo_execute_(?P<member_id>\d+)_(?P<current_rank_id>\d+)_(?P<target_rank_id>\d+)_(?P<scope>junior|senior)"):
+    ACTION = "execute"
     LABEL = "Execute Promotion"
 
     async def callback(self, interaction: discord.Interaction):
@@ -1090,8 +1090,8 @@ class PromotionReviewExecuteButton(BasePromotionReviewDynamicButton, template=r"
         await interaction.response.send_modal(PromotionReviewActionConfirmationModal(action="execute", memberId=self.memberId, currentRankId=self.currentRankId, targetRankId=self.targetRankId, scope=self.scope, reviewMessage=interaction.message))
 
 
-class PromotionReviewDiscardButton(BasePromotionReviewDynamicButton, template=r"promorev_r_(?P<member_id>\d+)_(?P<current_rank_id>\d+)_(?P<target_rank_id>\d+)_(?P<scope>junior|senior)"):
-    ACTION = "r"
+class PromotionReviewDiscardButton(BasePromotionReviewDynamicButton, template=r"recognition_button_promo_discard_(?P<member_id>\d+)_(?P<current_rank_id>\d+)_(?P<target_rank_id>\d+)_(?P<scope>junior|senior)"):
+    ACTION = "discard"
     LABEL = "Discard Recommendation"
 
     async def callback(self, interaction: discord.Interaction):
@@ -1103,7 +1103,7 @@ class PromotionReviewDiscardButton(BasePromotionReviewDynamicButton, template=r"
 
 class PromotionRecommendationTargetModal(discord.ui.Modal):
     def __init__(self, *, memberId: int, memberDisplayName: str, firstRecommenderId: int, secondRecommenderId: int, allowedTargetIds: Iterable[int], guild: discord.Guild | None, additionalComments: str | None = None) -> None:
-        super().__init__(title=f"Target Rank: {memberDisplayName[:28]}", custom_id="schedule_modal_promotion_target")
+        super().__init__(title=f"Target Rank: {memberDisplayName[:28]}", custom_id="recognition_modal_promotion_target")
         self.memberId = memberId
         self.memberDisplayName = memberDisplayName
         self.firstRecommenderId = firstRecommenderId
@@ -1112,7 +1112,7 @@ class PromotionRecommendationTargetModal(discord.ui.Modal):
         self.targetRank = discord.ui.Label(
             text="Select the recommended rank",
             component=discord.ui.RadioGroup(
-                custom_id="schedule_select_promotion_target",
+                custom_id="recognition_select_promotion_target",
                 required=True,
                 options=[
                     discord.RadioGroupOption(label=role.name if role is not None else str(targetRankId), value=str(targetRankId))
@@ -1176,7 +1176,7 @@ class PromotionRecommendationPreviewView(discord.ui.View):
 
 class PromotionRecommendationConfirmationModal(discord.ui.Modal):
     def __init__(self, *, memberId: int, memberDisplayName: str, firstRecommenderId: int, secondRecommenderId: int, targetRankId: int, targetRankName: str, additionalComments: str | None = None) -> None:
-        super().__init__(title="Confirm Promotion Recommendation", custom_id="schedule_modal_promotion_confirmation")
+        super().__init__(title="Confirm Promotion Recommendation", custom_id="recognition_modal_promotion_confirmation")
         self.memberId = memberId
         self.firstRecommenderId = firstRecommenderId
         self.secondRecommenderId = secondRecommenderId
@@ -1186,7 +1186,7 @@ class PromotionRecommendationConfirmationModal(discord.ui.Modal):
         self.add_item(discord.ui.TextDisplay(content=PROMOTION_RECOMMENDATION_CONFIRMATION_TEXT))
         self.confirmationInput = discord.ui.Label(
             text="Type `I confirm` to submit",
-            component=discord.ui.TextInput(custom_id="schedule_text_promotion_confirmation", style=discord.TextStyle.short, placeholder="I confirm", required=True, max_length=32)
+            component=discord.ui.TextInput(custom_id="recognition_text_promotion_confirmation", style=discord.TextStyle.short, placeholder="I confirm", required=True, max_length=32)
         )
         self.add_item(self.confirmationInput)
 
@@ -1203,7 +1203,7 @@ class PromotionRecommendationConfirmationModal(discord.ui.Modal):
 
 class PromotionReviewActionConfirmationModal(discord.ui.Modal):
     def __init__(self, *, action: Literal["execute", "discard"], memberId: int, currentRankId: int, targetRankId: int, scope: str, reviewMessage: discord.Message) -> None:
-        super().__init__(title="Confirm Execute Promotion" if action == "execute" else "Confirm Discard Recommendation", custom_id=f"schedule_modal_promotion_review_{action}")
+        super().__init__(title="Confirm Execute Promotion" if action == "execute" else "Confirm Discard Recommendation", custom_id=f"recognition_modal_promo_{action}")
         self.action = action
         self.memberId = memberId
         self.currentRankId = currentRankId
@@ -1221,8 +1221,8 @@ class PromotionReviewActionConfirmationModal(discord.ui.Modal):
 
 class PromotionRecommendationVoteRationaleModal(discord.ui.Modal):
     def __init__(self, *, memberId: int, currentRankId: int, targetRankId: int, scope: str, vote: str, reviewChannelId: int, reviewMessageId: int, existingRationale: str | None = None) -> None:
-        emoji = "\N{THUMBS UP SIGN}" if vote == "assent" else "\N{THUMBS DOWN SIGN}"
-        super().__init__(title=f"Rationale for {emoji} vote", custom_id=f"schedule_modal_promotion_vote_{vote}")
+        emoji = "\N{THUMBS UP SIGN}" if vote == "agree" else "\N{THUMBS DOWN SIGN}"
+        super().__init__(title=f"Rationale for {emoji} vote", custom_id=f"recognition_modal_promotion_vote_{vote}")
         self.memberId = memberId
         self.currentRankId = currentRankId
         self.targetRankId = targetRankId
@@ -1230,7 +1230,7 @@ class PromotionRecommendationVoteRationaleModal(discord.ui.Modal):
         self.vote = vote
         self.reviewChannelId = reviewChannelId
         self.reviewMessageId = reviewMessageId
-        self.rationale = discord.ui.TextInput(label=f"Rationale for {emoji} vote:", custom_id="schedule_text_promotion_vote_rationale", style=discord.TextStyle.long, default=existingRationale, required=True, min_length=1, max_length=1000)
+        self.rationale = discord.ui.TextInput(label=f"Rationale for {emoji} vote:", custom_id="recognition_text_promotion_vote_rationale", style=discord.TextStyle.long, default=existingRationale, required=True, min_length=1, max_length=1000)
         self.add_item(self.rationale)
 
     async def on_submit(self, interaction: discord.Interaction) -> None:
@@ -1259,8 +1259,8 @@ async def setup(bot: commands.Bot) -> None:
     Recognition.commend.error(Utils.onSlashError)
     await bot.add_cog(Recognition(bot))
     bot.add_dynamic_items(
-        PromotionReviewAssentButton,
-        PromotionReviewDisagreementButton,
+        PromotionReviewAgreeButton,
+        PromotionReviewDisagreeButton,
         PromotionReviewAbstainButton,
         PromotionReviewExecuteButton,
         PromotionReviewDiscardButton

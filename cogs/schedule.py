@@ -4119,7 +4119,11 @@ class ScheduleModal(discord.ui.Modal):
             # Send before time-hogging processes - fix interaction failed
             await interaction.response.send_message(interaction.user.mention, embed=discord.Embed(title="✅ Event edited", color=discord.Color.green()), ephemeral=True, delete_after=15.0)
 
-            previewEmbed = discord.Embed(title=f":clock3: The starting time has changed for: {event['title']}!", description=f"From: {discord.utils.format_dt(UTC.localize(datetime.strptime(startTimeOld, TIME_FORMAT)), style='F')}\n\u2000\u2000To: {discord.utils.format_dt(UTC.localize(datetime.strptime(event['time'], TIME_FORMAT)), style='F')}", color=discord.Color.orange())
+            previewEmbed = discord.Embed(
+                title=f":clock3: The starting time has changed for: {event['title']}!",
+                description=f"From: {discord.utils.format_dt(UTC.localize(datetime.strptime(startTimeOld, TIME_FORMAT)), style='F')}\n\u2004\u2004\u2004\u205F\u200ATo: {discord.utils.format_dt(UTC.localize(datetime.strptime(event['time'], TIME_FORMAT)), style='F')}",
+                color=discord.Color.orange()
+            )
             previewEmbed.add_field(name="\u200B", value=eventMsg.jump_url, inline=False)
             previewEmbed.set_footer(text=f"By: {interaction.user}")
             for memberId in event["accepted"] + event["declined"] + event["tentative"] + event["standby"]:

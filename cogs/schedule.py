@@ -1729,7 +1729,7 @@ class Schedule(commands.Cog):
     @discord.app_commands.guilds(GUILD)
     @discord.app_commands.checks.has_any_role(MEMBER)
     async def commend(self, interaction: discord.Interaction, member: discord.Member, reason: str) -> None:
-        """Pick a member to commend. Reason is optional.
+        """ Commend a member for good performance in an operation.
 
         Parameters:
         interaction (discord.Interaction): The Discord interaction.

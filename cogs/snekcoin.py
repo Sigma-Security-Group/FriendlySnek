@@ -227,10 +227,10 @@ class Snekcoin(commands.GroupCog, name = "snekcoin"):
     def addGambleSummary(embed: discord.Embed, bet: int, netChange: int, balance: int) -> None:
         """Attach standardized gamble summary fields to an embed."""
         resultLabel = "Win" if netChange > 0 else "Loss" if netChange < 0 else "Win/Loss"
-        resultValue = f"**+{netChange}** SnekCoins" if netChange > 0 else f"**{netChange}** SnekCoins"
-        embed.add_field(name="Bet", value=f"**{bet}** SnekCoins")
+        resultValue = f"**+{netChange:,}** SnekCoins" if netChange > 0 else f"**{netChange:,}** SnekCoins"
+        embed.add_field(name="Bet", value=f"**{bet:,}** SnekCoins")
         embed.add_field(name=resultLabel, value=resultValue)
-        embed.add_field(name="💰 Balance", value=f"**{balance}** SnekCoins", inline=False)
+        embed.add_field(name="💰 Balance", value=f"**{balance:,}** SnekCoins", inline=False)
 
     @staticmethod
     async def gambleMenu(interaction: discord.Interaction) -> Tuple[discord.Embed, discord.ui.View] | None:
@@ -257,7 +257,7 @@ class Snekcoin(commands.GroupCog, name = "snekcoin"):
             )
             return
 
-        embed.add_field(name="Current Balance", value=f"🪙 `{wallet['money']}` SnekCoins", inline=False)
+        embed.add_field(name="Current Balance", value=f"🪙 `{wallet['money']:,}` SnekCoins", inline=False)
 
         view = discord.ui.View(timeout=60)
         view.add_item(SnekcoinButton(emoji="🪙", label="Coin Flip", style=discord.ButtonStyle.success, custom_id=f"snekcoin_button_coinFlip_{interaction.user.id}"))
@@ -336,13 +336,13 @@ class Snekcoin(commands.GroupCog, name = "snekcoin"):
                 embed = discord.Embed(title="🏆 SnekCoin Leaderboard 🏆", color=discord.Color.gold())
                 embed.description = ""
                 pageEntries = 0
-            embed.description += f"{count}. **{member.mention}** - 🪙 `{wallets[user].get('money', 0)}` SnekCoins\n"
+            embed.description += f"{count:,}. **{member.mention}** - 🪙 `{wallets[user].get('money', 0):,}` SnekCoins\n"
             pageEntries += 1
             count += 1
         if embed.description:
             embeds.append(embed)
         for i, leaderboardEmbed in enumerate(embeds, start=1):
-            leaderboardEmbed.set_footer(text=f"Page {i} of {len(embeds)}")
+            leaderboardEmbed.set_footer(text=f"Page {i:,} of {len(embeds):,}")
 
         if not embeds:
             await interaction.response.send_message(
@@ -433,10 +433,10 @@ class Snekcoin(commands.GroupCog, name = "snekcoin"):
 
         # Build and send payday summary embed
         embed = discord.Embed(title="💰 Payday Processed 💰", color=discord.Color.gold())
-        embed.add_field(name="Zeus", value=f"{interaction.user.mention} hosted the Operation and was paid 🪙 `{zeusPay}` SnekCoins.", inline=False)
-        embed.add_field(name="Actual", value=f"{actual.mention} was paid 🪙 `{actualPay}` SnekCoins.", inline=False)
+        embed.add_field(name="Zeus", value=f"{interaction.user.mention} hosted the Operation and was paid 🪙 `{zeusPay:,}` SnekCoins.", inline=False)
+        embed.add_field(name="Actual", value=f"{actual.mention} was paid 🪙 `{actualPay:,}` SnekCoins.", inline=False)
         if paidTLs:
-            tlPaymentText = "\n".join([f"{tl}: 🪙 `{amount}` SnekCoins" for tl, amount in paidTLs.items()])
+            tlPaymentText = "\n".join([f"{tl}: 🪙 `{amount:,}` SnekCoins" for tl, amount in paidTLs.items()])
             embed.add_field(name="Team Leaders Paid", value=tlPaymentText, inline=False)
         embed.set_footer(text="Thank you for hosting the operation!")
 
@@ -461,12 +461,12 @@ class Snekcoin(commands.GroupCog, name = "snekcoin"):
                 delete_after=30.0
             )
 
-        tlMentions = (f"- Team Leaders:\n" + "\n".join([f"  - {tl}: 🪙 `{amount}` SnekCoins" for tl, amount in paidTLs.items()]) if paidTLs else "")
+        tlMentions = (f"- Team Leaders:\n" + "\n".join([f"  - {tl}: 🪙 `{amount:,}` SnekCoins" for tl, amount in paidTLs.items()]) if paidTLs else "")
 
         embed = discord.Embed(
             title="💰 Payday Executed 💰",
             description=f"{interaction.user.mention} has executed payday.\n\n**Payments:**\n" \
-            f"- Zeus: {interaction.user.mention} - 🪙 `{zeusPay}` SnekCoins\n- Actual: {actual.mention} - 🪙 `{actualPay}` SnekCoins\n{tlMentions}",
+            f"- Zeus: {interaction.user.mention} - 🪙 `{zeusPay:,}` SnekCoins\n- Actual: {actual.mention} - 🪙 `{actualPay:,}` SnekCoins\n{tlMentions}",
             color=discord.Color.blue()
         )
         await auditLogs.send(embed=embed)
@@ -532,7 +532,7 @@ class Snekcoin(commands.GroupCog, name = "snekcoin"):
         except Exception:
             log.warning("Snekcoin changeSnekCoins: Failed to save wallets file.")
 
-        await ctx.send(embed=discord.Embed(color=discord.Color.green(), title="✅ Wallet updated", description=f"`{amount}` SnekCoins have been {operationText} {member.display_name}'s wallet."))
+        await ctx.send(embed=discord.Embed(color=discord.Color.green(), title="✅ Wallet updated", description=f"`{amount:,}` SnekCoins have been {operationText} {member.display_name}'s wallet."))
 
         auditLogs = self.bot.get_channel(AUDIT_LOGS)
         if not isinstance(auditLogs, discord.TextChannel):
@@ -540,7 +540,7 @@ class Snekcoin(commands.GroupCog, name = "snekcoin"):
             return
         embed = discord.Embed(
             title="🪙 SnekCoin Wallet Change 🪙",
-            description=f"{ctx.author.mention} has {operationText} `{amount}` SnekCoins {'to' if operationText == 'added to' else 'from'} {member.mention}'s wallet.",
+            description=f"{ctx.author.mention} has {operationText} `{amount:,}` SnekCoins {'to' if operationText == 'added to' else 'from'} {member.mention}'s wallet.",
             color=discord.Color.blue()
         )
         await auditLogs.send(embed=embed)
@@ -572,7 +572,7 @@ class Snekcoin(commands.GroupCog, name = "snekcoin"):
         await Snekcoin.updateWallet(fromMember.id, "money", -amount)
         await Snekcoin.updateWallet(toMember.id, "money", amount)
 
-        await ctx.send(embed=discord.Embed(color=discord.Color.green(), title="✅ Trade complete", description=f"`{amount}` SnekCoins have been traded from {fromMember.display_name} to {toMember.display_name}."))
+        await ctx.send(embed=discord.Embed(color=discord.Color.green(), title="✅ Trade complete", description=f"`{amount:,}` SnekCoins have been traded from {fromMember.display_name} to {toMember.display_name}."))
 
         auditLogs = self.bot.get_channel(AUDIT_LOGS)
         if auditLogs is None or not isinstance(auditLogs, discord.TextChannel):
@@ -580,7 +580,7 @@ class Snekcoin(commands.GroupCog, name = "snekcoin"):
             return
         embed = discord.Embed(
             title="🪙 SnekCoin Trade 🪙",
-            description=f"{ctx.author.mention} has traded `{amount}` SnekCoins from {fromMember.mention} to {toMember.mention}.",
+            description=f"{ctx.author.mention} has traded `{amount:,}` SnekCoins from {fromMember.mention} to {toMember.mention}.",
             color=discord.Color.blue()
         )
         await auditLogs.send(embed=embed)
@@ -615,7 +615,7 @@ class Snekcoin(commands.GroupCog, name = "snekcoin"):
             await interaction.response.send_message(embed=discord.Embed(color=discord.Color.red(), title="❌ Failed", description="Could not retrieve your wallet data."), ephemeral=True, delete_after=15.0)
             return
         if senderWallet["money"] < amount:
-            await interaction.response.send_message(embed=discord.Embed(color=discord.Color.red(), title="❌ Insufficient funds", description=f"You do not have enough SnekCoins to gift that amount!\nWallet balance: `{senderWallet['money']}` SnekCoins"), ephemeral=True, delete_after=15.0)
+            await interaction.response.send_message(embed=discord.Embed(color=discord.Color.red(), title="❌ Insufficient funds", description=f"You do not have enough SnekCoins to gift that amount!\nWallet balance: `{senderWallet['money']:,}` SnekCoins"), ephemeral=True, delete_after=15.0)
             return
 
         await Snekcoin.updateWallet(interaction.user.id, "money", -amount)
@@ -624,7 +624,7 @@ class Snekcoin(commands.GroupCog, name = "snekcoin"):
         embed = discord.Embed(
             color=discord.Color.gold(),
             title="SnekCoin Gift 🎁",
-            description=f"You gave **{amount}** SnekCoins to {user.mention}"
+            description=f"You gave **{amount:,}** SnekCoins to {user.mention}"
         )
         embed.set_author(name=interaction.user.display_name, icon_url=interaction.user.display_avatar)
         await interaction.response.send_message(embed=embed)
@@ -648,8 +648,8 @@ class Snekcoin(commands.GroupCog, name = "snekcoin"):
             return
 
         embed = discord.Embed(title="💰 SnekCoin Wallet 💰", color=discord.Color.green())
-        embed.add_field(name="Current Balance", value=f"🪙 `{walletData['money']}` SnekCoins", inline=False)
-        embed.add_field(name="Total SnekCoins Spent", value=f"🪙 `{walletData['moneySpent']}` SnekCoins", inline=False)
+        embed.add_field(name="Current Balance", value=f"🪙 `{walletData['money']:,}` SnekCoins", inline=False)
+        embed.add_field(name="Total SnekCoins Spent", value=f"🪙 `{walletData['moneySpent']:,}` SnekCoins", inline=False)
         await interaction.response.send_message(embed=embed, ephemeral=True, delete_after=30.0)
 
 
@@ -684,7 +684,7 @@ class SnekcoinButton(discord.ui.Button):
                 return
 
             if userWallet["timesBumped"] >= MAX_BUMPS:
-                await interaction.response.send_message(embed=discord.Embed(color=discord.Color.red(), title="❌ Bump Bonus Unavailable", description=f"You have already received the maximum of {MAX_BUMPS} bump bonuses today."), ephemeral=True, delete_after=15.0)
+                await interaction.response.send_message(embed=discord.Embed(color=discord.Color.red(), title="❌ Bump Bonus Unavailable", description=f"You have already received the maximum of {MAX_BUMPS:,} bump bonuses today."), ephemeral=True, delete_after=15.0)
                 return
 
             award = randint(10, 100)
@@ -693,7 +693,7 @@ class SnekcoinButton(discord.ui.Button):
             embed = discord.Embed(
                 color=discord.Color.green(),
                 title="✅ Bonus Awarded",
-                description=f"You have been awarded 🪙 `{award}` SnekCoins from {originalMember.mention}'s bump bonus!\nThis does not count towards your daily bump bonus limit."
+                description=f"You have been awarded 🪙 `{award:,}` SnekCoins from {originalMember.mention}'s bump bonus!\nThis does not count towards your daily bump bonus limit."
             )
             embed.set_author(name=interaction.user.display_name, icon_url=interaction.user.display_avatar)
             await interaction.response.send_message(embed=embed)
@@ -729,7 +729,7 @@ class SnekcoinButton(discord.ui.Button):
                 return
 
             if userWallet["money"] < 50:
-                await interaction.response.send_message(embed=discord.Embed(color=discord.Color.red(), title="❌ Insufficient funds", description=f"You need at least **50** SnekCoins to play Slots!\nWallet balance: `{userWallet['money']}` SnekCoins"), ephemeral=True, delete_after=15.0)
+                await interaction.response.send_message(embed=discord.Embed(color=discord.Color.red(), title="❌ Insufficient funds", description=f"You need at least **50** SnekCoins to play Slots!\nWallet balance: `{userWallet['money']:,}` SnekCoins"), ephemeral=True, delete_after=15.0)
                 return
 
             if interaction.client.user is None:
@@ -828,7 +828,7 @@ class SnekcoinModal(discord.ui.Modal):
                 await interaction.followup.send(embed=discord.Embed(color=discord.Color.red(), title="❌ Invalid amount", description="Amount must be above 1!"), ephemeral=True)
                 return
             if (amount > userWallet["money"]):
-                await interaction.followup.send(embed=discord.Embed(color=discord.Color.red(), title="❌ Insufficient funds", description=f"You do not have enough SnekCoins to gamble that amount!\nWallet balance: `{userWallet['money']}` SnekCoins"), ephemeral=True)
+                await interaction.followup.send(embed=discord.Embed(color=discord.Color.red(), title="❌ Insufficient funds", description=f"You do not have enough SnekCoins to gamble that amount!\nWallet balance: `{userWallet['money']:,}` SnekCoins"), ephemeral=True)
                 return
 
             if interaction.client.user is None:
@@ -868,7 +868,7 @@ class SnekcoinModal(discord.ui.Modal):
                 await interaction.followup.send(embed=discord.Embed(color=discord.Color.red(), title="❌ Invalid amount", description="Amount must be above 1!"), ephemeral=True)
                 return
             if (amount > userWallet["money"]):
-                await interaction.followup.send(embed=discord.Embed(color=discord.Color.red(), title="❌ Insufficient funds", description=f"You do not have enough SnekCoins to gamble that amount!\nWallet balance: `{userWallet['money']}` SnekCoins"), ephemeral=True)
+                await interaction.followup.send(embed=discord.Embed(color=discord.Color.red(), title="❌ Insufficient funds", description=f"You do not have enough SnekCoins to gamble that amount!\nWallet balance: `{userWallet['money']:,}` SnekCoins"), ephemeral=True)
                 return
 
             if interaction.client.user is None:
@@ -885,21 +885,21 @@ class SnekcoinModal(discord.ui.Modal):
             if winner:
                 embed.color = discord.Color.green()
                 embed.set_author(name=interaction.user.display_name, icon_url=interaction.user.display_avatar)
-                embed.add_field(name="Result", value=f"You rolled: **{userRoll}**\nSnek rolled: **{botRoll}**")
+                embed.add_field(name="Result", value=f"You rolled: **{userRoll:,}**\nSnek rolled: **{botRoll:,}**")
                 Snekcoin.addGambleSummary(embed, bet=amount, netChange=winnings, balance=userWallet["money"])
 
             # Tie
             elif winner is None:
                 embed.color = discord.Color.gold()
                 embed.set_author(name=interaction.user.display_name, icon_url=interaction.user.display_avatar)
-                embed.add_field(name="Result", value=f"You rolled: **{userRoll}**\nSnek rolled: **{botRoll}**")
+                embed.add_field(name="Result", value=f"You rolled: **{userRoll:,}**\nSnek rolled: **{botRoll:,}**")
                 Snekcoin.addGambleSummary(embed, bet=amount, netChange=0, balance=userWallet["money"])
 
             # Loss
             else:
                 embed.color = discord.Color.red()
                 embed.set_author(name=interaction.user.display_name, icon_url=interaction.user.display_avatar)
-                embed.add_field(name="Result", value=f"You rolled: **{userRoll}**\nSnek rolled: **{botRoll}**")
+                embed.add_field(name="Result", value=f"You rolled: **{userRoll:,}**\nSnek rolled: **{botRoll:,}**")
                 Snekcoin.addGambleSummary(embed, bet=amount, netChange=-amount, balance=userWallet["money"])
 
         menu = await Snekcoin.gambleMenu(interaction)

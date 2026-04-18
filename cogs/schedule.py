@@ -971,6 +971,11 @@ class Schedule(commands.Cog):
         if interaction.guild is None:
             log.exception("Schedule _handlePersistentRSVPAction: interaction.guild is None")
             return
+        if interaction.message is None:
+            log.exception("Schedule _handlePersistentRSVPAction: interaction.message is None")
+            return
+
+        await interaction.response.defer()
 
         isAcceptAndReserve = event["reservableRoles"] and len(event["reservableRoles"]) == event["maxPlayers"]
 
@@ -1054,7 +1059,7 @@ class Schedule(commands.Cog):
         with open(EVENTS_FILE, "w") as f:
             json.dump(events, f, indent=4)
 
-        await interaction.response.edit_message(embed=Schedule.getEventEmbed(event, interaction.guild), view=Schedule.getEventView(event))
+        await interaction.message.edit(embed=Schedule.getEventEmbed(event, interaction.guild), view=Schedule.getEventView(event))
 
     @staticmethod
     async def _handlePersistentReserveAction(interaction: discord.Interaction, events: List[Dict], event: Dict) -> None:

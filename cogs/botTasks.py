@@ -33,6 +33,9 @@ REMINDER_RELATIVE_TIME_UNITS = {
     "minute": "minutes",
     "minutes": "minutes",
 }
+FIXED_REMINDER_DATE_LOG_KEY = "modpackVoteReminder"
+FIXED_REMINDER_DUE_MONTHS = (2, 5, 8, 11)
+FIXED_REMINDER_INTROS = ("Empire has called", "It's time again", "Once again", "Attention all", "Voting time", "It's Morbin time", "The time is nigh", "At last", "Once more")
 
 
 def chunkList(lst: list, n: int):
@@ -437,6 +440,76 @@ Join Us:
         return " ".join([role.mention for role in roles])  # type: ignore
 
     @staticmethod
+    def getFirstSunday(year: int, month: int) -> datetime:
+        """Return the first Sunday of a month at noon UTC."""
+        firstDay = datetime(year, month, 1, 12, 0, 0, 0, tzinfo=timezone.utc)
+        return firstDay + timedelta(days=(6 - firstDay.weekday()) % 7)
+
+    @staticmethod
+    def getNextFixedReminderTime(startTime: datetime | None = None) -> datetime:
+        """Return the next fixed modpack vote reminder time at noon UTC."""
+        if startTime is None:
+            startTime = datetime.now(timezone.utc)
+        if startTime.tzinfo is None:
+            startTime = startTime.replace(tzinfo=timezone.utc)
+        else:
+            startTime = startTime.astimezone(timezone.utc)
+
+        for year in (startTime.year, startTime.year + 1):
+            for month in FIXED_REMINDER_DUE_MONTHS:
+                dueTime = BotTasks.getFirstSunday(year, month)
+                for reminderTime in (dueTime - timedelta(days=2), dueTime):
+                    if reminderTime > startTime:
+                        return reminderTime
+
+        raise RuntimeError("Unable to calculate next fixed reminder time")
+
+    @staticmethod
+    def getFixedReminderDueTime(reminderTime: datetime) -> datetime:
+        """Return the due date associated with a fixed reminder timestamp."""
+        reminderTime = reminderTime.astimezone(timezone.utc)
+        sameDayDueTime = BotTasks.getFirstSunday(reminderTime.year, reminderTime.month)
+        if reminderTime == sameDayDueTime:
+            return sameDayDueTime
+
+        dueTime = reminderTime + timedelta(days=2)
+        return BotTasks.getFirstSunday(dueTime.year, dueTime.month)
+
+    async def fixedModpackVoteReminder(self, guild: discord.Guild, reminderTime: datetime) -> None:
+        """Send fixed quarterly modpack vote reminders."""
+        dueTime = BotTasks.getFixedReminderDueTime(reminderTime)
+        isDueDate = reminderTime == dueTime
+
+        channelDatacenter = guild.get_channel(THE_DATACENTER)
+        if not isinstance(channelDatacenter, discord.TextChannel):
+            log.exception("BotTasks fixedModpackVoteReminder: channelDatacenter not discord.TextChannel")
+            return
+
+        pingRoles = (SERVER_HAMSTER, GUINEA_PIG, UNIT_STAFF) if isDueDate else (SERVER_HAMSTER,)
+        pingString = self.getPingString(pingRoles)
+        if pingString is None:
+            return
+
+        dueTimestamp = discord.utils.format_dt(dueTime, style="R")
+        message = (
+            f"{pingString}\n"
+            f"{random.choice(FIXED_REMINDER_INTROS)}! New modpack vote & Member/Curator of the Turtle.\n"
+            f"Deadline is {dueTimestamp}.\n\n"
+            "Head Server Hampter is responsible for setting up the form, which may be delegated to another individual.\n"
+            "Make sure to include a deadline for the form!"
+        )
+        await channelDatacenter.send(message, allowed_mentions=discord.AllowedMentions(roles=True))
+
+        nextTime = BotTasks.getNextFixedReminderTime(reminderTime)
+        with open(REPEATED_MSG_DATE_LOG_FILE) as f:
+            msgDateLog = json.load(f)
+        msgDateLog[FIXED_REMINDER_DATE_LOG_KEY] = datetime.timestamp(nextTime)
+        with open(REPEATED_MSG_DATE_LOG_FILE, "w") as f:
+            json.dump(msgDateLog, f, indent=4)
+
+        log.info("BotTasks fixedModpackVoteReminder: reminder sent & updated time")
+
+    @staticmethod
     def pruneOldDataBackups() -> None:
         """Delete backup archives older than 48 hours based on their filename timestamp."""
         backupCutoff = datetime.now() - timedelta(hours=48)
@@ -769,6 +842,17 @@ Join Us:
         if guild is None:
             log.exception("Bottasks oneHourTasks: guild is None")
             return
+
+        # fixedModpackVoteReminder
+        if secret.MODPACK_VOTE_ACTIVE and FIXED_REMINDER_DATE_LOG_KEY not in msgDateLog:
+            msgDateLog[FIXED_REMINDER_DATE_LOG_KEY] = datetime.timestamp(BotTasks.getNextFixedReminderTime())
+            with open(REPEATED_MSG_DATE_LOG_FILE, "w") as f:
+                json.dump(msgDateLog, f, indent=4)
+        elif secret.MODPACK_VOTE_ACTIVE and datetime.fromtimestamp(msgDateLog[FIXED_REMINDER_DATE_LOG_KEY], tz=pytz.utc) < datetime.now(timezone.utc):
+            try:
+                await self.fixedModpackVoteReminder(guild, datetime.fromtimestamp(msgDateLog[FIXED_REMINDER_DATE_LOG_KEY], tz=timezone.utc))
+            except Exception:
+                log.exception("Bottasks oneHourTasks: fixed modpack vote reminder")
 
         # smeBigBrother
         if secret.SME_BIG_BROTHER and ("smeBigBrother" not in msgDateLog or (datetime.fromtimestamp(msgDateLog["smeBigBrother"], tz=pytz.utc) < datetime.now(timezone.utc))):

@@ -26,6 +26,8 @@ SME_REMINDER_ACTIVE = False  # Toggle SME reminders every month
 SME_BIG_BROTHER = False  # Toggle summarizing SME activity every 6 months
 WORKSHOP_INTEREST_WIPE = False  # Toggle wiping workshop interest list every new year
 SPREADSHEET_ACTIVE = False  # Toggle modification to recruitment Google spreadsheet
+CLEAR_BUMP_ACTIVE = False  # Toggle clearing bump counters
+MODPACK_VOTE_ACTIVE = True  # Toggle reminding hampters for modvote every quarter
 
 SFTP = {  # SFTP credentials to server(s)
     "My Server": {

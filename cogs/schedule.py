@@ -1084,7 +1084,7 @@ class Schedule(commands.Cog):
             includeAdditionalComments=False,
             reviewText="Unit Staff review required." if juniorPromotion else "Advisor and Unit Staff review required."
         )
-        await channelCommendations.send(embed=commendationsEmbed)
+        await channelCommendations.send(member.mention, embed=commendationsEmbed)
 
         reviewEmbed = Schedule._buildPromotionRecommendationEmbed(
             guild,

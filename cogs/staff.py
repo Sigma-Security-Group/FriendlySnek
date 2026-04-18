@@ -1275,7 +1275,7 @@ class Recruitment(commands.GroupCog, name="recruitment"):
     ])
     @discord.app_commands.guilds(GUILD)
     @discord.app_commands.checks.has_any_role(*CMD_LIMIT_INTERVIEW)
-    async def history(self, interaction: discord.Interaction, member: discord.Member | None = None, recruiter: discord.Member | None = None, event_type: discord.app_commands.Choice[str] | None = None, newcomer_status: discord.app_commands.Choice[str] | None = None, limit: discord.app_commands.Range[int, 1, 15] = 10) -> None:
+    async def history(self, interaction: discord.Interaction, member: discord.Member | None = None, recruiter: discord.Member | None = None, event_type: discord.app_commands.Choice[str] | None = None, newcomer_status: discord.app_commands.Choice[str] | None = None, limit: discord.app_commands.Range[int, 1, 20] = 10) -> None:
         """View and search recruitment interview history."""
         if not isinstance(interaction.guild, discord.Guild):
             await interaction.response.send_message("Failed to search recruitment history: Guild not found.", ephemeral=True)

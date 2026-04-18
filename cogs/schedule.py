@@ -500,6 +500,7 @@ class Schedule(commands.Cog):
             return
 
         noShowMembersListForLogging = []
+        noShowLogReviewEntries = []
         with open(NO_SHOW_FILE) as f:
             noShowFile = json.load(f)
 
@@ -512,6 +513,12 @@ class Schedule(commands.Cog):
                 startTime = int(datetime.timestamp(UTC.localize(datetime.strptime(noShowEvent["event"]["time"], TIME_FORMAT))))
                 reservedRole = getReservedRoleName(noShowEvent["event"]["reservableRoles"], noShowMember.id)
                 noShowFile[str(noShowMember.id)].append({"date": startTime, "operationName": noShowEvent["event"]["title"], "reservedRole": reservedRole})
+                noShowLogReviewEntries.append({
+                    "member": noShowMember,
+                    "date": startTime,
+                    "operationName": noShowEvent["event"]["title"],
+                    "reservedRole": reservedRole
+                })
 
         with open(NO_SHOW_FILE, "w") as f:
             json.dump(noShowFile, f, indent=4)
@@ -542,7 +549,17 @@ class Schedule(commands.Cog):
 
             Schedule._addLineListEmbedFields(embed, noShowEvent["event"]["title"], noShowEventEmbedFieldValue)
 
-        await channelAdvisorStaffComms.send(embed=embed)
+        reviewLimit = DISCORD_LIMITS["interactions"]["select_menu_option"]
+        noShowLogReviewEntriesSelectable = noShowLogReviewEntries[:reviewLimit]
+        noShowLogReviewEntriesManual = noShowLogReviewEntries[reviewLimit:]
+        if noShowLogReviewEntriesManual:
+            manualReviewText = f"{len(noShowLogReviewEntriesManual)} additional no-show entr{'y' if len(noShowLogReviewEntriesManual) == 1 else 'ies'} must be reviewed manually due to Discord's dropdown limit."
+            if len(embed.fields) < DISCORD_LIMITS["message_embed"]["embed_field"]:
+                embed.add_field(name="Manual review required", value=manualReviewText, inline=False)
+            else:
+                embed.description = f"{embed.description}\n\nManual review required: {manualReviewText}"
+
+        await channelAdvisorStaffComms.send(embed=embed, view=NoShowLogReviewView(noShowLogReviewEntriesSelectable, noShowLogReviewEntriesManual))
 
 
     @discord.app_commands.command(name="no-show")
@@ -2468,6 +2485,201 @@ class AARCandidateAttendanceButton(discord.ui.Button):
             return
 
         await self.view.submitAttendance(interaction, [self.candidateId] if self.participated else [])
+
+
+class NoShowLogReviewView(discord.ui.View):
+    """Allows staff to confirm or correct newly logged no-show entries."""
+    def __init__(self, entries: List[Dict[str, Any]], manualEntries: List[Dict[str, Any]]):
+        super().__init__(timeout=None)
+        self.entries = entries
+        self.manualEntries = manualEntries
+        self.selectedEntryIndexes: List[int] = []
+        self.submitted = False
+        self.reviewId = id(self)
+
+        if len(entries) == 1:
+            self.add_item(NoShowLogReviewButton(
+                showedUp=False,
+                label="No-showed",
+                style=discord.ButtonStyle.danger,
+                custom_id=f"schedule_button_noshow_log_no_showed_{self.reviewId}"
+            ))
+            self.add_item(NoShowLogReviewButton(
+                showedUp=True,
+                label="Showed up",
+                style=discord.ButtonStyle.success,
+                custom_id=f"schedule_button_noshow_log_showed_up_{self.reviewId}"
+            ))
+            return
+
+        self.add_item(NoShowLogReviewSelect(
+            entries=entries,
+            custom_id=f"schedule_select_noshow_log_review_{self.reviewId}"
+        ))
+        self.add_item(NoShowLogReviewSubmitButton(
+            custom_id=f"schedule_button_noshow_log_submit_{self.reviewId}"
+        ))
+
+    async def interaction_check(self, interaction: discord.Interaction) -> bool:
+        if not isinstance(interaction.user, discord.Member):
+            log.exception("NoShowLogReviewView interaction_check: interaction.user not discord.Member")
+            return False
+
+        if any(role.id in CMD_LIMIT_STAFF_ADVISOR for role in interaction.user.roles):
+            return True
+
+        await interaction.response.send_message("Only Unit Staff, Advisors, or Snek Lord can review no-show logs.", ephemeral=True, delete_after=10.0)
+        return False
+
+    @staticmethod
+    def _entryLabel(entry: Dict[str, Any]) -> str:
+        member = entry["member"]
+        label = member.mention if isinstance(member, discord.Member) else str(entry.get("memberId", "Unknown member"))
+        reservedRole = entry.get("reservedRole")
+        if reservedRole:
+            label += f" -- `{reservedRole}`"
+        return label
+
+    def _resultEmbed(self, showedUpIndexes: List[int], missingIndexes: List[int], reviewer: discord.Member) -> discord.Embed:
+        showedUpEntries = [self.entries[index] for index in showedUpIndexes]
+        resolvedIndexes = showedUpIndexes + missingIndexes
+        keptEntries = [entry for index, entry in enumerate(self.entries) if index not in resolvedIndexes]
+        keptEntries.extend(self.manualEntries)
+        missingEntries = [self.entries[index] for index in missingIndexes]
+
+        embed = discord.Embed(title="No-show Review Complete", color=discord.Color.green())
+        if keptEntries:
+            Schedule._addLineListEmbedFields(embed, "Kept as no-show", [self._entryLabel(entry) for entry in keptEntries], inline=False)
+        if showedUpEntries:
+            Schedule._addLineListEmbedFields(embed, "Marked showed up", [self._entryLabel(entry) for entry in showedUpEntries], inline=False)
+        if missingEntries:
+            Schedule._addLineListEmbedFields(embed, "Skipped", [self._entryLabel(entry) for entry in missingEntries], inline=False)
+        if not embed.fields:
+            embed.description = "No no-show entries were changed."
+        if self.manualEntries:
+            manualReviewText = f"{len(self.manualEntries)} no-show entr{'y' if len(self.manualEntries) == 1 else 'ies'} could not be included in the dropdown and remain logged."
+            if len(embed.fields) < DISCORD_LIMITS["message_embed"]["embed_field"]:
+                embed.add_field(name="Manual review required", value=manualReviewText, inline=False)
+            else:
+                embed.description = f"{embed.description or ''}\n\nManual review required: {manualReviewText}".strip()
+        embed.set_footer(text=f"Reviewed by {reviewer.display_name}")
+        return embed
+
+    def _removeShowedUpEntries(self, showedUpIndexes: List[int]) -> Tuple[List[int], List[int]]:
+        removedIndexes = []
+        missingIndexes = []
+        with open(NO_SHOW_FILE) as f:
+            noShowFile = json.load(f)
+
+        for index in showedUpIndexes:
+            entry = self.entries[index]
+            member = entry["member"]
+            userId = str(member.id)
+            if userId not in noShowFile:
+                missingIndexes.append(index)
+                continue
+
+            for noShowEntry in noShowFile[userId]:
+                if (
+                    int(noShowEntry.get("date", 0)) == int(entry["date"])
+                    and noShowEntry.get("operationName", "Operation UNKNOWN") == entry["operationName"]
+                    and noShowEntry.get("reservedRole", None) == entry["reservedRole"]
+                ):
+                    noShowFile[userId].remove(noShowEntry)
+                    if len(noShowFile[userId]) == 0:
+                        noShowFile.pop(userId, None)
+                    removedIndexes.append(index)
+                    break
+            else:
+                missingIndexes.append(index)
+
+        if removedIndexes:
+            with open(NO_SHOW_FILE, "w") as f:
+                json.dump(noShowFile, f, indent=4)
+
+        return removedIndexes, missingIndexes
+
+    async def submitReview(self, interaction: discord.Interaction, showedUpIndexes: List[int]) -> None:
+        if not isinstance(interaction.user, discord.Member):
+            log.exception("NoShowLogReviewView submitReview: interaction.user not discord.Member")
+            return
+        if interaction.message is None:
+            log.exception("NoShowLogReviewView submitReview: interaction.message is None")
+            return
+
+        if self.submitted:
+            await interaction.response.send_message("This no-show log has already been reviewed.", ephemeral=True, delete_after=10.0)
+            return
+        self.submitted = True
+        await interaction.response.defer(ephemeral=True, thinking=True)
+
+        showedUpIndexes = [index for index in showedUpIndexes if 0 <= index < len(self.entries)]
+        showedUpIndexes = list(dict.fromkeys(showedUpIndexes))
+        removedIndexes, missingIndexes = self._removeShowedUpEntries(showedUpIndexes)
+
+        embed = self._resultEmbed(removedIndexes, missingIndexes, interaction.user)
+        await interaction.message.edit(embed=embed, view=None)
+
+        response = f"Removed {len(removedIndexes)} no-show entr{'y' if len(removedIndexes) == 1 else 'ies'}."
+        if missingIndexes:
+            response += f" Skipped {len(missingIndexes)} already-missing entr{'y' if len(missingIndexes) == 1 else 'ies'}."
+        await interaction.followup.send(response, ephemeral=True)
+
+
+class NoShowLogReviewSelect(discord.ui.Select):
+    def __init__(self, entries: List[Dict[str, Any]], *args, **kwargs):
+        options = []
+        optionLimit = DISCORD_LIMITS["interactions"]["select_option_description"]
+        for index, entry in enumerate(entries):
+            member = entry["member"]
+            options.append(discord.SelectOption(
+                label=member.display_name[:optionLimit],
+                value=str(index),
+                description=str(member)[:optionLimit]
+            ))
+
+        super().__init__(
+            *args,
+            placeholder="Select members that showed up.",
+            min_values=1,
+            max_values=len(options),
+            row=0,
+            options=options,
+            **kwargs
+        )
+
+    async def callback(self, interaction: discord.Interaction) -> None:
+        if not isinstance(self.view, NoShowLogReviewView):
+            log.exception("NoShowLogReviewSelect callback: self.view not NoShowLogReviewView")
+            return
+
+        self.view.selectedEntryIndexes = [int(value) for value in self.values]
+        await interaction.response.send_message(f"Selected {len(self.values)} member(s). Press Submit to remove their no-show entries.", ephemeral=True, delete_after=10.0)
+
+
+class NoShowLogReviewSubmitButton(discord.ui.Button):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, label="Submit - Members That Showed Up", style=discord.ButtonStyle.success, row=1, **kwargs)
+
+    async def callback(self, interaction: discord.Interaction) -> None:
+        if not isinstance(self.view, NoShowLogReviewView):
+            log.exception("NoShowLogReviewSubmitButton callback: self.view not NoShowLogReviewView")
+            return
+
+        await self.view.submitReview(interaction, self.view.selectedEntryIndexes)
+
+
+class NoShowLogReviewButton(discord.ui.Button):
+    def __init__(self, showedUp: bool, *args, **kwargs):
+        super().__init__(*args, row=0, **kwargs)
+        self.showedUp = showedUp
+
+    async def callback(self, interaction: discord.Interaction) -> None:
+        if not isinstance(self.view, NoShowLogReviewView):
+            log.exception("NoShowLogReviewButton callback: self.view not NoShowLogReviewView")
+            return
+
+        await self.view.submitReview(interaction, [0] if self.showedUp else [])
 
 
 class BaseScheduleEventDynamicButton(discord.ui.DynamicItem[discord.ui.Button], template=r"^$"):

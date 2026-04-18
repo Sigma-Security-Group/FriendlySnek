@@ -595,14 +595,15 @@ class Snekcoin(commands.GroupCog, name = "snekcoin"):
 
 
     @discord.app_commands.command(name="gift")
-    @discord.app_commands.describe(user="User to gift SnekCoins to.", amount="Amount of SnekCoins to gift.")
-    async def gift(self, interaction: discord.Interaction, user: discord.Member, amount: int) -> None:
+    @discord.app_commands.describe(user="User to gift SnekCoins to.", amount="Amount of SnekCoins to gift.", comment="Optional message to include with the gift.")
+    async def gift(self, interaction: discord.Interaction, user: discord.Member, amount: int, comment: discord.app_commands.Range[str, 1, 200] | None = None) -> None:
         """Gift SnekCoins to another user.
 
         Parameters:
         interaction (discord.Interaction): The Discord interaction.
         user (discord.Member): The user to receive the gift.
         amount (int): Amount of SnekCoins to gift.
+        comment (str | None): Optional message to include with the gift.
 
         Returns:
         None.
@@ -635,6 +636,8 @@ class Snekcoin(commands.GroupCog, name = "snekcoin"):
             description=f"You gave **{amount:,}** SnekCoins to {user.mention}"
         )
         embed.set_author(name=interaction.user.display_name, icon_url=interaction.user.display_avatar)
+        if comment is not None:
+            embed.add_field(name="Message", value=comment, inline=False)
         await interaction.response.send_message(embed=embed)
 
 

@@ -445,49 +445,6 @@ async def reload(ctx: commands.Context) -> None:
 
 @client.command()
 @commands.has_any_role(SNEK_LORD)
-async def debug(ctx: commands.Context) -> None:
-    """debug."""
-    channel = client.get_channel(COMMENDATIONS)
-    if not isinstance(channel, discord.TextChannel):
-        log.exception("debug: COMMENDATIONS channel is not discord.TextChannel")
-        await ctx.send("Failed to resolve the commendations channel.")
-        return
-
-    if client.user is None:
-        log.exception("debug: client.user is None")
-        await ctx.send("Bot user is unavailable.")
-        return
-
-    botMessages: list[discord.Message] = []
-    matchedMessages = 0
-    cleanedMessages = 0
-    failedMessages = 0
-
-    async for message in channel.history(limit=100):
-        if message.author.id != client.user.id:
-            continue
-
-        botMessages.append(message)
-
-        if not any(embed.title and embed.title.startswith("Promotion Recommendation") for embed in message.embeds):
-            continue
-
-        matchedMessages += 1
-
-        if len(message.components) == 0:
-            continue
-
-        try:
-            await message.edit(view=None)
-            cleanedMessages += 1
-        except Exception:
-            failedMessages += 1
-            log.exception(f"debug: Failed to remove view from message {message.id} in #{channel.name}")
-
-
-
-@client.command()
-@commands.has_any_role(SNEK_LORD)
 async def stop(ctx: commands.Context) -> None:
     """Stops bot."""
     await client.close()

@@ -105,13 +105,21 @@ async def on_message(message: discord.Message) -> None:
     if message.guild is None or message.guild.id != GUILD_ID:  # Ignore messages that were not sent on the correct server
         return
 
+    # Run message content analysis before any other message handling.
+    if await analyzeChannel(client, message, COMBAT_FOOTAGE, "video"):
+        return
+    if await analyzeChannel(client, message, PROPAGANDA, "image"):
+        return
+
+    # Purple revenge
     if message.author.id == PURPLE and message.channel.id == CASINO:
         try:
             await message.add_reaction(PEPE_DUMB)
         except Exception as e:
             log.warning(f"on_message: failed to react to Purple in casino: {e}")
 
-    if message.author.id == DISBOARD: # Auto delete Disboard bump messages, replace with a thank you message
+    # Auto delete Disboard bump messages, replace with a thank you message
+    if message.author.id == DISBOARD:
         embed = message.embeds[0] if message.embeds else None
         if embed and embed.description and "Bump done" in embed.description and message.interaction_metadata:
             log.debug(f"[{message.interaction_metadata.user.display_name}] ran /bump; deleting message by [{message.author.display_name}] in #{message.channel}")
@@ -282,12 +290,7 @@ async def on_message(message: discord.Message) -> None:
         message.content = message.content.lower()
         await client.process_commands(message)
 
-    # Run message content analysis
-    await analyzeChannel(client, message, COMBAT_FOOTAGE, "video")
-    await analyzeChannel(client, message, PROPAGANDA, "image")
-
-
-async def analyzeChannel(client, message: discord.Message, channelID: int, attachmentContentType: str) -> None:
+async def analyzeChannel(client, message: discord.Message, channelID: int, attachmentContentType: str) -> bool:
     """Will analyze the discord.Message contents and see if it meets the channel purpose.
 
     Parameters:
@@ -296,27 +299,28 @@ async def analyzeChannel(client, message: discord.Message, channelID: int, attac
     attachmentContentType (str): A string to determine the allowed discord.Message attachment, either "video" or "image".
 
     Returns:
-    None.
+    bool: True when the message was deleted, otherwise False.
     """
     if message.channel.id != channelID:
-        return
+        return False
 
     if any(role.id == UNIT_STAFF for role in (message.author.roles if isinstance(message.author, discord.Member) else [])):
-        return
+        return False
 
     if any(attachment.content_type.startswith(f"{attachmentContentType}/") for attachment in message.attachments if attachment.content_type is not None):
-        return
+        return False
 
     if attachmentContentType == "video" and re.search(r"https?:\/\/((www)?(clips)?\.)?(youtu(be)?|twitch|streamable|medal)\.(com|be|tv).+", message.content):
-        return
+        return False
 
     if attachmentContentType == "image" and re.search(r"https?:\/\/((www)?(cdn)?\.)?(imgur|postimg|imageshack|flickr|photobucket|tinypic|gyazo|prntscr)\.(com|cc|net|org)\/.+", message.content):
-        return
+        return False
 
     try:
         await message.delete()
     except Exception:
         log.exception(f"{message.author.id} [{message.author}]")
+        return False
 
     try:
         log.info(f"{message.author.id} [{message.author.display_name}] Removed message in #{client.get_channel(channelID)}. Message content: {message.content}")
@@ -325,6 +329,8 @@ async def analyzeChannel(client, message: discord.Message, channelID: int, attac
         await message.author.send(embed=discord.Embed(title="❌ Message removed", description=f"The message you just posted in <#{channelID}> was deleted because no {attachmentContentType} was detected in it.\n\nIf this is an error, then please ask **staff** to post the {attachmentContentType} for you, and inform: {DEVS}", color=discord.Color.red()))
     except Exception:
         log.warning(f"analyzeChannel: Failed to DM {message.author.id} [{message.author.display_name}] about message removal")
+
+    return True
 
 
 @client.event

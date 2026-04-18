@@ -11,6 +11,7 @@ from random import random, randint, choice
 
 from discord.ext import commands, tasks  # type: ignore
 
+from .snekcoin import Snekcoin  # type: ignore
 from .workshopInterest import WorkshopInterest  # type: ignore
 from utils import Utils  # type: ignore
 import secret
@@ -1915,6 +1916,63 @@ class Schedule(commands.Cog):
         return view
 
     @staticmethod
+    def hadRecentLinkedWorkshop(workshopInterestName: str, events: List[Dict]) -> bool:
+        """Checks whether a linked workshop type has been on the schedule in the last 30 days."""
+        searchTime = datetime.now(timezone.utc) - timedelta(days=30)
+        eventsToCheck = list(events)
+
+        try:
+            with open(EVENTS_HISTORY_FILE) as f:
+                eventsToCheck.extend(json.load(f))
+        except Exception:
+            log.exception("Schedule hadRecentLinkedWorkshop: failed to load events history")
+
+        for event in eventsToCheck:
+            if event.get("type", "Operation") != "Workshop":
+                continue
+            if event.get("workshopInterest") != workshopInterestName:
+                continue
+
+            try:
+                eventScheduled = UTC.localize(datetime.strptime(event["time"], TIME_FORMAT))
+            except Exception:
+                log.warning(f"Schedule hadRecentLinkedWorkshop: failed to parse event time for '{event.get('title', 'UNKNOWN')}'")
+                continue
+
+            if eventScheduled > searchTime:
+                return True
+
+        return False
+
+    @staticmethod
+    async def awardWorkshopSchedulingBonus(interaction: discord.Interaction, event: Dict, existingEvents: List[Dict]) -> int | None:
+        """Awards a SnekCoin bonus for scheduling a workshop."""
+        if event.get("type") != "Workshop":
+            return None
+
+        workshopInterestName = event.get("workshopInterest")
+        isStaleLinkedWorkshop = workshopInterestName is not None and not Schedule.hadRecentLinkedWorkshop(workshopInterestName, existingEvents)
+        bonus = randint(150, 250) if isStaleLinkedWorkshop else randint(60, 100)
+        await Snekcoin.updateWallet(interaction.user.id, "money", bonus)
+
+        channelCommendations = interaction.guild.get_channel(COMMENDATIONS) if interaction.guild is not None else None
+        if isinstance(channelCommendations, discord.TextChannel):
+            embed = discord.Embed(
+                title="Workshop Scheduled",
+                description=f"{interaction.user.mention} has been awarded \N{COIN} {bonus} SnekCoins for scheduling `{event['title']}`.",
+                color=discord.Color.gold()
+            )
+            if isStaleLinkedWorkshop:
+                embed.add_field(name="Bonus", value=f"`{workshopInterestName}` has not been scheduled in the last 30 days.", inline=False)
+            embed.set_footer(text=interaction.user.display_name)
+            embed.timestamp = datetime.now(timezone.utc)
+            await channelCommendations.send(embed=embed)
+        else:
+            log.exception("Schedule awardWorkshopSchedulingBonus: channelCommendations not discord.TextChannel")
+
+        return bonus
+
+    @staticmethod
     async def submitCreatedEvent(interaction: discord.Interaction, previewEmbedDict: Dict, eventMsg: discord.Message) -> None:
         """Finalize a schedule preview into an event."""
         log.info(f"{interaction.user.id} [{interaction.user.display_name}] Created a '{previewEmbedDict['type']}' titled '{previewEmbedDict['title']}'")
@@ -1929,11 +1987,15 @@ class Schedule(commands.Cog):
         with open(EVENTS_FILE) as f:
             events = json.load(f)
         previewEmbedDict["eventId"] = Schedule.ensureEventId(previewEmbedDict, events)
+        existingEvents = list(events)
         events.append(previewEmbedDict)
         with open(EVENTS_FILE, "w") as f:
             json.dump(events, f, indent=4)
+        workshopBonus = await Schedule.awardWorkshopSchedulingBonus(interaction, previewEmbedDict, existingEvents)
 
         replyContent = f"`{previewEmbedDict['title']}` is now on <#{SCHEDULE}>!"
+        if workshopBonus is not None:
+            replyContent += f"\nYou have been awarded \N{COIN} {workshopBonus} SnekCoins for scheduling a workshop."
         if interaction.message == eventMsg:
             await interaction.response.edit_message(content=replyContent, embed=None, view=None)
         else:

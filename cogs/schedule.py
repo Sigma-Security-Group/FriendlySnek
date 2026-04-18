@@ -4026,6 +4026,9 @@ class ScheduleModal(discord.ui.Modal):
                 followupMsg["embed"].set_footer(text="You may still continue with the provided slots - but not recommended.")
 
         elif customId == "schedule_modal_edit_duration":
+            durationOld = event["duration"]
+            endTimeOld = event.get("endTime")
+
             if not re.match(r"^\s*((([1-9]\d*)?\d\s*h(\s*([0-5])?\d\s*m?)?)|(([0-5])?\d\s*m))\s*$", value):
                 await interaction.response.send_message(interaction.user.mention, embed=EMBED_INVALID, ephemeral=True, delete_after=10.0)
                 return
@@ -4038,11 +4041,48 @@ class ScheduleModal(discord.ui.Modal):
 
             event["duration"] = f"{(str(hours) + 'h')*(hours != 0)}{' '*(hours != 0 and minutes !=0)}{(str(minutes) + 'm')*(minutes != 0)}"
 
+            # Check if new duration and old duration is the same
+            if event["duration"] == durationOld:
+                await interaction.response.send_message(interaction.user.mention, embed=discord.Embed(title="❌ No changes made", description="The new duration is the same as the old duration.", color=discord.Color.red()), ephemeral=True, delete_after=10.0)
+                return
+
             # Update event endTime if no template
             if "endTime" in event:
                 startTime = UTC.localize(datetime.strptime(event["time"], TIME_FORMAT))
                 endTime = startTime + delta
                 event["endTime"] = endTime.strftime(TIME_FORMAT)
+
+            with open(EVENTS_FILE, "w") as f:
+                json.dump(events, f, indent=4)
+
+            await eventMsg.edit(embed=Schedule.getEventEmbed(event, interaction.guild), view=Schedule.getEventView(event))
+
+            # Notify attendees of duration change
+            # Send before time-hogging processes - fix interaction failed
+            await interaction.response.send_message(interaction.user.mention, embed=discord.Embed(title="✅ Event edited", color=discord.Color.green()), ephemeral=True, delete_after=5.0)
+
+            previewEmbed = discord.Embed(
+                title=f":clock3: The duration has changed for: {event['title']}!",
+                description=f"From: {durationOld}\n\u2004\u2004\u2004\u205F\u200ATo: {event['duration']}",
+                color=discord.Color.orange()
+            )
+            if endTimeOld is not None and event.get("endTime") is not None:
+                previewEmbed.add_field(
+                    name="End time",
+                    value=f"From: {discord.utils.format_dt(UTC.localize(datetime.strptime(endTimeOld, TIME_FORMAT)), style='F')}\n\u2004\u2004\u2004\u205F\u200ATo: {discord.utils.format_dt(UTC.localize(datetime.strptime(event['endTime'], TIME_FORMAT)), style='F')}",
+                    inline=False
+                )
+            previewEmbed.add_field(name="\u200B", value=eventMsg.jump_url, inline=False)
+            previewEmbed.set_footer(text=f"By: {interaction.user}")
+            for memberId in event["accepted"] + event["declined"] + event["tentative"] + event["standby"]:
+                member = interaction.guild.get_member(memberId)
+                if member is not None:
+                    try:
+                        await member.send(embed=previewEmbed)
+                    except Exception:
+                        log.warning(f"Failed to DM {member.id} [{member.display_name}] about event duration change")
+
+            return
 
         elif customId == "schedule_modal_edit_time":
             startTimeOld = event["time"]

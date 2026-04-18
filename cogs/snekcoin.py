@@ -317,11 +317,13 @@ class Snekcoin(commands.GroupCog, name = "snekcoin"):
         wallets = dict(sorted(wallets.items(), key=lambda item: item[1].get("money", 0), reverse=True))
 
         # Build leaderboard pages as embeds
+        ENTRIES_PER_PAGE = 20
         embeds = []
         view = discord.ui.View(timeout=60)
         embed = discord.Embed(title="🏆 SnekCoin Leaderboard 🏆", color=discord.Color.gold())
         embed.description = ""
         count = 1
+        pageEntries = 0
 
         for user in wallets:
             member = interaction.guild.get_member(int(user))
@@ -329,11 +331,13 @@ class Snekcoin(commands.GroupCog, name = "snekcoin"):
                 continue
             if wallets[user].get("money", 0) == 0:
                 continue
-            if len(embed.description) + len(f"{count}. **{member.mention}** - 🪙 `{wallets[user].get('money', 0)}` SnekCoins\n") > DISCORD_LIMITS["message_embed"]["embed_description"]:
+            if pageEntries == ENTRIES_PER_PAGE:
                 embeds.append(embed)
                 embed = discord.Embed(title="🏆 SnekCoin Leaderboard 🏆", color=discord.Color.gold())
                 embed.description = ""
+                pageEntries = 0
             embed.description += f"{count}. **{member.mention}** - 🪙 `{wallets[user].get('money', 0)}` SnekCoins\n"
+            pageEntries += 1
             count += 1
         if embed.description:
             embeds.append(embed)

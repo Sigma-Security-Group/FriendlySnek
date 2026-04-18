@@ -324,6 +324,7 @@ class Snekcoin(commands.GroupCog, name = "snekcoin"):
         embed.description = ""
         count = 1
         pageEntries = 0
+        userRank: int | None = None
 
         for user in wallets:
             member = interaction.guild.get_member(int(user))
@@ -331,6 +332,8 @@ class Snekcoin(commands.GroupCog, name = "snekcoin"):
                 continue
             if wallets[user].get("money", 0) == 0:
                 continue
+            if int(user) == interaction.user.id:
+                userRank = count
             if pageEntries == ENTRIES_PER_PAGE:
                 embeds.append(embed)
                 embed = discord.Embed(title="🏆 SnekCoin Leaderboard 🏆", color=discord.Color.gold())
@@ -341,8 +344,10 @@ class Snekcoin(commands.GroupCog, name = "snekcoin"):
             count += 1
         if embed.description:
             embeds.append(embed)
+        userRankText = f"Your leaderboard rank: #{userRank:,}" if userRank is not None else ""
         for i, leaderboardEmbed in enumerate(embeds, start=1):
-            leaderboardEmbed.set_footer(text=f"Page {i:,} of {len(embeds):,}")
+            footerText = f"Page {i:,}/{len(embeds):,}  •  {userRankText}" if len(embeds) > 1 else userRankText
+            leaderboardEmbed.set_footer(text=footerText)
 
         if not embeds:
             await interaction.response.send_message(

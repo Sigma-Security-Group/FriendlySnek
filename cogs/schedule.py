@@ -2601,7 +2601,12 @@ class ScheduleButton(discord.ui.Button):
                         for memberId in event["accepted"] + event["declined"] + event["tentative"] + event["standby"]:
                             member = interaction.guild.get_member(memberId)
                             if member is not None:
-                                embed = discord.Embed(title=f"🗑 {event.get('type', 'Operation')} deleted: {event['title']}!", description=f"The {event.get('type', 'Operation').lower()} was scheduled to run:\n{discord.utils.format_dt(UTC.localize(datetime.strptime(event['time'], TIME_FORMAT)), style='F')}", color=discord.Color.red())
+                                reservedRole = next((roleName for roleName, reservedMemberId in (event.get("reservableRoles") or {}).items() if reservedMemberId == member.id), None)
+                                description = f"The {event.get('type', 'Operation').lower()} was scheduled to run:\n{discord.utils.format_dt(UTC.localize(datetime.strptime(event['time'], TIME_FORMAT)), style='F')}"
+                                if reservedRole is not None:
+                                    description += f"\nReserved role: `{reservedRole}`"
+
+                                embed = discord.Embed(title=f"🗑 {event.get('type', 'Operation')} deleted: {event['title']}!", description=description, color=discord.Color.red())
                                 embed.set_footer(text=f"By: {interaction.user}")
                                 try:
                                     await member.send(embed=embed)

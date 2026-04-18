@@ -16,6 +16,25 @@ if secret.DEBUG:
 log = logging.getLogger("FriendlySnek")
 lock = asyncio.Lock()
 
+REMINDER_TIMESTAMP_PATTERN = re.compile(r"<t:(-?\d+)(?::[tTdDfFsSR])?>")
+REMINDER_RELATIVE_TIME_PATTERN = re.compile(r"(\d+)\s*(minutes?|mins?|hours?|hrs?|days?|d|h|m)")
+REMINDER_RELATIVE_TIME_UNITS = {
+    "d": "days",
+    "day": "days",
+    "days": "days",
+    "h": "hours",
+    "hr": "hours",
+    "hrs": "hours",
+    "hour": "hours",
+    "hours": "hours",
+    "m": "minutes",
+    "min": "minutes",
+    "mins": "minutes",
+    "minute": "minutes",
+    "minutes": "minutes",
+}
+
+
 def chunkList(lst: list, n: int):
     """Yield successive n-sized chunks from lst."""
     for i in range(0, len(lst), n):
@@ -905,6 +924,58 @@ Join Us:
             log.exception("BotTasks fifteenMinTasks: failed to create data backup")
 
 
+class ReminderTimeTransformer(discord.app_commands.Transformer):
+    """Parse Discord timestamp tokens or relative reminder durations."""
+
+    @property
+    def type(self) -> discord.AppCommandOptionType:
+        return discord.AppCommandOptionType.string
+
+    @staticmethod
+    def parse(value: str, now: datetime | None = None) -> datetime:
+        value = value.strip()
+        timestampMatch = REMINDER_TIMESTAMP_PATTERN.fullmatch(value)
+        if timestampMatch:
+            return datetime.fromtimestamp(int(timestampMatch.group(1)), tz=timezone.utc)
+
+        relativeValue = value.lower()
+        if relativeValue.startswith("in "):
+            relativeValue = relativeValue[3:].strip()
+
+        if not relativeValue:
+            raise ValueError("Empty reminder time")
+
+        position = 0
+        deltaParts = {"days": 0, "hours": 0, "minutes": 0}
+        matched = False
+        for match in REMINDER_RELATIVE_TIME_PATTERN.finditer(relativeValue):
+            if relativeValue[position:match.start()].strip():
+                raise ValueError("Invalid reminder time")
+
+            amount = int(match.group(1))
+            unit = REMINDER_RELATIVE_TIME_UNITS[match.group(2)]
+            deltaParts[unit] += amount
+            position = match.end()
+            matched = True
+
+        if not matched or relativeValue[position:].strip():
+            raise ValueError("Invalid reminder time")
+
+        delta = timedelta(**deltaParts)
+        if delta <= timedelta():
+            raise ValueError("Reminder time must be in the future")
+
+        if now is None:
+            now = datetime.now(timezone.utc)
+        return now + delta
+
+    async def transform(self, interaction: discord.Interaction, value: Any, /) -> datetime:
+        try:
+            return self.parse(str(value))
+        except (OverflowError, OSError, ValueError) as e:
+            raise discord.app_commands.TransformerError(value, self.type, self) from e
+
+
 @discord.app_commands.guilds(GUILD)
 class Reminders(commands.GroupCog, name="reminder"):
     """Reminders Cog."""
@@ -918,20 +989,20 @@ class Reminders(commands.GroupCog, name="reminder"):
             startDate = datetime.now(timezone.utc)
         return (startDate.replace(day=1) + timedelta(days=32)).replace(day=1, hour=12, minute=0, second=0, microsecond=0)
 
-    @discord.app_commands.command(name="set", description="Set a reminder using Discord's @time timestamp input.")
+    @discord.app_commands.command(name="set", description="Set a reminder using @time or a relative time like 2h or 3h2m.")
     @discord.app_commands.describe(
-        when = "When to remind you. Use Discord's @time picker/input only.",
+        when = "When to remind you. Use @time or relative time like 2h, 3h2m, or in 6 days.",
         text = "What to be reminded of.",
         repeat = "If the reminder repeats."
     )
-    async def reminderSet(self, interaction: discord.Interaction, when: discord.app_commands.Transform[datetime, discord.app_commands.Timestamp], text: str | None = None, repeat: bool | None = None) -> None:
-        """Set a reminder using Discord's `@time` timestamp input."""
+    async def reminderSet(self, interaction: discord.Interaction, when: discord.app_commands.Transform[datetime, ReminderTimeTransformer], text: str | None = None, repeat: bool | None = None) -> None:
+        """Set a reminder using Discord's `@time` input or relative time like `2h`."""
         reminderTime = when.astimezone(timezone.utc) if when.tzinfo is not None else when.replace(tzinfo=timezone.utc)
         now = datetime.now(timezone.utc)
         reminderDelta = reminderTime - now
 
         if reminderDelta <= timedelta():
-            await interaction.response.send_message(embed=discord.Embed(title="❌ Invalid time", description="Reminder time must be in the future. Use Discord's @time input.", color=discord.Color.red()), ephemeral=True, delete_after=10.0)
+            await interaction.response.send_message(embed=discord.Embed(title="❌ Invalid time", description="Reminder time must be in the future. Use @time or relative time like `2h`, `3h2m`, or `in 6 days`.", color=discord.Color.red()), ephemeral=True, delete_after=10.0)
             return
 
         if repeat and reminderDelta < timedelta(minutes=5):
@@ -971,7 +1042,7 @@ class Reminders(commands.GroupCog, name="reminder"):
         if isinstance(error, discord.app_commands.TransformerError):
             embed = discord.Embed(
                 title="❌ Invalid time",
-                description="Use Discord's `@time` input for the `when` field. Inputs like `2h` are not supported here.",
+                description="Use Discord's `@time` input or relative time for the `when` field, like `2h`, `3h2m`, or `in 6 days`.",
                 color=discord.Color.red()
             )
             if interaction.response.is_done():

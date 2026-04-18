@@ -639,7 +639,7 @@ class Schedule(commands.Cog):
                 color=discord.Color.purple()
             )
 
-            await channelCommendations.send(f"{roleUnitStaff.mention} This candidate need a levelup!", embed=embed)
+            await channelCommendations.send(f"{roleUnitStaff.mention} This candidate needs a levelup!", embed=embed)
             del candidateTracking[key]
             result = "Candidate has graduated!"
 
@@ -708,7 +708,7 @@ class Schedule(commands.Cog):
             )
 
             await interaction.followup.send("Candidate has graduated!", ephemeral=True)
-            await channelCommendations.send(f"{roleUnitStaff.mention} This candidate need a levelup!", embed=embed)
+            await channelCommendations.send(f"{roleUnitStaff.mention} This candidate needs a levelup!", embed=embed)
             del candidateTracking[key]
 
 

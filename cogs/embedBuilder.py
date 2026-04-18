@@ -434,8 +434,6 @@ class BuilderModal(discord.ui.Modal):
             log.exception("BuilderModal on_submit: interaction.user not discord.Member")
             return
 
-        value: str = self.children[0].value.strip()
-
         stderr = None
         embed = discord.Embed()
         if len(self.message.embeds) > 0:
@@ -447,18 +445,34 @@ class BuilderModal(discord.ui.Modal):
         name = interaction.data["custom_id"][len("builder_modal_"):]
         match name:
             case "title":
+                value = self.children[0].value
+                if value == "":
+                    await interaction.response.defer()
+                    return
                 embed.title = value
                 EmbedBuilder.unLockDependents(self.view, dependencies, name, value)
             case "description":
+                value = self.children[0].value
+                if value == "":
+                    await interaction.response.defer()
+                    return
                 embed.description = value
                 EmbedBuilder.unLockDependents(self.view, dependencies, name, value)
             case "timestamp":
+                value = self.children[0].value
+                if value == "":
+                    await interaction.response.defer()
+                    return
                 try:
                     parsedTimestamp = parseUserDatetime(value)
                     embed.timestamp = parsedTimestamp if parsedTimestamp.tzinfo is not None else parsedTimestamp.replace(tzinfo=timezone.utc)
                 except Exception:
                     stderr = "Invalid timestamp format."
             case "color":
+                value = self.children[0].value
+                if value == "":
+                    await interaction.response.defer()
+                    return
                 patternRGB = re.compile(r"(\d{1,3}(?:,| |, ))(\d{1,3}(?:,| |, ))(\d{1,3})")
 
                 # Hex
@@ -477,18 +491,30 @@ class BuilderModal(discord.ui.Modal):
                         stderr = "Invalid color value."
 
             case "url":
+                value = self.children[0].value
+                if value == "":
+                    await interaction.response.defer()
+                    return
                 if not re.match(r"https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()!@:%_\+.~#?&\/\/=]*)", value):
                     stderr = "URL must be a valid HTTP(S) link."
                 else:
                     embed.url = value
 
             case "thumbnail":
+                value = self.children[0].value
+                if value == "":
+                    await interaction.response.defer()
+                    return
                 if embed and not embed.title and not embed.description and not value and not embed.image and not embed.author and not embed.footer:
                     embed = None
                 else:
                     embed.set_thumbnail(url=value)
                     EmbedBuilder.unLockDependents(self.view, dependencies, name, value)
             case "image":
+                value = self.children[0].value
+                if value == "":
+                    await interaction.response.defer()
+                    return
                 if embed and not embed.title and not embed.description and not embed.thumbnail and not value and not embed.author and not embed.footer:
                     embed = None
                 else:
@@ -496,26 +522,41 @@ class BuilderModal(discord.ui.Modal):
                     EmbedBuilder.unLockDependents(self.view, dependencies, name, value)
 
             case "author":
-                authorName = self.children[0].value.strip()
-                authorURL = self.children[1].value.strip()
-                authorIconURL = self.children[2].value.strip()
+                authorNameInput = self.children[0].value
+                authorURLInput = self.children[1].value
+                authorIconURLInput = self.children[2].value
+                if authorNameInput == "" and authorURLInput == "" and authorIconURLInput == "":
+                    await interaction.response.defer()
+                    return
+
+                currentAuthor = embed.author if embed and embed.author else None
+                authorName = authorNameInput if authorNameInput != "" else (currentAuthor.name if currentAuthor and currentAuthor.name else "")
+                authorURL = authorURLInput if authorURLInput != "" else (currentAuthor.url if currentAuthor and currentAuthor.url else "")
+                authorIconURL = authorIconURLInput if authorIconURLInput != "" else (currentAuthor.icon_url if currentAuthor and currentAuthor.icon_url else "")
                 if not authorName and (authorURL or authorIconURL):
                     stderr = "Must set Author Name if using Author URL or Author Icon URL."
                 elif embed and not embed.title and not embed.description and not embed.thumbnail and not embed.image and not authorName and not embed.footer:
                     embed = None
                 else:
                     embed.set_author(name=authorName, url=authorURL, icon_url=authorIconURL)
-                    EmbedBuilder.unLockDependents(self.view, dependencies, name, value)
+                    EmbedBuilder.unLockDependents(self.view, dependencies, name, authorName)
             case "footer":
-                footerText = self.children[0].value.strip()
-                footerIconURL = self.children[1].value.strip()
+                footerTextInput = self.children[0].value
+                footerIconURLInput = self.children[1].value
+                if footerTextInput == "" and footerIconURLInput == "":
+                    await interaction.response.defer()
+                    return
+
+                currentFooter = embed.footer if embed and embed.footer else None
+                footerText = footerTextInput if footerTextInput != "" else (currentFooter.text if currentFooter and currentFooter.text else "")
+                footerIconURL = footerIconURLInput if footerIconURLInput != "" else (currentFooter.icon_url if currentFooter and currentFooter.icon_url else "")
                 if not footerText and footerIconURL:
                     stderr = "Must set Footer Text if using Footer Icon URL."
                 elif embed and not embed.title and not embed.description and not embed.thumbnail and not embed.image and not embed.author and not footerText:
                     embed = None
                 else:
                     embed.set_footer(text=footerText, icon_url=footerIconURL)
-                    EmbedBuilder.unLockDependents(self.view, dependencies, name, value)
+                    EmbedBuilder.unLockDependents(self.view, dependencies, name, footerText)
 
 
         if stderr:

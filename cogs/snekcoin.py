@@ -664,6 +664,26 @@ class Snekcoin(commands.GroupCog, name = "snekcoin"):
 class SnekcoinButton(discord.ui.Button):
     """Handling all snekcoin buttons."""
 
+    @staticmethod
+    async def showLeaderboardPage(interaction: discord.Interaction, pageDelta: int) -> None:
+        """Update the leaderboard page"""
+        if not SnekcoinButton.leaderboardEmbeds:
+            log.warning("SnekcoinButton showLeaderboardPage: No embeds found for leaderboard")
+            if not interaction.response.is_done():
+                await interaction.response.send_message(
+                    embed=discord.Embed(color=discord.Color.red(), title="Leaderboard expired", description="Please run `/snekcoin leaderboard` again."),
+                    ephemeral=True,
+                    delete_after=15.0,
+                )
+            return
+
+        SnekcoinButton.leaderboardCurrentPage = (SnekcoinButton.leaderboardCurrentPage + pageDelta) % len(SnekcoinButton.leaderboardEmbeds)
+
+        try:
+            await interaction.response.edit_message(embed=SnekcoinButton.leaderboardEmbeds[SnekcoinButton.leaderboardCurrentPage])
+        except discord.NotFound:
+            log.warning("SnekcoinButton showLeaderboardPage: Leaderboard message no longer exists.")
+
     async def callback(self, interaction: discord.Interaction):
         if not isinstance(interaction.user, discord.Member):
             log.exception("GambleButton callback: interaction.user not discord.Member")
@@ -772,23 +792,9 @@ class SnekcoinButton(discord.ui.Button):
             await interaction.followup.send(embed=embed, ephemeral=False)
 
         if customId.startswith("snekcoin_button_leaderboardPrevious"):
-            if not SnekcoinButton.leaderboardEmbeds:
-                log.exception("SnekcoinButton callback: No embeds found for leaderboardPrevious")
-                return
-            if SnekcoinButton.leaderboardCurrentPage == 0:
-                SnekcoinButton.leaderboardCurrentPage = len(SnekcoinButton.leaderboardEmbeds) - 1
-            else:
-                SnekcoinButton.leaderboardCurrentPage -= 1
-            await interaction.response.edit_message(embed=SnekcoinButton.leaderboardEmbeds[SnekcoinButton.leaderboardCurrentPage])
+            await SnekcoinButton.showLeaderboardPage(interaction, -1)
         if customId.startswith("snekcoin_button_leaderboardNext"):
-            if not SnekcoinButton.leaderboardEmbeds:
-                log.exception("SnekcoinButton callback: No embeds found for leaderboardNext")
-                return
-            if SnekcoinButton.leaderboardCurrentPage == len(SnekcoinButton.leaderboardEmbeds) - 1:
-                SnekcoinButton.leaderboardCurrentPage = 0
-            else:
-                SnekcoinButton.leaderboardCurrentPage += 1
-            await interaction.response.edit_message(embed=SnekcoinButton.leaderboardEmbeds[SnekcoinButton.leaderboardCurrentPage])
+            await SnekcoinButton.showLeaderboardPage(interaction, 1)
 
 
 class SnekcoinModal(discord.ui.Modal):

@@ -207,6 +207,50 @@ class Schedule(commands.Cog):
             await interaction.response.send_message(content=content, embeds=embeds, ephemeral=ephemeral, delete_after=delete_after, view=view)
 
 
+    @staticmethod
+    def _addLineListEmbedFields(embed: discord.Embed, name: str, lines: List[str], *, inline: bool = False) -> None:
+        maxLength = DISCORD_LIMITS["message_embed"]["embed_field_value"]
+        maxFields = DISCORD_LIMITS["message_embed"]["embed_field"]
+        maxNameLength = DISCORD_LIMITS["message_embed"]["embed_field_name"]
+        chunks: List[List[str]] = []
+        fieldLines: List[str] = []
+        fieldValueLength = 0
+
+        for line in lines:
+            if len(line) > maxLength:
+                line = line[:maxLength - 3] + "..."
+
+            nextLength = len(line) if not fieldLines else fieldValueLength + 1 + len(line)
+            if fieldLines and nextLength > maxLength:
+                chunks.append(fieldLines)
+                fieldLines = []
+                fieldValueLength = 0
+
+            fieldLines.append(line)
+            fieldValueLength = len(line) if fieldValueLength == 0 else fieldValueLength + 1 + len(line)
+
+        if fieldLines:
+            chunks.append(fieldLines)
+
+        availableFields = maxFields - len(embed.fields)
+        if availableFields <= 0:
+            return
+
+        if len(chunks) > availableFields:
+            omittedEntries = sum(len(chunk) for chunk in chunks[availableFields:])
+            chunks = chunks[:availableFields]
+            summary = f"... and {omittedEntries} more entries."
+            while len("\n".join(chunks[-1] + [summary])) > maxLength and chunks[-1]:
+                chunks[-1].pop()
+                omittedEntries += 1
+                summary = f"... and {omittedEntries} more entries."
+            chunks[-1].append(summary)
+
+        for index, chunk in enumerate(chunks, start=1):
+            fieldName = name if index == 1 else f"{name} ({index})"
+            embed.add_field(name=fieldName[:maxNameLength], value="\n".join(chunk), inline=inline)
+
+
     @commands.Cog.listener()
     async def on_ready(self) -> None:
         log.debug(LOG_COG_READY.format("Schedule"))
@@ -496,7 +540,7 @@ class Schedule(commands.Cog):
                 reservedRole = getReservedRoleName(noShowEvent["event"]["reservableRoles"], noShowMember.id)
                 noShowEventEmbedFieldValue.append(noShowMember.display_name + (f" -- **{reservedRole}**" * bool(reservedRole)) + f" {warningMsg}")
 
-            embed.add_field(name=noShowEvent["event"]["title"], value="\n".join(noShowEventEmbedFieldValue))
+            Schedule._addLineListEmbedFields(embed, noShowEvent["event"]["title"], noShowEventEmbedFieldValue)
 
         await channelAdvisorStaffComms.send(embed=embed)
 
@@ -547,9 +591,9 @@ class Schedule(commands.Cog):
                 noShowsPresent.append(entry)
 
         if noShowsPresent:
-            embed.add_field(name="Active", value="\n".join(noShowsPresent), inline=False)
+            Schedule._addLineListEmbedFields(embed, "Active", noShowsPresent, inline=False)
         if noShowsArchive:
-            embed.add_field(name=f"Archived (Older than {NOSHOW_ARCHIVE_THRESHOLD_IN_DAYS} days)", value="\n".join(noShowsArchive), inline=False)
+            Schedule._addLineListEmbedFields(embed, f"Archived (Older than {NOSHOW_ARCHIVE_THRESHOLD_IN_DAYS} days)", noShowsArchive, inline=False)
 
         view.add_item(ScheduleButton(interaction.message, style=discord.ButtonStyle.danger, label="Remove entry", custom_id=f"schedule_button_noshow_remove_{member.id}"))
         await interaction.response.send_message(embed=embed, view=view, ephemeral=True, delete_after=180.0)

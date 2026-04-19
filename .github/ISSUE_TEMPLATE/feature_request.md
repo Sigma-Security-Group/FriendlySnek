@@ -1,9 +1,10 @@
 ---
 name: Feature request
 about: Suggest an idea for this project
-title: ''
+title: 'feat(X): XXX'
 labels: enhancement
 assignees: ''
+type: Feature
 
 ---
 
